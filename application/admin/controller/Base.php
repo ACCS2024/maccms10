@@ -23,15 +23,22 @@ class Base extends All
         }
 
         //判断用户登录状态
+        // 获取真实的控制器类名，防止通过 API Timming 绕过鉴权
+        $real_class = basename(str_replace('\\', '/', get_class($this)));
+
         if(in_array($this->_cl,['Index']) && in_array($this->_ac,['login'])) {
 
         }
-        elseif(ENTRANCE=='api' && in_array($this->_cl,['Timming']) && in_array($this->_ac,['index'])){
+        elseif(ENTRANCE=='api' && $real_class=='Timming' && in_array($this->_ac,['index'])){
 
         }
         else {
             $res = model('Admin')->checkLogin();
             if ($res['code'] > 1) {
+                if(ENTRANCE=='api'){
+                    echo json_encode(['code'=>1009,'msg'=>'not login']);
+                    exit;
+                }
                 return $this->redirect('index/login');
             }
             $this->_admin = $res['info'];

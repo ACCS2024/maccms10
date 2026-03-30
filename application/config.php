@@ -104,8 +104,8 @@ return [
     'url_convert'            => true,
     // 默认的访问控制器层
     'url_controller_layer'   => 'controller',
-    // 表单请求类型伪装变量
-    'var_method'             => '_method',
+    // 表单请求类型伪装变量（安全加固：禁用 _method 覆盖以防注入）
+    'var_method'             => '',
     // 表单ajax伪装变量
     'var_ajax'               => '_ajax',
     // 表单pjax伪装变量

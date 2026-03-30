@@ -147,6 +147,11 @@ class Admin extends Base {
         session('admin_auth','1');
         session('admin_info',$row->toArray());
 
+        // 安全加固：登录后重新生成 session_id，防止会话固定攻击
+        if(function_exists('session_regenerate_id')){
+            session_regenerate_id(true);
+        }
+
         //cookie('admin_id',$row['admin_id']);
         //cookie('admin_name',$row['admin_name']);
         //cookie('admin_check',md5($random .'-'. $row['admin_name'] .'-'.$row['admin_id'] .'-'.mac_get_client_ip() ) );

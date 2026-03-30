@@ -11,6 +11,20 @@ class Timming extends Base
 
     public function index()
     {
+        // 安全加固：仅允许 CLI 或 GET 方式访问定时任务，阻断 POST 攻击面
+        if(strtoupper($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && !IS_CLI){
+            echo json_encode(['code'=>0,'msg'=>'POST method not allowed for timming']);
+            exit;
+        }
+
+        // 安全加固：校验定时任务令牌（在后台 系统->定时任务 中配置 timming_token）
+        $token = input('get.token','','trim');
+        $expected_token = config('maccms.app.timming_token');
+        if(!empty($expected_token) && $token !== $expected_token){
+            echo json_encode(['code'=>0,'msg'=>'invalid timming token']);
+            exit;
+        }
+
         $param = input('get.','','trim,urldecode');
         $name = $param['name'];
         if(empty($name)){
