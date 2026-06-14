@@ -159,6 +159,10 @@ class Addon extends Base
         if (!$name) {
             return $this->error(lang('param_err'));
         }
+        // 安全加固(V7):插件名严格白名单,防止 ../ 操纵下载/解压/复制路径
+        if (!preg_match('/^[a-zA-Z0-9_]+$/', $name)) {
+            return $this->error(lang('admin/addon/path_err'));
+        }
         try {
             $uid = $this->request->post("uid");
             $token = $this->request->post("token");
@@ -220,6 +224,10 @@ class Addon extends Base
         $force = (int)$param['force'];
         if (!$name) {
             return $this->error(lang('param_err'));
+        }
+        // 安全加固(V7):插件名严格白名单
+        if (!preg_match('/^[a-zA-Z0-9_]+$/', $name)) {
+            return $this->error(lang('admin/addon/path_err'));
         }
         try {
             $action = $action == 'enable' ? $action : 'disable';
@@ -327,6 +335,10 @@ class Addon extends Base
         $name = $this->request->post("name");
         if (!$name) {
             return $this->error(lang('param_err'));
+        }
+        // 安全加固(V7):插件名严格白名单
+        if (!preg_match('/^[a-zA-Z0-9_]+$/', $name)) {
+            return $this->error(lang('admin/addon/path_err'));
         }
         try {
             $uid = $this->request->post("uid");
