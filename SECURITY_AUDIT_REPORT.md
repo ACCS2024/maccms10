@@ -294,6 +294,60 @@ maccms10 与 TP5.0 深度耦合,以下几乎全部要重写:
 
 ---
 
+## 十、修复实施进度与冒烟测试(2026-06-14)
+
+搭建了 Docker 冒烟环境(PHP 7.4-apache + MySQL 5.7,贴近真实部署),完成安装与登录链路验证。**已落地并提交的修复(每个 bug 一次提交)**:
+
+| 提交 | 修复 | 冒烟验证 |
+|---|---|---|
+| 框架重建 | thinkphp/ 重建为官方 5.0.25 + 保留6处maccms补丁 | 前台/后台 boot 200 ✅ |
+| N4 | 标签库单引号逃逸(17处 addslashes) | php -l ✅ |
+| CVE-2026-4563 | 订单详情 IDOR 加 user_id | ✅ |
+| N1 | tj.js 统计代码 JS 注入改 json_encode | ✅ |
+| N2+V16 | Begin 清扫器 addons.php 内容校验 + 白名单补全 | ✅ |
+| V5 | botlog 任意文件读取(白名单+realpath) | ✅ |
+| V14 | Index::select 模板路径白名单 | ✅ |
+| V9 | 全局禁用 libxml 外部实体(XXE) | ✅ |
+| V11 | session/cookie 默认 HttpOnly | ✅ |
+| V18 | Live::field 列名白名单 | ✅ |
+| V7 | 插件 install/state/upgrade 的 name 白名单 | ✅ |
+| V13 | Receive 口令 hash_equals | ✅ |
+| V1-SSRF | checkCjUrl/友链/图片下载 SSRF 防护(禁内网/云元数据) | ✅ |
+| V1-SSRF纵深 | mac_curl_get 限协议 http/https + 限重定向 | 前台 boot 200 ✅ |
+| V10 | 安装器构造加锁 + database.php 改 var_export | ✅ |
+| V6 | 核心更新解压前 zip-slip 预扫 | ✅ |
+| V6-followup | 重算 update_hash(冒烟发现改 Update.php 锁死后台) | 后台登录恢复 ✅ |
+| V17 | 移除 Macdiy 调试标签 dump()+die | ✅ |
+| V8 | 公开用户API 停止返回手机号等 PII | ✅ |
+| **V4-admin** | 管理员口令迁移 bcrypt(兼容md5透明升级)+ 密码列扩宽 | **md5登录→升级\$2y\$、bcrypt登录、错误拒绝 全绿 ✅** |
+| **V4-user** | 前台用户口令迁移 bcrypt + 移除明文OR分支 | **md5→升级、bcrypt登录、错误拒绝 全绿 ✅** |
+| **V3-CSRF** | 默认开启后台CSRF(双UI+稳定令牌 mac_csrf_token) | **token渲染、无token→403、带头→200、错token→403 全绿 ✅** |
+| **V1-Timming** | 未授权定时任务 fail-closed(CLI放行/HTTP强制token) | **无token/错token→拒绝 全绿 ✅** |
+
+> 冒烟测试还**捕获了两个隐藏坑**:① 改 Update.php 触发核心文件校验把后台锁死(已修 update_hash);② `{$Request.token}` 渲染为空导致 CSRF 一开就锁死后台(改用稳定 `mac_csrf_token()` 并补齐双UI管道)。无运行环境无法发现。
+
+### ⚠️ 部署须知(现有站点升级时必须执行)
+1. **密码列扩宽**(bcrypt 60字符,旧 char(32) 存不下):
+   ```sql
+   ALTER TABLE mac_admin MODIFY admin_pwd VARCHAR(255) NOT NULL DEFAULT '';
+   ALTER TABLE mac_user  MODIFY user_pwd  VARCHAR(255) NOT NULL DEFAULT '';
+   ```
+   不执行会导致改密/新管理员登录失败(旧密码登录仍可,但升级写入被截断)。
+2. **CSRF**:默认已开。后台为 ajax 自动带令牌;若用了高度自定义后台模板或第三方对接出现 `请不要重复提交表单`,在 `maccms.php` 的 `security_csrf_admin_exempt` 临时加该 `controller/action` 再逐步收敛。
+3. **HTTP 定时任务**:需在后台配置 `timming_token` 并在 cron URL 带 `&token=xxx`;或改用 CLI(`php` 命令)触发。
+
+### ⏳ 仍未落地(需你决策/测试/协调,故未自动改)
+- **前台登录验证码(login_verify)**:默认主题登录表单**不渲染验证码**,直接开会挡死登录;需逐主题给登录表单加验证码字段并测happy-path。保持关闭。(bcrypt 已是更高价值的账号保护)
+- **phpmailer 6.0.3→最新**:依赖升级,需真实发信测试。
+- **Receive 接口 HMAC+时间戳+nonce**:协议级改动,会影响现有推送方,需协调。
+- **插件 copydirs 拦截 .php 落核心目录**:插件市场当前不可用(api_url 未配置)+本地上传已禁用+name已白名单+admin鉴权,改通用 copydirs 有破坏合法插件风险。
+- **更新通道 SSL_VERIFYPEER/SHA256**:需为 Update/Safety 单独走强校验下载函数。
+- **find_password 按IP限流**:已有按目标(手机/邮箱)发送间隔限流;按IP限流需定阈值(NAT 误伤),可改用 AntiScrape 中间件。
+- **cookie secure=true**:需站点全 HTTPS。
+- **默认防护开关**(CSP/审计/防爬/后台XSS过滤):需按站点资源调优,避免误伤。
+
+---
+
 ## 附:参考来源
 
 - Maccms CVEs — OpenCVE: https://app.opencve.io/cve/?vendor=maccms
