@@ -70,6 +70,20 @@ class Update extends Base
 
         $archive = new PclZip();
         $archive->PclZip($this->_save_path.$save_file);
+        // 安全加固(V6/zip-slip):解压前预扫条目名,拒绝 ../、绝对路径、盘符、空字节,防穿越写入Web目录
+        $entries = $archive->listContent();
+        if (is_array($entries)) {
+            foreach ($entries as $entry) {
+                $en = isset($entry['stored_filename']) ? $entry['stored_filename'] : (isset($entry['filename']) ? $entry['filename'] : '');
+                $en = str_replace('\\', '/', (string)$en);
+                if ($en === '' || strpos($en, '../') !== false || strpos($en, "\0") !== false
+                    || $en[0] === '/' || preg_match('#^[a-zA-Z]:/#', $en)) {
+                    @unlink($this->_save_path.$save_file);
+                    echo lang('admin/update/upgrade_err')."\n";
+                    exit;
+                }
+            }
+        }
         if(!$archive->extract(PCLZIP_OPT_PATH, '', PCLZIP_OPT_REPLACE_NEWER)) {
             echo $archive->error_string."\n";
             echo lang('admin/update/upgrade_err').'' ."\n";;
