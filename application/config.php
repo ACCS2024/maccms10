@@ -214,6 +214,8 @@ return [
         'auto_start'     => true,
         // PHP 7.3+ Cookie SameSite，减轻跨站请求伪造（需 HTTPS 站点可将 secure 设为 true）
         'samesite'       => 'Lax',
+        // 安全加固(V11)：会话 cookie 强制 HttpOnly，防 XSS 窃取后台会话
+        'httponly'       => true,
     ],
 
     // +----------------------------------------------------------------------
@@ -230,8 +232,8 @@ return [
         'domain'    => '',
         //  cookie 启用安全传输
         'secure'    => false,
-        // httponly设置
-        'httponly'  => '',
+        // httponly设置（安全加固 V11：默认开启，防 XSS 读取登录态 cookie）
+        'httponly'  => true,
         // 是否使用 setcookie
         'setcookie' => true,
     ],
