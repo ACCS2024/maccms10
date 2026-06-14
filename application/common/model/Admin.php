@@ -64,7 +64,7 @@ class Admin extends Base {
                 unset($data['admin_pwd']);
             }
             else{
-                $data['admin_pwd'] = md5($data['admin_pwd']);
+                $data['admin_pwd'] = mac_password_hash($data['admin_pwd']);
             }
             $where=[];
             $where['admin_id'] = ['eq',$data['admin_id']];
@@ -75,7 +75,7 @@ class Admin extends Base {
                 return ['code'=>1002,'msg'=>lang('param_err').'：'.$validate->getError() ];
             }
 
-            $data['admin_pwd'] = md5($data['admin_pwd']);
+            $data['admin_pwd'] = mac_password_hash($data['admin_pwd']);
             $res = $this->insert($data);
         }
         if(false === $res){
@@ -123,12 +123,12 @@ class Admin extends Base {
 
         $where=[];
         $where['admin_name'] = ['eq',$data['admin_name']];
-        $where['admin_pwd'] = ['eq',md5($data['admin_pwd'])];
         $where['admin_status'] = ['eq',1];
 
         $row = $this->where($where)->find();
 
-        if(empty($row)){
+        // 安全加固(V4):取行后用 mac_password_verify 校验(兼容旧 md5 与 bcrypt)
+        if(empty($row) || !mac_password_verify($data['admin_pwd'], $row['admin_pwd'])){
             return ['code'=>1003,'msg'=>lang('access_or_pass_err')];
         }
         $random = md5(rand(10000000,99999999));
@@ -138,8 +138,12 @@ class Admin extends Base {
         $update['admin_random'] = $random;
         $update['admin_last_login_time'] = $row['admin_login_time'];
         $update['admin_last_login_ip'] = $row['admin_login_ip'];
+        // 旧 md5 口令登录成功后透明升级为 bcrypt
+        if(mac_password_need_rehash($row['admin_pwd'])){
+            $update['admin_pwd'] = mac_password_hash($data['admin_pwd']);
+        }
 
-        $res = $this->where($where)->update($update);
+        $res = $this->where('admin_id', $row['admin_id'])->update($update);
         if($res===false){
             return ['code'=>1004,'msg'=>lang('model/admin/update_login_err')];
         }

@@ -210,7 +210,8 @@ class Index extends Base
         $param = input();
         $password = $param['password'];
 
-        if ($this->_admin['admin_pwd'] != md5($password)) {
+        // 安全加固(V4):兼容 bcrypt/旧md5 的解锁校验
+        if (!mac_password_verify($password, $this->_admin['admin_pwd'])) {
             return $this->error(lang('admin/index/pass_err'));
         }
 

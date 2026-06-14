@@ -642,6 +642,37 @@ function mac_send_mail($to,$title,$body,$conf=[])
 }
 
 /**
+ * 安全加固(V4):口令哈希。新口令用 bcrypt;校验兼容旧的 32位 md5,
+ * 旧 md5 校验通过后由调用方透明 rehash 升级为 bcrypt。
+ */
+function mac_password_hash($pwd)
+{
+    return password_hash((string)$pwd, PASSWORD_DEFAULT);
+}
+
+function mac_password_verify($pwd, $hash)
+{
+    $hash = (string)$hash;
+    $pwd  = (string)$pwd;
+    if ($hash === '') {
+        return false;
+    }
+    if (strlen($hash) === 32 && ctype_xdigit($hash)) {
+        return hash_equals(strtolower($hash), md5($pwd));
+    }
+    return password_verify($pwd, $hash);
+}
+
+function mac_password_need_rehash($hash)
+{
+    $hash = (string)$hash;
+    if (strlen($hash) === 32 && ctype_xdigit($hash)) {
+        return true;
+    }
+    return password_needs_rehash($hash, PASSWORD_DEFAULT);
+}
+
+/**
  * 安全加固(V1/SSRF):远程URL安全校验。
  * 仅允许 http/https;拒绝私网/保留/回环/链路本地(含云元数据 169.254.169.254)IP;
  * 解析主机名后逐个IP校验;无法解析则拒绝(fail-closed)。
