@@ -642,6 +642,25 @@ function mac_send_mail($to,$title,$body,$conf=[])
 }
 
 /**
+ * 安全加固(V3/CSRF):返回稳定的 per-session CSRF 令牌(生成一次、整会话复用,
+ * 不一次性销毁),供后台 head meta 输出、全局 ajax 头 X-CSRF-Token 使用。
+ * 与控制器内 \think\Loader::validate('Token') 用的一次性 __token__ 分开存放,互不干扰。
+ */
+function mac_csrf_token()
+{
+    $t = session('__csrf_token__');
+    if (empty($t) || !is_string($t)) {
+        if (function_exists('random_bytes')) {
+            $t = bin2hex(random_bytes(16));
+        } else {
+            $t = md5(uniqid('', true) . mt_rand());
+        }
+        session('__csrf_token__', $t);
+    }
+    return $t;
+}
+
+/**
  * 安全加固(V4):口令哈希。新口令用 bcrypt;校验兼容旧的 32位 md5,
  * 旧 md5 校验通过后由调用方透明 rehash 升级为 bcrypt。
  */

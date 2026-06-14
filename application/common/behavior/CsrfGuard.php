@@ -39,6 +39,10 @@ class CsrfGuard
         list($m, $c, $a) = self::parseDispatch($dispatch);
         $routeKey = strtolower($c) . '/' . strtolower($a);
 
+        // 登录入口豁免:登录前尚无会话令牌,登录本身即认证入口
+        if ($routeKey === 'index/login' || strtolower($a) === 'login') {
+            return;
+        }
         if ($c === 'upload' && strncmp(strtolower($a), 'ueditor', 7) === 0) {
             return;
         }
@@ -56,14 +60,23 @@ class CsrfGuard
             }
         }
 
-        $submitted = self::readSubmittedToken($req);
-        if ($submitted === '') {
-            self::deny($req, $app);
+        // 双令牌校验:① 稳定 X-CSRF-Token 头 vs 会话 __csrf_token__(覆盖全部后台 ajax)
+        //            ② 传统表单一次性 __token__ vs 会话 __token__(控制器内 validate('Token') 用)
+        $ok = false;
+        $header = $req->header('X-CSRF-Token');
+        $header = ($header === null) ? '' : (string)$header;
+        if ($header !== '' && Session::has('__csrf_token__')
+            && hash_equals((string)Session::get('__csrf_token__'), $header)) {
+            $ok = true;
         }
-        if (!Session::has('__token__')) {
-            self::deny($req, $app);
+        if (!$ok) {
+            $param = $req->param('__token__');
+            if (is_string($param) && $param !== '' && Session::has('__token__')
+                && hash_equals((string)Session::get('__token__'), $param)) {
+                $ok = true;
+            }
         }
-        if (!hash_equals((string)Session::get('__token__'), $submitted)) {
+        if (!$ok) {
             self::deny($req, $app);
         }
     }

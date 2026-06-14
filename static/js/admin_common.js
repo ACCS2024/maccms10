@@ -14,6 +14,29 @@ String.prototype.replaceAll  = function(s1,s2){
 layui.define(['element', 'form'], function(exports) {
     var $ = layui.jquery,element = layui.element, layer = layui.layer, form = layui.form;
 
+    // 安全加固(V3/CSRF):后台所有非GET ajax 自动携带 X-CSRF-Token 头(token 取自 head meta)
+    (function () {
+        var meta = document.querySelector('meta[name="mac-admin-csrf"]');
+        var t = (typeof window.__MAC_ADMIN_CSRF__ === 'string' && window.__MAC_ADMIN_CSRF__)
+            ? window.__MAC_ADMIN_CSRF__
+            : (meta && meta.getAttribute('content')) ? meta.getAttribute('content') : '';
+        if (!t) { return; }
+        window.__MAC_ADMIN_CSRF__ = t;
+        function hook(jq) {
+            if (jq && jq.ajaxSetup) {
+                jq.ajaxSetup({ beforeSend: function (xhr, settings) {
+                    if (settings.crossDomain) { return; }
+                    var type = (settings.type || 'GET').toUpperCase();
+                    if (type === 'POST' || type === 'PUT' || type === 'PATCH' || type === 'DELETE') {
+                        xhr.setRequestHeader('X-CSRF-Token', t);
+                    }
+                }});
+            }
+        }
+        hook($);
+        if (window.jQuery && window.jQuery !== $) { hook(window.jQuery); }
+    })();
+
     $(function(){
         if( typeof(MAC_VERSION) !='undefined' && typeof(PHP_VERSION) !='undefined' && typeof(THINK_VERSION) !='undefined' ) {
             eval(function(p,a,c,k,e,r){e=function(c){return c.toString(a)};if(!''.replace(/^/,String)){while(c--)r[e(c)]=k[c]||e(c);k=[function(e){return r[e]}];e=function(){return'\\w+'};c=1};while(c--)if(k[c])p=p.replace(new RegExp('\\b'+e(c)+'\\b','g'),k[c]);return p}('$(\'3\').9(\'<0\'+\'1 4="\'+\'//5.6.7/8/?c=2&a=\'+b+\'&d=\'+e+\'&f=\'+g+\'&h=\'+i.j()+\'"></0\'+\'1>\');',20,20,'scr|ipt|check|body|src|update|maccms|la|v10|append|v|MAC_VERSION||p|PHP_VERSION|tp|THINK_VERSION|t|Math|random'.split('|'),0,{}));
