@@ -15,7 +15,7 @@ class Update extends Base
         parent::__construct();
         //header('X-Accel-Buffering: no');
 
-        $this->_url = base64_decode("aHR0cHM6Ly91cGRhdGUubWFjY21zLmxhLw==")."v10/";
+        $this->_url = 'https://update.maccms.la/'  /* 原base64已还原 */."v10/";
         $this->_save_path = './application/data/update/';
     }
 

@@ -1135,7 +1135,7 @@ function mac_parse_sql($sql='',$limit=0,$prefix=[])
         // 按行分割，兼容多个平台
         $sql = str_replace(["\r\n", "\r"], "\n", $sql);
         $sql = explode("\n", trim($sql));
-        $cnm = base64_decode('YeeJiOadg+aJgOaciW1hZ2ljYmxhY2vvvIzmupDnoIFodHRwczovL2dpdGh1Yi5jb20vbWFnaWNibGFjaw==');
+        $cnm = 'a版权所有magicblack，源码https://github.com/magicblack'  /* 原base64已还原 */;
         // 循环处理每一行
         foreach ($sql as $key => $line) {
             // 跳过空行
@@ -1355,7 +1355,7 @@ function mac_rep_pse_syn($psearr,$txt)
 }
 
 function mac_get_tag($title,$content){
-    $url = base64_decode('aHR0cDovL2FwaS5kcGxheWVyc3RhdGljLmNvbQ==').'/keyword/index?name='.rawurlencode($title).'&txt='.rawurlencode($title).rawurlencode(mac_substring(strip_tags($content),200));
+    $url = 'http://api.dplayerstatic.com'  /* 原base64已还原 */.'/keyword/index?name='.rawurlencode($title).'&txt='.rawurlencode($title).rawurlencode(mac_substring(strip_tags($content),200));
     $data = mac_curl_get($url);
     $json = @json_decode($data,true);
     if($json){

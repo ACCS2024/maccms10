@@ -64,7 +64,7 @@ class Init
             }
         }
 
-        define('MAC_URL','http'.'://'.'www'.'.'.'maccms'.'.'.'la'.'/');
+        define('MAC_URL','http://www.maccms.la/');  // 原 'http'.'://'.'www'... 拼接免杀已还原(该常量全仓未被使用)
         define('MAC_NAME','苹果CMS');
         define('MAC_PATH', $config['site']['install_dir'] .'');
         define('MAC_MOB', $TMP_ISWAP);

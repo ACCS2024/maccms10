@@ -89,7 +89,7 @@ class Addon extends Base
         $onlineaddons = Cache::get($key);
         if (!is_array($onlineaddons)) {
             $onlineaddons = [];
-            $response = mac_curl_get( "h"."t"."t"."p:/"."/a"."p"."i"."."."m"."a"."c"."c"."m"."s."."c"."o"."m"."/" . 'addon/index');
+            $response = mac_curl_get( 'http://api.maccms.com/' . 'addon/index');  // 原单字符拼接免杀已还原;该域已被 mac_curl_get 底层拦截
             $json = !empty($response) ? json_decode($response, true) : [];
             if (!empty($json['rows'])) {
                 foreach ($json['rows'] as $row) {
