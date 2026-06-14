@@ -16,7 +16,8 @@ class Receive extends Base
             echo json_encode(['code'=>3001,'msg'=>lang('api/close_err')],JSON_UNESCAPED_UNICODE);
             exit;
         }
-        if($GLOBALS['config']['interface']['pass'] != $this->_param['pass']){
+        // 安全加固(V13):常量时间比较,防时序侧信道泄露口令
+        if(!hash_equals((string)$GLOBALS['config']['interface']['pass'], (string)$this->_param['pass'])){
             echo json_encode(['code'=>3002,'msg'=>lang('api/pass_err')],JSON_UNESCAPED_UNICODE);
             exit;
         }
