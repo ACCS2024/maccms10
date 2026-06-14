@@ -155,7 +155,7 @@ var MAC = {
         },
         'Get': function (url, call) {
             url = url || location.href;
-            MAC.Ajax('//api.maccms.la/shorten/index/url/' + encodeURIComponent(url), 'get', 'jsonp', '', function (r) {
+            MAC.Ajax('' + encodeURIComponent(url), 'get', 'jsonp', '', function (r) {
                 if (r.code == 1) {
                     if ($('.mac_shorten').length > 0) {
                         $('.mac_shorten').val(r.data.url_short);

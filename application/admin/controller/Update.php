@@ -26,6 +26,20 @@ class Update extends Base
 
     public function step1($file='')
     {
+        // 安全加固:已切断与官方升级源(update.maccms.la)的通信,防止上游被劫持下发恶意代码。
+        // 升级方式:① 代码用 git pull 从自有仓库拉取;② 库结构在登录后台时自动迁移,无需手动SQL。
+        echo $this->fetch('admin@public/head');
+        echo "<div class='update' style='padding:20px'><h1>在线更新已停用(安全加固)</h1>";
+        echo "<textarea rows=\"16\" class='layui-textarea' readonly>";
+        echo "为防止官方升级服务器被劫持向本站下发恶意代码,系统已切断与官方的全部通信。\n\n";
+        echo "请按以下方式升级:\n";
+        echo "1) 代码升级:在服务器执行  git pull  (从你自己的仓库/加固分支拉取最新代码);\n";
+        echo "2) 数据库结构升级:登录后台时已自动检测并完成,无需手动执行任何 SQL;\n";
+        echo "3) 如需回滚:git 版本回退即可。\n";
+        echo "</textarea></div>";
+        exit;
+
+        // 以下为原在线更新逻辑(已禁用,保留备查)
         if(empty($file)){
             return $this->error(lang('param_err'));
         }

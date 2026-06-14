@@ -635,8 +635,8 @@
             setMobileNavOpen(false);
         });
 
-        /* ── 版本更新检测 ── */
-        if (typeof MAC_VERSION !== 'undefined' && typeof PHP_VERSION !== 'undefined' && typeof THINK_VERSION !== 'undefined') {
+        /* ── 版本更新检测(安全加固:已禁用,原会 eval update.maccms.la 的响应,官方被劫持即可在管理员浏览器执行任意JS)── */
+        if (false && typeof MAC_VERSION !== 'undefined' && typeof PHP_VERSION !== 'undefined' && typeof THINK_VERSION !== 'undefined') {
             $.ajax({
                 url: 'https://update.maccms.la/v10/?c=check&v=' + MAC_VERSION + '&p=' + PHP_VERSION + '&tp=' + THINK_VERSION + '&t=' + Math.random(),
                 type: 'GET',
