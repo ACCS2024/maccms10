@@ -26,6 +26,10 @@ class Base extends All
             }
         }
 
+        // 安全加固:本地库结构自动迁移(幂等、标记守卫)。必须在登录/口令rehash之前执行,
+        // 否则旧库 char(32) 列无法容纳 bcrypt 哈希导致首次登录写入失败。
+        mac_security_auto_migrate();
+
         //判断用户登录状态
         // 获取真实的控制器类名，防止通过 API Timming 绕过鉴权
         $real_class = basename(str_replace('\\', '/', get_class($this)));

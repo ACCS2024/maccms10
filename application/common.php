@@ -661,6 +661,38 @@ function mac_csrf_token()
 }
 
 /**
+ * 安全加固:本地自动迁移(无需手动执行 SQL)。
+ * 幂等检测并应用必要的库结构变更,用标记文件记录已应用版本;版本不变则跳过。
+ * 完全本地、不联网。新增迁移时把 $version 递增并在下方追加幂等检测块即可自动生效。
+ */
+function mac_security_auto_migrate()
+{
+    $version = 'v1';
+    $marker  = APP_PATH . 'data' . DIRECTORY_SEPARATOR . 'update' . DIRECTORY_SEPARATOR . 'sec_schema.lock';
+    if (is_file($marker) && trim((string)@file_get_contents($marker)) === $version) {
+        return;
+    }
+    try {
+        $prefix = config('database.prefix');
+        // 迁移 v1:扩宽口令列以容纳 bcrypt(60+字符),旧 char(32)/varchar(32) 存不下
+        $cols = ['admin' => 'admin_pwd', 'user' => 'user_pwd'];
+        foreach ($cols as $t => $c) {
+            $table = $prefix . $t;
+            $info = \think\Db::query(
+                "SELECT CHARACTER_MAXIMUM_LENGTH AS len FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=? AND COLUMN_NAME=?",
+                [$table, $c]
+            );
+            if (!empty($info) && isset($info[0]['len']) && (int)$info[0]['len'] < 255) {
+                \think\Db::execute("ALTER TABLE `" . str_replace('`', '', $table) . "` MODIFY `" . $c . "` VARCHAR(255) NOT NULL DEFAULT ''");
+            }
+        }
+        @file_put_contents($marker, $version);
+    } catch (\Exception $e) {
+        // 迁移失败不阻断后台访问,标记不写入 → 下次请求自动重试
+    }
+}
+
+/**
  * 安全加固(V4):口令哈希。新口令用 bcrypt;校验兼容旧的 32位 md5,
  * 旧 md5 校验通过后由调用方透明 rehash 升级为 bcrypt。
  */
@@ -894,8 +926,30 @@ function mac_page_param($record_total, $page_size, $page_current, $page_url,$pag
 }
 
 // CurlPOST数据提交-----------------------------------------
+/**
+ * 安全加固:识别官方/上游服务器域名(更新/插件市场/资源站/短网址/播放器联盟等)。
+ * 用于切断与官方的一切出站通信,防止上游被劫持后向本站下发恶意代码。
+ */
+function mac_is_official_url($url)
+{
+    $host = @parse_url((string)$url, PHP_URL_HOST);
+    if (!$host) {
+        return false;
+    }
+    $host = strtolower($host);
+    $blocked = ['maccms.la', 'maccms.com', 'maccms.cn', 'maccms.ai', 'dplayerstatic.com'];
+    foreach ($blocked as $d) {
+        if ($host === $d || substr($host, -(strlen($d) + 1)) === '.' . $d) {
+            return true;
+        }
+    }
+    return false;
+}
+
 function mac_curl_post($url,$data,$heads=array(),$cookie='')
 {
+    // 安全加固:切断与官方服务器的通信(防止下发病毒)
+    if (mac_is_official_url($url)) { return ''; }
     $ch = @curl_init();
     curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/45.0.2454.101 Safari/537.36');
     curl_setopt($ch, CURLOPT_URL, $url);
@@ -926,6 +980,8 @@ function mac_curl_post($url,$data,$heads=array(),$cookie='')
 // CurlPOST数据提交-----------------------------------------
 function mac_curl_get($url,$heads=array(),$cookie='')
 {
+    // 安全加固:切断与官方服务器的通信(防止下发病毒)
+    if (mac_is_official_url($url)) { return ''; }
     $ch = @curl_init();
     curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/45.0.2454.101 Safari/537.36');
 
