@@ -641,6 +641,59 @@ function mac_send_mail($to,$title,$body,$conf=[])
     }
 }
 
+/**
+ * 安全加固(V1/SSRF):远程URL安全校验。
+ * 仅允许 http/https;拒绝私网/保留/回环/链路本地(含云元数据 169.254.169.254)IP;
+ * 解析主机名后逐个IP校验;无法解析则拒绝(fail-closed)。
+ */
+function mac_ip_is_public($ip)
+{
+    return filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) !== false;
+}
+
+function mac_is_safe_remote_url($url)
+{
+    $url = trim((string)$url);
+    if ($url === '') {
+        return false;
+    }
+    $p = @parse_url($url);
+    if (!$p || empty($p['scheme']) || empty($p['host'])) {
+        return false;
+    }
+    if (!in_array(strtolower($p['scheme']), ['http', 'https'], true)) {
+        return false;
+    }
+    $host = trim($p['host'], '[]');
+    $ips = [];
+    if (filter_var($host, FILTER_VALIDATE_IP)) {
+        $ips[] = $host;
+    } else {
+        if (function_exists('dns_get_record')) {
+            $recs = @dns_get_record($host, DNS_A | DNS_AAAA);
+            if (is_array($recs)) {
+                foreach ($recs as $r) {
+                    if (!empty($r['ip']))   { $ips[] = $r['ip']; }
+                    if (!empty($r['ipv6'])) { $ips[] = $r['ipv6']; }
+                }
+            }
+        }
+        if (!$ips) {
+            $ip4 = @gethostbyname($host);
+            if ($ip4 && $ip4 !== $host) { $ips[] = $ip4; }
+        }
+    }
+    if (!$ips) {
+        return false;
+    }
+    foreach ($ips as $ip) {
+        if (!mac_ip_is_public($ip)) {
+            return false;
+        }
+    }
+    return true;
+}
+
 function mac_check_back_link($url)
 {
     $res=[];
@@ -648,6 +701,10 @@ function mac_check_back_link($url)
     $res['msg'] = lang('param_err');
 
     if(empty($url)){
+        return json($res);
+    }
+    // 安全加固(V1/SSRF):仅允许公网 http/https 目标,防探测内网/云元数据
+    if(!mac_is_safe_remote_url($url)){
         return json($res);
     }
 

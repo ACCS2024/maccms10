@@ -20,6 +20,10 @@ class Image extends Base {
         if (!in_array($ext, explode(',', $upload_image_ext))) {
             $ext = 'jpg';
         }
+        // 安全加固(V1/SSRF):图片下载仅允许公网 http/https 目标
+        if (!mac_is_safe_remote_url($url)) {
+            return $url . '#err';
+        }
         $img = mac_curl_get($url);
         if (empty($img) || strlen($img) < 10) {
             return $url . '#err';

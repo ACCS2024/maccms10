@@ -2858,8 +2858,8 @@ class Collect extends Base {
      */
     private function checkCjUrl($url)
     {
-        $result = parse_url($url);
-        if (empty($result['host']) || in_array($result['host'], ['127.0.0.1', 'localhost'])) {
+        // 安全加固(V1/SSRF):仅允许公网 http/https,拒绝私网/保留/回环/链路本地(含云元数据)
+        if (!mac_is_safe_remote_url($url)) {
             return ['code' => 1001, 'msg' => lang('model/collect/cjurl_err') . ': ' . $url];
         }
         return ['code' => 1];
