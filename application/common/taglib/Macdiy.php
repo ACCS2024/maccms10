@@ -11,8 +11,7 @@ class Macdiy extends Taglib {
 
     public function tagTest($tag,$content)
     {
-        dump($tag);
-        dump($content);
-        die;
+        // 安全加固(V17):移除 dump()+die 调试输出(信息泄露/DoS),生产环境置空
+        return '';
     }
 }
