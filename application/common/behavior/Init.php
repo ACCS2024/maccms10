@@ -8,6 +8,12 @@ class Init
 {
     public function run(&$params)
     {
+        // 安全加固(V9/XXE):全局禁用 libxml 外部实体加载,防止采集/接口解析远程XML时的XXE。
+        // PHP 8.0+ 默认已禁用外部实体且此函数被弃用,故仅在 <8.0 调用。
+        if (PHP_VERSION_ID < 80000 && function_exists('libxml_disable_entity_loader')) {
+            libxml_disable_entity_loader(true);
+        }
+
         // 主题配置已在 App::init() 中通过 extra 扫描加载，此处不再重复 include mctheme.php
         // 同步到 $GLOBALS 供模板与 mac_tpl_* 直接读取，避免重复 config() 解析
         $GLOBALS['mctheme'] = config('mctheme') ?: ['theme' => []];
