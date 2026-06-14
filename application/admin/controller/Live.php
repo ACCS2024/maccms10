@@ -97,6 +97,11 @@ class Live extends Base
         $col = $param['col'];
         $val = $param['val'];
 
+        // 安全加固(V18):列名白名单,与其它控制器一致,防止越权改写非预期字段
+        if (!in_array($col, ['live_status', 'live_sort', 'live_hits'], true)) {
+            return $this->error(lang('param_err'));
+        }
+
         if (!empty($ids) && isset($col) && isset($val)) {
             $where = [];
             if (is_array($ids)) {
