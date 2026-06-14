@@ -239,6 +239,10 @@ class Index extends Base
         if (empty($tpl) || empty($tab) || empty($col) || empty($ids) || empty($url)) {
             return $this->error(lang('param_err'));
         }
+        // 安全加固(V14):限制模板名仅为字母数字下划线,杜绝 ../ 穿越与 @ 跨模块加载任意模板
+        if (!preg_match('/^[a-z0-9_]+$/i', (string)$tpl)) {
+            return $this->error(lang('param_err'));
+        }
 
         if (is_array($ids)) {
             $ids = join(',', $ids);
