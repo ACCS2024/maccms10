@@ -982,8 +982,18 @@ class Index extends Base
     public function botlog()
     {
         $parm = input();
-        $data = $parm['data'];
-        $bot_content = file_get_contents(ROOT_PATH . 'runtime/log/bot/' . $data . '.txt');
+        $data = (string)($parm['data'] ?? '');
+        // 安全加固(V5):仅允许安全文件名,杜绝 ../ 路径穿越读取任意 .txt
+        if ($data === '' || !preg_match('/^[A-Za-z0-9_\-]{1,64}$/', $data)) {
+            return $this->error(lang('param_err'));
+        }
+        $bot_file = ROOT_PATH . 'runtime/log/bot/' . $data . '.txt';
+        $bot_base = realpath(ROOT_PATH . 'runtime/log/bot/');
+        $bot_real = realpath($bot_file);
+        if ($bot_base === false || $bot_real === false || strpos($bot_real, $bot_base . DIRECTORY_SEPARATOR) !== 0) {
+            return $this->error(lang('param_err'));
+        }
+        $bot_content = file_get_contents($bot_real);
         $bot_list = array_slice(array_reverse(explode("\r\n", trim($bot_content))), 0, 20);
         $this->assign('bot_list', $bot_list);
         return $this->fetch('admin@others/botlog');
