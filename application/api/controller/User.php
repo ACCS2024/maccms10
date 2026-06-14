@@ -223,7 +223,8 @@ class User extends Base
         if ($total > 0) {
             // 排序
             $order = "user_reg_time DESC";
-            $field = 'user_id,user_name,user_nick_name,user_phone,user_reg_time';
+            // 安全加固(V8):公开列表不返回 user_phone 等PII,防止未授权批量导出
+            $field = 'user_id,user_name,user_nick_name,user_reg_time';
             if (strlen($param['orderby']) > 0) {
                 $order = 'user_' . $param['orderby'] . " DESC";
             }

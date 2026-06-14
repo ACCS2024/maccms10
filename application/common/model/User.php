@@ -43,7 +43,8 @@ class User extends Base
      */
     public function publicApiDetailFields()
     {
-        return 'user_id,user_name,user_nick_name,user_phone,user_qq,user_email,group_id,user_points,user_exp,user_integral,user_invite_code,user_invite_count,user_reg_time,user_status';
+        // 安全加固(V8):移除 user_phone/user_qq/user_email 等PII,防止未授权遍历泄露
+        return 'user_id,user_name,user_nick_name,group_id,user_points,user_exp,user_integral,user_invite_code,user_invite_count,user_reg_time,user_status';
     }
 
     /**
