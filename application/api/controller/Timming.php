@@ -13,18 +13,20 @@ class Timming extends Base
 
     public function index()
     {
-        // 安全加固：仅允许 CLI 或 GET 方式访问定时任务，阻断 POST 攻击面
-        if(strtoupper($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && !IS_CLI){
-            echo json_encode(['code'=>0,'msg'=>'POST method not allowed for timming']);
-            exit;
-        }
-
-        // 安全加固：校验定时任务令牌（在后台 系统->定时任务 中配置 timming_token）
-        $token = input('get.token','','trim');
-        $expected_token = config('maccms.app.timming_token');
-        if(!empty($expected_token) && $token !== $expected_token){
-            echo json_encode(['code'=>0,'msg'=>'invalid timming token']);
-            exit;
+        // 安全加固(V1/CVE-2026-4562):未授权定时任务收紧为 fail-closed。
+        // CLI(本机 crontab/命令行)放行;HTTP 必须携带与后台配置一致的 token,
+        // 且 token 未配置时一律拒绝(杜绝默认空 token 时的未授权触发采集/SSRF/清缓存)。
+        if (!IS_CLI) {
+            if (strtoupper($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
+                echo json_encode(['code'=>0,'msg'=>'POST method not allowed for timming']);
+                exit;
+            }
+            $token = input('get.token','','trim');
+            $expected_token = (string)config('maccms.app.timming_token');
+            if ($expected_token === '' || !hash_equals($expected_token, (string)$token)) {
+                echo json_encode(['code'=>0,'msg'=>'invalid or missing timming token']);
+                exit;
+            }
         }
 
         $param = input('get.','','trim,urldecode');
