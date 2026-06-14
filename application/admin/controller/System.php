@@ -212,7 +212,9 @@ class System extends Base
 
             $tj = $config_new['site']['site_tj'];
             if(strpos($tj,'document.w') ===false){
-                $tj = 'document.write(\'' . str_replace("'","\'",$tj) . '\')';
+                // 安全加固(N1):用 json_encode 生成安全的 JS 字符串字面量,
+                // 防止统计代码中的引号/换行/</script> 逃逸出 document.write(...) 注入恶意JS
+                $tj = 'document.write(' . json_encode($tj, JSON_UNESCAPED_UNICODE) . ')';
             }
             $res = @fwrite(fopen('./static/js/tj.js', 'wb'), $tj);
 
