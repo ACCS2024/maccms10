@@ -939,6 +939,8 @@ class User extends Base
         $param = input();
         $where = [];
         $where['order_id'] = intval($param['order_id']);
+        // 安全加固(CVE-2026-4563):订单详情必须绑定当前登录用户,防止越权遍历他人订单
+        $where['user_id'] = $GLOBALS['user']['user_id'];
         $res = model('Order')->infoData($where);
         if (request()->isAjax()) {
             return json($res);
