@@ -326,15 +326,20 @@ maccms10 与 TP5.0 深度耦合,以下几乎全部要重写:
 
 > 冒烟测试还**捕获了两个隐藏坑**:① 改 Update.php 触发核心文件校验把后台锁死(已修 update_hash);② `{$Request.token}` 渲染为空导致 CSRF 一开就锁死后台(改用稳定 `mac_csrf_token()` 并补齐双UI管道)。无运行环境无法发现。
 
-### ⚠️ 部署须知(现有站点升级时必须执行)
-1. **密码列扩宽**(bcrypt 60字符,旧 char(32) 存不下):
-   ```sql
-   ALTER TABLE mac_admin MODIFY admin_pwd VARCHAR(255) NOT NULL DEFAULT '';
-   ALTER TABLE mac_user  MODIFY user_pwd  VARCHAR(255) NOT NULL DEFAULT '';
-   ```
-   不执行会导致改密/新管理员登录失败(旧密码登录仍可,但升级写入被截断)。
-2. **CSRF**:默认已开。后台为 ajax 自动带令牌;若用了高度自定义后台模板或第三方对接出现 `请不要重复提交表单`,在 `maccms.php` 的 `security_csrf_admin_exempt` 临时加该 `controller/action` 再逐步收敛。
-3. **HTTP 定时任务**:需在后台配置 `timming_token` 并在 cron URL 带 `&token=xxx`;或改用 CLI(`php` 命令)触发。
+### 🔄 升级机制(已改为本地自动,无需手动 SQL)
+- **库结构升级:全自动。** `mac_security_auto_migrate()`(`common.php`)在后台 Base 构造最前幂等执行:检测到旧 `char(32)`/`varchar(32)` 口令列会**自动 `ALTER` 到 `varchar(255)`**(容纳 bcrypt),用 `application/data/update/sec_schema.lock` 标记只跑一次。**部署时无需再手动执行任何 SQL**;冒烟实测 char(32)→登录自动扩宽→bcrypt 升级成功。新增迁移只需在该函数内追加幂等块并递增版本号即可自动生效。
+- **代码升级:`git pull`** 从你自己的仓库/加固分支拉取(在线更新已停用,见下)。
+
+### 🚫 已切断与官方服务器的全部通信(防下发病毒)
+替换/停用了官方安装升级源,统一在 `mac_curl_get`/`mac_curl_post` 底层拦截 `maccms.la/com/cn/ai`、`dplayerstatic.com`,并逐处停用:
+- `Update::step1` 在线更新停用(原从 update.maccms.la 下载 zip 解压 → 改为提示 git pull);
+- `view_new/index/index.html` 版本检测停用(原会 **eval update.maccms.la 的响应**,官方被劫持即可在管理员浏览器执行任意 JS);
+- `home.js` 短网址(api.maccms.la)、`playerconfig.js`/`maccms.php` 的 union.maccms.la 加载屏、`Addon`(api.maccms.com)、`ResourceHub`(api.maccms.ai)均被切断。
+- **残留**:双层混淆的前端 `player.js` 移动端 union 广告无法干净改写,建议替换为干净 player.js 或在 DNS/防火墙层屏蔽 `union.maccms.la`。
+
+### ⚠️ 部署须知
+1. **CSRF**:默认已开。后台 ajax 自动带令牌;若高度自定义后台模板/第三方对接出现 `请不要重复提交表单`,在 `maccms.php` 的 `security_csrf_admin_exempt` 临时加该 `controller/action` 再逐步收敛。
+2. **HTTP 定时任务**:需在后台配置 `timming_token` 并在 cron URL 带 `&token=xxx`;或改用 CLI(`php` 命令)触发。
 
 ### ⏳ 仍未落地(需你决策/测试/协调,故未自动改)
 - **前台登录验证码(login_verify)**:默认主题登录表单**不渲染验证码**,直接开会挡死登录;需逐主题给登录表单加验证码字段并测happy-path。保持关闭。(bcrypt 已是更高价值的账号保护)
