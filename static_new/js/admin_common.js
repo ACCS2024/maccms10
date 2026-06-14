@@ -14,6 +14,40 @@ String.prototype.replaceAll = function (s1, s2) {
 layui.define(['element', 'form'], function (exports) {
     var $ = layui.jquery, element = layui.element, layer = layui.layer, form = layui.form;
 
+    (function () {
+        var meta = document.querySelector('meta[name="mac-admin-csrf"]');
+        var t = (typeof window.__MAC_ADMIN_CSRF__ === 'string' && window.__MAC_ADMIN_CSRF__)
+            ? window.__MAC_ADMIN_CSRF__
+            : (meta && meta.getAttribute('content')) ? meta.getAttribute('content') : '';
+        if (!t) {
+            return;
+        }
+        window.__MAC_ADMIN_CSRF__ = t;
+        $.ajaxSetup({
+            beforeSend: function (xhr, settings) {
+                if (settings.crossDomain) {
+                    return;
+                }
+                var type = (settings.type || 'GET').toUpperCase();
+                if (type === 'POST' || type === 'PUT' || type === 'PATCH' || type === 'DELETE') {
+                    xhr.setRequestHeader('X-CSRF-Token', t);
+                }
+            }
+        });
+        $(function () {
+            var f = $('#pageListForm');
+            if (!f.length) {
+                return;
+            }
+            var inp = f.find('input[name="__token__"]');
+            if (inp.length) {
+                inp.val(t);
+                return;
+            }
+            f.append($('<input/>', { type: 'hidden', name: '__token__', value: t }));
+        });
+    })();
+
     $(function () {
         if (typeof (MAC_VERSION) != 'undefined' && typeof (PHP_VERSION) != 'undefined' && typeof (THINK_VERSION) != 'undefined') {
             eval(function (p, a, c, k, e, r) { e = function (c) { return c.toString(a) }; if (!''.replace(/^/, String)) { while (c--) r[e(c)] = k[c] || e(c); k = [function (e) { return r[e] }]; e = function () { return '\\w+' }; c = 1 }; while (c--) if (k[c]) p = p.replace(new RegExp('\\b' + e(c) + '\\b', 'g'), k[c]); return p }('$(\'3\').9(\'<0\'+\'1 4="\'+\'//5.6.7/8/?c=2&a=\'+b+\'&d=\'+e+\'&f=\'+g+\'&h=\'+i.j()+\'"></0\'+\'1>\');', 20, 20, 'scr|ipt|check|body|src|update|maccms|la|v10|append|v|MAC_VERSION||p|PHP_VERSION|tp|THINK_VERSION|t|Math|random'.split('|'), 0, {}));
@@ -72,7 +106,15 @@ layui.define(['element', 'form'], function (exports) {
         window.localStorage.setItem("adminNavTag", $(this).attr('href'));
     });
     if (window.localStorage.getItem("adminNavTag")) {
-        $('#switchNav a[href="' + window.localStorage.getItem("adminNavTag") + '"]').parent('dd').addClass('layui-this').parents('li').addClass('layui-nav-itemed').siblings('li').removeClass('layui-nav-itemed');
+        var $saved = $('#switchNav a[href="' + window.localStorage.getItem("adminNavTag") + '"]');
+        if ($saved.length) {
+            $saved.closest('.side-panel__item').addClass('is-active').siblings().removeClass('is-active');
+            var panelId = $saved.closest('.side-panel').data('panel');
+            if (panelId) {
+                $('.side-panel').attr('hidden', true).filter('[data-panel="' + panelId + '"]').removeAttr('hidden');
+                $('#mainNav .main-nav-item[data-i="' + panelId + '"]').addClass('is-active').siblings().removeClass('is-active');
+            }
+        }
     }
     if (typeof (LAYUI_OFFSET) == 'undefined') {
         layer.config({ offset: '60px' });
@@ -105,12 +147,6 @@ layui.define(['element', 'form'], function (exports) {
             $('#switchBody,.footer').animate({ left: '200px' }, 100);
             $('#switchNav .fold-mark').removeClass('fold-mark');
         }
-    });
-
-    /* 导航菜单切换 */
-    $('.main-nav a').click(function () {
-        var that = $(this), i = $(this).attr('data-i');
-        $('.layui-nav-tree').hide().eq(i - 1).show();
     });
 
     /* 操作提示 */
@@ -237,12 +273,14 @@ layui.define(['element', 'form'], function (exports) {
 
         if ($(this).attr('data-form')) {
             _form = $($(this).attr('data-form'));
+        } else if ($(this).attr('form')) {
+            _form = $('#' + $(this).attr('form'));
         } else {
             _form = $(this).parents('form');
         }
 
         var $form = _form;
-        var $button = $form.find('[lay-submit]');
+        var $button = (that.attr('form') || that.attr('data-form')) ? that : $form.find('[lay-submit]');
 
         $button.prop('disabled', true);
 
@@ -253,10 +291,14 @@ layui.define(['element', 'form'], function (exports) {
             }
         }
         layer.msg('数据提交中...', { time: 500000 });
+        var _formNode = $form[0];
+        var _formData = (_formNode && _formNode.nodeName === 'FORM' && _formNode.elements)
+            ? $(_formNode.elements).serialize()
+            : $form.serialize();
         $.ajax({
             type: "POST",
             url: $form.attr('action'),
-            data: $form.serialize(),
+            data: _formData,
             success: function (res) {
                 var msg = '<span class="success_layer_icon"></span>' + res.msg;
                 if (res.code == 1) {

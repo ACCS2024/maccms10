@@ -3,6 +3,9 @@ namespace app\common\model;
 use think\Db;
 use think\Cache;
 use app\common\util\Pinyin;
+use app\common\util\MeilisearchService;
+use app\common\util\MeilisearchListBridge;
+use app\common\util\MeilisearchSync;
 
 class Actor extends Base {
     // 设置数据表（不含前缀）
@@ -44,6 +47,7 @@ class Actor extends Base {
         }
 
         $limit_str = ($limit * ($page-1) + $start) .",".$limit;
+        $total = 0;
         if($totalshow==1) {
             $total = $this->where($where)->count();
         }
@@ -82,9 +86,9 @@ class Actor extends Base {
         $sex = $lp['sex'];
         $starsign = $lp['starsign'];
         $blood = $lp['blood'];
-        $start = intval(abs($lp['start']));
-        $num = intval(abs($lp['num']));
-        $half = intval(abs($lp['half']));
+        $start = abs(intval($lp['start']));
+        $num = abs(intval($lp['num']));
+        $half = abs(intval($lp['half']));
         $timeadd = $lp['timeadd'];
         $timehits = $lp['timehits'];
         $time = $lp['time'];
@@ -230,11 +234,11 @@ class Actor extends Base {
                     }
                 }
                 $type = array_unique($type);
-                $where['type_id'] = ['in', implode(',', $type)];
+                $where['type_id'] = ['in', array_values(array_map('intval', $type))];
             }
         }
         if(!empty($typenot)){
-            $where['type_id'] = ['not in',$typenot];
+            $where['type_id'] = ['not in', array_map('intval', explode(',', $typenot))];
         }
         if(!empty($tid)) {
             $where['type_id|type_id_1'] = ['eq',$tid];
@@ -292,50 +296,66 @@ class Actor extends Base {
         if(!empty($wd)) {
             $where['actor_name|actor_en'] = ['like', '%' . $wd . '%'];
         }
-        if($by=='rnd'){
-            $data_count = $this->countData($where);
-            $page_total = floor($data_count / $lp['num']) + 1;
-            if($data_count < $lp['num']){
-                $lp['num'] = $data_count;
+        $use_rnd_order = ($by == 'rnd');
+        if (!$use_rnd_order) {
+            if (!in_array($by, ['id', 'time', 'time_add', 'score', 'hits', 'hits_day', 'hits_week', 'hits_month', 'up', 'down', 'level', 'rnd', 'in'])) {
+                $by = 'time';
             }
-            $randi = @mt_rand(1, $page_total);
-            $page = $randi;
-            $by = 'hits_week';
+        }
+        if (!in_array($order, ['asc', 'desc'])) {
             $order = 'desc';
         }
 
-        if(!in_array($by, ['id', 'time','time_add','score','hits','hits_day','hits_week','hits_month','up','down','level','rnd','in'])) {
-            $by = 'time';
-        }
-        if(!in_array($order, ['asc', 'desc'])) {
-            $order = 'desc';
+        if ($use_rnd_order) {
+            $order = ['[rand]' => '[rand]'];
+        } elseif ($by == 'in' && !empty($name)) {
+            $order = ' find_in_set(actor_name, \'' . $name . '\'  ) ';
+        } else {
+            if ($by == 'in' && empty($name)) {
+                $by = 'time';
+            }
+            $order = 'actor_' . $by . ' ' . $order;
         }
 
+        $meili = null;
+        if (!$use_rnd_order && MeilisearchService::enabled()) {
+            $meili = MeilisearchListBridge::applyForActor(
+                $where,
+                (string)$wd,
+                (string)$name,
+                $page,
+                $num,
+                $start,
+                $order
+            );
+            if ($meili !== null) {
+                $where = $meili['where'];
+                $order = $meili['order'];
+            }
+        }
         $where_cache = $where;
-        if(!empty($randi)){
+        if ($use_rnd_order) {
             unset($where_cache['actor_id']);
             $where_cache['order'] = 'rnd';
         }
+        $order_cache_key = ($meili !== null) ? 'meilisearch_relevance' : (is_array($order) ? 'sql_rand' : $order);
 
-
-        if($by=='in' && !empty($name) ){
-            $order = ' find_in_set(actor_name, \''.$name.'\'  ) ';
-        }
-        else{
-            if($by=='in' && empty($name) ){
-                $by = 'time';
-            }
-            $order= 'actor_'.$by .' ' . $order;
-        }
-
-        $cach_name = $GLOBALS['config']['app']['cache_flag']. '_' .md5('actor_listcache_'.http_build_query($where_cache).'_'.$order.'_'.$page.'_'.$num.'_'.$start.'_'.$pageurl);
-        $res = Cache::get($cach_name);
+        $cach_name = $GLOBALS['config']['app']['cache_flag']. '_' .md5('actor_listcache_'.http_build_query($where_cache).'_'.$order_cache_key.'_'.$page.'_'.$num.'_'.$start.'_'.$pageurl);
+        $res = $use_rnd_order ? null : Cache::get($cach_name);
         if(empty($cachetime)){
             $cachetime = $GLOBALS['config']['app']['cache_time'];
         }
         if($GLOBALS['config']['app']['cache_core']==0 || empty($res)) {
-            $res = $this->listData($where,$order,$page,$num,$start,'*',1,$totalshow);
-            if($GLOBALS['config']['app']['cache_core']==1){
+            if ($meili !== null) {
+                $res = $this->listData($where, $order, $page, $num, $start, '*', 1, 0);
+                if ($totalshow == 1) {
+                    $res['total'] = $meili['total'];
+                    $res['pagecount'] = $num > 0 ? (int)ceil($meili['total'] / $num) : 0;
+                }
+            } else {
+                $res = $this->listData($where,$order,$page,$num,$start,'*',1,$totalshow);
+            }
+            if($GLOBALS['config']['app']['cache_core']==1 && !$use_rnd_order){
                 Cache::set($cach_name, $res, $cachetime);
             }
         }
@@ -470,6 +490,9 @@ class Actor extends Base {
         if(false === $res){
             return ['code'=>1002,'msg'=>lang('save_err').'：'.$this->getError() ];
         }
+        $ixActorId = !empty($data['actor_id']) ? intval($data['actor_id']) : intval($this->getLastInsID());
+        MeilisearchSync::afterActorSave($ixActorId);
+
         return ['code'=>1,'msg'=>lang('save_ok')];
     }
 
@@ -481,6 +504,7 @@ class Actor extends Base {
         }
         $path = './';
         foreach($list['list'] as $k=>$v){
+            MeilisearchSync::deleteActor(intval($v['actor_id']));
             $pic = $path.$v['actor_pic'];
             if(file_exists($pic) && (substr($pic,0,8) == "./upload") || count( explode("./",$pic) ) ==1){
                 unlink($pic);

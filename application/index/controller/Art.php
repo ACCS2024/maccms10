@@ -1,6 +1,7 @@
 <?php
 namespace app\index\controller;
 use think\Controller;
+use app\common\util\SearchService;
 
 class Art extends Base
 {
@@ -39,6 +40,7 @@ class Art extends Base
     {
         $param = mac_param_url();
         $this->check_search($param);
+        SearchService::logFromParam(2, $param);
         $this->label_search($param);
         return $this->label_fetch('art/search');
     }
@@ -48,17 +50,23 @@ class Art extends Base
         $param = mac_param_url();
         $this->check_ajax();
         $this->check_search($param,1);
+        SearchService::logFromParam(2, $param);
         $this->label_search($param);
         return $this->label_fetch('art/ajax_search');
     }
 
     public function detail()
     {
-        $info = $this->label_art_detail();
+        $info = $this->label_art_detail([],2);
         if(!empty($info['art_pwd']) && session('2-1-'.$info['art_id'])!='1'){
             return $this->label_fetch('art/detail_pwd');
         }
-        return $this->label_fetch( mac_tpl_fetch('art',$info['art_tpl'],'detail') );
+        $tpl = mac_tpl_fetch('art',$info['art_tpl'],'detail');
+        $tplFile = isset($GLOBALS['MAC_ROOT_TEMPLATE']) ? $GLOBALS['MAC_ROOT_TEMPLATE'] . $tpl . '.html' : '';
+        if (empty($tplFile) || !is_file($tplFile)) {
+            $tpl = 'art/detail';
+        }
+        return $this->label_fetch($tpl);
     }
 
     public function ajax_detail()
@@ -72,6 +80,15 @@ class Art extends Base
     {
         $info = $this->label_art_detail();
         return $this->label_fetch('art/rss');
+    }
+
+    /**
+     * 小说阅读器视图：以文章分页为章节进行阅读
+     */
+    public function read()
+    {
+        $info = $this->label_art_detail([], 0, true);
+        return $this->label_fetch('art/read');
     }
 
 }

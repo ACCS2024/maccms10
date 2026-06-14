@@ -8,7 +8,22 @@ class Init
 {
     public function run(&$params)
     {
+        // 主题配置已在 App::init() 中通过 extra 扫描加载，此处不再重复 include mctheme.php
+        // 同步到 $GLOBALS 供模板与 mac_tpl_* 直接读取，避免重复 config() 解析
+        $GLOBALS['mctheme'] = config('mctheme') ?: ['theme' => []];
+
         $config = config('maccms');
+        if (!isset($config['meilisearch']) || !is_array($config['meilisearch'])) {
+            $config['meilisearch'] = [
+                'enabled' => '0',
+                'host' => 'http://127.0.0.1:7700',
+                'api_key' => '',
+                'index_uid' => 'maccms_contents',
+                'timeout' => '8',
+                'sync_on_save' => '1',
+                'search_only_wd' => '1',
+            ];
+        }
         $domain = config('domain');
 
         $isMobile = 0;
@@ -76,7 +91,7 @@ class Init
             }
         }
         if(intval($config['app']['search_len'])<1){
-            $config['app']['search_len'] = 10;
+            $config['app']['search_len'] = 50;
         }
         config('url_route_on',$config['rewrite']['route_status']);
         if(empty($config['app']['pathinfo_depr'])){

@@ -142,6 +142,7 @@ CREATE TABLE `mac_art` (
   `art_time_add` int(10) unsigned NOT NULL DEFAULT '0' ,
   `art_time_hits` int(10) unsigned NOT NULL DEFAULT '0' ,
   `art_time_make` int(10) unsigned NOT NULL DEFAULT '0' ,
+  `art_recycle_time` int(10) unsigned NOT NULL DEFAULT '0' ,
   `art_score` decimal(3,1) unsigned NOT NULL DEFAULT '0.0' ,
   `art_score_all` mediumint(8) unsigned NOT NULL DEFAULT '0' ,
   `art_score_num` mediumint(8) unsigned NOT NULL DEFAULT '0' ,
@@ -233,6 +234,7 @@ CREATE TABLE `mac_manga` (
   `manga_orientation` tinyint(1) unsigned NOT NULL DEFAULT '0' COMMENT '阅读方向(1=左到右,2=右到左,3=垂直)',
   `manga_is_vip` tinyint(1) unsigned NOT NULL DEFAULT '0' COMMENT '是否VIP(0=否,1=是)',
   `manga_copyright_info` varchar(255) NOT NULL DEFAULT '' COMMENT '版权信息',
+  `manga_recycle_time` int(10) unsigned NOT NULL DEFAULT '0' COMMENT '回收站时间戳，0=正常',
   PRIMARY KEY (`manga_id`),
   KEY `type_id` (`type_id`) USING BTREE,
   KEY `type_id_1` (`type_id_1`) USING BTREE,
@@ -539,6 +541,27 @@ CREATE TABLE `mac_plog` (
 ) ENGINE=MyISAM AUTO_INCREMENT=1 DEFAULT CHARSET=utf8;
 
 -- ----------------------------
+-- Table structure for mac_admin_audit_log
+-- ----------------------------
+DROP TABLE IF EXISTS `mac_admin_audit_log`;
+CREATE TABLE `mac_admin_audit_log` (
+  `audit_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `admin_id` int(10) unsigned NOT NULL DEFAULT '0',
+  `admin_name` varchar(60) NOT NULL DEFAULT '',
+  `audit_time` int(10) unsigned NOT NULL DEFAULT '0',
+  `audit_ip` varchar(45) NOT NULL DEFAULT '',
+  `audit_method` varchar(10) NOT NULL DEFAULT '',
+  `audit_route` varchar(128) NOT NULL DEFAULT '',
+  `audit_uri` varchar(2048) NOT NULL DEFAULT '',
+  `audit_http_code` smallint(5) unsigned NOT NULL DEFAULT '0',
+  `audit_payload` mediumtext,
+  PRIMARY KEY (`audit_id`),
+  KEY `idx_admin_time` (`admin_id`,`audit_time`),
+  KEY `idx_time` (`audit_time`),
+  KEY `idx_route` (`audit_route`(64))
+) ENGINE=MyISAM AUTO_INCREMENT=1 DEFAULT CHARSET=utf8;
+
+-- ----------------------------
 -- Table structure for mac_role
 -- ----------------------------
 DROP TABLE IF EXISTS `mac_role`;
@@ -739,7 +762,12 @@ CREATE TABLE `mac_user` (
   `user_pid` int(10) unsigned NOT NULL DEFAULT '0' ,
   `user_pid_2` int(10) unsigned NOT NULL DEFAULT '0' ,
   `user_pid_3` int(10) unsigned NOT NULL DEFAULT '0' ,
+  `user_invite_code` varchar(20) NOT NULL DEFAULT '' COMMENT '邀请码',
+  `user_invite_count` int(10) unsigned NOT NULL DEFAULT '0' COMMENT '邀请人数',
+  `user_invite_reward_time` int(10) unsigned NOT NULL DEFAULT '0' COMMENT '最后一次发放奖励时间',
+  `user_invite_reward_level` int(10) unsigned NOT NULL DEFAULT '0' COMMENT '已发放奖励档次(避免重复发放)',
   PRIMARY KEY (`user_id`),
+  KEY `user_invite_code` (`user_invite_code`),
   KEY `type_id` (`group_id`) USING BTREE,
   KEY `user_name` (`user_name`),
   KEY `user_reg_time` (`user_reg_time`)
@@ -780,6 +808,7 @@ CREATE TABLE `mac_vod` (
   `vod_pic` varchar(1024) NOT NULL DEFAULT '' ,
   `vod_pic_thumb` varchar(1024) NOT NULL DEFAULT '' ,
   `vod_pic_slide` varchar(1024) NOT NULL DEFAULT '' ,
+  `vod_pic_original` varchar(1024) NOT NULL DEFAULT '' ,
   `vod_pic_screenshot` text,
   `vod_actor` varchar(255) NOT NULL DEFAULT '' ,
   `vod_director` varchar(255) NOT NULL DEFAULT '' ,
@@ -823,6 +852,7 @@ CREATE TABLE `mac_vod` (
   `vod_time_add` int(10) unsigned NOT NULL DEFAULT '0' ,
   `vod_time_hits` int(10) unsigned NOT NULL DEFAULT '0' ,
   `vod_time_make` int(10) unsigned NOT NULL DEFAULT '0' ,
+  `vod_recycle_time` int(10) unsigned NOT NULL DEFAULT '0' ,
   `vod_trysee` smallint(6) unsigned NOT NULL DEFAULT '0' ,
   `vod_douban_id` int(10) unsigned NOT NULL DEFAULT '0' ,
   `vod_douban_score` decimal(3,1) unsigned NOT NULL DEFAULT '0.0' ,
@@ -981,3 +1011,625 @@ CREATE TABLE `mac_vod_search` (
   KEY `search_hit_count` (`search_hit_count`),
   KEY `search_last_hit_time` (`search_last_hit_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='vod搜索缓存表';
+
+
+-- ----------------------------
+-- Table structure for mac_search_query_log
+-- ----------------------------
+DROP TABLE IF EXISTS `mac_search_query_log`;
+CREATE TABLE `mac_search_query_log` (
+  `log_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `user_id` int(10) unsigned NOT NULL DEFAULT '0',
+  `mid` tinyint(3) unsigned NOT NULL DEFAULT '1',
+  `keyword` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '',
+  `log_time` int(10) unsigned NOT NULL DEFAULT '0',
+  PRIMARY KEY (`log_id`),
+  KEY `idx_user_time` (`user_id`,`log_time`),
+  KEY `idx_time` (`log_time`),
+  KEY `idx_keyword` (`keyword`(32))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='前台搜索关键词日志（热门词/用户历史）';
+
+
+-- ----------------------------
+-- Table structure for mac_seo_ai_result
+-- ----------------------------
+DROP TABLE IF EXISTS `mac_seo_ai_result`;
+CREATE TABLE `mac_seo_ai_result` (
+  `seo_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `seo_mid` tinyint(3) unsigned NOT NULL DEFAULT '0',
+  `seo_obj_id` int(10) unsigned NOT NULL DEFAULT '0',
+  `seo_obj_uuid` char(36) NOT NULL DEFAULT '',
+  `seo_title` varchar(255) NOT NULL DEFAULT '',
+  `seo_keywords` varchar(500) NOT NULL DEFAULT '',
+  `seo_description` varchar(500) NOT NULL DEFAULT '',
+  `seo_provider` varchar(32) NOT NULL DEFAULT '',
+  `seo_model` varchar(64) NOT NULL DEFAULT '',
+  `seo_source_hash` char(40) NOT NULL DEFAULT '',
+  `seo_error` varchar(255) NOT NULL DEFAULT '',
+  `seo_status` tinyint(3) unsigned NOT NULL DEFAULT '1',
+  `seo_time_add` int(10) unsigned NOT NULL DEFAULT '0',
+  `seo_time_update` int(10) unsigned NOT NULL DEFAULT '0',
+  PRIMARY KEY (`seo_id`),
+  UNIQUE KEY `seo_obj` (`seo_mid`,`seo_obj_id`),
+  UNIQUE KEY `seo_obj_uuid` (`seo_mid`,`seo_obj_uuid`),
+  KEY `seo_time_update` (`seo_time_update`)
+) ENGINE=MyISAM AUTO_INCREMENT=1 DEFAULT CHARSET=utf8;
+
+-- -----------------------------------------------------------------------------
+-- Table structure for mac_analytics_day_overview
+-- -----------------------------------------------------------------------------
+DROP TABLE IF EXISTS `mac_analytics_day_overview`;
+CREATE TABLE `mac_analytics_day_overview` (
+  `stat_date` date NOT NULL COMMENT '统计日（站点时区日历日）',
+  `pv` bigint(20) unsigned NOT NULL DEFAULT '0' COMMENT '页面浏览量',
+  `uv` bigint(20) unsigned NOT NULL DEFAULT '0' COMMENT '独立访客（按 visitor_id/cookie 去重，由任务写入）',
+  `session_cnt` int(10) unsigned NOT NULL DEFAULT '0' COMMENT '会话数',
+  `new_reg` int(10) unsigned NOT NULL DEFAULT '0' COMMENT '新注册用户数',
+  `user_login_dau` int(10) unsigned NOT NULL DEFAULT '0' COMMENT '登录日活（当日有登录行为的用户数）',
+  `user_active_mau` int(10) unsigned NOT NULL DEFAULT '0' COMMENT '月活（自然月内去重活跃，可月末回填或滚动窗口）',
+  `order_paid_cnt` int(10) unsigned NOT NULL DEFAULT '0' COMMENT '已支付订单笔数',
+  `order_paid_amount` decimal(14,2) unsigned NOT NULL DEFAULT '0.00' COMMENT '已支付订单金额',
+  `recharge_amount` decimal(14,2) unsigned NOT NULL DEFAULT '0.00' COMMENT '充值类金额（可与订单拆分或等于 order 中充值类型汇总）',
+  `ad_impression` bigint(20) unsigned NOT NULL DEFAULT '0' COMMENT '广告曝光',
+  `ad_click` bigint(20) unsigned NOT NULL DEFAULT '0' COMMENT '广告点击',
+  `avg_session_duration_sec` int(10) unsigned NOT NULL DEFAULT '0' COMMENT '平均会话时长（秒）',
+  `bounce_rate` decimal(6,2) NOT NULL DEFAULT '0.00' COMMENT '跳出率 0-100（单页会话/总会话）',
+  `retention_d1` decimal(6,2) NOT NULL DEFAULT '0.00' COMMENT '次日留存率 0-100（按 cohort 任务写入）',
+  `retention_d7` decimal(6,2) NOT NULL DEFAULT '0.00' COMMENT '7日留存率',
+  `retention_d30` decimal(6,2) NOT NULL DEFAULT '0.00' COMMENT '30日留存率',
+  `pv_web` bigint(20) unsigned NOT NULL DEFAULT '0' COMMENT 'Web 端 PV',
+  `pv_h5` bigint(20) unsigned NOT NULL DEFAULT '0' COMMENT 'H5 端 PV',
+  `pv_android` bigint(20) unsigned NOT NULL DEFAULT '0' COMMENT 'Android PV',
+  `pv_ios` bigint(20) unsigned NOT NULL DEFAULT '0' COMMENT 'iOS PV',
+  `pv_other` bigint(20) unsigned NOT NULL DEFAULT '0' COMMENT '未知/其它端 PV',
+  `updated_at` int(10) unsigned NOT NULL DEFAULT '0' COMMENT '本条汇总更新时间 UNIX',
+  PRIMARY KEY (`stat_date`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='运营统计-全站按日汇总';
+
+
+-- -----------------------------------------------------------------------------
+-- Table structure for mac_analytics_day_dim
+-- -----------------------------------------------------------------------------
+DROP TABLE IF EXISTS `mac_analytics_day_dim`;
+CREATE TABLE `mac_analytics_day_dim` (
+  `analytics_day_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `stat_date` date NOT NULL,
+  `dim_type` varchar(32) NOT NULL COMMENT '维度类型',
+  `dim_key` varchar(128) NOT NULL COMMENT '维度取值',
+  `pv` bigint(20) unsigned NOT NULL DEFAULT '0',
+  `uv` bigint(20) unsigned NOT NULL DEFAULT '0',
+  `session_cnt` int(10) unsigned NOT NULL DEFAULT '0',
+  `new_reg` int(10) unsigned NOT NULL DEFAULT '0',
+  `dau` int(10) unsigned NOT NULL DEFAULT '0' COMMENT '该切片下日活（定义与任务一致即可）',
+  `order_paid_cnt` int(10) unsigned NOT NULL DEFAULT '0',
+  `order_paid_amount` decimal(14,2) unsigned NOT NULL DEFAULT '0.00',
+  `ad_click` bigint(20) unsigned NOT NULL DEFAULT '0',
+  `updated_at` int(10) unsigned NOT NULL DEFAULT '0',
+  PRIMARY KEY (`analytics_day_id`),
+  UNIQUE KEY `uk_date_dim` (`stat_date`,`dim_type`,`dim_key`),
+  KEY `idx_dim_type_date` (`dim_type`,`stat_date`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='运营统计-按日多维切片';
+
+
+-- -----------------------------------------------------------------------------
+-- Table structure for mac_analytics_hour_dim
+-- -----------------------------------------------------------------------------
+DROP TABLE IF EXISTS `mac_analytics_hour_dim`;
+CREATE TABLE `mac_analytics_hour_dim` (
+  `analytics_hour_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `stat_hour` datetime NOT NULL COMMENT '整点时间，如 2026-04-15 08:00:00',
+  `dim_type` varchar(32) NOT NULL DEFAULT 'all' COMMENT '同 day_dim，all 表示全站',
+  `dim_key` varchar(128) NOT NULL DEFAULT '',
+  `pv` bigint(20) unsigned NOT NULL DEFAULT '0',
+  `uv` bigint(20) unsigned NOT NULL DEFAULT '0',
+  `session_cnt` int(10) unsigned NOT NULL DEFAULT '0',
+  `updated_at` int(10) unsigned NOT NULL DEFAULT '0',
+  PRIMARY KEY (`analytics_hour_id`),
+  UNIQUE KEY `uk_hour_dim` (`stat_hour`,`dim_type`,`dim_key`),
+  KEY `idx_hour` (`stat_hour`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='运营统计-按小时多维';
+
+
+-- -----------------------------------------------------------------------------
+-- Table structure for mac_analytics_session
+-- -----------------------------------------------------------------------------
+DROP TABLE IF EXISTS `mac_analytics_session`;
+CREATE TABLE `mac_analytics_session` (
+  `session_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `session_key` varchar(64) NOT NULL COMMENT '服务端生成或客户端上报的会话ID',
+  `visitor_id` varchar(64) NOT NULL DEFAULT '' COMMENT '匿名访客标识（cookie/device）',
+  `user_id` int(10) unsigned NOT NULL DEFAULT '0',
+  `device_type` varchar(16) NOT NULL DEFAULT '' COMMENT 'web/h5/android/ios',
+  `os` varchar(32) NOT NULL DEFAULT '',
+  `browser` varchar(32) NOT NULL DEFAULT '',
+  `app_version` varchar(32) NOT NULL DEFAULT '',
+  `region_code` varchar(16) NOT NULL DEFAULT '' COMMENT '省/国家等简码',
+  `channel` varchar(64) NOT NULL DEFAULT '' COMMENT '渠道：utm、应用市场等',
+  `entry_path` varchar(512) NOT NULL DEFAULT '' COMMENT '落地路径',
+  `exit_path` varchar(512) NOT NULL DEFAULT '' COMMENT '离开前最后路径',
+  `page_count` smallint(5) unsigned NOT NULL DEFAULT '0',
+  `duration_sec` int(10) unsigned NOT NULL DEFAULT '0' COMMENT '会话时长',
+  `is_bounce` tinyint(1) unsigned NOT NULL DEFAULT '0' COMMENT '是否跳出会话(仅1次浏览即离开)',
+  `started_at` int(10) unsigned NOT NULL DEFAULT '0',
+  `ended_at` int(10) unsigned NOT NULL DEFAULT '0',
+  PRIMARY KEY (`session_id`),
+  UNIQUE KEY `uk_session_key` (`session_key`),
+  KEY `idx_started` (`started_at`),
+  KEY `idx_user` (`user_id`),
+  KEY `idx_visitor` (`visitor_id`),
+  KEY `idx_device_date` (`device_type`,`started_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='运营统计-会话';
+
+
+-- -----------------------------------------------------------------------------
+-- Table structure for mac_analytics_pageview
+-- -----------------------------------------------------------------------------
+DROP TABLE IF EXISTS `mac_analytics_pageview`;
+CREATE TABLE `mac_analytics_pageview` (
+  `analytics_pageview_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `session_id` bigint(20) unsigned NOT NULL DEFAULT '0',
+  `visitor_id` varchar(64) NOT NULL DEFAULT '',
+  `user_id` int(10) unsigned NOT NULL DEFAULT '0',
+  `path` varchar(512) NOT NULL DEFAULT '' COMMENT '路径或路由',
+  `mid` tinyint(3) unsigned NOT NULL DEFAULT '0' COMMENT '模块 1视频2文章8漫画等，0非内容页',
+  `rid` int(10) unsigned NOT NULL DEFAULT '0' COMMENT '内容ID',
+  `type_id` smallint(6) unsigned NOT NULL DEFAULT '0' COMMENT '分类ID，便于关联多维',
+  `stay_ms` int(10) unsigned NOT NULL DEFAULT '0' COMMENT '停留毫秒（离开页或心跳上报）',
+  `prev_path` varchar(512) NOT NULL DEFAULT '' COMMENT '上一页路径，构路径漏斗',
+  `referer_host` varchar(255) NOT NULL DEFAULT '',
+  `ts` int(10) unsigned NOT NULL DEFAULT '0',
+  `stat_date` date NOT NULL,
+  PRIMARY KEY (`analytics_pageview_id`),
+  KEY `idx_session_ts` (`session_id`,`ts`),
+  KEY `idx_ts` (`ts`),
+  KEY `idx_stat_date` (`stat_date`),
+  KEY `idx_content` (`mid`,`rid`,`ts`),
+  KEY `idx_type_ts` (`type_id`,`ts`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='运营统计-页面浏览明细';
+
+
+-- -----------------------------------------------------------------------------
+-- Table structure for mac_analytics_event
+-- -----------------------------------------------------------------------------
+DROP TABLE IF EXISTS `mac_analytics_event`;
+CREATE TABLE `mac_analytics_event` (
+  `analytics_event_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `event_code` varchar(48) NOT NULL COMMENT '事件编码 ad_click / pay_intent / ...',
+  `session_id` bigint(20) unsigned NOT NULL DEFAULT '0',
+  `visitor_id` varchar(64) NOT NULL DEFAULT '',
+  `user_id` int(10) unsigned NOT NULL DEFAULT '0',
+  `device_type` varchar(16) NOT NULL DEFAULT '',
+  `region_code` varchar(16) NOT NULL DEFAULT '',
+  `mid` tinyint(3) unsigned NOT NULL DEFAULT '0',
+  `rid` int(10) unsigned NOT NULL DEFAULT '0',
+  `props` varchar(2048) NOT NULL DEFAULT '' COMMENT 'JSON 扩展字段,5.7+ 环境可改为 JSON 类型更优',
+  `ts` int(10) unsigned NOT NULL DEFAULT '0',
+  `stat_date` date NOT NULL,
+  PRIMARY KEY (`analytics_event_id`),
+  KEY `idx_event_ts` (`event_code`,`ts`),
+  KEY `idx_ts` (`ts`),
+  KEY `idx_stat_date` (`stat_date`),
+  KEY `idx_session_id` (`session_id`),
+  KEY `idx_user_ts` (`user_id`,`ts`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='运营统计-通用事件';
+
+
+-- -----------------------------------------------------------------------------
+-- Table structure for mac_analytics_content_day
+-- -----------------------------------------------------------------------------
+DROP TABLE IF EXISTS `mac_analytics_content_day`;
+CREATE TABLE `mac_analytics_content_day` (
+  `stat_date` date NOT NULL,
+  `mid` tinyint(3) unsigned NOT NULL COMMENT '1视频2文章8漫画',
+  `content_id` int(10) unsigned NOT NULL,
+  `type_id` smallint(6) unsigned NOT NULL DEFAULT '0' COMMENT '分类，冗余便于按类分析',
+  `view_pv` bigint(20) unsigned NOT NULL DEFAULT '0',
+  `view_uv` bigint(20) unsigned NOT NULL DEFAULT '0',
+  `play_or_read_cnt` int(10) unsigned NOT NULL DEFAULT '0' COMMENT '播放/阅读次数（按业务定义）',
+  `avg_stay_ms` int(10) unsigned NOT NULL DEFAULT '0' COMMENT '平均停留',
+  `bounce_cnt` int(10) unsigned NOT NULL DEFAULT '0' COMMENT '仅访问该内容即离开的会话数（任务算）',
+  `collect_add` int(10) unsigned NOT NULL DEFAULT '0' COMMENT '收藏新增',
+  `want_add` int(10) unsigned NOT NULL DEFAULT '0' COMMENT '想看新增',
+  `order_cnt` int(10) unsigned NOT NULL DEFAULT '0' COMMENT '关联订单数（付费转化）',
+  `order_amount` decimal(14,2) unsigned NOT NULL DEFAULT '0.00',
+  `updated_at` int(10) unsigned NOT NULL DEFAULT '0',
+  PRIMARY KEY (`stat_date`,`mid`,`content_id`),
+  KEY `idx_date_type` (`stat_date`,`type_id`),
+  KEY `idx_hot` (`stat_date`,`view_pv`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='运营统计-内容按日效果';
+
+
+-- -----------------------------------------------------------------------------
+-- Table structure for mac_analytics_retention_cohort
+-- -----------------------------------------------------------------------------
+DROP TABLE IF EXISTS `mac_analytics_retention_cohort`;
+CREATE TABLE `mac_analytics_retention_cohort` (
+  `cohort_date` date NOT NULL COMMENT 'cohort 基准日（常用：注册日）',
+  `cohort_type` varchar(16) NOT NULL DEFAULT 'register',
+  `return_day` smallint(5) unsigned NOT NULL COMMENT '回访间隔天 0=当日 1=次日',
+  `user_cnt` int(10) unsigned NOT NULL DEFAULT '0' COMMENT '该日仍活跃用户数',
+  `updated_at` int(10) unsigned NOT NULL DEFAULT '0',
+  PRIMARY KEY (`cohort_date`,`cohort_type`,`return_day`),
+  KEY `idx_cohort` (`cohort_date`,`cohort_type`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='运营统计-留存 cohort';
+
+-- ----------------------------
+-- Table structure for mac_task
+-- ----------------------------
+DROP TABLE IF EXISTS `mac_task`;
+CREATE TABLE `mac_task` (
+  `task_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `task_name` varchar(100) NOT NULL DEFAULT '' COMMENT '任务名称',
+  `task_type` tinyint(1) unsigned NOT NULL DEFAULT '1' COMMENT '任务类型 1=每日任务 2=新手任务',
+  `task_action` varchar(50) NOT NULL DEFAULT '' COMMENT '任务动作标识',
+  `task_icon` varchar(255) NOT NULL DEFAULT '' COMMENT '任务图标',
+  `task_desc` varchar(255) NOT NULL DEFAULT '' COMMENT '任务描述',
+  `task_points` int(10) unsigned NOT NULL DEFAULT '0' COMMENT '奖励积分',
+  `task_target` int(10) unsigned NOT NULL DEFAULT '1' COMMENT '目标次数',
+  `task_sort` int(10) NOT NULL DEFAULT '0' COMMENT '排序',
+  `task_status` tinyint(1) unsigned NOT NULL DEFAULT '1' COMMENT '状态 0=禁用 1=启用',
+  `task_time_add` int(10) unsigned NOT NULL DEFAULT '0' COMMENT '创建时间',
+  `task_time` int(10) unsigned NOT NULL DEFAULT '0' COMMENT '更新时间',
+  PRIMARY KEY (`task_id`),
+  KEY `task_type` (`task_type`),
+  UNIQUE KEY `task_action` (`task_action`),
+  KEY `task_status` (`task_status`),
+  KEY `task_sort` (`task_sort`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='任务定义表';
+
+-- ----------------------------
+-- Default data for mac_task
+-- ----------------------------
+INSERT INTO `mac_task` (`task_name`,`task_type`,`task_action`,`task_desc`,`task_points`,`task_target`,`task_sort`,`task_status`,`task_time_add`,`task_time`) VALUES
+('每日签到',1,'daily_sign','每天签到获得积分奖励',5,1,1,1,0,0),
+('观看影片',1,'watch_vod','每日观看3部影片',3,3,2,1,0,0),
+('分享影片',1,'share_vod','每日分享1次影片到社交平台',2,1,3,1,0,0),
+('发表评论',1,'post_comment','每日发表1条评论',2,1,4,1,0,0),
+('绑定手机',2,'bind_phone','绑定手机号码',20,1,1,1,0,0),
+('绑定邮箱',2,'bind_email','绑定电子邮箱',20,1,2,1,0,0),
+('设置头像',2,'set_portrait','上传个人头像',10,1,3,1,0,0),
+('完善资料',2,'complete_profile','填写个人昵称等资料',10,1,4,1,0,0),
+('首次充值',2,'first_pay','完成首次充值',50,1,5,1,0,0);
+
+-- ----------------------------
+-- Table structure for mac_task_log
+-- ----------------------------
+DROP TABLE IF EXISTS `mac_task_log`;
+CREATE TABLE `mac_task_log` (
+  `log_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `user_id` int(10) unsigned NOT NULL DEFAULT '0' COMMENT '用户ID',
+  `task_id` int(10) unsigned NOT NULL DEFAULT '0' COMMENT '任务ID',
+  `task_action` varchar(50) NOT NULL DEFAULT '' COMMENT '任务动作标识',
+  `log_progress` int(10) unsigned NOT NULL DEFAULT '0' COMMENT '当前进度',
+  `log_status` tinyint(1) unsigned NOT NULL DEFAULT '0' COMMENT '状态 0=进行中 1=已完成待领取 2=已领取',
+  `log_points` int(10) unsigned NOT NULL DEFAULT '0' COMMENT '获得积分',
+  `log_date` date NOT NULL COMMENT '任务日期',
+  `log_time` int(10) unsigned NOT NULL DEFAULT '0' COMMENT '记录时间',
+  `log_claim_time` int(10) unsigned NOT NULL DEFAULT '0' COMMENT '领取奖励时间',
+  PRIMARY KEY (`log_id`),
+  UNIQUE KEY `user_task_date` (`user_id`, `task_id`, `log_date`),
+  KEY `user_id` (`user_id`),
+  KEY `task_id` (`task_id`),
+  KEY `log_status` (`log_status`),
+  KEY `log_date` (`log_date`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户任务记录表';
+
+-- ----------------------------
+-- Table structure for mac_sign_log
+-- ----------------------------
+DROP TABLE IF EXISTS `mac_sign_log`;
+CREATE TABLE `mac_sign_log` (
+  `sign_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `user_id` int(10) unsigned NOT NULL DEFAULT '0' COMMENT '用户ID',
+  `sign_date` date NOT NULL COMMENT '签到日期',
+  `sign_time` int(10) unsigned NOT NULL DEFAULT '0' COMMENT '签到时间戳',
+  `sign_points` int(10) unsigned NOT NULL DEFAULT '0' COMMENT '获得积分',
+  `sign_serial_days` int(10) unsigned NOT NULL DEFAULT '0' COMMENT '连续签到天数',
+  PRIMARY KEY (`sign_id`),
+  UNIQUE KEY `user_date` (`user_id`, `sign_date`),
+  KEY `user_id` (`user_id`),
+  KEY `sign_date` (`sign_date`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='签到记录表';
+
+-- ----------------------------
+-- Table structure for mac_sign_milestone
+-- ----------------------------
+DROP TABLE IF EXISTS `mac_sign_milestone`;
+CREATE TABLE `mac_sign_milestone` (
+  `milestone_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `milestone_name` varchar(100) NOT NULL DEFAULT '' COMMENT '里程碑名称',
+  `milestone_days` int(10) unsigned NOT NULL DEFAULT '0' COMMENT '所需连续签到天数',
+  `milestone_points` int(10) unsigned NOT NULL DEFAULT '0' COMMENT '奖励积分',
+  `milestone_icon` varchar(255) NOT NULL DEFAULT '' COMMENT '里程碑图标',
+  `milestone_desc` varchar(255) NOT NULL DEFAULT '' COMMENT '里程碑描述',
+  `milestone_sort` int(10) NOT NULL DEFAULT '0' COMMENT '排序',
+  `milestone_status` tinyint(1) unsigned NOT NULL DEFAULT '1' COMMENT '状态 0=禁用 1=启用',
+  `milestone_time_add` int(10) unsigned NOT NULL DEFAULT '0' COMMENT '创建时间',
+  `milestone_time` int(10) unsigned NOT NULL DEFAULT '0' COMMENT '更新时间',
+  PRIMARY KEY (`milestone_id`),
+  KEY `milestone_days` (`milestone_days`),
+  KEY `milestone_status` (`milestone_status`),
+  KEY `milestone_sort` (`milestone_sort`)
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COMMENT='签到里程碑定义表';
+
+-- ----------------------------
+-- Default data for mac_sign_milestone
+-- ----------------------------
+INSERT INTO `mac_sign_milestone` (`milestone_name`,`milestone_days`,`milestone_points`,`milestone_desc`,`milestone_sort`,`milestone_status`,`milestone_time_add`,`milestone_time`) VALUES
+('连续签到3天', 3, 5, '连续签到3天可领取5个金币', 1, 1, 0, 0),
+('连续签到10天', 10, 10, '连续签到10天可领取10个金币', 2, 1, 0, 0),
+('连续签到20天', 20, 20, '连续签到20天可领取20个金币', 3, 1, 0, 0),
+('连续签到35天', 35, 30, '连续签到35天可领取30个金币', 4, 1, 0, 0),
+('连续签到55天', 55, 50, '连续签到55天可领取50个金币', 5, 1, 0, 0),
+('连续签到85天', 85, 100, '连续签到85天可领取100个金币', 6, 1, 0, 0);
+
+-- ----------------------------
+-- Table structure for mac_sign_milestone_log
+-- ----------------------------
+DROP TABLE IF EXISTS `mac_sign_milestone_log`;
+CREATE TABLE `mac_sign_milestone_log` (
+  `log_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `user_id` int(10) unsigned NOT NULL DEFAULT '0' COMMENT '用户ID',
+  `milestone_id` int(10) unsigned NOT NULL DEFAULT '0' COMMENT '里程碑ID',
+  `milestone_days` int(10) unsigned NOT NULL DEFAULT '0' COMMENT '里程碑所需天数',
+  `log_points` int(10) unsigned NOT NULL DEFAULT '0' COMMENT '获得积分',
+  `log_time` int(10) unsigned NOT NULL DEFAULT '0' COMMENT '领取时间',
+  PRIMARY KEY (`log_id`),
+  UNIQUE KEY `user_milestone` (`user_id`, `milestone_id`),
+  KEY `user_id` (`user_id`),
+  KEY `milestone_id` (`milestone_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COMMENT='签到里程碑领取记录表';
+-- Table structure for mac_ext_provider
+-- ----------------------------
+DROP TABLE IF EXISTS `mac_ext_provider`;
+CREATE TABLE `mac_ext_provider` (
+  `provider_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `provider_code` varchar(32) NOT NULL DEFAULT '',
+  `provider_name` varchar(80) NOT NULL DEFAULT '',
+  `provider_enabled` tinyint(1) unsigned NOT NULL DEFAULT '1',
+  `provider_type` varchar(32) NOT NULL DEFAULT 'api',
+  `provider_conf` mediumtext NOT NULL,
+  `provider_time_add` int(10) unsigned NOT NULL DEFAULT '0',
+  `provider_time_update` int(10) unsigned NOT NULL DEFAULT '0',
+  PRIMARY KEY (`provider_id`),
+  UNIQUE KEY `provider_code` (`provider_code`),
+  KEY `provider_enabled` (`provider_enabled`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='External source provider config';
+
+-- ----------------------------
+-- Table structure for mac_ext_source_item
+-- ----------------------------
+DROP TABLE IF EXISTS `mac_ext_source_item`;
+CREATE TABLE `mac_ext_source_item` (
+  `item_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `provider_code` varchar(32) NOT NULL DEFAULT '',
+  `item_key` varchar(128) NOT NULL DEFAULT '',
+  `item_mid` tinyint(3) unsigned NOT NULL DEFAULT '0',
+  `item_title` varchar(255) NOT NULL DEFAULT '',
+  `item_subtitle` varchar(255) NOT NULL DEFAULT '',
+  `item_snippet` varchar(500) NOT NULL DEFAULT '',
+  `item_url` varchar(500) NOT NULL DEFAULT '',
+  `item_cover` varchar(500) NOT NULL DEFAULT '',
+  `item_score` decimal(8,4) NOT NULL DEFAULT '0.0000',
+  `item_release_date` varchar(20) NOT NULL DEFAULT '',
+  `item_payload` mediumtext NOT NULL,
+  `item_time_add` int(10) unsigned NOT NULL DEFAULT '0',
+  `item_time_update` int(10) unsigned NOT NULL DEFAULT '0',
+  PRIMARY KEY (`item_id`),
+  UNIQUE KEY `uk_provider_item` (`provider_code`,`item_key`),
+  KEY `idx_mid_score` (`item_mid`,`item_score`),
+  KEY `idx_title` (`item_title`),
+  KEY `idx_time_update` (`item_time_update`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='External source normalized items';
+
+-- ----------------------------
+-- Table structure for mac_ext_source_map
+-- ----------------------------
+DROP TABLE IF EXISTS `mac_ext_source_map`;
+CREATE TABLE `mac_ext_source_map` (
+  `map_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `provider_code` varchar(32) NOT NULL DEFAULT '',
+  `item_key` varchar(128) NOT NULL DEFAULT '',
+  `cms_mid` tinyint(3) unsigned NOT NULL DEFAULT '0',
+  `cms_id` int(10) unsigned NOT NULL DEFAULT '0',
+  `map_confidence` decimal(8,4) NOT NULL DEFAULT '0.0000',
+  `map_time_add` int(10) unsigned NOT NULL DEFAULT '0',
+  `map_time_update` int(10) unsigned NOT NULL DEFAULT '0',
+  PRIMARY KEY (`map_id`),
+  UNIQUE KEY `uk_map` (`provider_code`,`item_key`,`cms_mid`,`cms_id`),
+  KEY `idx_cms_obj` (`cms_mid`,`cms_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='External source to CMS mapping';
+
+-- ----------------------------
+-- Table structure for mac_ext_search_cache
+-- ----------------------------
+DROP TABLE IF EXISTS `mac_ext_search_cache`;
+CREATE TABLE `mac_ext_search_cache` (
+  `cache_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `cache_key` char(40) NOT NULL DEFAULT '',
+  `query_word` varchar(255) NOT NULL DEFAULT '',
+  `query_mid` tinyint(3) unsigned NOT NULL DEFAULT '0',
+  `provider_code` varchar(32) NOT NULL DEFAULT '',
+  `result_total` int(10) unsigned NOT NULL DEFAULT '0',
+  `result_payload` mediumtext NOT NULL,
+  `expire_time` int(10) unsigned NOT NULL DEFAULT '0',
+  `cache_time_add` int(10) unsigned NOT NULL DEFAULT '0',
+  `cache_time_update` int(10) unsigned NOT NULL DEFAULT '0',
+  PRIMARY KEY (`cache_id`),
+  UNIQUE KEY `uk_cache_key` (`cache_key`),
+  KEY `idx_query` (`query_word`,`query_mid`),
+  KEY `idx_expire` (`expire_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='External search cache';
+
+-- ----------------------------
+-- Table structure for mac_ext_sync_job
+-- ----------------------------
+DROP TABLE IF EXISTS `mac_ext_sync_job`;
+CREATE TABLE `mac_ext_sync_job` (
+  `job_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `provider_code` varchar(32) NOT NULL DEFAULT '',
+  `job_type` varchar(32) NOT NULL DEFAULT 'feed_recent',
+  `job_status` tinyint(3) unsigned NOT NULL DEFAULT '1',
+  `job_param` varchar(1000) NOT NULL DEFAULT '',
+  `job_last_run` int(10) unsigned NOT NULL DEFAULT '0',
+  `job_next_run` int(10) unsigned NOT NULL DEFAULT '0',
+  `job_interval` int(10) unsigned NOT NULL DEFAULT '3600',
+  `job_retry` tinyint(3) unsigned NOT NULL DEFAULT '0',
+  `job_time_add` int(10) unsigned NOT NULL DEFAULT '0',
+  `job_time_update` int(10) unsigned NOT NULL DEFAULT '0',
+  PRIMARY KEY (`job_id`),
+  KEY `idx_status_next` (`job_status`,`job_next_run`),
+  KEY `idx_provider` (`provider_code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='External source sync jobs';
+
+-- ----------------------------
+-- Table structure for mac_ext_sync_log
+-- ----------------------------
+DROP TABLE IF EXISTS `mac_ext_sync_log`;
+CREATE TABLE `mac_ext_sync_log` (
+  `log_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `job_id` bigint(20) unsigned NOT NULL DEFAULT '0',
+  `provider_code` varchar(32) NOT NULL DEFAULT '',
+  `log_status` tinyint(3) unsigned NOT NULL DEFAULT '1',
+  `log_msg` varchar(1000) NOT NULL DEFAULT '',
+  `log_total` int(10) unsigned NOT NULL DEFAULT '0',
+  `log_success` int(10) unsigned NOT NULL DEFAULT '0',
+  `log_time_add` int(10) unsigned NOT NULL DEFAULT '0',
+  PRIMARY KEY (`log_id`),
+  KEY `idx_provider_time` (`provider_code`,`log_time_add`),
+  KEY `idx_job` (`job_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='External source sync logs';
+
+-- ----------------------------
+-- Table structure for mac_chatroom
+-- ----------------------------
+DROP TABLE IF EXISTS `mac_chatroom`;
+CREATE TABLE `mac_chatroom` (
+  `chat_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `vod_id` int(10) unsigned NOT NULL DEFAULT '0' COMMENT '影片ID(聊天室房间)',
+  `user_id` int(10) unsigned NOT NULL DEFAULT '0' COMMENT '用户ID',
+  `user_name` varchar(30) NOT NULL DEFAULT '' COMMENT '用户昵称',
+  `chat_content` varchar(500) NOT NULL DEFAULT '' COMMENT '聊天内容',
+  `chat_ip` int(10) unsigned NOT NULL DEFAULT '0' COMMENT 'IP',
+  `chat_time` int(10) unsigned NOT NULL DEFAULT '0' COMMENT '发送时间',
+  `chat_status` tinyint(1) unsigned NOT NULL DEFAULT '1' COMMENT '状态 0=禁用 1=正常',
+  `chat_report` mediumint(8) unsigned NOT NULL DEFAULT '0' COMMENT '举报次数',
+  PRIMARY KEY (`chat_id`),
+  KEY `vod_id` (`vod_id`),
+  KEY `user_id` (`user_id`),
+  KEY `chat_time` (`chat_time`),
+  KEY `chat_status` (`chat_status`),
+  KEY `vod_chat` (`vod_id`, `chat_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='聊天室消息表';
+
+-- ----------------------------
+-- Table structure for mac_danmaku
+-- ----------------------------
+DROP TABLE IF EXISTS `mac_danmaku`;
+CREATE TABLE `mac_danmaku` (
+  `danmaku_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `vod_id` int(10) unsigned NOT NULL DEFAULT '0' COMMENT '影片ID',
+  `vod_sid` tinyint(3) unsigned NOT NULL DEFAULT '0' COMMENT '播放源ID',
+  `vod_nid` smallint(6) unsigned NOT NULL DEFAULT '0' COMMENT '集数ID',
+  `user_id` int(10) unsigned NOT NULL DEFAULT '0' COMMENT '用户ID',
+  `user_name` varchar(30) NOT NULL DEFAULT '' COMMENT '用户昵称',
+  `danmaku_time` float unsigned NOT NULL DEFAULT '0' COMMENT '弹幕出现的影片时间点(秒)',
+  `danmaku_type` tinyint(1) unsigned NOT NULL DEFAULT '0' COMMENT '弹幕类型 0=滚动 1=顶部 2=底部',
+  `danmaku_color` varchar(10) NOT NULL DEFAULT '#FFFFFF' COMMENT '弹幕颜色',
+  `danmaku_text` varchar(200) NOT NULL DEFAULT '' COMMENT '弹幕内容',
+  `danmaku_ip` int(10) unsigned NOT NULL DEFAULT '0' COMMENT 'IP',
+  `danmaku_send_time` int(10) unsigned NOT NULL DEFAULT '0' COMMENT '发送时间戳',
+  `danmaku_status` tinyint(1) unsigned NOT NULL DEFAULT '1' COMMENT '状态 0=禁用 1=正常',
+  `danmaku_report` mediumint(8) unsigned NOT NULL DEFAULT '0' COMMENT '举报次数',
+  PRIMARY KEY (`danmaku_id`),
+  KEY `vod_id` (`vod_id`),
+  KEY `vod_episode` (`vod_id`, `vod_sid`, `vod_nid`),
+  KEY `user_id` (`user_id`),
+  KEY `danmaku_send_time` (`danmaku_send_time`),
+  KEY `danmaku_status` (`danmaku_status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='弹幕表';
+
+-- ----------------------------
+-- Table structure for mac_live_category
+-- ----------------------------
+DROP TABLE IF EXISTS `mac_live_category`;
+CREATE TABLE `mac_live_category` (
+  `cate_id` int(10) unsigned NOT NULL AUTO_INCREMENT COMMENT '分类ID',
+  `cate_name` varchar(100) NOT NULL DEFAULT '' COMMENT '分类名称',
+  `cate_en` varchar(100) NOT NULL DEFAULT '' COMMENT '分类英文名',
+  `cate_pic` varchar(1024) NOT NULL DEFAULT '' COMMENT '分类图片',
+  `cate_sort` smallint(5) unsigned NOT NULL DEFAULT '0' COMMENT '排序',
+  `cate_status` tinyint(1) unsigned NOT NULL DEFAULT '1' COMMENT '状态 0禁用 1启用',
+  `cate_time_add` int(10) unsigned NOT NULL DEFAULT '0' COMMENT '添加时间',
+  `cate_time` int(10) unsigned NOT NULL DEFAULT '0' COMMENT '更新时间',
+  PRIMARY KEY (`cate_id`),
+  KEY `cate_sort` (`cate_sort`),
+  KEY `cate_status` (`cate_status`)
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COMMENT='直播分类表';
+
+-- ----------------------------
+-- Default data for mac_live_category
+-- ----------------------------
+INSERT INTO `mac_live_category` (`cate_name`,`cate_en`,`cate_sort`,`cate_status`,`cate_time_add`,`cate_time`) VALUES
+('央视频道','cctv',0,1,0,0),
+('卫视频道','wstv',1,1,0,0),
+('地方频道','local',2,1,0,0),
+('港澳台','hktw',3,1,0,0);
+
+-- ----------------------------
+-- Table structure for mac_live
+-- ----------------------------
+DROP TABLE IF EXISTS `mac_live`;
+CREATE TABLE `mac_live` (
+  `live_id` int(10) unsigned NOT NULL AUTO_INCREMENT COMMENT '直播ID',
+  `cate_id` int(10) unsigned NOT NULL DEFAULT '0' COMMENT '分类ID',
+  `live_name` varchar(255) NOT NULL DEFAULT '' COMMENT '频道名称',
+  `live_sub` varchar(255) NOT NULL DEFAULT '' COMMENT '频道副标题',
+  `live_en` varchar(255) NOT NULL DEFAULT '' COMMENT '频道英文名',
+  `live_pic` varchar(1024) NOT NULL DEFAULT '' COMMENT '频道图片/LOGO',
+  `live_url` text COMMENT '播放地址,多线路用#分隔,格式:清晰度名$地址',
+  `live_play_from` varchar(255) NOT NULL DEFAULT 'hls' COMMENT '播放来源/协议 hls/flv/rtmp',
+  `live_status` tinyint(1) unsigned NOT NULL DEFAULT '1' COMMENT '状态 0禁用 1启用',
+  `live_lock` tinyint(1) unsigned NOT NULL DEFAULT '0' COMMENT '锁定 0否 1是',
+  `live_sort` smallint(5) unsigned NOT NULL DEFAULT '0' COMMENT '排序',
+  `live_level` tinyint(1) unsigned NOT NULL DEFAULT '0' COMMENT '推荐等级',
+  `live_hits` mediumint(8) unsigned NOT NULL DEFAULT '0' COMMENT '总点击',
+  `live_hits_day` mediumint(8) unsigned NOT NULL DEFAULT '0' COMMENT '日点击',
+  `live_hits_week` mediumint(8) unsigned NOT NULL DEFAULT '0' COMMENT '周点击',
+  `live_hits_month` mediumint(8) unsigned NOT NULL DEFAULT '0' COMMENT '月点击',
+  `live_time_add` int(10) unsigned NOT NULL DEFAULT '0' COMMENT '添加时间',
+  `live_time` int(10) unsigned NOT NULL DEFAULT '0' COMMENT '更新时间',
+  `live_time_hits` int(10) unsigned NOT NULL DEFAULT '0' COMMENT '最近点击时间',
+  `live_blurb` varchar(255) NOT NULL DEFAULT '' COMMENT '简要描述',
+  `live_content` text COMMENT '频道介绍',
+  PRIMARY KEY (`live_id`),
+  KEY `cate_id` (`cate_id`),
+  KEY `live_name` (`live_name`(100)),
+  KEY `live_status` (`live_status`),
+  KEY `live_sort` (`live_sort`),
+  KEY `live_level` (`live_level`),
+  KEY `live_hits` (`live_hits`),
+  KEY `live_time` (`live_time`)
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COMMENT='直播频道表';
+
+-- ----------------------------
+-- Default data for mac_live (CCTV 默认信号源,管理员可在后台调整)
+-- ----------------------------
+INSERT INTO `mac_live` (`cate_id`,`live_name`,`live_en`,`live_url`,`live_play_from`,`live_status`,`live_sort`,`live_time_add`,`live_time`,`live_blurb`) VALUES
+(1,'CCTV-1 综合','cctv1','HD$https://pili-live-hls.cntv.myqcloud.com/live/cctv1hd.m3u8','hls',1,120,0,0,'CCTV-1 综合频道 中央电视台官方直播'),
+(1,'CCTV-2 财经','cctv2','HD$https://pili-live-hls.cntv.myqcloud.com/live/cctv2hd.m3u8','hls',1,119,0,0,'CCTV-2 财经频道 中央电视台官方直播'),
+(1,'CCTV-3 综艺','cctv3','HD$https://pili-live-hls.cntv.myqcloud.com/live/cctv3hd.m3u8','hls',1,118,0,0,'CCTV-3 综艺频道 中央电视台官方直播'),
+(1,'CCTV-4 中文国际','cctv4','HD$https://pili-live-hls.cntv.myqcloud.com/live/cctv4hd.m3u8','hls',1,117,0,0,'CCTV-4 中文国际频道 中央电视台官方直播'),
+(1,'CCTV-5 体育','cctv5','HD$https://pili-live-hls.cntv.myqcloud.com/live/cctv5hd.m3u8','hls',1,116,0,0,'CCTV-5 体育频道 中央电视台官方直播'),
+(1,'CCTV-5+ 体育赛事','cctv5p','HD$https://pili-live-hls.cntv.myqcloud.com/live/cctv5phd.m3u8','hls',1,115,0,0,'CCTV-5+ 体育赛事频道 中央电视台官方直播'),
+(1,'CCTV-6 电影','cctv6','HD$https://pili-live-hls.cntv.myqcloud.com/live/cctv6hd.m3u8','hls',1,114,0,0,'CCTV-6 电影频道 中央电视台官方直播'),
+(1,'CCTV-7 国防军事','cctv7','HD$https://pili-live-hls.cntv.myqcloud.com/live/cctv7hd.m3u8','hls',1,113,0,0,'CCTV-7 国防军事频道 中央电视台官方直播'),
+(1,'CCTV-8 电视剧','cctv8','HD$https://pili-live-hls.cntv.myqcloud.com/live/cctv8hd.m3u8','hls',1,112,0,0,'CCTV-8 电视剧频道 中央电视台官方直播'),
+(1,'CCTV-9 纪录','cctv9','HD$https://pili-live-hls.cntv.myqcloud.com/live/cctv9hd.m3u8','hls',1,111,0,0,'CCTV-9 纪录频道 中央电视台官方直播'),
+(1,'CCTV-10 科教','cctv10','HD$https://pili-live-hls.cntv.myqcloud.com/live/cctv10hd.m3u8','hls',1,110,0,0,'CCTV-10 科教频道 中央电视台官方直播'),
+(1,'CCTV-11 戏曲','cctv11','HD$https://pili-live-hls.cntv.myqcloud.com/live/cctv11hd.m3u8','hls',1,109,0,0,'CCTV-11 戏曲频道 中央电视台官方直播'),
+(1,'CCTV-12 社会与法','cctv12','HD$https://pili-live-hls.cntv.myqcloud.com/live/cctv12hd.m3u8','hls',1,108,0,0,'CCTV-12 社会与法频道 中央电视台官方直播'),
+(1,'CCTV-13 新闻','cctv13','HD$https://pili-live-hls.cntv.myqcloud.com/live/cctv13hd.m3u8','hls',1,107,0,0,'CCTV-13 新闻频道 中央电视台官方直播'),
+(1,'CCTV-14 少儿','cctv14','HD$https://pili-live-hls.cntv.myqcloud.com/live/cctv14hd.m3u8','hls',1,106,0,0,'CCTV-14 少儿频道 中央电视台官方直播'),
+(1,'CCTV-15 音乐','cctv15','HD$https://pili-live-hls.cntv.myqcloud.com/live/cctv15hd.m3u8','hls',1,105,0,0,'CCTV-15 音乐频道 中央电视台官方直播'),
+(1,'CCTV-17 农业农村','cctv17','HD$https://pili-live-hls.cntv.myqcloud.com/live/cctv17hd.m3u8','hls',1,104,0,0,'CCTV-17 农业农村频道 中央电视台官方直播');

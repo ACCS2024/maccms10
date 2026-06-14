@@ -3,10 +3,20 @@ namespace app\common\model;
 use think\Db;
 use think\Cache;
 use app\common\util\Pinyin;
+use app\common\util\MeilisearchService;
+use app\common\util\MeilisearchListBridge;
+use app\common\util\MeilisearchSync;
 
 class Manga extends Base {
+    use RecycleBinTrait;
+
     // 设置数据表（不含前缀）
     protected $name = 'manga';
+
+    protected function getRecycleTimeField(): string
+    {
+        return 'manga_recycle_time';
+    }
 
     // 定义时间戳字段名
     protected $createTime = '';
@@ -31,18 +41,25 @@ class Manga extends Base {
 
     public function countData($where)
     {
+        $this->ensureRecycleColumnExists();
+        if(!is_array($where)){
+            $where = json_decode($where,true);
+        }
+        $where = $this->mergeRecycleWhere($where);
         $total = $this->where($where)->count();
         return $total;
     }
 
     public function listData($where,$order,$page=1,$limit=20,$start=0,$field='*',$addition=1,$totalshow=1)
     {
+        $this->ensureRecycleColumnExists();
         $page = $page > 0 ? (int)$page : 1;
         $limit = $limit ? (int)$limit : 20;
         $start = $start ? (int)$start : 0;
         if(!is_array($where)){
             $where = json_decode($where,true);
         }
+        $where = $this->mergeRecycleWhere($where);
         $where2='';
         if(!empty($where['_string'])){
             $where2 = $where['_string'];
@@ -61,7 +78,9 @@ class Manga extends Base {
         //用户组
         $group_list = model('Group')->getCache('group_list');
 
+        $vip_exclusive = mac_get_vip_exclusive_type_ids();
         foreach($list as $k=>$v){
+            $list[$k]['type_is_vip_exclusive'] = in_array($v['type_id'] ?? 0, $vip_exclusive) ? 1 : 0;
             if($addition==1){
 	            if(!empty($v['type_id'])) {
 	                $list[$k]['type'] = $type_list[$v['type_id']];
@@ -77,12 +96,14 @@ class Manga extends Base {
 
     public function listRepeatData($where,$order,$page=1,$limit=20,$start=0,$field='*',$addition=1)
     {
+        $this->ensureRecycleColumnExists();
         $page = $page > 0 ? (int)$page : 1;
         $limit = $limit ? (int)$limit : 20;
         $start = $start ? (int)$start : 0;
         if(!is_array($where)){
             $where = json_decode($where,true);
         }
+        $where = $this->mergeRecycleWhere($where);
         $limit_str = ($limit * ($page-1) + $start) .",". $limit;
 
         $total = $this
@@ -105,7 +126,9 @@ class Manga extends Base {
         //用户组
         $group_list = model('Group')->getCache('group_list');
 
+        $vip_exclusive = mac_get_vip_exclusive_type_ids();
         foreach($list as $k=>$v){
+            $list[$k]['type_is_vip_exclusive'] = in_array($v['type_id'] ?? 0, $vip_exclusive) ? 1 : 0;
             if($addition==1){
                 if(!empty($v['type_id'])) {
                     $list[$k]['type'] = $type_list[$v['type_id']];
@@ -139,9 +162,9 @@ class Manga extends Base {
         $tag = $lp['tag'];
         $class = $lp['class'];
         $letter = $lp['letter'];
-        $start = intval(abs($lp['start']));
-        $num = intval(abs($lp['num']));
-        $half = intval(abs($lp['half']));
+        $start = abs(intval($lp['start']));
+        $num = abs(intval($lp['num']));
+        $half = abs(intval($lp['half']));
         $timeadd = $lp['timeadd'];
         $timehits = $lp['timehits'];
         $time = $lp['time'];
@@ -288,11 +311,11 @@ class Manga extends Base {
                     }
                 }
                 $type = array_unique($type);
-                $where['type_id'] = ['in', implode(',', $type)];
+                $where['type_id'] = ['in', array_values(array_map('intval', $type))];
             }
         }
         if(!empty($typenot)){
-            $where['type_id'] = ['not in',$typenot];
+            $where['type_id'] = ['not in', array_map('intval', explode(',', $typenot))];
         }
         if(!empty($tid)) {
             $where['type_id|type_id_1'] = ['eq',$tid];
@@ -361,38 +384,60 @@ class Manga extends Base {
                 }
             }
         }
-        if($by=='rnd'){
-            $data_count = $this->countData($where);
-            $page_total = floor($data_count / $lp['num']) + 1;
-            if($data_count < $lp['num']){
-                $lp['num'] = $data_count;
+        $use_rnd_order = ($by == 'rnd');
+        if (!$use_rnd_order) {
+            if (!in_array($by, ['id', 'time', 'time_add', 'score', 'hits', 'hits_day', 'hits_week', 'hits_month', 'up', 'down', 'level', 'rnd'])) {
+                $by = 'time';
             }
-            $randi = @mt_rand(1, $page_total);
-            $page = $randi;
-            $by = 'hits_week';
+        }
+        if (!in_array($order, ['asc', 'desc'])) {
             $order = 'desc';
         }
-
-        if(!in_array($by, ['id', 'time','time_add','score','hits','hits_day','hits_week','hits_month','up','down','level','rnd'])) {
-            $by = 'time';
+        if ($use_rnd_order) {
+            $order = ['[rand]' => '[rand]'];
+        } else {
+            $order = 'manga_' . $by . ' ' . $order;
         }
-        if(!in_array($order, ['asc', 'desc'])) {
-            $order = 'desc';
+        $meili = null;
+        if (!$use_rnd_order && MeilisearchService::enabled()) {
+            $meili = MeilisearchListBridge::applyForManga(
+                $where,
+                (string)$wd,
+                (string)$name,
+                (string)$tag,
+                (string)$class,
+                $page,
+                $num,
+                $start,
+                $order
+            );
+            if ($meili !== null) {
+                $where = $meili['where'];
+                $order = $meili['order'];
+            }
         }
-        $order= 'manga_'.$by .' ' . $order;
         $where_cache = $where;
-        if(!empty($randi)){
+        if ($use_rnd_order) {
             unset($where_cache['manga_id']);
             $where_cache['order'] = 'rnd';
         }
-        $cach_name = $GLOBALS['config']['app']['cache_flag']. '_' .md5('manga_listcache_'.http_build_query($where_cache).'_'.$order.'_'.$page.'_'.$num.'_'.$start.'_'.$pageurl);
-        $res = Cache::get($cach_name);
+        $order_cache_key = ($meili !== null) ? 'meilisearch_relevance' : (is_array($order) ? 'sql_rand' : $order);
+        $cach_name = $GLOBALS['config']['app']['cache_flag']. '_' .md5('manga_listcache_'.http_build_query($where_cache).'_'.$order_cache_key.'_'.$page.'_'.$num.'_'.$start.'_'.$pageurl);
+        $res = $use_rnd_order ? null : Cache::get($cach_name);
         if(empty($cachetime)){
             $cachetime = $GLOBALS['config']['app']['cache_time'];
         }
         if($GLOBALS['config']['app']['cache_core']==0 || empty($res)) {
-            $res = $this->listData($where,$order,$page,$num,$start,'*',1,$totalshow);
-            if($GLOBALS['config']['app']['cache_core']==1) {
+            if ($meili !== null) {
+                $res = $this->listData($where, $order, $page, $num, $start, '*', 1, 0);
+                if ($totalshow == 1) {
+                    $res['total'] = $meili['total'];
+                    $res['pagecount'] = $num > 0 ? (int)ceil($meili['total'] / $num) : 0;
+                }
+            } else {
+                $res = $this->listData($where,$order,$page,$num,$start,'*',1,$totalshow);
+            }
+            if($GLOBALS['config']['app']['cache_core']==1 && !$use_rnd_order) {
                 Cache::set($cach_name, $res, $cachetime);
             }
         }
@@ -406,6 +451,8 @@ class Manga extends Base {
         if(empty($where) || !is_array($where)){
             return ['code'=>1001,'msg'=>lang('param_err')];
         }
+        $this->ensureRecycleColumnExists();
+        $where = $this->mergeRecycleWhere($where);
         $data_cache = false;
         $key = $GLOBALS['config']['app']['cache_flag']. '_'.'manga_detail_'.$where['manga_id'][1].'_'.$where['manga_en'][1];
         if($where['manga_id'][0]=='eq' || $where['manga_en'][0]=='eq'){
@@ -440,6 +487,8 @@ class Manga extends Base {
                 $group_list = model('Group')->getCache('group_list');
                 $info['group'] = $group_list[$info['group_id']];
             }
+            $vip_exclusive = mac_get_vip_exclusive_type_ids();
+            $info['type_is_vip_exclusive'] = in_array($info['type_id'] ?? 0, $vip_exclusive) ? 1 : 0;
             if($GLOBALS['config']['app']['cache_core']==1 && $data_cache && $cache==1) {
                 Cache::set($key, $info);
             }
@@ -555,17 +604,29 @@ class Manga extends Base {
         if(false === $res){
             return ['code'=>1002,'msg'=>lang('save_err').'：'.$this->getError() ];
         }
+        $ixMid = !empty($data['manga_id']) ? intval($data['manga_id']) : intval($this->getLastInsID());
+        MeilisearchSync::afterMangaSave($ixMid);
+
         return ['code'=>1,'msg'=>lang('save_ok')];
     }
 
     public function delData($where)
     {
+        if(!is_array($where)){
+            $where = json_decode($where,true);
+        }
+        if(!is_array($where)){
+            return ['code'=>1001,'msg'=>lang('param_err')];
+        }
+        $where['_recycle'] = 'all';
         $list = $this->listData($where,'',1,9999);
         if($list['code'] !==1){
             return ['code'=>1001,'msg'=>lang('del_err').'：'.$this->getError() ];
         }
+        $where = $this->mergeRecycleWhere($where);
         $path = './';
         foreach($list['list'] as $k=>$v){
+            MeilisearchSync::deleteManga(intval($v['manga_id']));
             $pic = $path.$v['manga_pic'];
             if(file_exists($pic) && (substr($pic,0,8) == "./upload") || count( explode("./",$pic) ) ==1){
                 unlink($pic);

@@ -38,6 +38,26 @@ return array (
     'score' => '\\d+',
     'limit' => '\\d+',
   ),
+  'sitehome' =>
+  array (
+    0 => 'index/home',
+    1 =>
+    array (
+    ),
+    2 =>
+    array (
+    ),
+  ),
+  'publish-<id>' =>
+  array (
+    0 => 'index/publish_group',
+    1 =>
+    array (
+    ),
+    2 =>
+    array (
+    ),
+  ),
   'map' => 
   array (
     0 => 'map/index',
@@ -378,6 +398,16 @@ return array (
     array (
     ),
   ),
+  'artread/<id>-<page?>' =>
+  array(
+    0 => 'art/read',
+    1 =>
+    array(
+    ),
+    2 =>
+    array(
+    ),
+  ),
     'manga-<page?>' =>
     array (
         0 => 'manga/index',
@@ -471,6 +501,26 @@ return array (
   'label-<file>' => 
   array (
     0 => 'label/index',
+    1 => 
+    array (
+    ),
+    2 => 
+    array (
+    ),
+  ),
+  'liveshow' => 
+  array (
+    0 => 'live/show',
+    1 => 
+    array (
+    ),
+    2 => 
+    array (
+    ),
+  ),
+  'liveplay/<id>' => 
+  array (
+    0 => 'live/play',
     1 => 
     array (
     ),

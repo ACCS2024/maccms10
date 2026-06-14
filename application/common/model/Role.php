@@ -3,6 +3,9 @@ namespace app\common\model;
 use think\Db;
 use think\Cache;
 use app\common\util\Pinyin;
+use app\common\util\MeilisearchService;
+use app\common\util\MeilisearchListBridge;
+use app\common\util\MeilisearchSync;
 
 class Role extends Base {
     // 设置数据表（不含前缀）
@@ -44,6 +47,7 @@ class Role extends Base {
         }
 
         $limit_str = ($limit * ($page-1) + $start) .",".$limit;
+        $total = 0;
         if($totalshow==1) {
             $total = $this->where($where)->count();
         }
@@ -55,7 +59,7 @@ class Role extends Base {
                 $vod_ids[$v['role_rid']] = $v['role_rid'];
             }
             $where2=[];
-            $where2['vod_id'] = ['in', implode(',',$vod_ids)];
+            $where2['vod_id'] = ['in', array_values(array_map('intval', $vod_ids))];
             $tmp_list = model('Vod')->listData($where2,'vod_id desc',1,999,0);
             //$tmp_list = Db::name('Vod')->field('vod_id,vod_name,vod_en,type_id,type_id_1')->where($where2)->select();
             foreach($tmp_list['list'] as $k=>$v){
@@ -87,9 +91,9 @@ class Role extends Base {
         $name = $lp['name'];
         $rid = $lp['rid'];
         $letter = $lp['letter'];
-        $start = intval(abs($lp['start']));
-        $num = intval(abs($lp['num']));
-        $half = intval(abs($lp['half']));
+        $start = abs(intval($lp['start']));
+        $num = abs(intval($lp['num']));
+        $half = abs(intval($lp['half']));
         $timeadd = $lp['timeadd'];
         $timehits = $lp['timehits'];
         $time = $lp['time'];
@@ -235,39 +239,61 @@ class Role extends Base {
         if(!empty($wd)) {
             $where['role_name|role_en'] = ['like', '%' . $wd . '%'];
         }
-        if($by=='rnd'){
-            $data_count = $this->countData($where);
-            $page_total = floor($data_count / $lp['num']) + 1;
-            if($data_count < $lp['num']){
-                $lp['num'] = $data_count;
-            }
-            $randi = @mt_rand(1, $page_total);
-            $page = $randi;
-            $by = 'hits_week';
-            $order = 'desc';
-        }
+        $use_rnd_order = ($by == 'rnd');
         // https://github.com/magicblack/maccms10/issues/1050
-        if(!in_array($by, ['id', 'time','time_add','score','hits','hits_day','hits_week','hits_month','up','down','level','rnd','sort'])) {
-            $by = 'time';
+        if (!$use_rnd_order) {
+            if (!in_array($by, ['id', 'time', 'time_add', 'score', 'hits', 'hits_day', 'hits_week', 'hits_month', 'up', 'down', 'level', 'rnd', 'sort'])) {
+                $by = 'time';
+            }
         }
-        if(!in_array($order, ['asc', 'desc'])) {
+        if (!in_array($order, ['asc', 'desc'])) {
             $order = 'desc';
         }
-        $order= 'role_'.$by .' ' . $order;
+        if ($use_rnd_order) {
+            $order = ['[rand]' => '[rand]'];
+        } else {
+            $order = 'role_' . $by . ' ' . $order;
+        }
+        $meili = null;
+        if (!$use_rnd_order && MeilisearchService::enabled()) {
+            $meili = MeilisearchListBridge::applyForRole(
+                $where,
+                (string)$wd,
+                (string)$name,
+                (string)$actor,
+                $page,
+                $num,
+                $start,
+                $order
+            );
+            if ($meili !== null) {
+                $where = $meili['where'];
+                $order = $meili['order'];
+            }
+        }
         $where_cache = $where;
-        if(!empty($randi)){
+        if ($use_rnd_order) {
             unset($where_cache['role_id']);
             $where_cache['order'] = 'rnd';
         }
+        $order_cache_key = ($meili !== null) ? 'meilisearch_relevance' : (is_array($order) ? 'sql_rand' : $order);
 
-        $cach_name = $GLOBALS['config']['app']['cache_flag']. '_' . md5('role_listcache_'.http_build_query($where_cache).'_'.$order.'_'.$page.'_'.$num.'_'.$start.'_'.$pageurl);
-        $res = Cache::get($cach_name);
+        $cach_name = $GLOBALS['config']['app']['cache_flag']. '_' . md5('role_listcache_'.http_build_query($where_cache).'_'.$order_cache_key.'_'.$page.'_'.$num.'_'.$start.'_'.$pageurl);
+        $res = $use_rnd_order ? null : Cache::get($cach_name);
         if(empty($cachetime)){
             $cachetime = $GLOBALS['config']['app']['cache_time'];
         }
         if($GLOBALS['config']['app']['cache_core']==0 || empty($res)) {
-            $res = $this->listData($where,$order,$page,$num,$start,'*',1,$totalshow);
-            if($GLOBALS['config']['app']['cache_core']==1) {
+            if ($meili !== null) {
+                $res = $this->listData($where, $order, $page, $num, $start, '*', 1, 0);
+                if ($totalshow == 1) {
+                    $res['total'] = $meili['total'];
+                    $res['pagecount'] = $num > 0 ? (int)ceil($meili['total'] / $num) : 0;
+                }
+            } else {
+                $res = $this->listData($where,$order,$page,$num,$start,'*',1,$totalshow);
+            }
+            if($GLOBALS['config']['app']['cache_core']==1 && !$use_rnd_order) {
                 Cache::set($cach_name, $res, $cachetime);
             }
         }
@@ -364,16 +390,25 @@ class Role extends Base {
         if(false === $res){
             return ['code'=>1002,'msg'=>lang('save_err').'：'.$this->getError() ];
         }
+        $ixRoleId = !empty($data['role_id']) ? intval($data['role_id']) : intval($this->getLastInsID());
+        MeilisearchSync::afterRoleSave($ixRoleId);
+
         return ['code'=>1,'msg'=>lang('save_ok')];
     }
 
     public function delData($where)
     {
+        $list = $this->field('role_id,role_pic')->where($where)->select();
+        if (!is_array($list)) {
+            $list = [];
+        }
+        foreach ($list as $v) {
+            MeilisearchSync::deleteRole(intval($v['role_id']));
+        }
         $res = $this->where($where)->delete();
         if($res===false){
             return ['code'=>1001,'msg'=>lang('del_err').'：'.$this->getError() ];
         }
-        $list = $this->where($where)->select();
         $path = './';
         foreach($list as $k=>$v){
             $pic = $path.$v['role_pic'];

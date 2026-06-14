@@ -1,7 +1,7 @@
 {include file="../../../application/admin/view_new/public/head" /}
 <div class="page-container p10">
 
-    <form class="layui-form" method="post" action="">
+    <form id="batch-filter-form" class="layui-form" method="post" action="">
 
         <div class="my-toolbar-box">
 
@@ -139,14 +139,15 @@
             <div class="layui-field-box">
                 <div class="layui-form-item">
                     <div class="layui-inline">
-                        <label class="layui-form-label"><input type="radio" lay-ignore value="1" name="ck_del">{:lang('del_data')}</label>
+                        <label class="layui-form-label"><input type="radio" lay-ignore value="1" name="ck_del">{:lang('admin/batch/del_recycle')}</label>
+                        <label class="layui-form-label"><input type="radio" lay-ignore value="4" name="ck_del">{:lang('admin/batch/del_purge')}</label>
                         <label class="layui-form-label"><input type="radio" lay-ignore value="2" name="ck_del">{:lang('admin/vod/del_player')}</label>
                         <label class="layui-form-label"><input type="radio" lay-ignore value="3" name="ck_del">{:lang('admin/vod/del_downer')}</label>
                     </div>
                 </div>
 
                 <div class="layui-form-item">
-                    <button type="button" class="layui-btn btn_submit">{:lang('del_multi')}</button>
+                    <button type="button" class="layui-btn btn_del_multi">{:lang('del_multi')}</button>
                 </div>
             </div>
         </fieldset>
@@ -238,6 +239,78 @@
                 </div>
             </div>
 
+            <!-- 批量修改分类 -->
+            <div class="layui-form-item">
+                <div class="layui-inline">
+                    <label class="layui-form-label"><input type="checkbox" lay-ignore value="1" name="ck_type">{:lang('type')}</label>
+                    <div class="layui-input-inline" style="width: 150px;">
+                        <select name="val_type">
+                            <option value="">{:lang('select_type')}</option>
+                            {volist name="type_tree" id="vo"}
+                            {if condition="$vo.type_mid eq 1"}
+                            <option value="{$vo.type_id}">{$vo.type_name}</option>
+                            {volist name="vo.child" id="ch"}
+                            <option value="{$ch.type_id}">&nbsp;&nbsp;&nbsp;&nbsp;├&nbsp;{$ch.type_name}</option>
+                            {/volist}
+                            {/if}
+                            {/volist}
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 批量修改标签 -->
+            <div class="layui-form-item">
+                <div class="layui-inline">
+                    <label class="layui-form-label"><input type="checkbox" lay-ignore value="1" name="ck_tag">{:lang('tag')}</label>
+                    <div class="layui-input-inline" style="width: 200px;">
+                        <input type="text" name="val_tag" placeholder="{:lang('admin/vod/tag_placeholder')}" autocomplete="off" class="layui-input">
+                    </div>
+                </div>
+            </div>
+
+            <!-- 批量修改播放源 -->
+            <div class="layui-form-item">
+                <div class="layui-inline">
+                    <label class="layui-form-label"><input type="checkbox" lay-ignore value="1" name="ck_play">{:lang('play_group')}</label>
+                    <div class="layui-input-inline" style="width: 150px;">
+                        <select name="val_play">
+                            <option value="">{:lang('admin/vod/select_player')}</option>
+                            <option value="no">{:lang('admin/vod/player_empty')}</option>
+                            {volist name="player_list" id="vo"}
+                            <option value="{$vo.from}">{$vo.show}</option>
+                            {/volist}
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 批量替换功能 -->
+            <div class="layui-form-item">
+                <div class="layui-inline">
+                    <label class="layui-form-label"><input type="checkbox" lay-ignore value="1" name="ck_replace">{:lang('admin/batch/replace')}</label>
+                    <div class="layui-input-inline" style="width: 150px;">
+                        <select name="replace_field">
+                            <option value="">{:lang('admin/batch/select_field')}</option>
+                            <option value="vod_name">{:lang('admin/batch/field_name')}</option>
+                            <option value="vod_sub">{:lang('admin/batch/field_sub')}</option>
+                            <option value="vod_en">{:lang('admin/batch/field_en')}</option>
+                            <option value="vod_actor">{:lang('admin/batch/field_actor')}</option>
+                            <option value="vod_director">{:lang('admin/batch/field_director')}</option>
+                            <option value="vod_blurb">{:lang('admin/batch/field_blurb')}</option>
+                            <option value="vod_remarks">{:lang('admin/batch/field_remarks')}</option>
+                            <option value="vod_content">{:lang('admin/batch/field_content')}</option>
+                        </select>
+                    </div>
+                    <div class="layui-input-inline" style="width: 200px;">
+                        <input type="text" name="replace_search" placeholder="{:lang('admin/batch/search_text')}" autocomplete="off" class="layui-input">
+                    </div>
+                    <div class="layui-input-inline" style="width: 200px;">
+                        <input type="text" name="replace_with" placeholder="{:lang('admin/batch/replace_with')}" autocomplete="off" class="layui-input">
+                    </div>
+                </div>
+            </div>
+
             <div class="layui-form-item">
                 <div class="layui-inline">
                     <label class="layui-form-label">{:lang('page_limit')}</label>
@@ -253,6 +326,32 @@
         </div>
     </fieldset>
     </form>
+
+    <fieldset class="layui-elem-field">
+        <legend>{:lang('admin/batch/io_title')}</legend>
+        <div class="layui-field-box space-y-2">
+            <p class="text-gray-600 text-sm">{:lang('admin/batch/io_hint_vod')}</p>
+            <div class="layui-input-inline w120">
+                <input type="number" id="io-max" value="5000" min="1" max="10000" class="layui-input" title="{:lang('admin/batch/io_export_max')}">
+            </div>
+            <span class="text-sm text-gray-500">{:lang('admin/batch/io_export_max')}</span>
+            <div class="mt10">
+                <button type="button" class="layui-btn layui-btn-primary" id="btn-io-export-csv">{:lang('admin/batch/io_export_csv')}</button>
+                <button type="button" class="layui-btn layui-btn-primary" id="btn-io-export-xlsx">{:lang('admin/batch/io_export_xlsx')}</button>
+            </div>
+        </div>
+    </fieldset>
+
+    <form class="layui-form mt10" method="post" action="{:url('vod/importData')}" enctype="multipart/form-data">
+        <input type="hidden" name="__token__" value="{$Request.token}" />
+        <fieldset class="layui-elem-field">
+            <legend>{:lang('admin/batch/io_import')}</legend>
+            <div class="layui-field-box">
+                <input type="file" name="file" required accept=".csv,.txt,.xlsx" class="layui-input mb10" style="max-width:360px">
+                <button type="submit" class="layui-btn">{:lang('admin/batch/io_import_btn')}</button>
+            </div>
+        </fieldset>
+    </form>
 </div>
 
 <script type="text/javascript">
@@ -260,9 +359,19 @@
 
     });
 
-    $('.btn_submit').click(function(){
-        $('form').submit();
-    })
+    $('.btn_submit, .btn_del_multi').click(function(){
+        $('#batch-filter-form').submit();
+    });
+    $('#btn-io-export-csv').click(function(){
+        var q = $('#batch-filter-form').serialize();
+        var mx = $('#io-max').val() || 5000;
+        location.href = "{:url('vod/exportData')}?" + q + "&format=csv&max=" + encodeURIComponent(mx);
+    });
+    $('#btn-io-export-xlsx').click(function(){
+        var q = $('#batch-filter-form').serialize();
+        var mx = $('#io-max').val() || 5000;
+        location.href = "{:url('vod/exportData')}?" + q + "&format=xlsx&max=" + encodeURIComponent(mx);
+    });
 </script>
 </body>
 </html>

@@ -3,11 +3,21 @@ namespace app\common\model;
 use think\Db;
 use think\Cache;
 use app\common\util\Pinyin;
+use app\common\util\MeilisearchService;
+use app\common\util\MeilisearchListBridge;
+use app\common\util\MeilisearchSync;
 use app\common\validate\Vod as VodValidate;
 
 class Vod extends Base {
+    use RecycleBinTrait;
+
     // 设置数据表（不含前缀）
     protected $name = 'vod';
+
+    protected function getRecycleTimeField(): string
+    {
+        return 'vod_recycle_time';
+    }
 
     // 定义时间戳字段名
     protected $createTime = '';
@@ -20,6 +30,11 @@ class Vod extends Base {
 
     public function countData($where)
     {
+        $this->ensureRecycleColumnExists();
+        if(!is_array($where)){
+            $where = json_decode($where,true);
+        }
+        $where = $this->mergeRecycleWhere($where);
         $where2='';
         if(!empty($where['_string'])){
             $where2 = $where['_string'];
@@ -31,12 +46,14 @@ class Vod extends Base {
 
     public function listData($where,$order,$page=1,$limit=20,$start=0,$field='*',$addition=1,$totalshow=1)
     {
+        $this->ensureRecycleColumnExists();
         $page = $page > 0 ? (int)$page : 1;
         $limit = $limit ? (int)$limit : 20;
         $start = $start ? (int)$start : 0;
         if(!is_array($where)){
             $where = json_decode($where,true);
         }
+        $where = $this->mergeRecycleWhere($where);
         $where2='';
         if(!empty($where['_string'])){
             $where2 = $where['_string'];
@@ -44,6 +61,7 @@ class Vod extends Base {
         }
 
         $limit_str = ($limit * ($page-1) + $start) .",".$limit;
+        $total = 0;
         if($totalshow==1) {
             $total = $this->where($where)->where($where2)->count();
         }
@@ -55,7 +73,9 @@ class Vod extends Base {
         //用户组
         $group_list = model('Group')->getCache('group_list');
 
+        $vip_exclusive = mac_get_vip_exclusive_type_ids();
         foreach($list as $k=>$v){
+            $list[$k]['type_is_vip_exclusive'] = in_array($v['type_id'] ?? 0, $vip_exclusive) ? 1 : 0;
             if($addition==1){
 	            if(!empty($v['type_id'])) {
 	                $list[$k]['type'] = $type_list[$v['type_id']];
@@ -71,12 +91,14 @@ class Vod extends Base {
 
     public function listRepeatData($where,$order,$page=1,$limit=20,$start=0,$field='*',$addition=1)
     {
+        $this->ensureRecycleColumnExists();
         $page = $page > 0 ? (int)$page : 1;
         $limit = $limit ? (int)$limit : 20;
         $start = $start ? (int)$start : 0;
         if(!is_array($where)){
             $where = json_decode($where,true);
         }
+        $where = $this->mergeRecycleWhere($where);
         $limit_str = ($limit * ($page-1) + $start) .",".$limit;
 
         $total = $this
@@ -97,7 +119,9 @@ class Vod extends Base {
         //用户组
         $group_list = model('Group')->getCache('group_list');
 
+        $vip_exclusive = mac_get_vip_exclusive_type_ids();
         foreach($list as $k=>$v){
+            $list[$k]['type_is_vip_exclusive'] = in_array($v['type_id'] ?? 0, $vip_exclusive) ? 1 : 0;
             if($addition==1){
                 if(!empty($v['type_id'])) {
                     $list[$k]['type'] = $type_list[$v['type_id']];
@@ -136,9 +160,9 @@ class Vod extends Base {
         $director = $lp['director'];
         $version = $lp['version'];
         $year = $lp['year'];
-        $start = intval(abs($lp['start']));
-        $num = intval(abs($lp['num']));
-        $half = intval(abs($lp['half']));
+        $start = abs(intval($lp['start']));
+        $num = abs(intval($lp['num']));
+        $half = abs(intval($lp['half']));
         $weekday = $lp['weekday'];
         $tv = $lp['tv'];
         $timeadd = $lp['timeadd'];
@@ -353,7 +377,7 @@ class Vod extends Base {
                     }
                 }
                 $type = array_unique($type);
-                $where['type_id'] = ['in', implode(',',$type) ];
+                $where['type_id'] = ['in', array_values(array_map('intval', $type))];
             }
         }
         if(!empty($typenot)){
@@ -362,13 +386,13 @@ class Vod extends Base {
             if(!empty($type) && is_array($type)){
                 $type = array_diff($type, $typenot_arr);
                 if(!empty($type)){
-                    $where['type_id'] = ['in', implode(',', $type)];
+                    $where['type_id'] = ['in', array_values(array_map('intval', $type))];
                 } else {
                     // type 被完全排除后，设置一个永不匹配的条件，避免查询所有视频
                     $where['type_id'] = ['eq', -1];
                 }
             } else {
-                $where['type_id'] = ['not in',$typenot];
+                $where['type_id'] = ['not in', $typenot_arr];
             }
         }
         if(!empty($tid)) {
@@ -420,7 +444,8 @@ class Vod extends Base {
         }
 
         $vod_search = model('VodSearch');
-        $vod_search_enabled = $vod_search->isFrontendEnabled();
+        // Meilisearch 开启时不再走 mac_vod_search 前台 ID 缓存，避免与 Meili 双写、且 _string 会阻断 applyForVod；采集侧仍可用 VodSearch::isCollectEnabled()
+        $vod_search_enabled = $vod_search->isFrontendEnabled() && !MeilisearchService::enabled();
         $max_id_count = $vod_search->maxIdCount;
         if ($vod_search_enabled) {
             // 开启搜索优化，查询并缓存Id
@@ -432,46 +457,46 @@ class Vod extends Base {
                 }
                 $where[$role] = ['like', '%' . $wd . '%'];
                 if (count($search_id_list_tmp = $vod_search->getResultIdList($wd, $role)) <= $max_id_count) {
-                    $search_id_list += $search_id_list_tmp;
+                    $search_id_list = array_merge($search_id_list, $search_id_list_tmp);
                     unset($where[$role]);
                 }
             }
             if(!empty($name)) {
                 $where['vod_name'] = ['like',mac_like_arr($name),'OR'];
                 if (count($search_id_list_tmp = $vod_search->getResultIdList($name, 'vod_name')) <= $max_id_count) {
-                    $search_id_list += $search_id_list_tmp;
+                    $search_id_list = array_merge($search_id_list, $search_id_list_tmp);
                     unset($where['vod_name']);
                 }
             }
             if(!empty($tag)) {
                 $where['vod_tag'] = ['like',mac_like_arr($tag),'OR'];
                 if (count($search_id_list_tmp = $vod_search->getResultIdList($tag, 'vod_tag', true)) <= $max_id_count) {
-                    $search_id_list += $search_id_list_tmp;
+                    $search_id_list = array_merge($search_id_list, $search_id_list_tmp);
                     unset($where['vod_tag']);
                 }
             }
             if(!empty($class)) {
                 $where['vod_class'] = ['like',mac_like_arr($class), 'OR'];
                 if (count($search_id_list_tmp = $vod_search->getResultIdList($class, 'vod_class', true)) <= $max_id_count) {
-                    $search_id_list += $search_id_list_tmp;
+                    $search_id_list = array_merge($search_id_list, $search_id_list_tmp);
                     unset($where['vod_class']);
                 }
             }
             if(!empty($actor)) {
                 $where['vod_actor'] = ['like', mac_like_arr($actor), 'OR'];
                 if (count($search_id_list_tmp = $vod_search->getResultIdList($actor, 'vod_actor', true)) <= $max_id_count) {
-                    $search_id_list += $search_id_list_tmp;
+                    $search_id_list = array_merge($search_id_list, $search_id_list_tmp);
                     unset($where['vod_actor']);
                 }
             }
             if(!empty($director)) {
                 $where['vod_director'] = ['like',mac_like_arr($director),'OR'];
                 if (count($search_id_list_tmp = $vod_search->getResultIdList($director, 'vod_director', true)) <= $max_id_count) {
-                    $search_id_list += $search_id_list_tmp;
+                    $search_id_list = array_merge($search_id_list, $search_id_list_tmp);
                     unset($where['vod_director']);
                 }
             }
-            $search_id_list = array_unique($search_id_list);
+            $search_id_list = array_values(array_unique(array_map('intval', $search_id_list)));
             if (!empty($search_id_list)) {
                 $where['_string'] = "vod_id IN (" . join(',', $search_id_list) . ")";
             }
@@ -515,79 +540,96 @@ class Vod extends Base {
                 }
             }
         }
-        // 优化随机视频排序rnd的性能问题
-        // https://github.com/magicblack/maccms10/issues/967
-        $use_rand = false;
-        if($by=='rnd'){
-            $use_rand = true;
-            $algo2_threshold = 2000;
-            $data_count = $this->countData($where);
-            $where_string_addon = "";
-            if ($data_count > $algo2_threshold) {
-                $rows = $this->field("vod_id")->where($where)->select();
-                foreach ($rows as $row) {
-                    $id_list[] = $row['vod_id'];
+        // 随机排序 rnd：按条件 SQL 随机排序并保留当前页码（不再随机跳转分页）
+        // 大表下 ORDER BY RAND() 有性能代价，属语义正确性与性能的取舍
+        $use_rand = ($by == 'rnd');
+        if (!$use_rand) {
+            if (!in_array($by, ['id', 'time', 'time_add', 'score', 'hits', 'hits_day', 'hits_week', 'hits_month', 'up', 'down', 'level', 'rnd'])) {
+                $by = 'time';
+            }
+        }
+        if (!in_array($order, ['asc', 'desc'])) {
+            $order = 'desc';
+        }
+        if ($use_rand) {
+            // 大表优化：候选集超阈值时先用 PK 索引圈一个随机 ID 窗口，再在窗口内 ORDER BY RAND()
+            // 避免 ORDER BY RAND() 对全表逐行计算 RAND() 后再全排序的开销；阈值可由 app.rnd_window_size 配置
+            $rnd_window = isset($GLOBALS['config']['app']['rnd_window_size']) ? (int)$GLOBALS['config']['app']['rnd_window_size'] : 3000;
+            if ($rnd_window > 0 && !isset($where['vod_id']) && $this->countData($where) > $rnd_window) {
+                $where_q = $this->mergeRecycleWhere($where);
+                $where_q_string = '';
+                if (!empty($where_q['_string'])) {
+                    $where_q_string = $where_q['_string'];
+                    unset($where_q['_string']);
                 }
-                if (
-                    !empty($id_list)
-                ) {
-                    $random_count = intval($algo2_threshold / 2);
-                    $specified_list = array_rand($id_list, intval($algo2_threshold / 2));
-                    $random_keys = array_rand($id_list, $random_count);
-                    $specified_list = [];
-
-                    if ($random_count == 1) {
-                        $specified_list[] = $id_list[$random_keys];
-                    } else {
-                        foreach ($random_keys as $key) {
-                            $specified_list[] = $id_list[$key];
-                        }
+                $bounds = $this->where($where_q)->where($where_q_string)
+                    ->field('MIN(vod_id) AS min_id, MAX(vod_id) AS max_id')->find();
+                $min_id = (int)$bounds['min_id'];
+                $max_id = (int)$bounds['max_id'];
+                if ($min_id > 0 && $max_id >= $min_id) {
+                    $rand_start = $min_id < $max_id ? mt_rand($min_id, $max_id) : $min_id;
+                    $window_ids = $this->where($where_q)->where($where_q_string)
+                        ->where('vod_id', '>=', $rand_start)
+                        ->order('vod_id')->limit($rnd_window)
+                        ->column('vod_id');
+                    if (count($window_ids) < $num) {
+                        $more = $this->where($where_q)->where($where_q_string)
+                            ->order('vod_id')->limit($rnd_window)
+                            ->column('vod_id');
+                        $window_ids = array_values(array_unique(array_merge($window_ids, $more)));
                     }
-                    if (!empty($specified_list)) {
-                        $where_string_addon = " AND vod_id IN (" . join(',', $specified_list) . ")";
+                    if (!empty($window_ids)) {
+                        $where['vod_id'] = ['in', $window_ids];
                     }
                 }
             }
-            if (!empty($where_string_addon)) {
-                $where['_string'] .= $where_string_addon;
-                $where['_string'] = trim($where['_string'], " AND ");
-            } else {
-                if ($data_count % $lp['num'] === 0) {
-                    $page_total = floor($data_count / $lp['num']);
-                } else {
-                    $page_total = floor($data_count / $lp['num']) + 1;
-                }
-                if($data_count < $lp['num']){
-                    $lp['num'] = $data_count;
-                }
-                $randi = @mt_rand(1, $page_total);
-                $page = $randi;
+            $order = ['[rand]' => '[rand]'];
+        } else {
+            $order = 'vod_' . $by . ' ' . $order;
+        }
+        $meili = null;
+        if (!$use_rand && MeilisearchService::enabled()) {
+            $meili = MeilisearchListBridge::applyForVod(
+                $where,
+                (string)$wd,
+                (string)$name,
+                (string)$tag,
+                (string)$class,
+                (string)$actor,
+                (string)$director,
+                $page,
+                $num,
+                $start,
+                $order
+            );
+            if ($meili !== null) {
+                $where = $meili['where'];
+                $order = $meili['order'];
             }
-            $by = 'hits_week';
-            $order = 'desc';
         }
-
-        if(!in_array($by, ['id', 'time','time_add','score','hits','hits_day','hits_week','hits_month','up','down','level','rnd'])) {
-            $by = 'time';
-        }
-        if(!in_array($order, ['asc', 'desc'])) {
-            $order = 'desc';
-        }
-        $order= 'vod_'.$by .' ' . $order;
         $where_cache = $where;
         if($use_rand){
             unset($where_cache['vod_id']);
             $where_cache['order'] = 'rnd';
         }
+        $order_cache_key = ($meili !== null) ? 'meilisearch_relevance' : (is_array($order) ? 'sql_rand' : $order);
 
-        $cach_name = $GLOBALS['config']['app']['cache_flag']. '_' .md5('vod_listcache_'.http_build_query($where_cache).'_'.$order.'_'.$page.'_'.$num.'_'.$start.'_'.$pageurl);
-        $res = Cache::get($cach_name);
+        $cach_name = $GLOBALS['config']['app']['cache_flag']. '_' .md5('vod_listcache_'.http_build_query($where_cache).'_'.$order_cache_key.'_'.$page.'_'.$num.'_'.$start.'_'.$pageurl);
+        $res = $use_rand ? null : Cache::get($cach_name);
         if(empty($cachetime)){
             $cachetime = $GLOBALS['config']['app']['cache_time'];
         }
         if($GLOBALS['config']['app']['cache_core']==0 || empty($res)) {
-            $res = $this->listData($where, $order, $page, $num, $start,$field,1, $totalshow);
-            if($GLOBALS['config']['app']['cache_core']==1) {
+            if ($meili !== null) {
+                $res = $this->listData($where, $order, $page, $num, $start, $field, 1, 0);
+                if ($totalshow == 1) {
+                    $res['total'] = $meili['total'];
+                    $res['pagecount'] = $num > 0 ? (int)ceil($meili['total'] / $num) : 0;
+                }
+            } else {
+                $res = $this->listData($where, $order, $page, $num, $start,$field,1, $totalshow);
+            }
+            if($GLOBALS['config']['app']['cache_core']==1 && !$use_rand) {
                 Cache::set($cach_name, $res, $cachetime);
             }
         }
@@ -602,6 +644,8 @@ class Vod extends Base {
         if(empty($where) || !is_array($where)){
             return ['code'=>1001,'msg'=>lang('param_err')];
         }
+        $this->ensureRecycleColumnExists();
+        $where = $this->mergeRecycleWhere($where);
         $data_cache = false;
         $key = $GLOBALS['config']['app']['cache_flag']. '_'.'vod_detail_'.$where['vod_id'][1].'_'.$where['vod_en'][1];
         if($where['vod_id'][0]=='eq' || $where['vod_en'][0]=='eq'){
@@ -647,6 +691,8 @@ class Vod extends Base {
                 $group_list = model('Group')->getCache('group_list');
                 $info['group'] = $group_list[$info['group_id']];
             }
+            $vip_exclusive = mac_get_vip_exclusive_type_ids();
+            $info['type_is_vip_exclusive'] = in_array($info['type_id'] ?? 0, $vip_exclusive) ? 1 : 0;
             if($GLOBALS['config']['app']['cache_core']==1 && $data_cache && $cache==1) {
                 Cache::set($key, $info);
             }
@@ -741,6 +787,7 @@ class Vod extends Base {
         unset($data['uptag']);
 
         $data = VodValidate::formatDataBeforeDb($data);
+        $seoObjId = 0;
         if(!empty($data['vod_id'])){
 
             $where=[];
@@ -754,6 +801,7 @@ class Vod extends Base {
             }else{
                 $this->cacheRepeatWithName($data['vod_name']);
             }
+            $seoObjId = intval($data['vod_id']);
         }
         else{
             $data['vod_plot'] = 0;
@@ -762,8 +810,9 @@ class Vod extends Base {
             $data['vod_time_add'] = time();
             $data['vod_time'] = time();
             $res = $this->allowField(true)->insert($data, false, true);
+            $seoObjId = intval($this->getLastInsID());
             if ($res > 0 && model('VodSearch')->isFrontendEnabled()) {
-                model('VodSearch')->checkAndUpdateTopResults(['vod_id' => $res] + $data);
+                model('VodSearch')->checkAndUpdateTopResults(['vod_id' => $seoObjId] + $data);
             }
             //新增 针对当前name 判断是否重复
             $this->cacheRepeatWithName($data['vod_name']);
@@ -771,6 +820,12 @@ class Vod extends Base {
         if(false === $res){
             return ['code'=>1002,'msg'=>lang('save_err').'：'.$this->getError() ];
         }
+
+        $ixVodId = $seoObjId > 0 ? $seoObjId : intval($data['vod_id'] ?? 0);
+        if ($ixVodId <= 0) {
+            $ixVodId = intval($this->getLastInsID());
+        }
+        MeilisearchSync::afterVodSave($ixVodId);
 
         return ['code'=>1,'msg'=>lang('save_ok')];
     }
@@ -814,12 +869,21 @@ class Vod extends Base {
 
     public function delData($where)
     {
+        if(!is_array($where)){
+            $where = json_decode($where,true);
+        }
+        if(!is_array($where)){
+            return ['code'=>1001,'msg'=>lang('param_err')];
+        }
+        $where['_recycle'] = 'all';
         $list = $this->listData($where,'',1,9999);
         if($list['code'] !==1){
             return ['code'=>1001,'msg'=>lang('del_err').'：'.$this->getError() ];
         }
+        $where = $this->mergeRecycleWhere($where);
         $path = './';
         foreach($list['list'] as $k=>$v){
+            MeilisearchSync::deleteVod(intval($v['vod_id']));
             $pic = $path.$v['vod_pic'];
             if(file_exists($pic) && (substr($pic,0,8) == "./upload") || count( explode("./",$pic) ) ==1){
                 unlink($pic);
@@ -892,14 +956,14 @@ class Vod extends Base {
     {
         try{
             Db::execute('delete from `' . config('database.prefix') . 'vod_repeat` where name1 =?', [$name]);
-            Db::execute('INSERT INTO `' . config('database.prefix') . 'vod_repeat` (SELECT min(vod_id)as id1,vod_name as name1 FROM ' . config('database.prefix') . 'vod WHERE vod_name = ? GROUP BY name1 HAVING COUNT(name1)>1)', [$name]);
+            Db::execute('INSERT INTO `' . config('database.prefix') . 'vod_repeat` (SELECT min(vod_id)as id1,vod_name as name1 FROM ' . config('database.prefix') . 'vod WHERE vod_name = ? AND vod_recycle_time = 0 GROUP BY name1 HAVING COUNT(name1)>1)', [$name]);
         }catch (\Exception $e){
             Db::execute('DROP TABLE IF EXISTS ' . config('database.prefix') . 'vod_repeat');
             Db::execute('CREATE TABLE `' . config('database.prefix') . 'vod_repeat` (`id1` int unsigned DEFAULT NULL, `name1` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT \'\') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci');
             Db::execute('ALTER TABLE `' . config('database.prefix') . 'vod_repeat` ADD INDEX `name1` (`name1`(100))');
         }
         Db::execute('INSERT INTO `' . config('database.prefix') . 'vod_repeat` (SELECT min(vod_id)as id1,vod_name as name1 FROM ' .
-            config('database.prefix') . 'vod GROUP BY name1 HAVING COUNT(name1)>1)');
+            config('database.prefix') . 'vod WHERE vod_recycle_time = 0 GROUP BY name1 HAVING COUNT(name1)>1)');
         Cache::set('vod_repeat_table_created_time',time());
     }
     public function  createRepeatCache()
@@ -915,7 +979,7 @@ class Vod extends Base {
             Db::execute('ALTER TABLE `' . config('database.prefix') . 'vod_repeat` ADD INDEX `name1` (`name1`(100))');
         }
         Db::execute('INSERT INTO `' . config('database.prefix') . 'vod_repeat` (SELECT min(vod_id)as id1,vod_name as name1 FROM ' .
-            config('database.prefix') . 'vod GROUP BY name1 HAVING COUNT(name1)>1)');
+            config('database.prefix') . 'vod WHERE vod_recycle_time = 0 GROUP BY name1 HAVING COUNT(name1)>1)');
         Cache::set('vod_repeat_table_created_time',time());
     }
 

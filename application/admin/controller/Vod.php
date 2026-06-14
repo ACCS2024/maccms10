@@ -90,9 +90,13 @@ class Vod extends Base
             $where['vod_weekday'] = ['like','%'.$param['weekday'].'%'];
         }
         if(!empty($param['wd'])){
+            @set_time_limit(120);
             $param['wd'] = urldecode($param['wd']);
             $param['wd'] = mac_filter_xss($param['wd']);
-            $where['vod_name|vod_actor|vod_sub'] = ['like','%'.$param['wd'].'%'];
+            $like = mac_search_wd_like($param['wd']);
+            if ($like) {
+                $where['vod_name|vod_actor|vod_sub'] = $like;
+            }
         }
         if(!empty($param['player'])){
             if($param['player']=='no'){
@@ -112,6 +116,9 @@ class Vod extends Base
         }
         if(!empty($param['server'])){
             $where['vod_play_server|vod_down_server'] = ['like','%'.$param['server'].'%'];
+        }
+        if (!empty($param['recycle'])) {
+            $where['vod_recycle_time'] = ['>', 0];
         }
         $order='vod_time desc';
         if(in_array($param['order'],['vod_id','vod_hits','vod_hits_month','vod_hits_week','vod_hits_day'])){
@@ -143,6 +150,7 @@ class Vod extends Base
         // 批量查询哪些视频有角色数据
         $vodIds = array_column($res['list'], 'vod_id');
         $vodIdsWithRole = [];
+        $vodSeoStatusMap = [];
         if (!empty($vodIds)) {
             $roleData = Db::name('role')
                 ->where('role_rid', 'in', $vodIds)
@@ -150,6 +158,16 @@ class Vod extends Base
                 ->group('role_rid')
                 ->column('role_rid');
             $vodIdsWithRole = array_flip($roleData); // 转为键值对，方便快速查找
+
+            $seoRows = Db::name('seo_ai_result')
+                ->field('seo_obj_id,seo_status')
+                ->where('seo_mid', 1)
+                ->where('seo_obj_id', 'in', $vodIds)
+                ->where('seo_status', 'in', [1, 2])
+                ->select();
+            foreach ((array)$seoRows as $seoRow) {
+                $vodSeoStatusMap[intval($seoRow['seo_obj_id'])] = intval($seoRow['seo_status']);
+            }
         }
 
         foreach($res['list'] as $k=>&$v){
@@ -159,6 +177,7 @@ class Vod extends Base
             }
             // 标记是否有角色数据
             $v['vod_role'] = isset($vodIdsWithRole[$v['vod_id']]) ? 1 : 0;
+            $v['seo_ai_status'] = isset($vodSeoStatusMap[$v['vod_id']]) ? intval($vodSeoStatusMap[$v['vod_id']]) : 0;
         }
 
         $this->assign('list',$res['list']);
@@ -189,7 +208,8 @@ class Vod extends Base
             mac_echo('<style type="text/css">body{font-size:12px;color: #333333;line-height:21px;}span{font-weight:bold;color:#FF0000}</style>');
 
             if(empty($param['ck_del']) && empty($param['ck_level']) && empty($param['ck_status']) && empty($param['ck_lock']) && empty($param['ck_hits'])
-                && empty($param['ck_points']) && empty($param['ck_copyright'])
+                && empty($param['ck_points']) && empty($param['ck_copyright']) && empty($param['ck_type']) && empty($param['ck_tag']) && empty($param['ck_play'])
+                && empty($param['ck_replace'])
             ){
                 return $this->error(lang('param_err'));
             }
@@ -201,103 +221,14 @@ class Vod extends Base
             if($param['ck_del']==3 && empty($param['downer'])){
                 return $this->error(lang('admin/vod/del_down_must_select_down'));
             }
-
-            $where = [];
-            if(!empty($param['type'])){
-                $where['type_id'] = ['eq',$param['type']];
-            }
-            if(!empty($param['level'])){
-                $where['vod_level'] = ['eq',$param['level']];
-            }
-            if(in_array($param['status'],['0','1'])){
-                $where['vod_status'] = ['eq',$param['status']];
-            }
-            if(in_array($param['copyright'],['0','1'])){
-                $where['vod_copyright'] = ['eq',$param['copyright']];
-            }
-            if(in_array($param['isend'],['0','1'])){
-                $where['vod_isend'] = ['eq',$param['isend']];
-            }
-
-            if(!empty($param['lock'])){
-                $where['vod_lock'] = ['eq',$param['lock']];
-            }
-            if(!empty($param['state'])){
-                $where['vod_state'] = ['eq',$param['state']];
-            }
-
-            if(!empty($param['area'])){
-                $where['vod_area'] = ['eq',$param['area']];
-            }
-            if(!empty($param['lang'])){
-                $where['vod_lang'] = ['eq',$param['lang']];
-            }
-            if(in_array($param['plot'],['0','1'])){
-                $where['vod_plot'] = ['eq',$param['plot']];
-            }
-
-            // 处理角色筛选 - 通过查询角色表判断是否有角色数据
-            if(in_array($param['role'],['0','1'])){
-                $roleVodIds = Db::name('role')->where('role_rid', '>', 0)->group('role_rid')->column('role_rid');
-                if($param['role'] == '1'){
-                    // 有角色数据
-                    if(!empty($roleVodIds)){
-                        $where['vod_id'] = ['in', $roleVodIds];
-                    } else {
-                        // 如果没有任何角色数据，设置一个不可能匹配的条件
-                        $where['vod_id'] = ['eq', 0];
-                    }
-                } else {
-                    // 无角色数据
-                    if(!empty($roleVodIds)){
-                        $where['vod_id'] = ['not in', $roleVodIds];
-                    }
-                }
-            }
-
-            if(!empty($param['url'])){
-                if($param['url']==1){
-                    $where['vod_play_url'] = '';
-                }
-            }
-            if(!empty($param['pic'])){
-                if($param['pic'] == '1'){
-                    $where['vod_pic'] = ['eq',''];
-                }
-                elseif($param['pic'] == '2'){
-                    $where['vod_pic'] = ['like','http%'];
-                }
-                elseif($param['pic'] == '3'){
-                    $where['vod_pic'] = ['like','%#err%'];
-                }
-            }
-            if(!empty($param['wd'])){
-                $param['wd'] = htmlspecialchars(urldecode($param['wd']));
-                $where['vod_name'] = ['like','%'.$param['wd'].'%'];
-            }
-
-            if(!empty($param['weekday'])){
-                $where['vod_weekday'] = ['like','%'.$param['weekday'].'%'];
-            }
-
-            if(!empty($param['player'])){
-                if($param['player']=='no'){
-                    $where['vod_play_from'] = [['eq', ''], ['eq', 'no'], 'or'];
-                }
-                else {
-                    $where['vod_play_from'] = ['like', '%' . $param['player'] . '%'];
-                }
-            }
-            if(!empty($param['downer'])){
-                if($param['downer']=='no'){
-                    $where['vod_down_from'] = [['eq', ''], ['eq', 'no'], 'or'];
-                }
-                else {
-                    $where['vod_down_from'] = ['like', '%' . $param['downer'] . '%'];
-                }
-            }
-
+            $where = $this->vodBatchFilterWhere($param);
             if($param['ck_del'] == 1){
+                $res = model('Vod')->recycleData($where);
+                mac_echo($res['code'] == 1 ? lang('recycle_ok') : $res['msg']);
+                mac_jump( url('vod/batch') ,3);
+                exit;
+            }
+            if($param['ck_del'] == 4){
                 $res = model('Vod')->delData($where);
                 mac_echo(lang('multi_del_ok'));
                 mac_jump( url('vod/batch') ,3);
@@ -361,6 +292,38 @@ class Vod extends Base
                 if(!empty($param['ck_points']) && $param['val_points_down']!='' ){
                     $update['vod_points_down'] = $param['val_points_down'];
                     $des .= '&nbsp;'.lang('points_down').'：'.$param['val_points_down'].'；';
+                }
+
+                // 新增：批量修改分类
+                if(!empty($param['ck_type']) && !empty($param['val_type'])){
+                    $update['type_id'] = intval($param['val_type']);
+                    $type_list = model('Type')->getCache();
+                    if(isset($type_list[$update['type_id']])){
+                        $id1 = intval($type_list[$update['type_id']]['type_pid']);
+                        $update['type_id_1'] = $id1;
+                    }
+                    $des .= '&nbsp;'.lang('type').'：'.$update['type_id'].'；';
+                }
+
+                // 新增：批量修改标签
+                if(!empty($param['ck_tag']) && !empty($param['val_tag'])){
+                    $update['vod_tag'] = mac_filter_xss($param['val_tag']);
+                    $des .= '&nbsp;'.lang('tag').'：'.$update['vod_tag'].'；';
+                }
+
+                // 新增：批量修改播放源
+                if(!empty($param['ck_play']) && !empty($param['val_play'])){
+                    $update['vod_play_from'] = $param['val_play'];
+                    $des .= '&nbsp;'.lang('play_group').'：'.$param['val_play'].'；';
+                }
+
+                // 新增：批量替换功能
+                if(!empty($param['ck_replace']) && !empty($param['replace_field']) && isset($param['replace_search'])){
+                    $field = $param['replace_field'];
+                    $replaceres = $this->batch_replace($field,$v,$param['replace_search'],$param['replace_with'],'vod');
+                    if(isset($replaceres[$field])) $update[$field] = $replaceres[$field];
+
+                    if(!empty($replaceres['des'])) $des .= $replaceres['des'];
                 }
 
                 if($param['ck_del'] == 2 || $param['ck_del'] ==3){
@@ -428,6 +391,118 @@ class Vod extends Base
         return $this->fetch('admin@vod/batch');
     }
 
+    /**
+     * 与批量操作页筛选条件一致（用于导出）
+     */
+    private function vodBatchFilterWhere(&$param)
+    {
+        $where = [];
+        if (!empty($param['type'])) {
+            $where['type_id'] = ['eq', $param['type']];
+        }
+        if (!empty($param['level'])) {
+            $where['vod_level'] = ['eq', $param['level']];
+        }
+        if (in_array($param['status'] ?? '', ['0', '1'])) {
+            $where['vod_status'] = ['eq', $param['status']];
+        }
+        if (in_array($param['copyright'] ?? '', ['0', '1'])) {
+            $where['vod_copyright'] = ['eq', $param['copyright']];
+        }
+        if (in_array($param['isend'] ?? '', ['0', '1'])) {
+            $where['vod_isend'] = ['eq', $param['isend']];
+        }
+        if (!empty($param['lock'])) {
+            $where['vod_lock'] = ['eq', $param['lock']];
+        }
+        if (!empty($param['state'])) {
+            $where['vod_state'] = ['eq', $param['state']];
+        }
+        if (!empty($param['area'])) {
+            $where['vod_area'] = ['eq', $param['area']];
+        }
+        if (!empty($param['lang'])) {
+            $where['vod_lang'] = ['eq', $param['lang']];
+        }
+        if (in_array($param['plot'] ?? '', ['0', '1'])) {
+            $where['vod_plot'] = ['eq', $param['plot']];
+        }
+        if (in_array($param['role'] ?? '', ['0', '1'])) {
+            $roleVodIds = Db::name('role')->where('role_rid', '>', 0)->group('role_rid')->column('role_rid');
+            if ($param['role'] == '1') {
+                if (!empty($roleVodIds)) {
+                    $where['vod_id'] = ['in', $roleVodIds];
+                } else {
+                    $where['vod_id'] = ['eq', 0];
+                }
+            } else {
+                if (!empty($roleVodIds)) {
+                    $where['vod_id'] = ['not in', $roleVodIds];
+                }
+            }
+        }
+        if (!empty($param['url'])) {
+            if ($param['url'] == 1) {
+                $where['vod_play_url'] = '';
+            }
+        }
+        if (!empty($param['points'])) {
+            $where['vod_points_play|vod_points_down'] = ['gt', 0];
+        }
+        if (!empty($param['pic'])) {
+            if ($param['pic'] == '1') {
+                $where['vod_pic'] = ['eq', ''];
+            } elseif ($param['pic'] == '2') {
+                $where['vod_pic'] = ['like', 'http%'];
+            } elseif ($param['pic'] == '3') {
+                $where['vod_pic'] = ['like', '%#err%'];
+            }
+        }
+        if (!empty($param['wd'])) {
+            $param['wd'] = htmlspecialchars(urldecode($param['wd']));
+            $like = mac_search_wd_like($param['wd']);
+            if ($like) {
+                $where['vod_name'] = $like;
+            }
+        }
+        if (!empty($param['weekday'])) {
+            $where['vod_weekday'] = ['like', '%' . $param['weekday'] . '%'];
+        }
+        if (!empty($param['player'])) {
+            if ($param['player'] == 'no') {
+                $where['vod_play_from'] = [['eq', ''], ['eq', 'no'], 'or'];
+            } else {
+                $where['vod_play_from'] = ['like', '%' . $param['player'] . '%'];
+            }
+        }
+        if (!empty($param['downer'])) {
+            if ($param['downer'] == 'no') {
+                $where['vod_down_from'] = [['eq', ''], ['eq', 'no'], 'or'];
+            } else {
+                $where['vod_down_from'] = ['like', '%' . $param['downer'] . '%'];
+            }
+        }
+        if (!empty($param['server'])) {
+            $where['vod_play_server|vod_down_server'] = ['like', '%' . $param['server'] . '%'];
+        }
+        if (!empty($param['recycle'])) {
+            $where['vod_recycle_time'] = ['>', 0];
+        }
+        return $where;
+    }
+
+    public function exportData()
+    {
+        $param = input();
+        $where = $this->vodBatchFilterWhere($param);
+        $this->base_export($param,'vod',$where);
+    }
+
+    public function importData()
+    {
+        $this->base_import('vod');
+    }
+
     public function info()
     {
         if (Request()->isPost()) {
@@ -442,11 +517,21 @@ class Vod extends Base
         $id = input('id');
         $where=[];
         $where['vod_id'] = $id;
+        $where['_recycle'] = 'all';
         $res = model('Vod')->infoData($where);
 
 
         $info = $res['info'];
         $this->assign('info',$info);
+        $seoAiStatus = 0;
+        if (!empty($info['vod_id'])) {
+            $seoAi = model('SeoAiResult')->getByObject(1, intval($info['vod_id']));
+            if (!empty($seoAi)) {
+                $seoAiStatus = intval($seoAi['seo_status']);
+            }
+        }
+        $this->assign('seo_ai_status', $seoAiStatus);
+        $this->assign('vod_ai_cover_can_revert', !empty($info['vod_pic_original']));
 
         //分类
         $type_tree = model('Type')->getCache('type_tree');
@@ -476,6 +561,77 @@ class Vod extends Base
         return $this->fetch('admin@vod/info');
     }
 
+    public function aiSeoGenerate()
+    {
+        if (!Request()->isPost()) {
+            return json(['code' => 0, 'msg' => lang('illegal_request'), 'data' => []]);
+        }
+        $id = intval(input('post.id'));
+        if ($id <= 0) {
+            return json(['code' => 0, 'msg' => lang('param_err'), 'data' => []]);
+        }
+        try {
+            $res = \app\common\util\SeoAi::generateByMidObj(1, $id);
+        } catch (\Exception $e) {
+            \think\Log::error('AI SEO generate failed (vod_id=' . $id . '): ' . $e->getMessage());
+            return json(['code' => 0, 'msg' => $e->getMessage(), 'data' => []]);
+        }
+        if (empty($res['code']) || intval($res['code']) !== 1) {
+            return json(['code' => 0, 'msg' => isset($res['msg']) ? $res['msg'] : lang('save_err'), 'data' => []]);
+        }
+        return json(['code' => 1, 'msg' => lang('save_ok'), 'data' => isset($res['data']) ? $res['data'] : []]);
+    }
+
+    public function aiCoverGenerate()
+    {
+        if (!Request()->isPost()) {
+            return json(['code' => 0, 'msg' => lang('illegal_request'), 'data' => []]);
+        }
+        $id = intval(input('post.id'));
+        if ($id <= 0) {
+            return json(['code' => 0, 'msg' => lang('param_err'), 'data' => []]);
+        }
+        $adminId = intval($this->_admin['admin_id'] ?? 0);
+        if (!\app\common\util\VodAiCover::consumeGenerateRateLimit($adminId)) {
+            return json(['code' => 0, 'msg' => lang('admin/ai_cover/msg_rate_limit'), 'data' => []]);
+        }
+        $extraPrompt = input('post.extra_prompt', '', '');
+        if (!is_string($extraPrompt)) {
+            $extraPrompt = '';
+        }
+        try {
+            $res = \app\common\util\VodAiCover::generateByVodId($id, $extraPrompt);
+        } catch (\Exception $e) {
+            \think\Log::error('AI cover generate failed (vod_id=' . $id . '): ' . $e->getMessage());
+            return json(['code' => 0, 'msg' => $e->getMessage(), 'data' => []]);
+        }
+        if (empty($res['code']) || intval($res['code']) !== 1) {
+            return json(['code' => 0, 'msg' => isset($res['msg']) ? $res['msg'] : lang('save_err'), 'data' => isset($res['data']) ? $res['data'] : []]);
+        }
+        return json(['code' => 1, 'msg' => isset($res['msg']) ? $res['msg'] : lang('save_ok'), 'data' => isset($res['data']) ? $res['data'] : []]);
+    }
+
+    public function aiCoverRevert()
+    {
+        if (!Request()->isPost()) {
+            return json(['code' => 0, 'msg' => lang('illegal_request'), 'data' => []]);
+        }
+        $id = intval(input('post.id'));
+        if ($id <= 0) {
+            return json(['code' => 0, 'msg' => lang('param_err'), 'data' => []]);
+        }
+        try {
+            $res = \app\common\util\VodAiCover::revertByVodId($id);
+        } catch (\Exception $e) {
+            \think\Log::error('AI cover revert failed (vod_id=' . $id . '): ' . $e->getMessage());
+            return json(['code' => 0, 'msg' => $e->getMessage(), 'data' => []]);
+        }
+        if (empty($res['code']) || intval($res['code']) !== 1) {
+            return json(['code' => 0, 'msg' => isset($res['msg']) ? $res['msg'] : lang('save_err'), 'data' => isset($res['data']) ? $res['data'] : []]);
+        }
+        return json(['code' => 1, 'msg' => isset($res['msg']) ? $res['msg'] : lang('save_ok'), 'data' => isset($res['data']) ? $res['data'] : []]);
+    }
+
     public function iplot()
     {
         if (Request()->isPost()) {
@@ -490,6 +646,7 @@ class Vod extends Base
         $id = input('id');
         $where=[];
         $where['vod_id'] = $id;
+        $where['_recycle'] = 'all';
         $res = model('Vod')->infoData($where);
 
 
@@ -502,15 +659,36 @@ class Vod extends Base
         return $this->fetch('admin@vod/iplot');
     }
 
+    public function restore()
+    {
+        $param = input();
+        $ids = $param['ids'];
+        if (empty($ids)) {
+            return $this->error(lang('param_err'));
+        }
+        $where = ['vod_id' => ['in', $ids]];
+        $res = model('Vod')->restoreData($where);
+        if ($res['code'] > 1) {
+            return $this->error($res['msg']);
+        }
+        Cache::rm('vod_repeat_table_created_time');
+        return $this->success($res['msg']);
+    }
+
     public function del()
     {
         $param = input();
         $ids = $param['ids'];
+        $purge = !empty($param['purge']);
 
         if(!empty($ids)){
             $where=[];
             $where['vod_id'] = ['in',$ids];
-            $res = model('Vod')->delData($where);
+            if ($purge) {
+                $res = model('Vod')->delData($where);
+            } else {
+                $res = model('Vod')->recycleData($where);
+            }
             if($res['code']>1){
                 return $this->error($res['msg']);
             }

@@ -3,6 +3,7 @@ namespace app\common\model;
 use think\Db;
 use think\Cache;
 use app\common\util\Pinyin;
+use app\common\util\Dir;
 use think\Request;
 use app\common\validate\Vod as VodValidate;
 
@@ -75,6 +76,31 @@ class Collect extends Base {
             return ['code'=>1001,'msg'=>lang('del_err').'：'.$this->getError() ];
         }
         return ['code'=>1,'msg'=>lang('del_ok')];
+    }
+
+    /**
+     * 缓存清理标志位，确保一次请求内只清理一次
+     */
+    private $_cacheClearedFlag = false;
+
+    /**
+     * 采集完成后自动清理缓存
+     */
+    private function collectCacheClear()
+    {
+        if ($this->_cacheClearedFlag) {
+            return;
+        }
+        $this->_cacheClearedFlag = true;
+
+        try {
+            Dir::delDir(RUNTIME_PATH . 'cache/');
+            Dir::delDir(RUNTIME_PATH . 'temp/');
+            Cache::clear();
+            mac_echo('<font color="green">[cache] ' . lang('admin/index/clear_ok') . '</font>');
+        } catch (\Exception $e) {
+            mac_echo('<font color="red">[cache] ' . lang('admin/index/clear_err') . '</font>');
+        }
     }
 
     public function check_flag($param)
@@ -746,31 +772,36 @@ class Collect extends Base {
                     $where['vod_name'] = mac_filter_xss($v['vod_name']);
                 }
                 $blend=false;
-                if (strpos($config['inrule'], 'b')!==false) {
+                if (strpos($config['inrule'], 'b')!==false && !empty($v['type_id'])) {
                     $where['type_id'] = $v['type_id'];
                 }
-                if (strpos($config['inrule'], 'c')!==false) {
+                if (strpos($config['inrule'], 'c')!==false && !empty($v['vod_year'])) {
                     $where['vod_year'] = $v['vod_year'];
                 }
-                if (strpos($config['inrule'], 'd')!==false) {
+                if (strpos($config['inrule'], 'd')!==false && !empty($v['vod_area'])) {
                     $where['vod_area'] = $v['vod_area'];
                 }
-                if (strpos($config['inrule'], 'e')!==false) {
+                if (strpos($config['inrule'], 'e')!==false && !empty($v['vod_lang'])) {
                     $where['vod_lang'] = $v['vod_lang'];
                 }
                 $search_actor_id_list = [];
-                if (strpos($config['inrule'], 'f')!==false) {
+                if (strpos($config['inrule'], 'f')!==false && !empty(trim($v['vod_actor']))) {
                     $where['vod_actor'] = ['like', mac_like_arr(mac_filter_xss($v['vod_actor'])), 'OR'];
                     if ($vod_search_enabled) {
                         $search_actor_id_list = $vod_search->getResultIdList(mac_filter_xss($v['vod_actor']), 'vod_actor', true);
                         $search_actor_id_list = empty($search_actor_id_list) ? [0] : $search_actor_id_list;
                     }
                 }
-                if (strpos($config['inrule'], 'g')!==false) {
+                if (strpos($config['inrule'], 'g')!==false && !empty(trim($v['vod_director']))) {
                     $where['vod_director'] = mac_filter_xss($v['vod_director']);
                 }
-                if (strpos($config['inrule'], 'h')!==false) {
+                if (strpos($config['inrule'], 'h')!==false && !empty($v['vod_douban_id'])) {
                     $where['vod_douban_id'] = intval($v['vod_douban_id']);
+                }
+
+                // 安全回退：如果 $where 为空（所有 inrule 字段都为空值），则使用 vod_name 作为判断依据
+                if (empty($where) && !empty($v['vod_name'])) {
+                    $where['vod_name'] = mac_filter_xss($v['vod_name']);
                 }
 
                 if(!empty($where['vod_actor']) && !empty($where['vod_director'])){
@@ -1204,6 +1235,7 @@ class Collect extends Base {
                 }
                 $this->vod_data($param,$res );
             }
+            $this->collectCacheClear();
             mac_echo(lang('model/collect/is_over'));
             die;
         }
@@ -1214,6 +1246,7 @@ class Collect extends Base {
         if($show==1) {
             if ($param['ac'] == 'cjsel') {
                 Cache::rm($key);
+                $this->collectCacheClear();
                 mac_echo(lang('model/collect/is_over'));
                 unset($param['ids']);
                 $param['ac'] = 'list';
@@ -1227,6 +1260,7 @@ class Collect extends Base {
             } else {
                 if ($data['page']['page'] >= $data['page']['pagecount']) {
                     Cache::rm($key);
+                    $this->collectCacheClear();
                     mac_echo(lang('model/collect/is_over'));
                     unset($param['page'],$param['ids']);
                     $param['ac'] = 'list';
@@ -1611,6 +1645,7 @@ class Collect extends Base {
                 }
                 $this->art_data($param,$res );
             }
+            $this->collectCacheClear();
             mac_echo(lang('model/collect/is_over'));
             die;
         }
@@ -1622,6 +1657,7 @@ class Collect extends Base {
         if($show==1) {
             if ($param['ac'] == 'cjsel') {
                 Cache::rm($key);
+                $this->collectCacheClear();
                 mac_echo(lang('model/collect/is_over'));
                 unset($param['ids']);
                 $param['ac'] = 'list';
@@ -1634,6 +1670,7 @@ class Collect extends Base {
             } else {
                 if ($data['page']['page'] >= $data['page']['pagecount']) {
                     Cache::rm($key);
+                    $this->collectCacheClear();
                     mac_echo(lang('model/collect/is_over'));
                     unset($param['page']);
                     $param['ac'] = 'list';
@@ -1903,6 +1940,7 @@ class Collect extends Base {
                 }
                 $this->actor_data($param,$res );
             }
+            $this->collectCacheClear();
             mac_echo(lang('model/collect/is_over'));
             die;
         }
@@ -1914,6 +1952,7 @@ class Collect extends Base {
         if($show==1) {
             if ($param['ac'] == 'cjsel') {
                 Cache::rm($key);
+                $this->collectCacheClear();
                 mac_echo(lang('model/collect/is_over'));
                 unset($param['ids']);
                 $param['ac'] = 'list';
@@ -1926,6 +1965,7 @@ class Collect extends Base {
             } else {
                 if ($data['page']['page'] >= $data['page']['pagecount']) {
                     Cache::rm($key);
+                    $this->collectCacheClear();
                     mac_echo(lang('model/collect/is_over'));
                     unset($param['page']);
                     $param['ac'] = 'list';
@@ -2202,6 +2242,7 @@ class Collect extends Base {
                 }
                 $this->role_data($param,$res );
             }
+            $this->collectCacheClear();
             mac_echo(lang('model/collect/is_over'));
             die;
         }
@@ -2213,6 +2254,7 @@ class Collect extends Base {
         if($show==1) {
             if ($param['ac'] == 'cjsel') {
                 Cache::rm($key);
+                $this->collectCacheClear();
                 mac_echo(lang('model/collect/is_over'));
                 unset($param['ids']);
                 $param['ac'] = 'list';
@@ -2225,6 +2267,7 @@ class Collect extends Base {
             } else {
                 if ($data['page']['page'] >= $data['page']['pagecount']) {
                     Cache::rm($key);
+                    $this->collectCacheClear();
                     mac_echo(lang('model/collect/is_over'));
                     unset($param['page']);
                     $param['ac'] = 'list';
@@ -2497,6 +2540,7 @@ class Collect extends Base {
                 }
                 $this->website_data($param,$res );
             }
+            $this->collectCacheClear();
             mac_echo(lang('model/collect/is_over'));
             die;
         }
@@ -2508,6 +2552,7 @@ class Collect extends Base {
         if($show==1) {
             if ($param['ac'] == 'cjsel') {
                 Cache::rm($key);
+                $this->collectCacheClear();
                 mac_echo(lang('model/collect/is_over'));
                 unset($param['ids']);
                 $param['ac'] = 'list';
@@ -2520,6 +2565,7 @@ class Collect extends Base {
             } else {
                 if ($data['page']['page'] >= $data['page']['pagecount']) {
                     Cache::rm($key);
+                    $this->collectCacheClear();
                     mac_echo(lang('model/collect/is_over'));
                     unset($param['page']);
                     $param['ac'] = 'list';
@@ -2760,12 +2806,13 @@ class Collect extends Base {
             Cache::rm($key);
             if ($data['page']['page'] < $data['page']['pagecount']) {
                 $param['page'] = intval($data['page']['page']) + 1;
-                $res = $this->role($param);
+                $res = $this->comment_json($param);
                 if($res['code']>1){
                     return $this->error($res['msg']);
                 }
-                $this->actor_data($param,$res );
+                $this->comment_data($param,$res );
             }
+            $this->collectCacheClear();
             mac_echo(lang('model/collect/is_over'));
             die;
         }
@@ -2777,6 +2824,7 @@ class Collect extends Base {
         if($show==1) {
             if ($param['ac'] == 'cjsel') {
                 Cache::rm($key);
+                $this->collectCacheClear();
                 mac_echo(lang('model/collect/is_over'));
                 unset($param['ids']);
                 $param['ac'] = 'list';
@@ -2789,6 +2837,7 @@ class Collect extends Base {
             } else {
                 if ($data['page']['page'] >= $data['page']['pagecount']) {
                     Cache::rm($key);
+                    $this->collectCacheClear();
                     mac_echo(lang('model/collect/is_over'));
                     unset($param['page']);
                     $param['ac'] = 'list';
@@ -3091,6 +3140,7 @@ class Collect extends Base {
                 }
                 $this->manga_data($param,$res );
             }
+            $this->collectCacheClear();
             mac_echo(lang('model/collect/is_over'));
             die;
         }
@@ -3101,6 +3151,7 @@ class Collect extends Base {
         if($show==1) {
             if ($param['ac'] == 'cjsel') {
                 Cache::rm($key);
+                $this->collectCacheClear();
                 mac_echo(lang('model/collect/is_over'));
                 unset($param['ids']);
                 $param['ac'] = 'list';
@@ -3114,6 +3165,7 @@ class Collect extends Base {
             } else {
                 if ($data['page']['page'] >= $data['page']['pagecount']) {
                     Cache::rm($key);
+                    $this->collectCacheClear();
                     mac_echo(lang('model/collect/is_over'));
                     unset($param['page'],$param['ids']);
                     $param['ac'] = 'list';

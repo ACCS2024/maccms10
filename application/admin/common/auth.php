@@ -72,7 +72,7 @@ return array (
       ),
       210 => 
       array (
-        'show' => 1,
+        'show' => 0,
         'name' => lang('menu/configseo'),
         'controller' => 'system',
         'action' => 'configseo',
@@ -86,7 +86,7 @@ return array (
       ),
       212 => 
       array (
-        'show' => 1,
+        'show' => 0,
         'name' => lang('menu/configcomment'),
         'controller' => 'system',
         'action' => 'configcomment',
@@ -98,16 +98,89 @@ return array (
         'controller' => 'system',
         'action' => 'configupload',
       ),
-      22 => 
+      214 =>
+      array (
+        'show' => 0,
+        'name' => lang('menu/configaiseo'),
+        'controller' => 'system',
+        'action' => 'configaiseo',
+      ),
+      2141 =>
+      array (
+        'show' => 0,
+        'name' => lang('menu/configaicover'),
+        'controller' => 'system',
+        'action' => 'configaicover',
+      ),
+      215 =>
       array (
         'show' => 1,
+
+        'name' => lang('menu/configaisearch'),
+        'controller' => 'system',
+        'action' => 'configaisearch',
+      ),
+      
+      2151 =>
+      array (
+        'show' => 0,
+        'name' => '--'.lang('menu/meilisearch_save'),
+        'controller' => 'meilisearch',
+        'action' => 'save',
+      ),
+      2152 =>
+      array (
+        'show' => 0,
+        'name' => '--'.lang('menu/meilisearch_status'),
+        'controller' => 'meilisearch',
+        'action' => 'status',
+      ),
+      2153 =>
+      array (
+        'show' => 0,
+        'name' => '--'.lang('menu/meilisearch_selfcheck'),
+        'controller' => 'meilisearch',
+        'action' => 'selfcheck',
+      ),
+      2154 =>
+      array (
+        'show' => 0,
+        'name' => '--'.lang('menu/meilisearch_sync'),
+        'controller' => 'meilisearch',
+        'action' => 'sync',
+      ),
+      2155 =>
+      array (
+        'show' => 0,
+        'name' => '--'.lang('menu/meilisearch_setup'),
+        'controller' => 'meilisearch',
+        'action' => 'setup',
+      ),
+      216 => 
+      array (
+        'show' => 1,
+        'name' => lang('menu/meilisearch'),
+        'controller' => 'meilisearch',
+        'action' => 'index',
+      ),
+      217 =>
+      array (
+        'show' => 1,
+        'name' => lang('menu/configassistant'),
+        'controller' => 'system',
+        'action' => 'configassistant',
+      ),
+
+      22 => 
+      array (
+        'show' => 0,
         'name' => lang('menu/configurl'),
         'controller' => 'system',
         'action' => 'configurl',
       ),
       23 => 
       array (
-        'show' => 1,
+        'show' => 0,
         'name' => lang('menu/configplay'),
         'controller' => 'system',
         'action' => 'configplay',
@@ -121,14 +194,14 @@ return array (
       ),
       25 => 
       array (
-        'show' => 1,
+        'show' => 0,
         'name' => lang('menu/configinterface'),
         'controller' => 'system',
         'action' => 'configinterface',
       ),
       26 => 
       array (
-        'show' => 1,
+        'show' => 0,
         'name' => lang('menu/configapi'),
         'controller' => 'system',
         'action' => 'configapi',
@@ -142,14 +215,14 @@ return array (
       ),
       28 => 
       array (
-        'show' => 1,
+        'show' => 0,
         'name' => lang('menu/configpay'),
         'controller' => 'system',
         'action' => 'configpay',
       ),
       29 => 
       array (
-        'show' => 1,
+        'show' => 0,
         'name' => lang('menu/configweixin'),
         'controller' => 'system',
         'action' => 'configweixin',
@@ -400,7 +473,119 @@ return array (
         'controller' => 'comment',
         'action' => 'field',
       ),
-      36 => 
+      36 =>
+      array (
+        'show' => 1,
+        'name' => lang('menu/chatroom'),
+        'controller' => 'chatroom',
+        'action' => 'data',
+      ),
+      3610 =>
+      array (
+        'show' => 0,
+        'name' => '--'.lang('del'),
+        'controller' => 'chatroom',
+        'action' => 'del',
+      ),
+      3611 =>
+      array (
+        'show' => 0,
+        'name' => '--'.lang('status'),
+        'controller' => 'chatroom',
+        'action' => 'field',
+      ),
+      37 =>
+      array (
+        'show' => 1,
+        'name' => lang('menu/danmaku'),
+        'controller' => 'danmaku',
+        'action' => 'data',
+      ),
+      3710 =>
+      array (
+        'show' => 0,
+        'name' => '--'.lang('del'),
+        'controller' => 'danmaku',
+        'action' => 'del',
+      ),
+      3711 =>
+      array (
+        'show' => 0,
+        'name' => '--'.lang('status'),
+        'controller' => 'danmaku',
+        'action' => 'field',
+      ),
+      39 =>
+      array (
+        'show' => 1,
+        'name' => lang('menu/task'),
+        'controller' => 'task',
+        'action' => 'data',
+      ),
+      3901 =>
+      array (
+        'show' => 0,
+        'name' => '--'.lang('add'),
+        'controller' => 'task',
+        'action' => 'info',
+      ),
+      3902 =>
+      array (
+        'show' => 0,
+        'name' => '--'.lang('del'),
+        'controller' => 'task',
+        'action' => 'del',
+      ),
+      3903 =>
+      array (
+        'show' => 0,
+        'name' => '--'.lang('status'),
+        'controller' => 'task',
+        'action' => 'field',
+      ),
+      3904 =>
+      array (
+        'show' => 1,
+        'name' => lang('menu/task_log'),
+        'controller' => 'task',
+        'action' => 'log',
+      ),
+      3905 =>
+      array (
+        'show' => 0,
+        'name' => '--'.lang('del'),
+        'controller' => 'task',
+        'action' => 'log_del',
+      ),
+      3910 =>
+      array (
+        'show' => 1,
+        'name' => lang('menu/sign_milestone'),
+        'controller' => 'sign_milestone',
+        'action' => 'data',
+      ),
+      3911 =>
+      array (
+        'show' => 0,
+        'name' => '--'.lang('add'),
+        'controller' => 'sign_milestone',
+        'action' => 'info',
+      ),
+      3912 =>
+      array (
+        'show' => 0,
+        'name' => '--'.lang('del'),
+        'controller' => 'sign_milestone',
+        'action' => 'del',
+      ),
+      3913 =>
+      array (
+        'show' => 0,
+        'name' => '--'.lang('status'),
+        'controller' => 'sign_milestone',
+        'action' => 'field',
+      ),
+      38 =>
       array (
         'show' => 1,
         'name' => lang('menu/images'),
@@ -1089,12 +1274,47 @@ return array (
         'controller' => 'plog',
         'action' => 'index',
       ),
+      671 => 
+      array (
+        'show' => 1,
+        'name' => lang('menu/analytics'),
+        'controller' => 'analytics',
+        'action' => 'index',
+      ),
       6701 => 
       array (
         'show' => 0,
         'name' => '--积分日志删除',
         'controller' => 'plog',
         'action' => 'del',
+      ),
+      67101 =>
+      array (
+        'show' => 0,
+        'name' => lang('admin/analytics/auth_trend'),
+        'controller' => 'analytics',
+        'action' => 'trend',
+      ),
+      67102 =>
+      array (
+        'show' => 0,
+        'name' => lang('admin/analytics/auth_export'),
+        'controller' => 'analytics',
+        'action' => 'export',
+      ),
+      672 =>
+      array (
+        'show' => 1,
+        'name' => lang('menu/adminaudit'),
+        'controller' => 'adminaudit',
+        'action' => 'index',
+      ),
+      67201 =>
+      array (
+        'show' => 0,
+        'name' => lang('admin/adminaudit/menu_info'),
+        'controller' => 'adminaudit',
+        'action' => 'info',
       ),
       68 => 
       array (
@@ -1160,6 +1380,13 @@ return array (
         'name' => lang('menu/wizard'),
         'controller' => 'template',
         'action' => 'wizard',
+      ),
+      74 => 
+      array (
+        'show' => 1,
+        'name' => lang('menu/theme/config'),
+        'controller' => 'tpl_config',
+        'action' => 'theme',
       ),
     ),
   ),
@@ -1387,6 +1614,62 @@ return array (
         'controller' => 'cj',
         'action' => 'import',
       ),
+      95 => 
+      array (
+        'show' => 1,
+        'name' => lang('admin/resourcehub/title'),
+        'controller' => 'resource_hub',
+        'action' => 'index',
+      ),
+      9501 => 
+      array (
+        'show' => 0,
+        'name' => lang('admin/resourcehub/multi_collect_menu'),
+        'controller' => 'resource_hub',
+        'action' => 'multi_collect',
+      ),
+      9502 => 
+      array (
+        'show' => 0,
+        'name' => lang('admin/resourcehub/poster_menu'),
+        'controller' => 'resource_hub',
+        'action' => 'poster',
+      ),
+      96 => 
+      array (
+        'show' => 0,
+        'name' => lang('admin/batchplayer/title'),
+        'controller' => 'batch_player',
+        'action' => 'index',
+      ),
+      9601 => 
+      array (
+        'show' => 0,
+        'name' => lang('admin/batchplayer/batch_status_menu'),
+        'controller' => 'batch_player',
+        'action' => 'batchStatus',
+      ),
+      9602 => 
+      array (
+        'show' => 0,
+        'name' => lang('admin/batchplayer/batch_del_menu'),
+        'controller' => 'batch_player',
+        'action' => 'batchDel',
+      ),
+      97 => 
+      array (
+        'show' => 0,
+        'name' => lang('admin/datareplace/title'),
+        'controller' => 'data_replace',
+        'action' => 'index',
+      ),
+      9701 => 
+      array (
+        'show' => 0,
+        'name' => lang('admin/datareplace/do_replace_menu'),
+        'controller' => 'data_replace',
+        'action' => 'doReplace',
+      ),
     ),
   ),
   10 => 
@@ -1574,6 +1857,63 @@ return array (
         'name' => '--应用插件添加',
         'controller' => 'addon',
         'action' => 'add',
+      ),
+    ),
+  ),
+  14 =>
+  array (
+    'name' => lang('menu/live'),
+    'icon' => 'xe62b',
+    'sub' =>
+    array (
+      141 =>
+      array (
+        'show' => 1,
+        'name' => lang('menu/live_list'),
+        'controller' => 'live',
+        'action' => 'index',
+      ),
+      142 =>
+      array (
+        'show' => 1,
+        'name' => lang('menu/live_category'),
+        'controller' => 'live',
+        'action' => 'category',
+      ),
+      1401 =>
+      array (
+        'show' => 0,
+        'name' => '--直播频道添加/编辑',
+        'controller' => 'live',
+        'action' => 'info',
+      ),
+      1402 =>
+      array (
+        'show' => 0,
+        'name' => '--直播频道删除',
+        'controller' => 'live',
+        'action' => 'del',
+      ),
+      1403 =>
+      array (
+        'show' => 0,
+        'name' => '--直播频道字段更新',
+        'controller' => 'live',
+        'action' => 'field',
+      ),
+      1404 =>
+      array (
+        'show' => 0,
+        'name' => '--直播分类添加/编辑',
+        'controller' => 'live',
+        'action' => 'category_info',
+      ),
+      1405 =>
+      array (
+        'show' => 0,
+        'name' => '--直播分类删除',
+        'controller' => 'live',
+        'action' => 'category_del',
       ),
     ),
   ),

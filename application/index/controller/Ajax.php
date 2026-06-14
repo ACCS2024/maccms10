@@ -1,6 +1,12 @@
 <?php
 namespace app\index\controller;
 
+use app\common\util\AiChatRateLimit;
+use app\common\util\AiChatService;
+use app\common\util\ApiMeilisearchSuggest;
+use app\common\util\MeilisearchService;
+use app\common\util\SearchService;
+use think\Cache;
 
 class Ajax extends Base
 {
@@ -92,7 +98,16 @@ class Ajax extends Base
         }
 
         $mid = $this->_param['mid'];
-        $wd = $this->_param['wd'];
+        $wd = isset($this->_param['wd']) ? $this->_param['wd'] : '';
+        if (is_string($wd)) {
+            $wd = trim(urldecode($wd));
+        } else {
+            $wd = '';
+        }
+        $wd = mac_filter_xss($wd);
+        if (mb_strlen($wd, 'UTF-8') > 64) {
+            $wd = mb_substr($wd, 0, 64, 'UTF-8');
+        }
         $limit = intval($this->_param['limit']);
 
         if( $wd=='' || !in_array($mid,['1','2','3','8','9','11']) ) {
@@ -103,21 +118,132 @@ class Ajax extends Base
         if($limit<1){
             $limit = 20;
         }
-        $where = [];
-        $where[$pre.'_name|'.$pre.'_en'] = ['like','%'.$wd.'%'];
-        $order = $pre.'_id desc';
-        $field = $pre.'_id as id,'.$pre.'_name as name,'.$pre.'_en as en,'.$pre.'_pic as pic';
-
+        $limit = min(50, $limit);
         $url = mac_url_search(['wd'=>'mac_wd'],$pre);
 
-        $res = model($pre)->listData($where,$order,1,$limit,0,$field);
-        if($res['code']==1) {
-            foreach ($res['list'] as $k => $v) {
-                $res['list'][$k]['pic'] = mac_url_img($v['pic']);
+        $appCfg = $GLOBALS['config']['app'];
+        $minChars = max(1, intval(isset($appCfg['search_suggest_min_chars']) ? $appCfg['search_suggest_min_chars'] : 2));
+        if (mb_strlen($wd, 'UTF-8') < $minChars) {
+            return json([
+                'code' => 1,
+                'msg' => lang('data_list'),
+                'page' => 1,
+                'pagecount' => 0,
+                'limit' => $limit,
+                'total' => 0,
+                'list' => [],
+                'url' => $url,
+            ]);
+        }
+
+        $ip = request()->ip(0, true);
+        $uid = intval($GLOBALS['user']['user_id'] ?? 0);
+        $sessionKey = (string)request()->cookie(session_name(), '');
+        $visitorSeed = $uid > 0 ? ('u:' . $uid) : ('s:' . $sessionKey);
+        $visitorId = md5($visitorSeed . '|' . (string)request()->header('user-agent', ''));
+        $rateLimit = max(0, intval(isset($appCfg['search_suggest_rate_ip']) ? $appCfg['search_suggest_rate_ip'] : 90));
+        $rateWin = max(1, intval(isset($appCfg['search_suggest_rate_window_sec']) ? $appCfg['search_suggest_rate_window_sec'] : 60));
+        if (!SearchService::consumeSuggestRate($ip, $rateLimit, $rateWin, $visitorId)) {
+            return json([
+                'code' => 1,
+                'msg' => lang('data_list'),
+                'page' => 1,
+                'pagecount' => 0,
+                'limit' => $limit,
+                'total' => 0,
+                'list' => [],
+                'url' => $url,
+            ]);
+        }
+
+        $orderMode = isset($appCfg['search_suggest_order']) ? $appCfg['search_suggest_order'] : 'popular';
+        $cacheSec = max(30, intval(isset($appCfg['search_suggest_cache_sec']) ? $appCfg['search_suggest_cache_sec'] : 180));
+        $msOn = MeilisearchService::enabled() ? '1' : '0';
+        $cacheKey = 'search:suggest:v3:' . md5($mid . '|' . mb_strtolower($wd, 'UTF-8') . '|' . $limit . '|' . $orderMode . '|' . $msOn);
+        $debounceSec = max(1, intval(isset($appCfg['search_suggest_debounce_sec']) ? $appCfg['search_suggest_debounce_sec'] : 1));
+        $ipDebounceKey = 'search:suggest:debounce:' . md5($ip . '|' . $mid . '|' . mb_strtolower($wd, 'UTF-8') . '|' . $limit . '|' . $msOn);
+        $cached = Cache::get($cacheKey);
+        if (is_array($cached)) {
+            $cached['url'] = $url;
+            return json($cached);
+        }
+        $debounced = Cache::get($ipDebounceKey);
+        if (is_array($debounced)) {
+            $debounced['url'] = $url;
+            return json($debounced);
+        }
+
+        $res = ApiMeilisearchSuggest::ajaxSuggestResult($pre, $wd, $limit, $orderMode);
+        $res['url'] = $url;
+        Cache::set($cacheKey, $res, $cacheSec);
+        Cache::set($ipDebounceKey, $res, $debounceSec);
+        return json($res);
+    }
+
+    /**
+     * 热门搜索词（聚合自 search_query_log）+ 后台配置的备选热词。
+     */
+    public function search_hot()
+    {
+        if ($GLOBALS['config']['app']['search'] != '1') {
+            return json(['code' => 999, 'msg' => lang('suggest_close')]);
+        }
+        $limit = isset($this->_param['limit']) ? intval($this->_param['limit']) : 15;
+        $days = isset($this->_param['days']) ? intval($this->_param['days']) : 30;
+        $limit = max(1, min(50, $limit));
+        $days = max(1, min(365, $days));
+        $cacheSec = max(15, intval(isset($GLOBALS['config']['app']['search_hot_cache_sec']) ? $GLOBALS['config']['app']['search_hot_cache_sec'] : 60));
+        $cacheKey = 'search:hot:v1:' . md5($limit . '|' . $days . '|' . (string)($GLOBALS['config']['app']['search_hot'] ?? ''));
+        $cached = Cache::get($cacheKey);
+        if (is_array($cached)) {
+            return json($cached);
+        }
+        $hot = SearchService::hotWords($limit, $days);
+        $raw = isset($GLOBALS['config']['app']['search_hot']) ? (string)$GLOBALS['config']['app']['search_hot'] : '';
+        $raw = str_replace('，', ',', $raw);
+        $configHot = [];
+        foreach (explode(',', $raw) as $w) {
+            $w = trim(mac_filter_xss($w));
+            if ($w !== '') {
+                $configHot[] = ['word' => $w, 'count' => 0];
             }
         }
-        $res['url'] = $url;
-        return json($res);
+        $payload = ['code' => 1, 'data' => ['hot' => $hot, 'config_hot' => $configHot]];
+        Cache::set($cacheKey, $payload, $cacheSec);
+        return json($payload);
+    }
+
+    /**
+     * 登录用户搜索历史（需在搜索落地页触发过记录）。
+     */
+    public function search_history()
+    {
+        if ($GLOBALS['config']['app']['search'] != '1') {
+            return json(['code' => 999, 'msg' => lang('suggest_close')]);
+        }
+        $uid = intval($GLOBALS['user']['user_id'] ?? 0);
+        if ($uid <= 0) {
+            return json(['code' => 1001, 'msg' => 'not logged in', 'list' => []]);
+        }
+        $limit = isset($this->_param['limit']) ? intval($this->_param['limit']) : 15;
+        $list = SearchService::userHistory($uid, $limit);
+        return json(['code' => 1, 'list' => $list]);
+    }
+
+    /**
+     * 清空登录用户搜索历史。
+     */
+    public function search_history_clear()
+    {
+        if ($GLOBALS['config']['app']['search'] != '1') {
+            return json(['code' => 999, 'msg' => lang('suggest_close')]);
+        }
+        $uid = intval($GLOBALS['user']['user_id'] ?? 0);
+        if ($uid <= 0) {
+            return json(['code' => 1001, 'msg' => 'not logged in']);
+        }
+        $ok = SearchService::clearUserHistory($uid);
+        return json(['code' => $ok ? 1 : 1002, 'msg' => $ok ? lang('ok') : 'clear failed']);
     }
 
     public function desktop()
@@ -350,7 +476,7 @@ class Ajax extends Base
         $mid = $this->_param['mid'];
         $score = $this->_param['score'];
 
-        if(empty($id) ||  !in_array($mid,['1','2','3','8','9','11']) ) {
+        if(empty($id) ||  !in_array($mid,['1','2','3','8','9','11','12']) ) {
             return json(['code'=>1001,'msg'=>lang('param_err')]);
         }
 
@@ -457,6 +583,357 @@ class Ajax extends Base
         return json(['code'=>1,'msg'=>'ok']);
     }
 
+    /**
+     * 漫画猜你喜欢 - 换一换 AJAX 接口
+     * 参数: id=当前漫画ID, tid=分类ID(可选), num=数量(默认9)
+     */
+    public function guess_manga()
+    {
+        $id = intval($this->_param['id'] ?? 0);
+        $tid = intval($this->_param['tid'] ?? 0);
+        $num = intval($this->_param['num'] ?? 9);
+        if ($num < 1 || $num > 20) $num = 9;
+
+        $where = ['manga_status' => ['eq', 1]];
+        if ($id > 0) $where['manga_id'] = ['neq', $id];
+        if ($tid > 0) $where['type_id'] = $tid;
+
+        $order = 'manga_hits desc, manga_id desc';
+        $res = model('Manga')->listData($where, $order, 1, $num, 0, '*', 1);
+        if ($res['code'] != 1) {
+            return json($res);
+        }
+        $pagecount = max(1, (int)$res['pagecount']);
+        $page = mt_rand(1, min(5, $pagecount));
+        if ($page !== 1) {
+            $res = model('Manga')->listData($where, $order, $page, $num, 0, '*', 1);
+            if ($res['code'] != 1) {
+                return json($res);
+            }
+        }
+
+        $list = [];
+        foreach ($res['list'] as $v) {
+            $ep = 0;
+            if (!empty($v['manga_chapter_from']) && !empty($v['manga_chapter_url'])) {
+                $pl = mac_manga_list($v['manga_chapter_from'], $v['manga_chapter_url'], $v['manga_play_server'] ?? '', $v['manga_play_note'] ?? '');
+                foreach ($pl as $f) {
+                    if (!empty($f['urls']) && is_array($f['urls'])) $ep += count($f['urls']);
+                }
+            }
+            $list[] = [
+                'manga_id' => $v['manga_id'],
+                'manga_name' => $v['manga_name'],
+                'manga_pic' => mac_url_img($v['manga_pic']),
+                'link' => mac_url_manga_detail($v),
+                'ep_count' => (int)$ep,
+            ];
+        }
+        return json(['code' => 1, 'msg' => lang('data_list'), 'list' => $list]);
+    }
+
+    /**
+     * 文章猜你喜欢 - 换一换 AJAX 接口
+     * 参数: id=当前文章ID, tid=分类ID(可选), num=数量(默认9)
+     */
+    public function guess_art()
+    {
+        $id = intval($this->_param['id'] ?? 0);
+        $tid = intval($this->_param['tid'] ?? 0);
+        $num = intval($this->_param['num'] ?? 9);
+        if ($num < 1 || $num > 20) $num = 9;
+
+        $where = ['art_status' => ['eq', 1]];
+        if ($id > 0) $where['art_id'] = ['neq', $id];
+        if ($tid > 0) $where['type_id'] = $tid;
+
+        $order = 'art_hits desc, art_id desc';
+        $res = model('Art')->listData($where, $order, 1, $num, 0, '*', 1);
+        if ($res['code'] != 1) {
+            return json($res);
+        }
+        $pagecount = max(1, (int)$res['pagecount']);
+        $page = mt_rand(1, min(5, $pagecount));
+        if ($page !== 1) {
+            $res = model('Art')->listData($where, $order, $page, $num, 0, '*', 1);
+            if ($res['code'] != 1) {
+                return json($res);
+            }
+        }
+
+        $list = [];
+        foreach ($res['list'] as $v) {
+            $pageTotal = 0;
+            if (!empty($v['art_content'])) {
+                $pageTotal = count(explode('$$$', $v['art_content']));
+            }
+            $list[] = [
+                'art_id' => $v['art_id'],
+                'art_name' => $v['art_name'],
+                'art_pic' => mac_url_img($v['art_pic']),
+                'link' => mac_url_art_detail($v),
+                'page_total' => (int)$pageTotal,
+            ];
+        }
+        return json(['code' => 1, 'msg' => lang('data_list'), 'list' => $list]);
+    }
+
+    /**
+     * 首页热门 tab 分段加载
+     * 参数: tab=2..7
+     */
+    public function home_hot_tab()
+    {
+        $tab = intval(input('param.tab/d', 0));
+        if ($tab <= 0) {
+            $tab = intval($this->_param['id'] ?? 0);
+        }
+        if ($tab < 2 || $tab > 7) {
+            return json(['code' => 1001, 'msg' => lang('param_err')]);
+        }
+
+        $vars = $this->buildIndexThemeVars();
+        $data = $this->buildHomeHotTabData($tab, $vars);
+        return json(['code' => 1, 'msg' => 'ok', 'data' => $data]);
+    }
+
+    /**
+     * 构造首页主题变量（供首页 AJAX 片段使用）
+     */
+    protected function buildIndexThemeVars()
+    {
+        $tplconfig = isset($GLOBALS['mctheme']) && is_array($GLOBALS['mctheme'])
+            ? $GLOBALS['mctheme']
+            : (config('mctheme') ?: ['theme' => []]);
+        $theme = isset($tplconfig['theme']) && is_array($tplconfig['theme']) ? $tplconfig['theme'] : [];
+
+        $mangaTheme = isset($theme['manga']) && is_array($theme['manga']) ? $theme['manga'] : [];
+        $mangaHbtn = (!isset($mangaTheme['hbtn']) || (string)($mangaTheme['hbtn']) !== '0') ? 1 : 0;
+        $mangaHnumInt = (isset($mangaTheme['hnum']) && (string)$mangaTheme['hnum'] === '12') ? 12 : 6;
+
+        $artTheme = isset($theme['art']) && is_array($theme['art']) ? $theme['art'] : [];
+        $artHbtn = (!isset($artTheme['hbtn']) || (string)($artTheme['hbtn']) !== '0') ? 1 : 0;
+        $artHnumInt = (isset($artTheme['hnum']) && (string)$artTheme['hnum'] === '12') ? 12 : 6;
+
+        return [
+            'index_hotvod_tabs' => mac_theme_index_hotvod_tabs($theme),
+            'index_manga_hbtn' => $mangaHbtn,
+            'index_manga_hnum_str' => (string)$mangaHnumInt,
+            'index_manga_hot_txt_num' => (string)($mangaHnumInt * 2),
+            'index_manga_hot_txt_start' => (string)$mangaHnumInt,
+            'index_manga_poster_class' => mac_tpl_manga_cover() === 'h' ? 'mac-poster--h' : 'mac-poster--v',
+            'index_art_hbtn' => $artHbtn,
+            'index_art_hnum' => (string)$artHnumInt,
+            'index_art_hot_txt_num' => (string)($artHnumInt * 2),
+            'index_art_hot_txt_start' => (string)$artHnumInt,
+            'index_art_poster_class' => mac_tpl_art_cover() === 'h' ? 'mac-poster--h' : 'mac-poster--v',
+        ];
+    }
+
+    protected function buildHomeHotTabData($tab, $vars)
+    {
+        if (in_array($tab, [2, 3, 4, 5], true)) {
+            $tabs = isset($vars['index_hotvod_tabs']) && is_array($vars['index_hotvod_tabs']) ? $vars['index_hotvod_tabs'] : [];
+            $idx = $tab - 2;
+            $typeId = 0;
+            if (isset($tabs[$idx]) && is_array($tabs[$idx])) {
+                $typeId = intval($tabs[$idx]['id'] ?? 0);
+            }
+            return $this->buildVodHotTabData($tab, $typeId);
+        }
+        if ($tab === 6) {
+            return $this->buildMangaHotTabData($tab, $vars);
+        }
+        return $this->buildArtHotTabData($tab, $vars);
+    }
+
+    protected function buildVodHotTabData($tab, $typeId)
+    {
+        if ($typeId <= 0) {
+            return [
+                'tab' => $tab,
+                'content_type' => 'vod',
+                'append_remarks' => $tab === 2 ? 1 : 0,
+                'img_list' => [],
+                'txt_list' => [],
+            ];
+        }
+        $where = ['vod_status' => ['eq', 1]];
+        $ids = $this->resolveTypeIds($typeId);
+        $where['type_id|type_id_1'] = ['in', $ids];
+
+        $model = model('Vod');
+        $imgRes = $model->listData($where, 'vod_hits_month desc', 1, 6, 0, '*', 1, 1);
+        $txtRes = $model->listData($where, 'vod_hits_month desc', 1, 12, 6, '*', 1, 1);
+
+        $imgList = [];
+        $userId = intval($GLOBALS['user']['user_id'] ?? 0);
+        $favMap = [];
+        $vodIds = [];
+        if (($imgRes['code'] ?? 0) == 1 && !empty($imgRes['list'])) {
+            foreach ($imgRes['list'] as $v) {
+                if (!empty($v['vod_id'])) {
+                    $vodIds[] = intval($v['vod_id']);
+                }
+            }
+            if ($userId > 0 && !empty($vodIds)) {
+                $favRows = model('Ulog')->where([
+                    'user_id' => $userId,
+                    'ulog_type' => 2,
+                    'ulog_rid' => ['in', array_values(array_unique($vodIds))],
+                ])->column('ulog_id', 'ulog_rid');
+                if (is_array($favRows)) {
+                    $favMap = $favRows;
+                }
+            }
+            foreach ($imgRes['list'] as $v) {
+                $classBadge = '';
+                if (!empty($v['vod_class'])) {
+                    $parts = preg_split('/[\s,，\/|]+/u', (string)$v['vod_class'], -1, PREG_SPLIT_NO_EMPTY);
+                    if (!empty($parts)) {
+                        $classBadge = trim((string)$parts[0]);
+                    }
+                }
+                $vodId = intval($v['vod_id'] ?? 0);
+                $favUid = isset($favMap[$vodId]) ? intval($favMap[$vodId]) : 0;
+                $imgList[] = [
+                    'name' => (string)($v['vod_name'] ?? ''),
+                    'pic' => mac_url_img($v['vod_pic'] ?? ''),
+                    'link' => mac_url_vod_detail($v),
+                    'sub' => (string)($v['vod_sub'] ?? ''),
+                    'id' => $vodId,
+                    'points_play' => (string)($v['vod_points_play'] ?? ''),
+                    'vod_class' => (string)($v['vod_class'] ?? ''),
+                    'vod_area' => (string)($v['vod_area'] ?? ''),
+                    'vod_year' => (string)($v['vod_year'] ?? ''),
+                    'vod_actor' => (string)($v['vod_actor'] ?? ''),
+                    'vod_blurb' => (string)($v['vod_blurb'] ?? ''),
+                    'vod_isend' => intval($v['vod_isend'] ?? 0),
+                    'type_is_vip_exclusive' => intval($v['type_is_vip_exclusive'] ?? 0),
+                    'class_badge' => $classBadge,
+                    'is_fav' => $favUid > 0 ? 1 : 0,
+                    'fav_uid' => $favUid,
+                ];
+            }
+        }
+
+        $txtList = [];
+        if (($txtRes['code'] ?? 0) == 1 && !empty($txtRes['list'])) {
+            foreach ($txtRes['list'] as $v) {
+                $txtList[] = [
+                    'id' => intval($v['vod_id'] ?? 0),
+                    'name' => (string)($v['vod_name'] ?? ''),
+                    'link' => mac_url_vod_detail($v),
+                    'time_md' => !empty($v['vod_time']) ? date('m-d', intval($v['vod_time'])) : '',
+                    'remarks' => (string)($v['vod_remarks'] ?? ''),
+                ];
+            }
+        }
+
+        return [
+            'tab' => $tab,
+            'content_type' => 'vod',
+            'append_remarks' => $tab === 2 ? 1 : 0,
+            'img_list' => $imgList,
+            'txt_list' => $txtList,
+        ];
+    }
+
+    protected function buildMangaHotTabData($tab, $vars)
+    {
+        if (intval($vars['index_manga_hbtn'] ?? 0) !== 1) {
+            return ['tab' => $tab, 'content_type' => 'manga', 'img_list' => [], 'txt_list' => []];
+        }
+
+        $model = model('Manga');
+        $imgRes = $model->listData(['manga_status' => ['eq', 1]], 'manga_hits_month desc', 1, intval($vars['index_manga_hnum_str']), 0, '*', 1, 1);
+        $txtRes = $model->listData(['manga_status' => ['eq', 1]], 'manga_hits_month desc', 1, intval($vars['index_manga_hot_txt_num']), intval($vars['index_manga_hot_txt_start']), '*', 1, 1);
+
+        $imgList = [];
+        if (($imgRes['code'] ?? 0) == 1 && !empty($imgRes['list'])) {
+            foreach ($imgRes['list'] as $v) {
+                $imgList[] = [
+                    'name' => (string)($v['manga_name'] ?? ''),
+                    'pic' => mac_url_img($v['manga_pic'] ?? ''),
+                    'link' => mac_url_manga_detail($v),
+                    'sub' => (string)($v['manga_remarks'] ?? '连载中'),
+                    'type_is_vip_exclusive' => intval($v['type_is_vip_exclusive'] ?? 0),
+                    'manga_points' => (string)($v['manga_points'] ?? ''),
+                ];
+            }
+        }
+
+        $txtList = [];
+        if (($txtRes['code'] ?? 0) == 1 && !empty($txtRes['list'])) {
+            foreach ($txtRes['list'] as $v) {
+                $txtList[] = [
+                    'name' => (string)($v['manga_name'] ?? ''),
+                    'link' => mac_url_manga_detail($v),
+                    'time_md' => !empty($v['manga_time']) ? date('m-d', intval($v['manga_time'])) : '',
+                ];
+            }
+        }
+
+        return ['tab' => $tab, 'content_type' => 'manga', 'img_list' => $imgList, 'txt_list' => $txtList];
+    }
+
+    protected function buildArtHotTabData($tab, $vars)
+    {
+        if (intval($vars['index_art_hbtn'] ?? 0) !== 1) {
+            return ['tab' => $tab, 'content_type' => 'art', 'img_list' => [], 'txt_list' => []];
+        }
+
+        $model = model('Art');
+        $imgRes = $model->listData(['art_status' => ['eq', 1]], 'art_time desc', 1, intval($vars['index_art_hnum']), 0, '*', 1, 1);
+        $txtRes = $model->listData(['art_status' => ['eq', 1]], 'art_time desc', 1, intval($vars['index_art_hot_txt_num']), intval($vars['index_art_hot_txt_start']), '*', 1, 1);
+
+        $imgList = [];
+        if (($imgRes['code'] ?? 0) == 1 && !empty($imgRes['list'])) {
+            foreach ($imgRes['list'] as $v) {
+                $imgList[] = [
+                    'name' => (string)($v['art_name'] ?? ''),
+                    'pic' => mac_url_img($v['art_pic'] ?? ''),
+                    'link' => mac_url_art_detail($v),
+                    'sub' => (string)($v['art_actor'] ?? ''),
+                    'type_is_vip_exclusive' => intval($v['type_is_vip_exclusive'] ?? 0),
+                    'art_points' => (string)($v['art_points'] ?? ''),
+                    'art_remarks' => (string)($v['art_remarks'] ?? ''),
+                ];
+            }
+        }
+
+        $txtList = [];
+        if (($txtRes['code'] ?? 0) == 1 && !empty($txtRes['list'])) {
+            foreach ($txtRes['list'] as $v) {
+                $txtList[] = [
+                    'name' => (string)($v['art_name'] ?? ''),
+                    'link' => mac_url_art_detail($v),
+                    'time_md' => !empty($v['art_time']) ? date('m-d', intval($v['art_time'])) : '',
+                ];
+            }
+        }
+
+        return ['tab' => $tab, 'content_type' => 'art', 'img_list' => $imgList, 'txt_list' => $txtList];
+    }
+
+    protected function resolveTypeIds($typeId)
+    {
+        $typeId = intval($typeId);
+        if ($typeId <= 0) {
+            return [];
+        }
+        $typeList = model('Type')->getCache('type_list');
+        $info = is_array($typeList) && isset($typeList[$typeId]) ? $typeList[$typeId] : [];
+        if (empty($info)) {
+            return [$typeId];
+        }
+        if (intval($info['type_pid'] ?? 0) === 0 && !empty($info['childids'])) {
+            $childids = array_filter(array_map('intval', explode(',', (string)$info['childids'])));
+            return empty($childids) ? [$typeId] : $childids;
+        }
+        return [intval($info['type_id'] ?? $typeId)];
+    }
+
     public function verify_check()
     {
         $param = input();
@@ -470,4 +947,128 @@ class Ajax extends Base
         session($param['type'].'_verify','1');
         return json(['code'=>1,'msg'=>lang('ok')]);
     }
+
+    // AI chat search endpoint for custom chat template
+    public function ai_chat()
+    {
+        $service = new AiChatService();
+        $payload = $this->readAiChatPayload();
+        $token = isset($payload['__token__']) ? (string)$payload['__token__'] : '';
+        $sessionToken = (string)session('__token__');
+        if ($token === '' || $sessionToken === '' || !$this->safeHashEquals($sessionToken, $token)) {
+            return json([
+                'code' => 1002,
+                'msg' => lang('token_err'),
+                'data' => $service->emptyPayload()
+            ]);
+        }
+
+        $question = trim(mac_filter_xss((string)$payload['question']));
+        $mid = intval($payload['mid']);
+        $limit = intval($payload['limit']);
+
+        if ($question === '') {
+            return json([
+                'code' => 1001,
+                'msg' => 'question is empty',
+                'data' => $service->emptyPayload()
+            ]);
+        }
+
+        $aiCfg = config('maccms.ai_search');
+        if (!is_array($aiCfg)) {
+            $aiCfg = [];
+        }
+        $maxChars = intval(isset($aiCfg['max_question_chars']) ? $aiCfg['max_question_chars'] : 800);
+        if ($maxChars > 0 && mb_strlen($question, 'UTF-8') > $maxChars) {
+            return json([
+                'code' => 1003,
+                'msg' => 'question exceeds maximum length',
+                'data' => $service->emptyPayload()
+            ]);
+        }
+
+        $rl = AiChatRateLimit::checkHit(mac_get_client_ip(), $aiCfg);
+        if (!$rl['allowed']) {
+            $retry = max(1, intval($rl['retry_after']));
+            header('HTTP/1.1 429 Too Many Requests');
+            header('Retry-After: '.$retry);
+
+            return json([
+                'code' => 429,
+                'msg' => 'Too many requests. Please try again in '.$retry.' seconds.',
+                'data' => array_merge($service->emptyPayload(), ['retry_after' => $retry])
+            ]);
+        }
+
+        if (!in_array($mid, [0,1,2,3,8,9,11,12,13], true)) {
+            $mid = 0;
+        }
+        if ($limit < 1) {
+            $limit = 6;
+        } elseif ($limit > 12) {
+            $limit = 12;
+        }
+
+        try {
+            $chatPayload = $service->buildPayload($question, $mid, $limit);
+        } catch (\Throwable $e) {
+            return json([
+                'code' => 5001,
+                'msg' => 'ai_chat payload build failed',
+                'data' => $service->emptyPayload()
+            ]);
+        }
+
+        return json([
+            'code' => 1,
+            'msg' => 'ok',
+            'data' => $chatPayload
+        ]);
+    }
+
+    private function readAiChatPayload()
+    {
+        $payload = input('post.');
+        if (!is_array($payload)) {
+            $payload = [];
+        }
+
+        $raw = file_get_contents('php://input');
+        if (!empty($raw)) {
+            $json = json_decode($raw, true);
+            if (is_array($json)) {
+                $payload = array_merge($payload, $json);
+            }
+        }
+
+        return [
+            'question' => isset($payload['question']) ? $payload['question'] : $this->_param['wd'],
+            'mid' => isset($payload['mid']) ? $payload['mid'] : $this->_param['mid'],
+            'limit' => isset($payload['limit']) ? $payload['limit'] : $this->_param['limit'],
+            'session_id' => isset($payload['session_id']) ? $payload['session_id'] : '',
+            '__token__' => isset($payload['__token__']) ? $payload['__token__'] : '',
+        ];
+    }
+
+
+    private function safeHashEquals($knownString, $userString)
+    {
+        if (function_exists('hash_equals')) {
+            return hash_equals((string)$knownString, (string)$userString);
+        }
+        $a = (string)$knownString;
+        $b = (string)$userString;
+        $lenA = strlen($a);
+        $lenB = strlen($b);
+        if ($lenA !== $lenB) {
+            return false;
+        }
+        $res = 0;
+        for ($i = 0; $i < $lenA; $i++) {
+            $res |= ord($a[$i]) ^ ord($b[$i]);
+        }
+        return $res === 0;
+    }
+
 }

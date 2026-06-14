@@ -39,7 +39,10 @@ class Role extends Base
         }
         if(!empty($param['wd'])){
             $param['wd'] = htmlspecialchars(urldecode($param['wd']));
-            $where['role_name'] = ['like','%'.$param['wd'].'%'];
+            $like = mac_search_wd_like($param['wd']);
+            if ($like) {
+                $where['role_name'] = $like;
+            }
         }
 
 
@@ -85,6 +88,7 @@ class Role extends Base
 
         $where=[];
         $where['vod_id'] = ['eq', $info['role_rid'] ];
+        $where['_recycle'] = 'all';
         $res = model('Vod')->infoData($where);
         $data = $res['info'];
         $this->assign('data',$data);

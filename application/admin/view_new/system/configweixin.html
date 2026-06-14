@@ -3,12 +3,6 @@
 <div class="page-container">
     <form class="layui-form layui-form-pane" action="">
         <input type="hidden" name="__token__" value="{$Request.token}" />
-        <div class="layui-tab">
-            <ul class="layui-tab-title">
-                <li class="layui-this">{:lang('admin/system/configweixin/title')}</li>
-            </ul>
-            <div class="layui-tab-content">
-                <div class="layui-tab-item layui-show" id="movementTable">
                     <blockquote class="layui-elem-quote layui-quote-nm">
                         {:lang('admin/system/configweixin/tip')}
                     </blockquote>
@@ -196,9 +190,6 @@
                         </div>
                     </div>
 
-                </div>
-            </div>
-        </div>
         <div class="layui-form-item center">
             <div class="layui-input-block">
                 <button type="submit" class="layui-btn" lay-submit=""

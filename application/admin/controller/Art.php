@@ -43,14 +43,20 @@ class Art extends Base
         if(!empty($param['wd'])){
             $param['wd'] = urldecode($param['wd']);
             $param['wd'] = mac_filter_xss($param['wd']);
-            $where['art_name'] = ['like','%'.$param['wd'].'%'];
+            $like = mac_search_wd_like($param['wd']);
+            if ($like) {
+                $where['art_name'] = $like;
+            }
+        }
+        if (!empty($param['recycle'])) {
+            $where['art_recycle_time'] = ['>', 0];
         }
 
         if(!empty($param['repeat'])){
             if($param['page'] ==1){
                 Db::execute('DROP TABLE IF EXISTS '.config('database.prefix').'tmpart');
                 Db::execute('CREATE TABLE `'.config('database.prefix').'tmpart` (`id1` int unsigned DEFAULT NULL, `name1` varchar(1024) NOT NULL DEFAULT \'\') ENGINE=MyISAM');
-                Db::execute('INSERT INTO `'.config('database.prefix').'tmpart` (SELECT min(art_id)as id1,art_name as name1 FROM '.config('database.prefix').'art GROUP BY name1 HAVING COUNT(name1)>1)');
+                Db::execute('INSERT INTO `'.config('database.prefix').'tmpart` (SELECT min(art_id)as id1,art_name as name1 FROM '.config('database.prefix').'art WHERE art_recycle_time = 0 GROUP BY name1 HAVING COUNT(name1)>1)');
             }
             $order='art_name asc';
             $res = model('Art')->listRepeatData($where,$order,$param['page'],$param['limit']);
@@ -60,11 +66,26 @@ class Art extends Base
             $res = model('Art')->listData($where,$order,$param['page'],$param['limit']);
         }
 
+        $artIds = array_column($res['list'], 'art_id');
+        $artSeoStatusMap = [];
+        if (!empty($artIds)) {
+            $seoRows = Db::name('seo_ai_result')
+                ->field('seo_obj_id,seo_status')
+                ->where('seo_mid', 2)
+                ->where('seo_obj_id', 'in', $artIds)
+                ->where('seo_status', 'in', [1, 2])
+                ->select();
+            foreach ((array)$seoRows as $seoRow) {
+                $artSeoStatusMap[intval($seoRow['seo_obj_id'])] = intval($seoRow['seo_status']);
+            }
+        }
+
         foreach($res['list'] as $k=>&$v){
             $v['ismake'] = 1;
             if($GLOBALS['config']['view']['art_detail'] >0 && $v['art_time_make'] < $v['art_time']){
                 $v['ismake'] = 0;
             }
+            $v['seo_ai_status'] = isset($artSeoStatusMap[$v['art_id']]) ? intval($artSeoStatusMap[$v['art_id']]) : 0;
         }
 
         $this->assign('list', $res['list']);
@@ -90,40 +111,17 @@ class Art extends Base
 
             mac_echo('<style type="text/css">body{font-size:12px;color: #333333;line-height:21px;}span{font-weight:bold;color:#FF0000}</style>');
 
-            if(empty($param['ck_del']) && empty($param['ck_level']) && empty($param['ck_status']) && empty($param['ck_lock']) && empty($param['ck_hits']) ){
+            if(empty($param['ck_del']) && empty($param['ck_level']) && empty($param['ck_status']) && empty($param['ck_lock']) && empty($param['ck_hits']) && empty($param['ck_replace']) ){
                 return $this->error(lang('param_err'));
             }
-            $where = [];
-            if(!empty($param['type'])){
-                $where['type_id'] = ['eq',$param['type']];
-            }
-            if(!empty($param['level'])){
-                $where['art_level'] = ['eq',$param['level']];
-            }
-            if(in_array($param['status'],['0','1'])){
-                $where['art_status'] = ['eq',$param['status']];
-            }
-            if(!empty($param['lock'])){
-                $where['art_lock'] = ['eq',$param['lock']];
-            }
-            if(!empty($param['pic'])){
-                if($param['pic'] == '1'){
-                    $where['art_pic'] = ['eq',''];
-                }
-                elseif($param['pic'] == '2'){
-                    $where['art_pic'] = ['like','http%'];
-                }
-                elseif($param['pic'] == '3'){
-                    $where['art_pic'] = ['like','%#err%'];
-                }
-            }
-            if(!empty($param['wd'])){
-                $param['wd'] = htmlspecialchars(urldecode($param['wd']));
-                $where['art_name'] = ['like','%'.$param['wd'].'%'];
-            }
-
-
+            $where = $this->artBatchFilterWhere($param);
             if($param['ck_del'] == 1){
+                $res = model('Art')->recycleData($where);
+                mac_echo($res['code'] == 1 ? lang('recycle_ok') : $res['msg']);
+                mac_jump( url('art/batch') ,3);
+                exit;
+            }
+            if($param['ck_del'] == 4){
                 $res = model('Art')->delData($where);
                 mac_echo(lang('multi_del_ok'));
                 mac_jump( url('art/batch') ,3);
@@ -175,6 +173,16 @@ class Art extends Base
                     $update['art_hits'] = rand($param['val_hits_min'],$param['val_hits_max']);
                     $des .= '&nbsp;'.lang('hits').'：'.$update['art_hits'].'；';
                 }
+
+                // 新增：批量替换功能
+                if(!empty($param['ck_replace']) && !empty($param['replace_field']) && isset($param['replace_search'])){
+                    $field = $param['replace_field'];
+                    $replaceres = $this->batch_replace($field,$v,$param['replace_search'],$param['replace_with'],'art');
+                    if(isset($replaceres[$field])) $update[$field] = $replaceres[$field];
+
+                    if(!empty($replaceres['des'])) $des .= $replaceres['des'];
+                }
+
                 mac_echo($des);
                 $res2 = model('Art')->where($where2)->update($update);
 
@@ -192,6 +200,55 @@ class Art extends Base
         return $this->fetch('admin@art/batch');
     }
 
+    private function artBatchFilterWhere(&$param)
+    {
+        $where = [];
+        if (!empty($param['type'])) {
+            $where['type_id'] = ['eq', $param['type']];
+        }
+        if (!empty($param['level'])) {
+            $where['art_level'] = ['eq', $param['level']];
+        }
+        if (in_array($param['status'] ?? '', ['0', '1'])) {
+            $where['art_status'] = ['eq', $param['status']];
+        }
+        if (!empty($param['lock'])) {
+            $where['art_lock'] = ['eq', $param['lock']];
+        }
+        if (!empty($param['pic'])) {
+            if ($param['pic'] == '1') {
+                $where['art_pic'] = ['eq', ''];
+            } elseif ($param['pic'] == '2') {
+                $where['art_pic'] = ['like', 'http%'];
+            } elseif ($param['pic'] == '3') {
+                $where['art_pic'] = ['like', '%#err%'];
+            }
+        }
+        if (!empty($param['wd'])) {
+            $param['wd'] = htmlspecialchars(urldecode($param['wd']));
+            $like = mac_search_wd_like($param['wd']);
+            if ($like) {
+                $where['art_name'] = $like;
+            }
+        }
+        if (!empty($param['recycle'])) {
+            $where['art_recycle_time'] = ['>', 0];
+        }
+        return $where;
+    }
+
+    public function exportData()
+    {
+        $param = input();
+        $where = $this->artBatchFilterWhere($param);
+        $this->base_export($param,'art',$where);
+    }
+
+    public function importData()
+    {
+        $this->base_import('art');
+    }
+
     public function info()
     {
         if (Request()->isPost()) {
@@ -206,11 +263,20 @@ class Art extends Base
         $id = input('id');
         $where=[];
         $where['art_id'] = ['eq',$id];
+        $where['_recycle'] = 'all';
         $res = model('Art')->infoData($where);
 
         $info = $res['info'];
         $this->assign('info',$info);
         $this->assign('art_page_list',(array)$info['art_page_list']);
+        $seoAiStatus = 0;
+        if (!empty($info['art_id'])) {
+            $seoAi = model('SeoAiResult')->getByObject(2, intval($info['art_id']));
+            if (!empty($seoAi)) {
+                $seoAiStatus = intval($seoAi['seo_status']);
+            }
+        }
+        $this->assign('seo_ai_status', $seoAiStatus);
 
         $type_tree = model('Type')->getCache('type_tree');
         $this->assign('type_tree',$type_tree);
@@ -219,15 +285,56 @@ class Art extends Base
         return $this->fetch('admin@art/info');
     }
 
+    public function aiSeoGenerate()
+    {
+        if (!Request()->isPost()) {
+            return json(['code' => 0, 'msg' => lang('illegal_request'), 'data' => []]);
+        }
+        $id = intval(input('post.id'));
+        if ($id <= 0) {
+            return json(['code' => 0, 'msg' => lang('param_err'), 'data' => []]);
+        }
+        try {
+            $res = \app\common\util\SeoAi::generateByMidObj(2, $id);
+        } catch (\Exception $e) {
+            \think\Log::error('AI SEO generate failed (art_id=' . $id . '): ' . $e->getMessage());
+            return json(['code' => 0, 'msg' => $e->getMessage(), 'data' => []]);
+        }
+        if (empty($res['code']) || intval($res['code']) !== 1) {
+            return json(['code' => 0, 'msg' => isset($res['msg']) ? $res['msg'] : lang('save_err'), 'data' => []]);
+        }
+        return json(['code' => 1, 'msg' => lang('save_ok'), 'data' => isset($res['data']) ? $res['data'] : []]);
+    }
+
+    public function restore()
+    {
+        $param = input();
+        $ids = $param['ids'];
+        if (empty($ids)) {
+            return $this->error(lang('param_err'));
+        }
+        $where = ['art_id' => ['in', $ids]];
+        $res = model('Art')->restoreData($where);
+        if ($res['code'] > 1) {
+            return $this->error($res['msg']);
+        }
+        return $this->success($res['msg']);
+    }
+
     public function del()
     {
         $param = input();
         $ids = $param['ids'];
+        $purge = !empty($param['purge']);
 
         if(!empty($ids)){
             $where=[];
             $where['art_id'] = ['in',$ids];
-            $res = model('Art')->delData($where);
+            if ($purge) {
+                $res = model('Art')->delData($where);
+            } else {
+                $res = model('Art')->recycleData($where);
+            }
             if($res['code']>1){
                 return $this->error($res['msg']);
             }

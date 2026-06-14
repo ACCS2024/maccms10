@@ -7,13 +7,6 @@
 
     <form class="layui-form layui-form-pane" action="">
         <input type="hidden" name="__token__" value="{$Request.token}" />
-        <div class="layui-tab">
-            <ul class="layui-tab-title">
-                <li class="layui-this">{:lang('admin/system/configcomment/title')}</li>
-            </ul>
-            <div class="layui-tab-content">
-
-                <div class="layui-tab-item layui-show" id="movementTable">
                     <div class="layui-form-item">
                         <label class="layui-form-label">{:lang('admin/system/configcomment/gbook')}：</label>
                         <div class="layui-input-inline">
@@ -124,15 +117,11 @@
                         </div>
                     </div>
 
-                </div>
-
-                <div class="layui-form-item center">
-                    <div class="layui-input-block">
-                        <button type="submit" class="layui-btn" lay-submit=""
-                            lay-filter="formSubmit">{:lang('btn_save')}</button>
-                        <button class="layui-btn layui-btn-primary" type="reset">{:lang('btn_reset')}</button>
-                    </div>
-                </div>
+        <div class="layui-form-item center">
+            <div class="layui-input-block">
+                <button type="submit" class="layui-btn" lay-submit=""
+                    lay-filter="formSubmit">{:lang('btn_save')}</button>
+                <button class="layui-btn layui-btn-primary" type="reset">{:lang('btn_reset')}</button>
             </div>
         </div>
     </form>
