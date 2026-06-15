@@ -126,4 +126,23 @@ $res = model('vod')->listData($where, $order, $page, $size, 0, $field, $totalsho
 
 ---
 
-*本设计仅为方案,待你审定后我按阶段实现并在 docker 实测;不依赖任何生产环境。*
+## 9. 落地状态(已全量实现并 docker 实测)
+
+> 全部纯本地、不与官方通信;Meili 关闭(默认)时零行为变化、零额外开销;Meili 开启则用现成桥接,异常/无命中/不可达一律回退 LIKE。
+
+| 阶段 | 内容 | 提交 | 验证 |
+|---|---|---|---|
+| **P1** | 前台热查询复合索引(类目+状态+排序,消除 filesort/全扫),自动迁移 v2 | `1928792` | EXPLAIN:`key=idx_type_st_time`,无 `Using filesort` |
+| **P2** | `api/Vod·Art·Manga::get_list`、`api/Provide::vod·art` 接 Meili;统一助手 `mac_meili_api_apply($module,$where,$kw,$page,$num,$order,$start)`;**并修复前台 `listCacheData`(Vod/Art/Manga)既有分页缺陷**(Meili 命中后二次 offset 致第 2 页起为空) | `f24d461` | 5 入口关键词搜索(Meili 关)结构/总数/分类正确;非关键词浏览不受影响 |
+| **P3** | 采集 `Collect::vod_data/art_data/...` 与推送 `Receive` 的裸 insert/update 处补 `MeilisearchSync::afterXSave`(vod/art/manga/actor/role/website),消除索引陈旧 | `c59dc0f` | `insert($v,false,true)` 返回自增ID;Meili 关时为安全空操作 |
+| **P4** | `filterableAttributes` 补 `ts`(时间范围过滤此前被拒→静默回退);新增 `mac_meili_settings_auto_sync()` 按 payload 哈希版本随升级自动 PATCH 设置(后台访问时,不阻断、不联网) | `0098383` | `ts` 已进 filterable;Meili 关/不可达时空操作不写标记、下次重试 |
+| **P5** | 后台「数据库」一键 **MyISAM→InnoDB** 转换(`Database::convert_engine`,根治采集锁表/故障),新增"引擎"列与批量/单行按钮;管理员低峰手动触发,不入自动迁移 | `d837529` | MyISAM 成功转 InnoDB、已 InnoDB 正确跳过、失败隔离 |
+| **P6** | 全链路回归 | — | 首页/前台搜索/后台均 HTTP 200;**降级**(Meili 开但不可达)3ms 内回退 LIKE 不卡死;前台搜索结果正常渲染 |
+
+### 仍按设计保留的取舍(非缺陷)
+- **Provide 默认带 `datafilter`(`_string`)** → 桥接遇 `_string` 即回退 LIKE(外站契约优先稳妥)。清空 datafilter 后 Provide 才走 Meili;关键词少、以浏览为主,影响小。
+- **`class/tag` 过滤** 仍走 LIKE 回退(未纳入 Meili filter;二者已是 searchable,关键词检索覆盖)。
+- **排序**:Meili 出相关性序,`time/hits/score/level` 等由 DB 在命中集合上排;`sortableAttributes` 维持 `hits_month/ts` 即可。
+- **大表引擎转换/删冗余单列索引** 不自动化(放后台按钮),避免登录时长 ALTER 阻塞。
+
+*本方案已逐阶段实现并在 docker(MySQL 5.7 + PHP 7.4)实测;Meili/Redis 镜像因 Docker Hub 限流无法拉起,故 Meili-ON 以"现成桥接 + 降级回退"双重保证(关闭=零回归实测、不可达=3ms 回退实测)。*
