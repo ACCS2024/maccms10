@@ -277,6 +277,79 @@ class Database extends Base
         return $this->success($msg);
     }
 
+    /**
+     * 清理「冗余单列索引」:仅删除可证明多余的索引——
+     * 单列、非唯一、非主键,且该列恰是某复合索引的「首列」(最左前缀)。
+     * 此类单列索引的全部查找都能由复合索引最左前缀承担,删之不影响任何查询,纯减写放大。
+     * 例:补了 (type_id,vod_status,vod_time) 后,单列 type_id 索引即冗余。
+     *
+     * 安全边界(经核实 maccms 查询模式后刻意从严):
+     *  - 唯一索引(NON_UNIQUE=0)一律保留(承载唯一约束,非纯加速);
+     *  - 仅"首列重复"才删;vod_name/vod_director(采集去重等值查)、vod_up/down/level/hits*(排序白名单)
+     *    等虽是单列但被实际查询使用,不属"首列重复",不会被本方法删除。
+     * 幂等:已清理过再次执行不再删除。
+     */
+    public function drop_redundant_index($ids = '')
+    {
+        if (empty($ids)) {
+            return $this->error(lang('admin/database/select_optimize_table'));
+        }
+        $table = is_array($ids) ? $ids : [$ids];
+        foreach ($table as $t) {
+            if (!$this->isValidTable($t)) {
+                return $this->error('Table is invalid.');
+            }
+        }
+        $dropped = [];
+        $failed  = [];
+        foreach ($table as $t) {
+            $rows = Db::query(
+                "SELECT INDEX_NAME, SEQ_IN_INDEX, COLUMN_NAME, NON_UNIQUE
+                 FROM information_schema.STATISTICS
+                 WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?
+                 ORDER BY INDEX_NAME, SEQ_IN_INDEX",
+                [$t]
+            );
+            // 聚合:每个索引的列序列 + 是否唯一
+            $idx = [];
+            foreach ($rows as $r) {
+                $n = $r['INDEX_NAME'];
+                $idx[$n]['cols'][(int)$r['SEQ_IN_INDEX']] = $r['COLUMN_NAME'];
+                $idx[$n]['nonuniq'] = (int)$r['NON_UNIQUE'];
+            }
+            // 复合索引(>1 列)的首列集合
+            $leadingCols = [];
+            foreach ($idx as $meta) {
+                if (count($meta['cols']) > 1) {
+                    ksort($meta['cols']);
+                    $leadingCols[reset($meta['cols'])] = true;
+                }
+            }
+            // 单列 + 非唯一 + 非主键 + 列是某复合索引首列 → 冗余
+            foreach ($idx as $name => $meta) {
+                if ($name === 'PRIMARY' || count($meta['cols']) !== 1 || $meta['nonuniq'] !== 1) {
+                    continue;
+                }
+                $col = reset($meta['cols']);
+                if (empty($leadingCols[$col])) {
+                    continue;
+                }
+                try {
+                    Db::execute("ALTER TABLE `" . str_replace('`', '', $t) . "` DROP INDEX `" . str_replace('`', '', $name) . "`");
+                    $dropped[] = $t . '.' . $name;
+                } catch (\Throwable $e) {
+                    $failed[] = $t . '.' . $name . ' (' . $e->getMessage() . ')';
+                }
+            }
+        }
+        $msg = '冗余索引清理完成 — 删除:' . count($dropped) . ',失败:' . count($failed)
+             . (empty($dropped) ? '(无可删冗余索引)' : ' | ' . implode(', ', $dropped));
+        if (!empty($failed)) {
+            return $this->error($msg . ' | 失败:' . implode('; ', $failed));
+        }
+        return $this->success($msg);
+    }
+
     public function del($id = '')
     {
         if (empty($id)) {
