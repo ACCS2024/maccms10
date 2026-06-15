@@ -739,6 +739,39 @@ function mac_security_auto_migrate()
 }
 
 /**
+ * Meilisearch 索引设置自动同步(无需手动在后台点"初始化")。
+ * 仅当 Meili 已启用时执行:把 indexSettingsPayload(filterable/sortable/ranking 等)
+ * 自动 PATCH 到索引。版本号取 payload 内容哈希——今后任意修改设置即自动触发一次重应用。
+ * 仅改设置、不重推文档(filterable 新增字段由 Meili 异步对既有文档重建过滤结构)。
+ * Meili 不可达时不写标记 → 下次后台请求自动重试,完全本地不阻断、不联官方。
+ */
+function mac_meili_settings_auto_sync()
+{
+    if (!class_exists('\\app\\common\\util\\MeilisearchService')) {
+        return;
+    }
+    $svc = '\\app\\common\\util\\MeilisearchService';
+    try {
+        if (!$svc::enabled()) {
+            return; // Meili 关闭:无需同步,零开销
+        }
+        $payload = $svc::indexSettingsPayload();
+        $ver = 'ms_' . substr(md5(json_encode($payload)), 0, 12);
+        $marker = APP_PATH . 'data' . DIRECTORY_SEPARATOR . 'update' . DIRECTORY_SEPARATOR . 'meili_settings.lock';
+        if (is_file($marker) && trim((string)@file_get_contents($marker)) === $ver) {
+            return; // 当前设置版本已应用
+        }
+        $svc::ensureIndex();          // 索引不存在则建(建时已应用一次设置)
+        $r = $svc::updateSettings();  // 既有索引:PATCH 最新 filterable/sortable
+        if (!empty($r['ok'])) {
+            @file_put_contents($marker, $ver);
+        }
+    } catch (\Throwable $e) {
+        // 静默:不阻断后台访问
+    }
+}
+
+/**
  * 幂等添加索引:仅当所有列存在且同名索引不存在时执行 ADD INDEX。
  */
 function mac_db_add_index_if_absent($table, $indexName, array $cols)

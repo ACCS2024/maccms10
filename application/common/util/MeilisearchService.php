@@ -117,6 +117,9 @@ class MeilisearchService
             'filterableAttributes' => [
                 'kind', 'type_id', 'type_id_1', 'recycle', 'status', 'level', 'group_id', 'isend', 'plot',
                 'year', 'area', 'lang', 'state', 'version', 'rid',
+                // ts 同时用于时间范围过滤(build*Filter 的 thinkTimeToMeili 生成 ts>x/ts<y);
+                // 缺失会导致"关键词+时间筛选"被 Meili 拒绝而静默回退 LIKE。ts 亦在 sortable 中,两者可共存。
+                'ts',
             ],
             'sortableAttributes' => ['hits_month', 'ts'],
             'rankingRules' => [
