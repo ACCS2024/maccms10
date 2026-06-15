@@ -353,6 +353,30 @@ maccms10 与 TP5.0 深度耦合,以下几乎全部要重写:
 
 ---
 
+## 十一、第二轮去混淆回溯审计(2026-06-15)
+
+**复盘第一轮方法论盲点**:① 纯 grep 未解包 → admin_common.js 打包器里藏的 `update.maccms.la` 脚本注入被误判"干净";② "官方/库=良性"前提 → player.js 的 union 广告被放过。**本轮方法论升级:解包一切 + 不信"库/官方"标签 + 追踪所有动态执行与"数据→代码"**,对全树跑穿。
+
+### 本轮新处置
+- 🔧 `crossdomain.xml`:通配 `domain="*"`(任意站点 Flash 可携 cookie 跨域读)→ 收紧为 `none`
+- 🗑️ 删除第三方解析脚本 `static_new/player/wjm3u8.js`(→jx.wujinkk.com)、`hnm3u8.js`(→cdn.zyc888.top),并清理 `static_new/js/playerconfig.js` 残留的 wjm3u8/hnm3u8 条目(配置源 `extra/vodplayer.php` 本已无此项,属旧生成残留)
+
+### 全面复核结论(均实际解包/污点追踪验证)
+| 面 | 结论 |
+|---|---|
+| p,a,c,k,e,d 打包器 | player.js/admin_common.js **上轮已清**;jquery×4 库无外联;security_check/Begin/Template 命中是**检测特征字符串** |
+| `_0x` 重度混淆 | 仅 Mybase.js,实测**零 I/O** 的混淆 CryptoJS,无法 phone-home |
+| base64/gzinflate/rot13/hex/fromCharCode | 无恶意:库数据或检测特征;base64 字面量已全部还原明文 |
+| 首页/下载 JS | home-stack 只调**本站**(timming/搜索),vod-down 是迅雷/QQ 官方下载SDK,无外部代码加载 |
+| PHP 动态执行 | 应用层**无** eval/assert/preg-`/e`;**无原生 unserialize**(Collection 是 PHPCMS 遗留死代码方法);变量函数/方法/include 全部受白名单/class_exists/固定路径/消毒约束 |
+| 写可执行文件 | 无;`mac_arr2file` 全数组(var_export);install 的 database.php 已 var_export |
+| 供应链/基础设施 | `.github` prompts 是站长自有 AI 指令(良性);git 作者正常;无 CI/composer/npm 恶意钩子 |
+
+> **底线:本轮未发现新的活跃病毒/后门。** 真正隐藏的两个 phone-home(player.js 的 union 广告、admin_common.js 的打包器脚本注入)是**第一轮**靠解混淆挖出并已清除;本轮把升级后的方法论对全树穷尽,确认无其它隐藏。
+> 备注:后台异步子 agent 本次启动后僵死(输出停在启动占位、零进程),已改为同步执行以保证可靠。
+
+---
+
 ## 附:参考来源
 
 - Maccms CVEs — OpenCVE: https://app.opencve.io/cve/?vendor=maccms
