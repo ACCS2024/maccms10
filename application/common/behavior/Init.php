@@ -119,7 +119,13 @@ class Init
         }
 
         config('cache.type', $config['app']['cache_type']);
-        config('cache.timeout',1000);
+        // 连接超时(秒):TP5 redis/memcache 驱动把该值作为 connect() 的秒级超时。
+        // 历史硬编码 1000(=1000 秒)会在 Redis/Memcache 不可达时,让每个请求在 connect 上
+        // 阻塞十几分钟 → 整站挂死。改为秒级快速失败(可经 maccms.php 的 cache_timeout 覆盖),
+        // 使"缓存切 Redis"在后端故障时安全降级而非拖垮站点。
+        $cacheTimeout = (isset($config['app']['cache_timeout']) && (float)$config['app']['cache_timeout'] > 0)
+            ? (float)$config['app']['cache_timeout'] : 1.5;
+        config('cache.timeout', $cacheTimeout);
         config('cache.host',$config['app']['cache_host']);
         config('cache.port',$config['app']['cache_port']);
         config('cache.username',$config['app']['cache_username']);
