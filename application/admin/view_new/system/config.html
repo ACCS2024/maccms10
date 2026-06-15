@@ -407,6 +407,15 @@
                     </div>
 
                     <div class="layui-form-item">
+                        <label class="layui-form-label">播放计数缓冲：</label>
+                        <div class="layui-input-block">
+                            <input type="radio" name="app[hits_buffer]" value="0" title="关闭(默认)" form="form_config_main" {if condition="empty($config['app']['hits_buffer']) || $config['app']['hits_buffer'] eq '0'"}checked{/if}>
+                            <input type="radio" name="app[hits_buffer]" value="1" title="Redis缓冲(削减写库)" form="form_config_main" {if condition="$config['app']['hits_buffer'] eq '1'"}checked{/if}>
+                        </div>
+                        <div class="layui-form-mid layui-word-aux">高流量时把"每播一次写库"削减为"每累计若干次写一次"。需缓存方式为 redis;展示计数最多滞后约 10 次,定时任务兜底落库。</div>
+                    </div>
+
+                    <div class="layui-form-item">
                         <label class="layui-form-label">{:lang('admin/system/config/cache_flag')}：</label>
                         <div class="layui-input-inline">
                             <input type="text" name="app[cache_flag]"

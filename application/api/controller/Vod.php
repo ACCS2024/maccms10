@@ -687,19 +687,21 @@ class Vod extends Base
         $id = intval($param['id'] ?? 0);
         if ($id < 1) return json(['code' => 1001, 'msg' => '参数错误']);
         $where = ['vod_id' => $id];
-        // 原子自增 + 跨期归零:单条 UPDATE,消除原"读-改-写"的竞态(高并发播放不丢增量),
-        // 配合 InnoDB 行锁,不再因 MyISAM 表锁让并发播放串行。日/周/月跨期归零下推到 SQL。
+        // 计数:优先 Redis 缓冲(后台开 hits_buffer 且缓存为 redis 时削减写库);未启用/异常 →
+        // 单条原子 UPDATE(inc + 日/周/月跨期归零下推 SQL,无竞态,配合 InnoDB 行锁去表锁串行)。
         if (($param['type'] ?? '') == 'update') {
-            $now        = time();
-            $dayStart   = strtotime('today');
-            $weekStart  = $dayStart - ((int)date('w', $now)) * 86400; // 周日为周首(与原逻辑一致)
-            $monthStart = mktime(0, 0, 0, (int)date('n', $now), 1, (int)date('Y', $now));
-            model('Vod')->where($where)
-                ->inc('vod_hits')
-                ->exp('vod_hits_day',   "IF(vod_time_hits >= {$dayStart}, vod_hits_day + 1, 1)")
-                ->exp('vod_hits_week',  "IF(vod_time_hits >= {$weekStart}, vod_hits_week + 1, 1)")
-                ->exp('vod_hits_month', "IF(vod_time_hits >= {$monthStart}, vod_hits_month + 1, 1)")
-                ->update(['vod_time_hits' => $now]);
+            if (!\app\common\util\HitsBuffer::bump('vod', $id)) {
+                $now        = time();
+                $dayStart   = strtotime('today');
+                $weekStart  = $dayStart - ((int)date('w', $now)) * 86400; // 周日为周首(与原逻辑一致)
+                $monthStart = mktime(0, 0, 0, (int)date('n', $now), 1, (int)date('Y', $now));
+                model('Vod')->where($where)
+                    ->inc('vod_hits')
+                    ->exp('vod_hits_day',   "IF(vod_time_hits >= {$dayStart}, vod_hits_day + 1, 1)")
+                    ->exp('vod_hits_week',  "IF(vod_time_hits >= {$weekStart}, vod_hits_week + 1, 1)")
+                    ->exp('vod_hits_month', "IF(vod_time_hits >= {$monthStart}, vod_hits_month + 1, 1)")
+                    ->update(['vod_time_hits' => $now]);
+            }
         }
         $res = model('Vod')->infoData($where, 'vod_hits,vod_hits_day,vod_hits_week,vod_hits_month');
         if ($res['code'] > 1) return json($res);

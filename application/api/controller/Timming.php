@@ -29,6 +29,9 @@ class Timming extends Base
             }
         }
 
+        // 低峰兜底:把 Redis 播放/阅读计数缓冲的零头落库(未开 hits_buffer 时为空操作)
+        \app\common\util\HitsBuffer::flush();
+
         $param = input('get.','','trim,urldecode');
         $name = $param['name'];
         if(empty($name)){

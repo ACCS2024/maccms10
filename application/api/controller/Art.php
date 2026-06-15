@@ -348,18 +348,20 @@ class Art extends Base
         $id = intval($param['id'] ?? 0);
         if ($id < 1) return json(['code' => 1001, 'msg' => '参数错误']);
         $where = ['art_id' => $id];
-        // 原子自增 + 跨期归零(同 Vod::update_hits):单条 UPDATE,无"读-改-写"竞态,配合 InnoDB 行锁去串行。
+        // 计数:优先 Redis 缓冲(同 Vod);未启用/异常 → 单条原子 UPDATE(无竞态,配合 InnoDB 行锁去串行)。
         if (($param['type'] ?? '') == 'update') {
-            $now        = time();
-            $dayStart   = strtotime('today');
-            $weekStart  = $dayStart - ((int)date('w', $now)) * 86400;
-            $monthStart = mktime(0, 0, 0, (int)date('n', $now), 1, (int)date('Y', $now));
-            model('Art')->where($where)
-                ->inc('art_hits')
-                ->exp('art_hits_day',   "IF(art_time_hits >= {$dayStart}, art_hits_day + 1, 1)")
-                ->exp('art_hits_week',  "IF(art_time_hits >= {$weekStart}, art_hits_week + 1, 1)")
-                ->exp('art_hits_month', "IF(art_time_hits >= {$monthStart}, art_hits_month + 1, 1)")
-                ->update(['art_time_hits' => $now]);
+            if (!\app\common\util\HitsBuffer::bump('art', $id)) {
+                $now        = time();
+                $dayStart   = strtotime('today');
+                $weekStart  = $dayStart - ((int)date('w', $now)) * 86400;
+                $monthStart = mktime(0, 0, 0, (int)date('n', $now), 1, (int)date('Y', $now));
+                model('Art')->where($where)
+                    ->inc('art_hits')
+                    ->exp('art_hits_day',   "IF(art_time_hits >= {$dayStart}, art_hits_day + 1, 1)")
+                    ->exp('art_hits_week',  "IF(art_time_hits >= {$weekStart}, art_hits_week + 1, 1)")
+                    ->exp('art_hits_month', "IF(art_time_hits >= {$monthStart}, art_hits_month + 1, 1)")
+                    ->update(['art_time_hits' => $now]);
+            }
         }
         $res = model('Art')->infoData($where, 'art_hits,art_hits_day,art_hits_week,art_hits_month');
         if ($res['code'] > 1) return json($res);
