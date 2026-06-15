@@ -847,6 +847,77 @@ function mac_perf_env_checks()
 }
 
 /**
+ * 缓存防击穿:单飞锁。仅用于"缓存未命中、即将回源"的并发收敛。
+ * - Redis 后端:SET NX EX 原子锁(真正单飞);
+ * - 其它后端:has+set 尽力而为(非原子,竞争时退化为多产出 = 现状,绝不更差);
+ * - 任何异常都按"未获锁/可产出"处理,绝不阻断业务。
+ * 锁带 TTL 自动过期,持有者崩溃也不会长期占锁。
+ *
+ * @return bool true=本请求应回源产出;false=他人正在产出(调用方可短等其结果)
+ */
+function mac_cache_lock_acquire($key, $ttl = 10)
+{
+    $ttl = max(1, (int)$ttl);
+    try {
+        $h = \think\Cache::init()->handler();
+        if (class_exists('\\Redis', false) && $h instanceof \Redis) {
+            return (bool)$h->set('mac_sf:' . md5((string)$key), 1, ['nx', 'ex' => $ttl]);
+        }
+    } catch (\Throwable $e) {
+        return true;
+    }
+    // 非 Redis:尽力而为
+    try {
+        $lk = 'mac_sf_' . md5((string)$key);
+        if (\think\Cache::has($lk)) {
+            return false;
+        }
+        \think\Cache::set($lk, 1, $ttl);
+        return true;
+    } catch (\Throwable $e) {
+        return true;
+    }
+}
+
+function mac_cache_lock_release($key)
+{
+    try {
+        $h = \think\Cache::init()->handler();
+        if (class_exists('\\Redis', false) && $h instanceof \Redis) {
+            $h->del('mac_sf:' . md5((string)$key));
+            return;
+        }
+    } catch (\Throwable $e) {
+    }
+    try {
+        \think\Cache::rm('mac_sf_' . md5((string)$key));
+    } catch (\Throwable $e) {
+    }
+}
+
+/**
+ * 缓存未命中时的单飞等待:抢锁失败者短等他人产出(有硬上限,绝不长挂)。
+ * 返回他人产出的值(命中)或 null(超时,调用方自行产出)。
+ * @param string $cacheKey 业务缓存键(读它判断他人是否已产出)
+ */
+function mac_cache_singleflight_wait($cacheKey, $maxMs = 1000, $stepMs = 50)
+{
+    $steps = max(1, (int)($maxMs / max(1, $stepMs)));
+    for ($i = 0; $i < $steps; $i++) {
+        usleep($stepMs * 1000);
+        try {
+            $v = \think\Cache::get($cacheKey);
+        } catch (\Throwable $e) {
+            $v = null;
+        }
+        if (!empty($v)) {
+            return $v;
+        }
+    }
+    return null;
+}
+
+/**
  * 幂等添加索引:仅当所有列存在且同名索引不存在时执行 ADD INDEX。
  */
 function mac_db_add_index_if_absent($table, $indexName, array $cols)

@@ -427,6 +427,12 @@ class Manga extends Base {
         if(empty($cachetime)){
             $cachetime = $GLOBALS['config']['app']['cache_time'];
         }
+        // 防击穿:可缓存且未命中时,单飞收敛并发回源(抢锁失败者短等他人结果,超时再自行回源)
+        $sf_lock = false;
+        if($GLOBALS['config']['app']['cache_core']==1 && !$use_rnd_order && empty($res)) {
+            $sf_lock = mac_cache_lock_acquire($cach_name, 10);
+            if(!$sf_lock){ $res = mac_cache_singleflight_wait($cach_name); }
+        }
         if($GLOBALS['config']['app']['cache_core']==0 || empty($res)) {
             if ($meili !== null) {
                 // Meili 已按 $page/$start 召回本页主键,DB 不可再次 offset(否则第 2 页起为空);以 page=1/start=0 取本页命中,再补真实页码
@@ -443,6 +449,7 @@ class Manga extends Base {
                 Cache::set($cach_name, $res, $cachetime);
             }
         }
+        if($sf_lock){ mac_cache_lock_release($cach_name); }
         $res['pageurl'] = $pageurl;
         $res['half'] = $half;
         return $res;
