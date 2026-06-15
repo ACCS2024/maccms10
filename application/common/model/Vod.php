@@ -621,7 +621,9 @@ class Vod extends Base {
         }
         if($GLOBALS['config']['app']['cache_core']==0 || empty($res)) {
             if ($meili !== null) {
-                $res = $this->listData($where, $order, $page, $num, $start, $field, 1, 0);
+                // Meili 已按 $page/$start 召回本页主键,DB 不可再次 offset(否则第 2 页起为空);以 page=1/start=0 取本页命中,再补真实页码
+                $res = $this->listData($where, $order, 1, $num, 0, $field, 1, 0);
+                $res['page'] = $page;
                 if ($totalshow == 1) {
                     $res['total'] = $meili['total'];
                     $res['pagecount'] = $num > 0 ? (int)ceil($meili['total'] / $num) : 0;

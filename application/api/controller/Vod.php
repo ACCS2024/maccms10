@@ -95,18 +95,30 @@ class Vod extends Base
                 $where['vod_actor'] = ['like', mac_like_arr($an), 'OR'];
             }
         }
+        // 排序(Meili 接入需提前确定 $order)
+        $order = "vod_time DESC";
+        if (!empty($param['orderby'])) {
+            $order = 'vod_' . $param['orderby'] . " DESC";
+        }
+        // 关键词搜索接 Meilisearch:命中→改写为 vod_id IN(本页命中,Meili 已分页);未启用/无命中/异常→保持原 vod_name LIKE 回退
+        $meili_on = false;
+        $meili_total = null;
+        if (isset($param['vod_name']) && strlen($param['vod_name']) > 0) {
+            $mr = mac_meili_api_apply('vod', $where, $param['vod_name'], 1, $limit, $order, $offset);
+            if ($mr !== false) {
+                $where = $mr[0];
+                $order = $mr[1];
+                $meili_total = $mr[2];
+                $meili_on = true;
+            }
+        }
         // 数据获取
-        $total = model('Vod')->getCountByCond($where);
+        $total = ($meili_on && $meili_total !== null) ? (int)$meili_total : model('Vod')->getCountByCond($where);
         $list = [];
         if ($total > 0) {
-            // 排序
-            $order = "vod_time DESC";
-            if (!empty($param['orderby'])) {
-                $order = 'vod_' . $param['orderby'] . " DESC";
-            }
             $field = 'vod_id,vod_en,vod_name,vod_sub,vod_pic,vod_actor,vod_hits,vod_hits_day,vod_hits_week,vod_hits_month,vod_time,vod_remarks,vod_score,vod_area,vod_year,vod_class,vod_blurb,vod_points_play,vod_isend,type_id,type_id_1';
-//            $list = model('Vod')->getListByCond($offset, $limit, $where, $order, $field, []);
-            $list = model('Vod')->getListByCond($offset, $limit, $where, $order, $field);
+            // Meili 命中已按偏移分页,DB 不可二次 offset(否则第 2 页起为空)
+            $list = model('Vod')->getListByCond($meili_on ? 0 : $offset, $limit, $where, $order, $field);
 
             // 补充 vod_pic、vod_link；主题「进播放页」时补充 vod_play_link（与 mac_url_vod_play 一致，避免前端拼 URL 与伪静态不一致）
             $playlinkOn = mac_tpl_vod_playlink_on();

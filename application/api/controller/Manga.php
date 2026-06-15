@@ -48,7 +48,19 @@ class Manga extends Base
             $order = $param['order'];
         }
 
-        $data = model('Manga')->listData($where, $order, $param['page'], $param['limit']);
+        // 关键词搜索接 Meilisearch(manga_name);命中→manga_id IN(本页命中,Meili 已分页);未启用/无命中/异常→回退原 LIKE
+        $meili = !empty($param['wd']) ? mac_meili_api_apply('manga', $where, $param['wd'], $param['page'], $param['limit'], $order, 0) : false;
+        if ($meili !== false) {
+            // Meili 已按 page/limit 分页;listData 以 page=1/start=0 取本页命中,避免二次分页,再用 Meili 总数覆盖
+            $data = model('Manga')->listData($meili[0], $meili[1], 1, $param['limit'], 0, '*', 1, 0);
+            $data['page'] = $param['page'];
+            if ($meili[2] !== null) {
+                $data['total'] = (int)$meili[2];
+                $data['pagecount'] = $param['limit'] > 0 ? (int)ceil($meili[2] / $param['limit']) : 0;
+            }
+        } else {
+            $data = model('Manga')->listData($where, $order, $param['page'], $param['limit']);
+        }
         if (!empty($data['list']) && is_array($data['list'])) {
             foreach ($data['list'] as &$v) {
                 if (!empty($v['manga_pic'])) {

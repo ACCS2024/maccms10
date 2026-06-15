@@ -93,17 +93,30 @@ class Art extends Base
             $where['art_level'] = ['in', $this->format_sql_string($param['level'])];
         }
 
+        // 排序(Meili 接入需提前确定 $order)
+        $order = "art_time DESC";
+        if (strlen($param['orderby']) > 0) {
+            $order = 'art_' . $param['orderby'] . " DESC";
+        }
+        // 关键词搜索接 Meilisearch(art_name);命中→art_id IN(本页命中,已分页);未启用/无命中/异常→回退原 LIKE
+        $meili_on = false;
+        $meili_total = null;
+        if (isset($param['name']) && strlen($param['name']) > 0) {
+            $mr = mac_meili_api_apply('art', $where, $param['name'], 1, $limit, $order, $offset);
+            if ($mr !== false) {
+                $where = $mr[0];
+                $order = $mr[1];
+                $meili_total = $mr[2];
+                $meili_on = true;
+            }
+        }
         // 数据获取
-        $total = model('Art')->getCountByCond($where);
+        $total = ($meili_on && $meili_total !== null) ? (int)$meili_total : model('Art')->getCountByCond($where);
         $list = [];
         if ($total > 0) {
-            // 排序
-            $order = "art_time DESC";
             $field = 'art_id,art_name,art_sub,art_en,art_pic,art_blurb,art_time,art_time_add,art_hits,art_points,art_points_detail,art_remarks,art_author,type_id';
-            if (strlen($param['orderby']) > 0) {
-                $order = 'art_' . $param['orderby'] . " DESC";
-            }
-            $list = model('Art')->getListByCond($offset, $limit, $where, $order, $field, []);
+            // Meili 命中已按偏移分页,DB 不可二次 offset
+            $list = model('Art')->getListByCond($meili_on ? 0 : $offset, $limit, $where, $order, $field, []);
             $type_list = model('Type')->getCache('type_list');
             foreach ($list as &$v) {
                 if (!empty($v['type_id']) && isset($type_list[$v['type_id']])) {

@@ -127,7 +127,19 @@ class Provide extends Base
             if ($this->_param['ac'] == 'videolist' || $this->_param['ac'] == 'detail') {
                 $field = '*';
             }
-            $res = model('vod')->listData($where, $order, $this->_param['pg'], $pagesize, 0, $field, 0);
+            // 关键词搜索接 Meilisearch(vod_name);命中→vod_id IN(本页命中,Meili 已分页);未启用/无命中/异常/含 _string→回退原 LIKE
+            $meili = !empty($this->_param['wd']) ? mac_meili_api_apply('vod', $where, $this->_param['wd'], $this->_param['pg'], $pagesize, $order, 0) : false;
+            if ($meili !== false) {
+                // Meili 已分页;listData 以 page=1/start=0 取本页命中,避免二次分页,再用 Meili 总数覆盖
+                $res = model('vod')->listData($meili[0], $meili[1], 1, $pagesize, 0, $field, 0, 0);
+                $res['page'] = $this->_param['pg'];
+                if ($meili[2] !== null) {
+                    $res['total'] = (int)$meili[2];
+                    $res['pagecount'] = $pagesize > 0 ? (int)ceil($meili[2] / $pagesize) : 0;
+                }
+            } else {
+                $res = model('vod')->listData($where, $order, $this->_param['pg'], $pagesize, 0, $field, 0);
+            }
 
 
             if ($this->_param['at'] == 'xml') {
@@ -398,7 +410,20 @@ class Provide extends Base
                 $field = '*';
             }
 
-            $res = model('art')->listData($where, $order, $this->_param['pg'], $GLOBALS['config']['api']['art']['pagesize'], 0, $field, 0);
+            // 关键词搜索接 Meilisearch(art_name);命中→art_id IN(本页命中,Meili 已分页);未启用/无命中/异常/含 _string→回退原 LIKE
+            $art_pagesize = $GLOBALS['config']['api']['art']['pagesize'];
+            $meili = !empty($this->_param['wd']) ? mac_meili_api_apply('art', $where, $this->_param['wd'], $this->_param['pg'], $art_pagesize, $order, 0) : false;
+            if ($meili !== false) {
+                // Meili 已分页;listData 以 page=1/start=0 取本页命中,避免二次分页,再用 Meili 总数覆盖
+                $res = model('art')->listData($meili[0], $meili[1], 1, $art_pagesize, 0, $field, 0, 0);
+                $res['page'] = $this->_param['pg'];
+                if ($meili[2] !== null) {
+                    $res['total'] = (int)$meili[2];
+                    $res['pagecount'] = $art_pagesize > 0 ? (int)ceil($meili[2] / $art_pagesize) : 0;
+                }
+            } else {
+                $res = model('art')->listData($where, $order, $this->_param['pg'], $art_pagesize, 0, $field, 0);
+            }
 
             if ($res['code'] > 1) {
                 echo $res['msg'];

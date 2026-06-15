@@ -761,6 +761,53 @@ function mac_db_add_index_if_absent($table, $indexName, array $cols)
 }
 
 /**
+ * 性能(P2):API 层关键词搜索统一接入 Meilisearch。
+ * 返回改写后的 [where, order, total](命中ID集 + 相关性排序 + Meili 预估总数)或 false(由调用方走原 LIKE)。
+ * 安全:Meili 未启用 / 无关键词 / 桥接异常 / 无命中 / where 含无法映射的过滤 一律返回 false → 回退原 LIKE,绝不改变既有结果集语义。
+ *
+ * 注意分页:命中 where 形如 `pk IN(本页ID)`,即 Meili 已按 $page/$num/$start 完成分页。
+ *   - 调用方用 getListByCond 时:Meili 命中后 offset 必须传 0(否则二次分页,第 2 页起为空)。
+ *   - 调用方用 listData 时:Meili 命中后须以 page=1/start=0 调用(避免二次分页),再用本函数返回的 total 覆盖 $res['total']/'pagecount'。
+ *
+ * @param string $module vod|art|manga|actor|role|website
+ * @param array  $where  原始查询条件(含关键词 LIKE,桥接会自行剥离文本搜索键)
+ * @param string $kw     关键词
+ * @param int    $page   页码(1 起)
+ * @param int    $num    每页条数
+ * @param mixed  $order  当前排序(未命中相关性时透传)
+ * @param int    $start  附加偏移(offset 型分页传 offset,page 型分页传 0)
+ * @return array|false   [where, order, total] 或 false
+ */
+function mac_meili_api_apply($module, $where, $kw, $page = 1, $num = 20, $order = '', $start = 0)
+{
+    $kw = trim((string)$kw);
+    if ($kw === '' || !class_exists('\\app\\common\\util\\MeilisearchService') || !\app\common\util\MeilisearchService::enabled()) {
+        return false;
+    }
+    $page  = $page > 0 ? (int)$page : 1;
+    $num   = $num > 0 ? (int)$num : 20;
+    $start = $start > 0 ? (int)$start : 0;
+    try {
+        $B = '\\app\\common\\util\\MeilisearchListBridge';
+        switch ($module) {
+            case 'vod':     $m = $B::applyForVod($where, $kw, '', '', '', '', '', $page, $num, $start, $order); break;
+            case 'art':     $m = $B::applyForArt($where, $kw, '', '', '', $page, $num, $start, $order); break;
+            case 'manga':   $m = $B::applyForManga($where, $kw, '', '', '', $page, $num, $start, $order); break;
+            case 'actor':   $m = $B::applyForActor($where, $kw, '', $page, $num, $start, $order); break;
+            case 'role':    $m = $B::applyForRole($where, $kw, '', '', $page, $num, $start, $order); break;
+            case 'website': $m = $B::applyForWebsite($where, $kw, '', '', '', $page, $num, $start, $order); break;
+            default:        return false;
+        }
+        if (is_array($m) && isset($m['where'])) {
+            return [$m['where'], (isset($m['order']) ? $m['order'] : $order), (isset($m['total']) ? $m['total'] : null)];
+        }
+        return false;
+    } catch (\Throwable $e) {
+        return false;
+    }
+}
+
+/**
  * 安全加固(V4):口令哈希。新口令用 bcrypt;校验兼容旧的 32位 md5,
  * 旧 md5 校验通过后由调用方透明 rehash 升级为 bcrypt。
  */
