@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<cross-domain-policy> 
-	<allow-access-from domain="*"/>  
-</cross-domain-policy> 
+<!-- 安全加固:原为 allow-access-from domain="*"(任意站点Flash可携带本站cookie跨域读取),
+     收紧为禁止一切跨域策略。现代浏览器用 CORS,不依赖本文件。 -->
+<cross-domain-policy>
+	<site-control permitted-cross-domain-policies="none"/>
+</cross-domain-policy>
