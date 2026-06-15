@@ -946,6 +946,7 @@ class Collect extends Base {
                         $vod_id = model('Vod')->insert($v, false, true);
                         if ($vod_id > 0) {
                             $vod_search_enabled && $vod_search->checkAndUpdateTopResults(['vod_id' => $vod_id] + $v, true);
+                            \app\common\util\MeilisearchSync::afterVodSave((int)$vod_id); // 采集入库:增量同步 Meili(Meili 关闭则空操作)
                             $color = 'green';
                             $des = lang('model/collect/add_ok');
                         } else {
@@ -1201,6 +1202,7 @@ class Collect extends Base {
                             $where['vod_id'] = $info['vod_id'];
                             $update = VodValidate::formatDataBeforeDb($update);
                             $res = model('Vod')->where($where)->update($update);
+                            \app\common\util\MeilisearchSync::afterVodSave((int)$info['vod_id']); // 采集更新:增量同步 Meili
                             $color = 'green';
                             if ($res === false) {
 
@@ -1553,7 +1555,8 @@ class Collect extends Base {
                     $v['art_pic'] = (string)$tmp['pic'];
 
                     $msg = $tmp['msg'];
-                    $res = model('Art')->insert($v);
+                    $res = model('Art')->insert($v, false, true);
+                    \app\common\util\MeilisearchSync::afterArtSave((int)$res); // 采集入库:增量同步 Meili(Meili 关闭则空操作)
                     if($res===false){
 
                     }
@@ -1613,6 +1616,7 @@ class Collect extends Base {
                                 $where = [];
                                 $where['art_id'] = $info['art_id'];
                                 $res = model('Art')->where($where)->update($update);
+                                \app\common\util\MeilisearchSync::afterArtSave((int)$info['art_id']); // 采集更新:增量同步 Meili
                                 $color = 'green';
                                 if($res===false){
 
@@ -1865,7 +1869,8 @@ class Collect extends Base {
                     $tmp = $this->syncImages($config_sync_pic, $v['actor_pic'],'actor');
                     $v['actor_pic'] = $tmp['pic'];
                     $msg = $tmp['msg'];
-                    $res = model('Actor')->insert($v);
+                    $res = model('Actor')->insert($v, false, true);
+                    \app\common\util\MeilisearchSync::afterActorSave((int)$res); // 采集入库:增量同步 Meili(Meili 关闭则空操作)
                     if($res===false){
 
                     }
@@ -1908,6 +1913,7 @@ class Collect extends Base {
                                 $where = [];
                                 $where['actor_id'] = $info['actor_id'];
                                 $res = model('Actor')->where($where)->update($update);
+                                \app\common\util\MeilisearchSync::afterActorSave((int)$info['actor_id']); // 采集更新:增量同步 Meili
                                 $color = 'green';
                                 if($res===false){
 
@@ -2171,7 +2177,8 @@ class Collect extends Base {
                         $tmp = $this->syncImages($config_sync_pic,  $v['role_pic'], 'role');
                         $v['role_pic'] = $tmp['pic'];
                         $msg = $tmp['msg'];
-                        $res = model('Role')->insert($v);
+                        $res = model('Role')->insert($v, false, true);
+                        \app\common\util\MeilisearchSync::afterRoleSave((int)$res); // 采集入库:增量同步 Meili(Meili 关闭则空操作)
                         if ($res === false) {
 
                         }
@@ -2208,6 +2215,7 @@ class Collect extends Base {
                                     $where = [];
                                     $where['role_id'] = $info['role_id'];
                                     $res = model('Role')->where($where)->update($update);
+                                    \app\common\util\MeilisearchSync::afterRoleSave((int)$info['role_id']); // 采集更新:增量同步 Meili
                                     $color = 'green';
                                     if ($res === false) {
 
@@ -2465,7 +2473,8 @@ class Collect extends Base {
                     $tmp = $this->syncImages($config_sync_pic, $v['website_pic'],'website');
                     $v['website_pic'] = $tmp['pic'];
                     $msg = $tmp['msg'];
-                    $res = model('Website')->insert($v);
+                    $res = model('Website')->insert($v, false, true);
+                    \app\common\util\MeilisearchSync::afterWebsiteSave((int)$res); // 采集入库:增量同步 Meili(Meili 关闭则空操作)
                     if($res===false){
 
                     }
@@ -2508,6 +2517,7 @@ class Collect extends Base {
                                 $where = [];
                                 $where['website_id'] = $info['website_id'];
                                 $res = model('Website')->where($where)->update($update);
+                                \app\common\util\MeilisearchSync::afterWebsiteSave((int)$info['website_id']); // 采集更新:增量同步 Meili
                                 $color = 'green';
                                 if($res===false){
 
@@ -3064,7 +3074,8 @@ class Collect extends Base {
                     $v['manga_chapter_from'] = $v['manga_play_from'];
                     $v['manga_chapter_url'] = $v['manga_play_url'];
                     
-                    $res = model('Manga')->insert($v);
+                    $res = model('Manga')->insert($v, false, true);
+                    \app\common\util\MeilisearchSync::afterMangaSave((int)$res); // 采集入库:增量同步 Meili(Meili 关闭则空操作)
                     if($res===false){
 
                     }
@@ -3113,6 +3124,7 @@ class Collect extends Base {
                             $where = [];
                             $where['manga_id'] = $info['manga_id'];
                             $res = model('Manga')->where($where)->update($update);
+                            \app\common\util\MeilisearchSync::afterMangaSave((int)$info['manga_id']); // 采集更新:增量同步 Meili
                             $color = 'green';
                         }
                         else{
