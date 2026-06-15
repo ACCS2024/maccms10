@@ -843,6 +843,37 @@ function mac_perf_env_checks()
         }
     } catch (\Throwable $e) {}
 
+    // 7) 整页缓存(匿名安全可用,读侧最大杠杆)
+    $cp = isset($app['cache_page']) && (string)$app['cache_page'] === '1';
+    $push('整页缓存(匿名)', $cp, $cp ? '已开启' : '未开启',
+        $cp ? '' : '「系统配置」页面缓存设为开:匿名访客整页缓存(登录用户自动绕过、不串号),读侧提速最大。', !$cp);
+
+    // 8) 输出压缩(gzip/HTML)
+    try {
+        $zlib = strtolower((string)ini_get('zlib.output_compression'));
+        $gzipOn = ($zlib === '1' || $zlib === 'on') || (!empty($app['compress']) && (string)$app['compress'] === '1');
+        $push('输出压缩', $gzipOn, $gzipOn ? '已开启' : '未开启',
+            $gzipOn ? '' : '在 Web 服务器开 gzip/brotli(或 php.ini zlib.output_compression / 后台 HTML 压缩),降带宽与 TTFB。', !$gzipOn);
+    } catch (\Throwable $e) {}
+
+    // 9) PHP OPcache JIT(需 PHP 8+)
+    try {
+        $jit = function_exists('opcache_get_status') ? strtolower((string)ini_get('opcache.jit')) : '';
+        $jitOn = PHP_VERSION_ID >= 80000 && $jit !== '' && $jit !== '0' && $jit !== 'off' && $jit !== 'disable';
+        $push('PHP JIT', $jitOn, PHP_VERSION_ID >= 80000 ? ($jitOn ? '已开启' : '未开启') : '需 PHP 8+',
+            $jitOn ? '' : (PHP_VERSION_ID >= 80000 ? 'php.ini 设 opcache.jit=tracing、opcache.jit_buffer_size=64M。' : '升级 PHP 8.1+ 后启用 JIT。'), true);
+    } catch (\Throwable $e) {}
+
+    // 10) InnoDB 缓冲池(热数据常驻内存)
+    try {
+        $rows = \think\Db::query("SHOW VARIABLES LIKE 'innodb_buffer_pool_size'");
+        $bpMb = (int)round((int)($rows[0]['Value'] ?? 0) / 1048576);
+        if ($bpMb > 0) {
+            $push('InnoDB 缓冲池', $bpMb >= 256, $bpMb . ' MB',
+                $bpMb >= 256 ? '' : '建议把 innodb_buffer_pool_size 调到物理内存的 50–70%,热数据常驻内存、显著降磁盘 IO。', true);
+        }
+    } catch (\Throwable $e) {}
+
     return $checks;
 }
 
