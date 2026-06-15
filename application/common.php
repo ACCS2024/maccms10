@@ -896,6 +896,33 @@ function mac_cache_lock_release($key)
 }
 
 /**
+ * 整页缓存是否对当前请求生效。
+ * 安全:仅 index 入口 + 开关开 + GET + 匿名访客(maccms 前台登录基于 cookie;登录用户页面含
+ * 用户名/VIP/积分等用户态,整页缓存会串号,故登录用户一律绕过)。匿名 GET 前台本就不开 session,
+ * 缓存页天然无 Set-Cookie、对 CDN 友好。
+ */
+function mac_page_cache_eligible()
+{
+    if (!defined('ENTRANCE') || ENTRANCE !== 'index') {
+        return false;
+    }
+    $app = isset($GLOBALS['config']['app']) && is_array($GLOBALS['config']['app']) ? $GLOBALS['config']['app'] : [];
+    if (empty($app['cache_page']) || (string)$app['cache_page'] !== '1' || empty($app['cache_time_page'])) {
+        return false;
+    }
+    if (strtoupper(isset($_SERVER['REQUEST_METHOD']) ? $_SERVER['REQUEST_METHOD'] : 'GET') !== 'GET') {
+        return false;
+    }
+    $uid = 0;
+    try {
+        $uid = intval(cookie('user_id'));
+    } catch (\Throwable $e) {
+        $uid = isset($_COOKIE['user_id']) ? intval($_COOKIE['user_id']) : 0;
+    }
+    return $uid <= 0;
+}
+
+/**
  * 缓存未命中时的单飞等待:抢锁失败者短等他人产出(有硬上限,绝不长挂)。
  * 返回他人产出的值(命中)或 null(超时,调用方自行产出)。
  * @param string $cacheKey 业务缓存键(读它判断他人是否已产出)

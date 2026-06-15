@@ -11,6 +11,7 @@ class All extends Controller
     var $_ac;
     var $_tsp;
     var $_url;
+    protected $_page_sf_lock = false; // 整页缓存单飞:本请求持有的锁键(产出后释放)
 
     public function __construct()
     {
@@ -32,10 +33,18 @@ class All extends Controller
             return;
         }
 
-        if(defined('ENTRANCE') && ENTRANCE == 'index' && $GLOBALS['config']['app']['cache_page'] ==1  && $GLOBALS['config']['app']['cache_time_page'] ) {
-            $cach_name = $_SERVER['HTTP_HOST']. '_'. MAC_MOB . '_'. $GLOBALS['config']['app']['cache_flag']. '_' .$tpl .'_'. http_build_query(mac_param_url());
+        if (mac_page_cache_eligible()) {
+            $cach_name = $this->page_cache_key($tpl);
             $res = Cache::get($cach_name);
-            if ($res) {
+            if (empty($res)) {
+                // 防击穿:抢锁者回源产出(label_fetch set 后释放);未抢到者短等他人结果,超时再自行产出
+                if (mac_cache_lock_acquire($cach_name, 15)) {
+                    $this->_page_sf_lock = $cach_name;
+                } else {
+                    $res = mac_cache_singleflight_wait($cach_name);
+                }
+            }
+            if (!empty($res)) {
                 // 修复后台开启页面缓存时，模板json请求解析问题
                 // https://github.com/magicblack/maccms10/issues/965
                 if($type=='json' || str_contains(request()->header('accept'), 'application/json')){
@@ -47,6 +56,15 @@ class All extends Controller
         }
     }
 
+    /**
+     * 整页缓存键(load 与 fetch 共用,保证一致);含 host/移动端标记/缓存标识/模板/查询参数,
+     * 不含用户维度(仅匿名命中,见 mac_page_cache_eligible)。
+     */
+    protected function page_cache_key($tpl)
+    {
+        return $_SERVER['HTTP_HOST']. '_'. MAC_MOB . '_'. $GLOBALS['config']['app']['cache_flag']. '_' .$tpl .'_'. http_build_query(mac_param_url());
+    }
+
     protected function label_fetch($tpl,$loadcache=1,$type='html')
     {
         if($loadcache==1){
@@ -56,9 +74,14 @@ class All extends Controller
         if($GLOBALS['config']['app']['compress'] == 1){
             $html = mac_compress_html($html);
         }
-        if(defined('ENTRANCE') && ENTRANCE == 'index' && $GLOBALS['config']['app']['cache_page'] ==1  && $GLOBALS['config']['app']['cache_time_page'] ){
-            $cach_name = $_SERVER['HTTP_HOST']. '_'. MAC_MOB . '_'. $GLOBALS['config']['app']['cache_flag']. '_' . $tpl .'_'. http_build_query(mac_param_url());
-            $res = Cache::set($cach_name,$html,$GLOBALS['config']['app']['cache_time_page']);
+        if (mac_page_cache_eligible()) {
+            $cach_name = $this->page_cache_key($tpl);
+            Cache::set($cach_name,$html,$GLOBALS['config']['app']['cache_time_page']);
+        }
+        // 释放整页缓存单飞锁(本请求产出完毕)
+        if ($this->_page_sf_lock) {
+            mac_cache_lock_release($this->_page_sf_lock);
+            $this->_page_sf_lock = false;
         }
         if (strtolower(request()->controller()) != 'rss' && (!isset($GLOBALS['config']['site']['site_polyfill']) || $GLOBALS['config']['site']['site_polyfill'] == 1)){
             $polyfill =  <<<polyfill
