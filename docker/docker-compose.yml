@@ -1,0 +1,46 @@
+# maccms10 本地/演示部署(含 OPcache + Redis + Meilisearch),可复现冒烟环境。
+# 用法:cd docker && docker compose up -d --build
+# 访问:http://localhost:8088  (首次走 /install.php 安装,数据库主机填 db)
+#
+# 生产提示:
+#   - 缓存切 Redis:后台「系统配置」缓存方式选 redis,主机填 redis、端口 6379(或用环境内网地址)。
+#   - 会话切 Redis:同一 Redis 复用(maccms.php 的 session_type=redis,详见 application/common/behavior/Init.php)。
+#   - 库引擎:后台「数据库」一键转 InnoDB(根治锁表)。
+services:
+  db:
+    image: mysql:5.7
+    container_name: maccms_db
+    environment:
+      MYSQL_ROOT_PASSWORD: maccmsroot
+      MYSQL_DATABASE: maccms
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_general_ci"]
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-pmaccmsroot"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    container_name: maccms_redis
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+
+  meili:
+    image: getmeili/meilisearch:v1.6
+    container_name: maccms_meili
+    environment:
+      MEILI_MASTER_KEY: maccmsMeiliKey123456
+      MEILI_NO_ANALYTICS: "true"
+    ports:
+      - "7700:7700"
+
+  web:
+    build: .
+    container_name: maccms_web
+    ports:
+      - "8088:80"
+    volumes:
+      - ../:/var/www/html
+    depends_on:
+      db:
+        condition: service_healthy
