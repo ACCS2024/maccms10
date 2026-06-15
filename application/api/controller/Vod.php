@@ -687,44 +687,23 @@ class Vod extends Base
         $id = intval($param['id'] ?? 0);
         if ($id < 1) return json(['code' => 1001, 'msg' => '参数错误']);
         $where = ['vod_id' => $id];
-        $field = 'vod_hits,vod_hits_day,vod_hits_week,vod_hits_month,vod_time_hits';
-        $res = model('Vod')->infoData($where, $field);
+        // 原子自增 + 跨期归零:单条 UPDATE,消除原"读-改-写"的竞态(高并发播放不丢增量),
+        // 配合 InnoDB 行锁,不再因 MyISAM 表锁让并发播放串行。日/周/月跨期归零下推到 SQL。
+        if (($param['type'] ?? '') == 'update') {
+            $now        = time();
+            $dayStart   = strtotime('today');
+            $weekStart  = $dayStart - ((int)date('w', $now)) * 86400; // 周日为周首(与原逻辑一致)
+            $monthStart = mktime(0, 0, 0, (int)date('n', $now), 1, (int)date('Y', $now));
+            model('Vod')->where($where)
+                ->inc('vod_hits')
+                ->exp('vod_hits_day',   "IF(vod_time_hits >= {$dayStart}, vod_hits_day + 1, 1)")
+                ->exp('vod_hits_week',  "IF(vod_time_hits >= {$weekStart}, vod_hits_week + 1, 1)")
+                ->exp('vod_hits_month', "IF(vod_time_hits >= {$monthStart}, vod_hits_month + 1, 1)")
+                ->update(['vod_time_hits' => $now]);
+        }
+        $res = model('Vod')->infoData($where, 'vod_hits,vod_hits_day,vod_hits_week,vod_hits_month');
         if ($res['code'] > 1) return json($res);
         $info = $res['info'];
-        if ($param['type'] == 'update') {
-            $update = [
-                'vod_hits'       => $info['vod_hits'],
-                'vod_hits_day'   => $info['vod_hits_day'],
-                'vod_hits_week'  => $info['vod_hits_week'],
-                'vod_hits_month' => $info['vod_hits_month'],
-            ];
-            $new = getdate();
-            $old = getdate($info['vod_time_hits']);
-            if ($new['year'] == $old['year'] && $new['mon'] == $old['mon']) {
-                $update['vod_hits_month']++;
-            } else {
-                $update['vod_hits_month'] = 1;
-            }
-            $ws = mktime(0,0,0,$new["mon"],$new["mday"],$new["year"]) - ($new["wday"] * 86400);
-            $we = mktime(23,59,59,$new["mon"],$new["mday"],$new["year"]) + ((6-$new["wday"])*86400);
-            if ($info['vod_time_hits'] >= $ws && $info['vod_time_hits'] <= $we) {
-                $update['vod_hits_week']++;
-            } else {
-                $update['vod_hits_week'] = 1;
-            }
-            if ($new['year']==$old['year'] && $new['mon']==$old['mon'] && $new['mday']==$old['mday']) {
-                $update['vod_hits_day']++;
-            } else {
-                $update['vod_hits_day'] = 1;
-            }
-            $update['vod_hits'] += 1;
-            $update['vod_time_hits'] = time();
-            model('Vod')->where($where)->update($update);
-            return json(['code' => 1, 'msg' => 'ok', 'data' => [
-                'hits' => $update['vod_hits'], 'hits_day' => $update['vod_hits_day'],
-                'hits_week' => $update['vod_hits_week'], 'hits_month' => $update['vod_hits_month'],
-            ]]);
-        }
         return json(['code' => 1, 'msg' => 'ok', 'data' => [
             'hits' => $info['vod_hits'], 'hits_day' => $info['vod_hits_day'],
             'hits_week' => $info['vod_hits_week'], 'hits_month' => $info['vod_hits_month'],

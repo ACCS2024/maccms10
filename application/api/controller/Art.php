@@ -348,22 +348,22 @@ class Art extends Base
         $id = intval($param['id'] ?? 0);
         if ($id < 1) return json(['code' => 1001, 'msg' => '参数错误']);
         $where = ['art_id' => $id];
-        $field = 'art_hits,art_hits_day,art_hits_week,art_hits_month,art_time_hits';
-        $res = model('Art')->infoData($where, $field);
+        // 原子自增 + 跨期归零(同 Vod::update_hits):单条 UPDATE,无"读-改-写"竞态,配合 InnoDB 行锁去串行。
+        if (($param['type'] ?? '') == 'update') {
+            $now        = time();
+            $dayStart   = strtotime('today');
+            $weekStart  = $dayStart - ((int)date('w', $now)) * 86400;
+            $monthStart = mktime(0, 0, 0, (int)date('n', $now), 1, (int)date('Y', $now));
+            model('Art')->where($where)
+                ->inc('art_hits')
+                ->exp('art_hits_day',   "IF(art_time_hits >= {$dayStart}, art_hits_day + 1, 1)")
+                ->exp('art_hits_week',  "IF(art_time_hits >= {$weekStart}, art_hits_week + 1, 1)")
+                ->exp('art_hits_month', "IF(art_time_hits >= {$monthStart}, art_hits_month + 1, 1)")
+                ->update(['art_time_hits' => $now]);
+        }
+        $res = model('Art')->infoData($where, 'art_hits,art_hits_day,art_hits_week,art_hits_month');
         if ($res['code'] > 1) return json($res);
         $info = $res['info'];
-        if (($param['type'] ?? '') == 'update') {
-            $update = ['art_hits'=>$info['art_hits'],'art_hits_day'=>$info['art_hits_day'],'art_hits_week'=>$info['art_hits_week'],'art_hits_month'=>$info['art_hits_month']];
-            $new = getdate(); $old = getdate($info['art_time_hits']);
-            $update['art_hits_month'] = ($new['year']==$old['year'] && $new['mon']==$old['mon']) ? $update['art_hits_month']+1 : 1;
-            $ws = mktime(0,0,0,$new["mon"],$new["mday"],$new["year"]) - ($new["wday"]*86400);
-            $we = mktime(23,59,59,$new["mon"],$new["mday"],$new["year"]) + ((6-$new["wday"])*86400);
-            $update['art_hits_week'] = ($info['art_time_hits']>=$ws && $info['art_time_hits']<=$we) ? $update['art_hits_week']+1 : 1;
-            $update['art_hits_day'] = ($new['year']==$old['year'] && $new['mon']==$old['mon'] && $new['mday']==$old['mday']) ? $update['art_hits_day']+1 : 1;
-            $update['art_hits']++; $update['art_time_hits'] = time();
-            model('Art')->where($where)->update($update);
-            return json(['code'=>1,'msg'=>'ok','data'=>['hits'=>$update['art_hits'],'hits_day'=>$update['art_hits_day'],'hits_week'=>$update['art_hits_week'],'hits_month'=>$update['art_hits_month']]]);
-        }
         return json(['code'=>1,'msg'=>'ok','data'=>['hits'=>$info['art_hits'],'hits_day'=>$info['art_hits_day'],'hits_week'=>$info['art_hits_week'],'hits_month'=>$info['art_hits_month']]]);
     }
 
