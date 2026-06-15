@@ -55,6 +55,7 @@ return array (
     'cache_username' => '',
     'cache_password' => '',
     'cache_db' => '0',
+    'session_type' => '',
     'cache_flag' => 'a6bcf9aa58',
     'cache_core' => '1',
     'cache_time' => '3600',

@@ -242,6 +242,15 @@
                     </div>
 
                 <div class="layui-form-item">
+                    <label class="layui-form-label">会话存储：</label>
+                    <div class="layui-input-block">
+                        <input type="radio" name="app[session_type]" value="" title="文件(默认)" {if condition="empty($config['app']['session_type']) || $config['app']['session_type'] eq 'file'"}checked{/if}>
+                        <input type="radio" name="app[session_type]" value="redis" title="redis(复用上面缓存Redis,去文件锁、并发更高)" {if condition="$config['app']['session_type'] eq 'redis'"}checked{/if}>
+                    </div>
+                    <div class="layui-form-mid layui-word-aux">选 redis 则会话复用上面的缓存 Redis 连接;需缓存方式也为 redis 或填好上面的 Redis 主机/端口。</div>
+                </div>
+
+                <div class="layui-form-item">
                     <label class="layui-form-label">{:lang('admin/system/config/cache_flag')}：</label>
                     <div class="layui-input-inline">
                         <input type="text" name="app[cache_flag]" placeholder="{:lang('admin/system/config/cache_flag_auto')}" value="{$config['app']['cache_flag']}" class="layui-input w150" >

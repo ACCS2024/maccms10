@@ -138,6 +138,21 @@ class Init
             Cache::$handler = null;
         }
 
+        // 会话存储:可选切 Redis(默认文件)。PHP 文件 session 有写锁——同一用户的并发请求
+        // (播放页常并行发计数/弹幕/推荐等 ajax)会在 session 文件锁上串行等待。切 Redis 去锁并发。
+        // 复用上面的缓存 Redis 连接参数,避免重复配置;连接超时同样秒级,后端故障快速降级。
+        // 本桥接在 app_init 执行,早于首次 session 访问(CsrfGuard 等在 app_begin),故配置及时生效。
+        $sessionType = isset($config['app']['session_type']) ? strtolower(trim((string)$config['app']['session_type'])) : '';
+        if ($sessionType === 'redis') {
+            config('session.type', 'redis');
+            config('session.host', $config['app']['cache_host']);
+            config('session.port', $config['app']['cache_port']);
+            config('session.password', $config['app']['cache_password']);
+            config('session.select', isset($config['app']['cache_db']) ? intval($config['app']['cache_db']) : 0);
+            config('session.timeout', $cacheTimeout);
+            config('session.persistent', true);
+        }
+
         $GLOBALS['config'] = $config;
     }
 }
