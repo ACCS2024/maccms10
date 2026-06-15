@@ -772,6 +772,81 @@ function mac_meili_settings_auto_sync()
 }
 
 /**
+ * 性能/环境体检(只读检测 + 引导)。
+ * 用于后台首页:检测服务器侧需用户自行开启的项(OPcache/Redis/引擎/PHP 版本/Meili),
+ * 给出"状态 + 怎么开"的引导;本函数只读、绝不修改环境,且每项都吞异常,绝不让首页报错。
+ *
+ * @return array<int, array{label:string, ok:bool, optional:bool, detail:string, guide:string}>
+ */
+function mac_perf_env_checks()
+{
+    $app = isset($GLOBALS['config']['app']) && is_array($GLOBALS['config']['app']) ? $GLOBALS['config']['app'] : [];
+    $checks = [];
+    $push = function ($label, $ok, $detail, $guide, $optional = false) use (&$checks) {
+        $checks[] = ['label' => $label, 'ok' => (bool)$ok, 'optional' => (bool)$optional, 'detail' => (string)$detail, 'guide' => (string)$guide];
+    };
+
+    // 1) OPcache 字节码缓存
+    $opOn = false;
+    try { $opOn = function_exists('opcache_get_status') && (int)ini_get('opcache.enable') === 1; } catch (\Throwable $e) {}
+    $push('OPcache 字节码缓存', $opOn, $opOn ? '已开启' : '未开启',
+        $opOn ? '' : '把 docker/php/opcache.ini 复制到 PHP 的 conf.d 目录后 reload(详见 docker/README.md)。零风险、显著降 CPU 与延迟。');
+
+    // 2) 缓存后端
+    $ct = isset($app['cache_type']) ? strtolower((string)$app['cache_type']) : 'file';
+    $redisExt = false;
+    try { $redisExt = extension_loaded('redis'); } catch (\Throwable $e) {}
+    if ($ct === 'redis') {
+        $reach = false;
+        try {
+            $h = \think\Cache::init()->handler();
+            if (class_exists('\\Redis', false) && $h instanceof \Redis) { $h->ping(); $reach = true; }
+        } catch (\Throwable $e) {}
+        $push('缓存后端', $reach, $reach ? 'Redis(连通正常)' : 'Redis(连接失败)',
+            $reach ? '' : '检查 Redis 主机/端口/密码或服务是否启动;连接超时已为秒级,故障会快速降级不挂站。');
+    } else {
+        $push('缓存后端', false, '文件缓存',
+            $redisExt
+                ? '部署 Redis 后,在本「系统配置」把缓存方式切 redis,高并发下显著优于文件缓存。'
+                : '先为 PHP 安装 redis 扩展(pecl install redis 后启用),再到「系统配置」切 redis。');
+    }
+
+    // 3) 会话存储
+    $st = isset($app['session_type']) ? strtolower((string)$app['session_type']) : '';
+    $push('会话存储', $st === 'redis', $st === 'redis' ? 'Redis' : '文件',
+        $st === 'redis' ? '' : '「系统配置」会话存储切 redis,去除文件 session 写锁导致的同用户请求串行(需缓存为 redis)。');
+
+    // 4) 数据库引擎(MyISAM 表锁)
+    try {
+        $prefix = (string)config('database.prefix');
+        $like = str_replace('_', '\\_', $prefix) . '%';
+        $rows = \think\Db::query(
+            "SELECT COUNT(*) AS c FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND ENGINE = 'MyISAM' AND TABLE_NAME LIKE ?",
+            [$like]
+        );
+        $my = (int)($rows[0]['c'] ?? 0);
+        $push('数据库引擎', $my === 0, $my === 0 ? '全部 InnoDB' : ($my . ' 张表仍是 MyISAM'),
+            $my === 0 ? '' : '「数据库」页点"转 InnoDB",根治 MyISAM 表锁导致的采集/高并发卡顿(低峰执行)。');
+    } catch (\Throwable $e) {}
+
+    // 5) PHP 版本
+    $phpOk = PHP_VERSION_ID >= 80000;
+    $push('PHP 版本', $phpOk, PHP_VERSION,
+        $phpOk ? '' : 'PHP 7.4 已停止官方支持;评估升级到 8.1+(性能更好、仍受安全维护)。');
+
+    // 6) Meilisearch(可选增强,关闭不算问题)
+    try {
+        if (class_exists('\\app\\common\\util\\MeilisearchService')) {
+            $on = \app\common\util\MeilisearchService::enabled();
+            $push('Meilisearch 搜索', true, $on ? '已启用' : '未启用(关键词走 LIKE 回退)',
+                $on ? '' : '可选:部署 Meili 后在「Meilisearch」页启用,大幅提升搜索;关闭则自动回退,不影响功能。', true);
+        }
+    } catch (\Throwable $e) {}
+
+    return $checks;
+}
+
+/**
  * 幂等添加索引:仅当所有列存在且同名索引不存在时执行 ADD INDEX。
  */
 function mac_db_add_index_if_absent($table, $indexName, array $cols)

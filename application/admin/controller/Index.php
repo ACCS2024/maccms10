@@ -135,6 +135,7 @@ class Index extends Base
         $this->assign('dashboard_data', $this->getAdminDashboardData());
 
         $this->assign('admin', $this->_admin);
+        $this->assign('perf_checks', mac_perf_env_checks());
         $this->assign('title', lang('admin/index/welcome/title'));
         return $this->fetch('admin@index/welcome');
     }

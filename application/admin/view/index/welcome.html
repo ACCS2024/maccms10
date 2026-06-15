@@ -42,6 +42,19 @@
         </tr>
         </tbody>
     </table>
+
+    <table class="layui-table">
+        <thead><tr><th width="160">性能与环境体检</th><th width="190">状态</th><th>建议(服务器/后台由你处理)</th></tr></thead>
+        <tbody>
+        {volist name="perf_checks" id="pc"}
+        <tr>
+            <td>{$pc.label}</td>
+            <td>{if condition="$pc['ok']"}<span class="layui-badge layui-bg-green">{$pc.detail}</span>{elseif condition="$pc['optional']"/}<span class="layui-badge layui-bg-blue">{$pc.detail}</span>{else/}<span class="layui-badge layui-bg-orange">{$pc.detail}</span>{/if}</td>
+            <td style="color:#888">{$pc.guide}</td>
+        </tr>
+        {/volist}
+        </tbody>
+    </table>
     {if condition="$update_sql"}
     <table class="tbinfo pleft layui-table" ><thead><th colspan="2">{:lang('admin/index/welcome/tip_update_db')}</th></thead><tr><td colspan="2"><font class="tif s20">{:lang('admin/index/welcome/tip_update_db_txt')}</font><a class="j-iframe" title="{:lang('admin/index/welcome/tip_update_go')}" data-href="{:url('update/step2')}"><font class="tit s20">{:lang('admin/index/welcome/tip_update_go')}</font></a> </td></tr></table>
     {/if}
