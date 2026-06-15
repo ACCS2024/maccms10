@@ -667,7 +667,7 @@ function mac_csrf_token()
  */
 function mac_security_auto_migrate()
 {
-    $version = 'v1';
+    $version = 'v2';
     $marker  = APP_PATH . 'data' . DIRECTORY_SEPARATOR . 'update' . DIRECTORY_SEPARATOR . 'sec_schema.lock';
     if (is_file($marker) && trim((string)@file_get_contents($marker)) === $version) {
         return;
@@ -686,10 +686,78 @@ function mac_security_auto_migrate()
                 \think\Db::execute("ALTER TABLE `" . str_replace('`', '', $table) . "` MODIFY `" . $c . "` VARCHAR(255) NOT NULL DEFAULT ''");
             }
         }
+
+        // 迁移 v2:前台热查询复合索引(类目+状态+排序),解决单列索引无法"过滤+排序"导致的 filesort/全扫。
+        // 幂等:列与索引名存在性检查;缺列自动跳过(兼容不同版本库)。
+        // 注:大表(数十万行+)首次 ADD INDEX 在 MyISAM 下会锁表数秒~分钟;海量库建议先用后台「数据库优化」按钮低峰执行。
+        $idxPlan = [
+            // 注:类目类复合索引以高选择性的 type_id/type_id_1 打头(vod_status 几乎恒为1、选择性低,
+            // 放首列会被优化器弃用),实现"等值type + 等值status + 排序列"单索引消除 filesort;
+            // 全站榜单/最新无类目过滤,用 (status, 排序列)。
+            'vod' => [
+                'idx_type_st_time'  => ['type_id', 'vod_status', 'vod_time'],
+                'idx_type1_st_time' => ['type_id_1', 'vod_status', 'vod_time'],
+                'idx_type_st_hits'  => ['type_id', 'vod_status', 'vod_hits'],
+                'idx_st_level_time' => ['vod_status', 'vod_level', 'vod_time'],
+                'idx_st_time'       => ['vod_status', 'vod_time'],
+                'idx_st_hits_day'   => ['vod_status', 'vod_hits_day'],
+                'idx_st_hits_week'  => ['vod_status', 'vod_hits_week'],
+                'idx_st_hits_month' => ['vod_status', 'vod_hits_month'],
+            ],
+            'art' => [
+                'idx_type_st_time'  => ['type_id', 'art_status', 'art_time'],
+                'idx_type1_st_time' => ['type_id_1', 'art_status', 'art_time'],
+                'idx_type_st_hits'  => ['type_id', 'art_status', 'art_hits'],
+                'idx_st_level_time' => ['art_status', 'art_level', 'art_time'],
+                'idx_st_hits_month' => ['art_status', 'art_hits_month'],
+            ],
+            'manga' => [
+                'idx_type_st_time'  => ['type_id', 'manga_status', 'manga_time'],
+                'idx_type1_st_time' => ['type_id_1', 'manga_status', 'manga_time'],
+                'idx_type_st_hits'  => ['type_id', 'manga_status', 'manga_hits'],
+                'idx_st_level_time' => ['manga_status', 'manga_level', 'manga_time'],
+                'idx_st_hits_month' => ['manga_status', 'manga_hits_month'],
+            ],
+            'comment' => [
+                'idx_rid_status_id'  => ['comment_rid', 'comment_status', 'comment_id'],
+                'idx_mid_rid_status' => ['comment_mid', 'comment_rid', 'comment_status'],
+            ],
+            'gbook' => [
+                'idx_rid_status_id' => ['gbook_rid', 'gbook_status', 'gbook_id'],
+            ],
+        ];
+        foreach ($idxPlan as $t => $idxs) {
+            foreach ($idxs as $name => $icols) {
+                mac_db_add_index_if_absent($prefix . $t, $name, $icols);
+            }
+        }
+
         @file_put_contents($marker, $version);
     } catch (\Exception $e) {
         // 迁移失败不阻断后台访问,标记不写入 → 下次请求自动重试
     }
+}
+
+/**
+ * 幂等添加索引:仅当所有列存在且同名索引不存在时执行 ADD INDEX。
+ */
+function mac_db_add_index_if_absent($table, $indexName, array $cols)
+{
+    $table = str_replace('`', '', $table);
+    foreach ($cols as $c) {
+        $r = \think\Db::query("SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=? AND COLUMN_NAME=? LIMIT 1", [$table, $c]);
+        if (empty($r)) {
+            return; // 缺列,跳过(兼容旧版库)
+        }
+    }
+    $r = \think\Db::query("SELECT 1 FROM information_schema.STATISTICS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=? AND INDEX_NAME=? LIMIT 1", [$table, $indexName]);
+    if (!empty($r)) {
+        return; // 索引已存在
+    }
+    $colSql = implode(',', array_map(function ($c) {
+        return '`' . str_replace('`', '', $c) . '`';
+    }, $cols));
+    \think\Db::execute("ALTER TABLE `{$table}` ADD INDEX `{$indexName}` ({$colSql})");
 }
 
 /**
