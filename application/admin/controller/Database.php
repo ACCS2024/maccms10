@@ -231,6 +231,52 @@ class Database extends Base
         return $this->error(lang('admin/database/repair_ok'));
     }
 
+    /**
+     * 将所选表存储引擎转换为 InnoDB(MyISAM 表级锁 → 行级锁/MVCC,
+     * 根治采集与高并发下的锁表、"卡死/故障多",并支持事务与崩溃恢复)。
+     * 仅管理员手动、低峰触发:大表 ALTER 会重建表、耗时且占用磁盘,故不放入登录自动迁移。
+     * 已是 InnoDB 的表自动跳过;逐表执行,单表失败(如旧版 MySQL 的 FULLTEXT 限制)不影响其余。
+     */
+    public function convert_engine($ids = '')
+    {
+        if (empty($ids)) {
+            return $this->error(lang('admin/database/select_optimize_table'));
+        }
+        $table = is_array($ids) ? $ids : [$ids];
+        foreach ($table as $t) {
+            if (!$this->isValidTable($t)) {
+                return $this->error('Table is invalid.');
+            }
+        }
+        // 读取当前引擎,已 InnoDB 的跳过
+        $engineMap = [];
+        foreach (Db::query("SHOW TABLE STATUS") as $row) {
+            $engineMap[$row['Name']] = strtoupper((string)($row['Engine'] ?? ''));
+        }
+        $converted = [];
+        $skipped   = [];
+        $failed    = [];
+        foreach ($table as $t) {
+            if (($engineMap[$t] ?? '') === 'INNODB') {
+                $skipped[] = $t;
+                continue;
+            }
+            try {
+                Db::execute("ALTER TABLE `" . str_replace('`', '', $t) . "` ENGINE=InnoDB");
+                $converted[] = $t;
+            } catch (\Throwable $e) {
+                $failed[] = $t . ' (' . $e->getMessage() . ')';
+            }
+        }
+        $msg = 'InnoDB 转换完成 — 成功:' . count($converted)
+             . ',跳过(已是InnoDB):' . count($skipped)
+             . ',失败:' . count($failed);
+        if (!empty($failed)) {
+            return $this->error($msg . ' | 失败:' . implode('; ', $failed));
+        }
+        return $this->success($msg);
+    }
+
     public function del($id = '')
     {
         if (empty($id)) {

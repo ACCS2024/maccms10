@@ -11,6 +11,7 @@
             <a data-href="{:url('export')}" class="layui-btn layui-btn-primary j-page-btns"><i class="layui-icon">&#xe62d;</i>{:lang('admin/database/backup_db')}</a>
             <a data-href="{:url('optimize')}" class="layui-btn layui-btn-primary j-page-btns"><i class="layui-icon">&#xe631;</i>{:lang('admin/database/optimize_db')}</a>
             <a data-href="{:url('repair')}" class="layui-btn layui-btn-primary j-page-btns"><i class="layui-icon">&#xe60c;</i>{:lang('admin/database/repair_db')}</a>
+            <a data-href="{:url('convert_engine')}" class="layui-btn layui-btn-primary j-page-btns"><i class="layui-icon">&#xe631;</i>转 InnoDB(根治锁表)</a>
         </div>
     </div>
 
@@ -23,11 +24,12 @@
             <tr>
                 <th><input type="checkbox" lay-skin="primary" lay-filter="allChoose"></th>
                 <th>{:lang('admin/database/table')}</th>
+                <th width="80">引擎</th>
                 <th>{:lang('admin/database/count')}</th>
                 <th>{:lang('admin/database/size')}</th>
                 <th>{:lang('admin/database/redundancy')}</th>
                 <th>{:lang('remarks')}</th>
-                <th width="90">{:lang('opt')}</th>
+                <th width="150">{:lang('opt')}</th>
             </tr>
             </thead>
             <tbody>
@@ -35,6 +37,7 @@
             <tr>
                 <td><input type="checkbox" name="ids[]" class="layui-checkbox checkbox-ids" value="{$vo['Name']}" lay-skin="primary"></td>
                 <td>{$vo['Name']}</td>
+                <td>{$vo['Engine']}</td>
                 <td>{$vo['Rows']}</td>
                 <td>{$vo['Data_length']/1024|round=###,2} kb</td>
                 <td>{$vo['Data_free']/1024|round=###,2} kb</td>
@@ -42,6 +45,7 @@
                 <td>
                         <a data-href="{:url('optimize?ids='.$vo['Name'])}" class="layui-badge-rim j-ajax">{:lang('admin/database/optimize')}</a>
                         <a data-href="{:url('repair?ids='.$vo['Name'])}" class="layui-badge-rim  j-ajax">{:lang('admin/database/repair')}</a>
+                        <a data-href="{:url('convert_engine?ids='.$vo['Name'])}" class="layui-badge-rim j-ajax">InnoDB</a>
                 </td>
             </tr>
             {/volist}
