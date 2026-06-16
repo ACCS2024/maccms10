@@ -41,8 +41,8 @@ class Art extends Base
         $where = [];
 
         $offset = isset($param['offset']) ? max(0, (int)$param['offset']) : 0;
-        // 限制每页上限,防 ?limit=1000000 之类一次拉巨量行打爆 CPU/内存(公开接口收紧到 100)
-        $limit = isset($param['limit']) ? min(max(1, (int)$param['limit']), 100) : 20;
+        // limit 归一化到两档 {10,20}(防变参放大:任意 limit 收敛到极少数固定值,且每页≤20)
+        $limit = mac_api_norm_limit($param['limit'] ?? 0);
 
         if (isset($param['type_id']) && (int)$param['type_id'] > 0) {
             $where['type_id|type_id_1'] = ['eq', (int)$param['type_id']];

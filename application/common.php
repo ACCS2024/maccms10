@@ -932,6 +932,18 @@ function mac_cache_lock_release($key)
 }
 
 /**
+ * API 分页 limit 归一化(防变参放大攻击)。
+ * 把任意 limit 收敛到两档 {10,20}:≤10→10,>10→20(封顶20);未传/非法→默认 20。
+ * 攻击者狂变 limit=1,2,3,… 只会落到 10 或 20 两个值,无法制造大量不同查询/响应;
+ * 同时把单页行数封到 ≤20,杜绝 ?limit=百万 放大。COUNT 缓存按 where 取键、与 limit 无关,不受影响。
+ */
+function mac_api_norm_limit($raw)
+{
+    $raw = (int)$raw;
+    return ($raw > 0 && $raw <= 10) ? 10 : 20;
+}
+
+/**
  * 整页缓存是否对当前请求生效。
  * 安全:仅 index 入口 + 开关开 + GET + 匿名访客(maccms 前台登录基于 cookie;登录用户页面含
  * 用户名/VIP/积分等用户态,整页缓存会串号,故登录用户一律绕过)。匿名 GET 前台本就不开 session,

@@ -24,8 +24,8 @@ class Manga extends Base
             ]);
         }
         $param['page'] = intval($param['page']) < 1 ? 1 : intval($param['page']);
-        // 限制每页上限,防 ?limit=1000000 之类一次拉巨量行打爆 CPU/内存(公开接口收紧到 100)
-        $param['limit'] = min(intval($param['limit']) < 1 ? 20 : intval($param['limit']), 100);
+        // limit 归一化到两档 {10,20}(防变参放大:任意 limit 收敛到极少数固定值,且每页≤20)
+        $param['limit'] = mac_api_norm_limit($param['limit'] ?? 0);
 
         $where = [];
         $where['manga_status'] = ['eq', 1];
