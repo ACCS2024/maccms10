@@ -215,6 +215,15 @@ class User extends Base
             if(isset($param['group_id']) && is_array($param['group_id'])) {
                 $param['group_id'] = implode(',', $param['group_id']);
             }
+            // 安全加固:后台编辑用户时,对自由文本字段做与前台注册/改料一致的 HTML 转义,
+            // 维持"入库即转义"不变量。否则后台保存会把已转义值还原为原始字符
+            // (表单回填时浏览器会把 &quot; 解码为 "，提交后按原始字符入库),
+            // 这些字段随后在后台用户列表/详情与前台个人资料处被原样渲染,造成存储型 XSS。
+            foreach (['user_name','user_nick_name','user_qq','user_phone','user_email'] as $__xss_f) {
+                if (isset($param[$__xss_f]) && is_string($param[$__xss_f])) {
+                    $param[$__xss_f] = htmlspecialchars(trim($param[$__xss_f]));
+                }
+            }
             $res = model('User')->saveData($param);
             if($res['code']>1){
                 return $this->error($res['msg']);
