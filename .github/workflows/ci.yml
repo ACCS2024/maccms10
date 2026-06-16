@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  php-lint:
+    name: PHP Lint (7.4)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.4'
+          coverage: none
+      - name: php -l on application/ + entry files
+        run: |
+          set -euo pipefail
+          fail=0
+          while IFS= read -r -d '' f; do
+            php -l "$f" >/dev/null || { echo "LINT FAIL: $f"; fail=1; }
+          done < <(find application -name '*.php' -print0)
+          for f in index.php api.php admin.php install.php security_check.php; do
+            [ -f "$f" ] && { php -l "$f" >/dev/null || { echo "LINT FAIL: $f"; fail=1; }; }
+          done
+          if [ "$fail" = 0 ]; then echo "All PHP lint OK"; else exit 1; fi
+
+  schema-load:
+    name: Schema loads on MySQL 5.7 (all InnoDB)
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:5.7
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: maccms
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -proot"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Load install schema + initdata, assert InnoDB
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 30); do mysql -h127.0.0.1 -uroot -proot -e "SELECT 1" >/dev/null 2>&1 && break; sleep 3; done
+          mysql -h127.0.0.1 -uroot -proot maccms < application/install/sql/install.sql
+          mysql -h127.0.0.1 -uroot -proot maccms < application/install/sql/initdata.sql
+          total=$(mysql -h127.0.0.1 -uroot -proot -N -e "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA='maccms'")
+          myisam=$(mysql -h127.0.0.1 -uroot -proot -N -e "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA='maccms' AND ENGINE='MyISAM'")
+          echo "tables=$total, MyISAM=$myisam"
+          if [ "$myisam" != "0" ]; then echo "ERROR: expected all InnoDB"; exit 1; fi
