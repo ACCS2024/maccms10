@@ -135,11 +135,19 @@ class TaskLog extends Base {
 
         Db::startTrans();
         try {
-            Db::name('TaskLog')->where('log_id', $log['log_id'])->update([
+            // 原子认领:仅当 log_status 仍为 1(已完成未领取)时置 2;受影响行数==1 才算抢到本次领取。
+            // 修复 TOCTOU:此处是对已存在行的 UPDATE,不受唯一索引保护(不同于 SignLog/SignMilestone 的 INSERT),
+            // 并发/重放请求若都读到 log_status==1 会重复发放积分。必须用条件 UPDATE + 受影响行数闸门。
+            $claim = Db::name('TaskLog')->where('log_id', $log['log_id'])->where('log_status', 1)->update([
                 'log_status' => 2,
                 'log_points' => $points,
                 'log_claim_time' => time(),
             ]);
+            if (empty($claim)) {
+                // 0 行:已被(并发的)其它请求领取
+                Db::rollback();
+                return ['code' => 1004, 'msg' => lang('task/already_claimed')];
+            }
 
             $inc = Db::name('User')->where('user_id', $user_id)->setInc('user_points', $points);
             if ($inc === false) {
