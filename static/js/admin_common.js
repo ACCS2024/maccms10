@@ -242,7 +242,8 @@ layui.define(['element', 'form'], function(exports) {
         if (this.checked) {
             status = 1;
         }
-        $.get(that.attr('data-href'), {val:status}, function(res) {
+        // 安全加固(CSRF):状态开关属变更操作，改用 POST 携带 X-CSRF-Token，避免 GET 顶层导航式 CSRF
+        $.post(that.attr('data-href'), {val:status}, function(res) {
             layer.msg(res.msg);
             if (res.code == 0) {
                 that.trigger('click');
@@ -317,7 +318,8 @@ layui.define(['element', 'form'], function(exports) {
                 layer.msg('请设置data-href参数');
                 return false;
             }
-            $.get(href, function(res){
+            // 安全加固(CSRF):删除属变更操作，改用 POST 携带 X-CSRF-Token
+            $.post(href, function(res){
                 layer.msg(res.msg);
                 if (res.code == 1) {
                     that.parents('tr').remove();
@@ -341,7 +343,7 @@ layui.define(['element', 'form'], function(exports) {
 
         if (!that.attr('confirm')) {
             layer.msg('数据提交中...', {time:500000});
-            $.get(href, {}, function(res) {
+            $.post(href, {}, function(res) {
                 layer.msg(res.msg, {}, function() {
                     if (refresh == 'yes') {
                         if (typeof(res.url) != 'undefined' && res.url != null && res.url != '') {
@@ -357,7 +359,7 @@ layui.define(['element', 'form'], function(exports) {
         else {
             layer.confirm(that.attr('confirm'), {title:false, closeBtn:0}, function(index){
                 layer.msg('数据提交中...', {time:500000});
-                $.get(href, {}, function(res) {
+                $.post(href, {}, function(res) {
                     layer.msg(res.msg, {}, function() {
                         if (refresh == 'yes') {
                             if (typeof(res.url) != 'undefined' && res.url != null && res.url != '') {

@@ -32,18 +32,17 @@ class CsrfGuard
         }
 
         $req = Request::instance();
-        if (!$req->isPost()) {
-            return;
-        }
 
         list($m, $c, $a) = self::parseDispatch($dispatch);
-        $routeKey = strtolower($c) . '/' . strtolower($a);
+        $c = strtolower($c);
+        $a = strtolower($a);
+        $routeKey = $c . '/' . $a;
 
         // 登录入口豁免:登录前尚无会话令牌,登录本身即认证入口
-        if ($routeKey === 'index/login' || strtolower($a) === 'login') {
+        if ($routeKey === 'index/login' || $a === 'login') {
             return;
         }
-        if ($c === 'upload' && strncmp(strtolower($a), 'ueditor', 7) === 0) {
+        if ($c === 'upload' && strncmp($a, 'ueditor', 7) === 0) {
             return;
         }
         if ($routeKey === 'assistant/chat') {
@@ -58,6 +57,18 @@ class CsrfGuard
                     return;
                 }
             }
+        }
+
+        // 变更类动作(默认 del/field,可经 security_csrf_admin_post_actions 追加)强制走 POST:
+        // 这些是纯写操作(无 GET 读/渲染语义),前台 admin_common.js 已统一改为 $.post 携带令牌提交。
+        // GET 触发(顶层导航式 CSRF)直接拒绝——SameSite=Lax 已挡零点击子资源攻击,此处补齐顶层导航缺口。
+        if (!$req->isPost() && in_array($a, self::mutatingActions($app), true)) {
+            self::deny($req, $app);
+        }
+
+        // 非变更类的 GET 不校验令牌(保持列表/表单页可直接导航访问)
+        if (!$req->isPost()) {
+            return;
         }
 
         // 双令牌校验:① 稳定 X-CSRF-Token 头 vs 会话 __csrf_token__(覆盖全部后台 ajax)
@@ -111,6 +122,25 @@ class CsrfGuard
         $a = (string)($parts[2] ?? '');
 
         return [$m, $c, $a];
+    }
+
+    /**
+     * 需强制 POST 的变更类动作名(小写)。默认 del/field（纯写操作，无 GET 读语义）;
+     * 站点可经 config app.security_csrf_admin_post_actions（逗号分隔）按需追加，如 move,clearcache。
+     */
+    private static function mutatingActions(array $app)
+    {
+        $list = ['del', 'field'];
+        $cfg = isset($app['security_csrf_admin_post_actions']) ? trim((string)$app['security_csrf_admin_post_actions']) : '';
+        if ($cfg !== '') {
+            foreach (explode(',', $cfg) as $one) {
+                $one = strtolower(trim($one));
+                if ($one !== '' && !in_array($one, $list, true)) {
+                    $list[] = $one;
+                }
+            }
+        }
+        return $list;
     }
 
     private static function readSubmittedToken(Request $req)
