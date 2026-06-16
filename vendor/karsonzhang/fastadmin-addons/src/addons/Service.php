@@ -412,7 +412,7 @@ EOD;
         }
 
         $viewSource = $addonDir . 'view/';
-        $viewDest = APP_PATH . 'admin/view_new/' . $name . '/';
+        $viewDest = APP_PATH . 'admin/view/' . $name . '/';
         if (is_dir($viewSource)) {
             copydirs($viewSource, $viewDest);
         }
@@ -496,7 +496,7 @@ EOD;
             rmdirs($staticAssetDest);
         }
 
-        $viewDest = APP_PATH . 'admin/view_new/' . $name . '/';
+        $viewDest = APP_PATH . 'admin/view/' . $name . '/';
         if (is_dir($viewDest)) {
             rmdirs($viewDest);
         }
