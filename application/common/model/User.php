@@ -962,24 +962,45 @@ class User extends Base
         $where = [];
         $where['user_id'] = $GLOBALS['user']['user_id'];
         
-        $data = [];
-        $data['user_points'] = $GLOBALS['user']['user_points'] - $point;
-        $data['user_end_time'] = $end_time;
-        $data['group_id'] = $group_id;
+        // 使用事务 + 条件原子扣分,防止并发刷分/丢失更新。
+        // 修复:原逻辑读内存快照算绝对值无条件写回(user_points = 快照 - point),
+        // 并发请求会相互覆盖余额,并可重复触发三级分销 reward(),造成积分泄漏。
+        Db::startTrans();
+        try {
+            if ($point > 0) {
+                $affected = $this->where($where)
+                    ->where('user_points', '>=', $point)
+                    ->setDec('user_points', $point);
+                if ($affected === 0 || $affected === false) {
+                    Db::rollback();
+                    return ['code'=>1005,'msg'=>lang('model/user/potins_not_enough')];
+                }
+            }
 
-        $res = $this->where($where)->update($data);
-        if($res===false){
+            // 扣分成功后再更新会员组与到期时间
+            $res = $this->where($where)->update([
+                'user_end_time' => $end_time,
+                'group_id'      => $group_id,
+            ]);
+            if($res===false){
+                Db::rollback();
+                return ['code'=>1009,'msg'=>lang('model/user/update_group_err')];
+            }
+
+            //积分日志
+            $data = [];
+            $data['user_id'] = $GLOBALS['user']['user_id'];
+            $data['plog_type'] = 7;
+            $data['plog_points'] = $point;
+            model('Plog')->saveData($data);
+            //分销日志(每次成功扣费仅触发一次)
+            $this->reward($point);
+
+            Db::commit();
+        } catch (\Exception $e) {
+            Db::rollback();
             return ['code'=>1009,'msg'=>lang('model/user/update_group_err')];
         }
-
-        //积分日志
-        $data = [];
-        $data['user_id'] = $GLOBALS['user']['user_id'];
-        $data['plog_type'] = 7;
-        $data['plog_points'] = $point;
-        model('Plog')->saveData($data);
-        //分销日志
-        $this->reward($point);
 
         cookie('group_id', $group_info['group_id'],['expire'=>2592000] );
         cookie('group_name', $group_info['group_name'],['expire'=>2592000] );
@@ -1018,11 +1039,20 @@ class User extends Base
         }
 
         $where = ['user_id' => intval($user['user_id'])];
-        $data = [];
-        $data['user_points'] = intval($user['user_points']) - $point;
-        $data['user_end_time'] = $end_time;
-        $data['group_id'] = $group_id;
-        $res = $this->where($where)->update($data);
+        // 原子扣分:仅当余额仍足够时扣减,避免与其它并发请求相互覆盖余额(丢失更新)。
+        // 原逻辑读传入快照算绝对值无条件写回;上方已校验余额,此处为并发兜底。
+        if ($point > 0) {
+            $affected = $this->where($where)
+                ->where('user_points', '>=', $point)
+                ->setDec('user_points', $point);
+            if ($affected === 0 || $affected === false) {
+                return ['code' => 1004, 'msg' => lang('model/user/potins_not_enough')];
+            }
+        }
+        $res = $this->where($where)->update([
+            'user_end_time' => $end_time,
+            'group_id'      => $group_id,
+        ]);
         if ($res === false) {
             return ['code' => 1005, 'msg' => lang('model/user/update_group_err')];
         }
