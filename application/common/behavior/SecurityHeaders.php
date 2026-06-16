@@ -29,6 +29,12 @@ class SecurityHeaders
             $response->header($base);
         }
 
+        // 边缘缓存:仅"匿名 + 已通过整页缓存全部检查"的页面(由 All::load_page_cache 置位)允许
+        // 浏览器/CDN 公共缓存,重复匿名访问不再回 PHP。登录/动态/POST 页不置位 → 不发该头。
+        if (!empty($GLOBALS['_mac_page_cacheable'])) {
+            $response->header(['Cache-Control' => 'public, max-age=' . (int)$GLOBALS['_mac_page_cacheable']]);
+        }
+
         if (defined('ENTRANCE') && ENTRANCE === 'install') {
             return;
         }

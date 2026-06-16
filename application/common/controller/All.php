@@ -34,6 +34,9 @@ class All extends Controller
         }
 
         if (mac_page_cache_eligible()) {
+            // 标记本页可被边缘缓存(已过 tpl 级跳过检查):供 app_end 的 SecurityHeaders 发 Cache-Control;
+            // 命中直出在下方就地发头(此处 die 不经 app_end)。仅匿名可缓存页置位,登录/动态页不置。
+            $GLOBALS['_mac_page_cacheable'] = (int)$GLOBALS['config']['app']['cache_time_page'];
             $cach_name = $this->page_cache_key($tpl);
             $res = Cache::get($cach_name);
             if (empty($res)) {
@@ -49,6 +52,9 @@ class All extends Controller
                 // https://github.com/magicblack/maccms10/issues/965
                 if($type=='json' || str_contains(request()->header('accept'), 'application/json')){
                     $res = json_encode($res);
+                }
+                if (!headers_sent()) {
+                    header('Cache-Control: public, max-age=' . (int)$GLOBALS['config']['app']['cache_time_page']);
                 }
                 echo $res;
                 die;
