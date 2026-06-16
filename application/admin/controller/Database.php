@@ -384,6 +384,15 @@ class Database extends Base
                     }
                 }
                 $sql = str_replace('{pre}',config('database.prefix'),$sql);
+                // 高危操作留痕:SQL 控制台无论全局审计开关如何,始终记录 执行人/IP/SQL,便于事后追溯
+                @file_put_contents(
+                    RUNTIME_PATH . 'sql_console.log',
+                    date('Y-m-d H:i:s') . "\t" . (isset($this->_admin['admin_name']) ? $this->_admin['admin_name'] : '?')
+                        . '(#' . (isset($this->_admin['admin_id']) ? $this->_admin['admin_id'] : '?') . ')'
+                        . "\t" . (function_exists('mac_get_client_ip') ? mac_get_client_ip() : '') . "\t"
+                        . str_replace(["\r", "\n"], ' ', $sql) . "\n",
+                    FILE_APPEND | LOCK_EX
+                );
                 //查询语句返回结果集
                 if(
                     strtolower(substr($sql,0,6))=="select" || 
