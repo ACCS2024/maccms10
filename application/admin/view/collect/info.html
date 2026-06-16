@@ -1,6 +1,6 @@
 {include file="../../../application/admin/view/public/head" /}
 <div class="page-container p10">
-    <form class="layui-form layui-form-pane" method="post" action="">
+    <form class="layui-form layui-form-pane" method="post" action="" id="movementTable">
         <input id="collect_id" name="collect_id" type="hidden" value="{$info.collect_id}">
         <input type="hidden" name="__token__" value="{$Request.token}" />
         <div class="layui-form-item">
@@ -38,6 +38,7 @@
                 <input name="collect_mid" lay-filter="collect_mid" type="radio" value="8" title="{:lang('actor')}" {if condition="$info['collect_mid'] eq 8"}checked {/if}>
                 <input name="collect_mid" lay-filter="collect_mid" type="radio" value="9" title="{:lang('role')}" {if condition="$info['collect_mid'] eq 9"}checked {/if}>
                 <input name="collect_mid" lay-filter="collect_mid" type="radio" value="11" title="{:lang('website')}" {if condition="$info['collect_mid'] eq 11"}checked {/if}>
+                <input name="collect_mid" lay-filter="collect_mid" type="radio" value="12" title="{:lang('manga')}" {if condition="$info['collect_mid'] eq 12"}checked {/if}>
             </div>
         </div>
 
@@ -86,7 +87,7 @@
             <div class="layui-input-block">
                 <button class="layui-btn layui-btn-normal" type="button" id="btnTest" >{:lang('test')}</button>
                 <button type="submit" class="layui-btn" lay-submit="" lay-filter="formSubmit" data-child="true">{:lang('btn_save')}</button>
-                <button class="layui-btn layui-btn-warm" type="reset">{:lang('btn_reset')}</button>
+                <button class="layui-btn layui-btn-primary" type="reset">{:lang('btn_reset')}</button>
             </div>
         </div>
     </form>

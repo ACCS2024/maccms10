@@ -3,7 +3,7 @@
 
     <div class="showpic" style="display:none;"><img class="showpic_img" width="120" height="160" referrerPolicy="no-referrer"></div>
     
-    <form class="layui-form layui-form-pane" method="post" action="">
+    <form class="layui-form layui-form-pane" method="post" action="" id="movementTable">
         <input type="hidden" name="type_id" value="{$info.type_id}">
         <input type="hidden" name="__token__" value="{$Request.token}" />
         <blockquote class="layui-elem-quote layui-quote-nm">
@@ -18,6 +18,7 @@
                         <option value="2" {if condition="$info['type_mid'] == '2' || ($info.type_id eq 0 && $infop['type_mid'] == '2')"}selected {/if}>{:lang('art')}</option>
                         <option value="8" {if condition="$info['type_mid'] == '8' || ($info.type_id eq 0 && $infop['type_mid'] == '8')"}selected {/if}>{:lang('actor')}</option>
                         <option value="11" {if condition="$info['type_mid'] == '11' || ($info.type_id eq 0 && $infop['type_mid'] == '11')"}selected {/if}>{:lang('website')}</option>
+                        <option value="12" {if condition="$info['type_mid'] == '12' || ($info.type_id eq 0 && $infop['type_mid'] == '12')"}selected {/if}>{:lang('manga')}</option>
                     </select>
             </div>
         </div>
@@ -187,7 +188,7 @@
         <div class="layui-form-item center">
             <div class="layui-input-block">
                 <button type="submit" class="layui-btn" lay-submit="" lay-filter="formSubmit" data-child="true">{:lang('btn_save')}</button>
-                <button class="layui-btn layui-btn-warm" type="reset">{:lang('btn_reset')}</button>
+                <button class="layui-btn layui-btn-primary" type="reset">{:lang('btn_reset')}</button>
             </div>
         </div>
     </form>

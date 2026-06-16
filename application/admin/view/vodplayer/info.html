@@ -9,7 +9,7 @@
             </ul>
             <div class="layui-tab-content">
 
-                <div class="layui-tab-item layui-show">
+                <div class="layui-tab-item layui-show" id="movementTable">
 
                     <div class="layui-form-item">
                         <label class="layui-form-label">{:lang('status')}：</label>
@@ -69,7 +69,7 @@
                         </div>
                     </div>
               </div>
-                <div class="layui-tab-item">
+                <div class="layui-tab-item" id="movementTable">
                     <div class="layui-form-item">
                         <label class="layui-form-label">{:lang('file')}：</label>
                         <div class="layui-input-block">
@@ -88,7 +88,7 @@
         <div class="layui-form-item center">
             <div class="layui-input-block">
                 <button type="submit" class="layui-btn" lay-submit="" lay-filter="formSubmit" data-child="true">{:lang('btn_save')}</button>
-                <button class="layui-btn layui-btn-warm" type="reset">{:lang('btn_reset')}</button>
+                <button class="layui-btn layui-btn-primary" type="reset">{:lang('btn_reset')}</button>
             </div>
         </div>
     </form>

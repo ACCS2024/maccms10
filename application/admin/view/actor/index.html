@@ -3,8 +3,8 @@
 
     <div class="my-toolbar-box">
         {if condition="$param.select neq 1"}
-        <div class="center mb10">
-            <form class="layui-form " method="post" action="{:url('data')}">
+        <div class="mb-2">
+            <form class="layui-form space-x-1 space-y-1" method="post" action="{:url('data')}">
                 <input type="hidden" value="{$param.select|mac_filter_xss}" name="select">
                 <input type="hidden" value="{$param.input|mac_filter_xss}" name="input">
                 <div class="layui-input-inline w150">
@@ -69,13 +69,13 @@
         </div>
         {/if}
 
-        <div class="layui-btn-group">
+        <div class="flex gap-5 overflow-x-auto overflow-y-hidden">
             <a data-href="{:url('info')}" data-full="1" class="layui-btn layui-btn-primary j-iframe"><i class="layui-icon">&#xe654;</i>{:lang('add')}</a>
             <a data-href="{:url('del')}" class="layui-btn layui-btn-primary j-page-btns confirm"><i class="layui-icon">&#xe640;</i>{:lang('del')}</a>
-            <a data-href="{:url('index/select')}?tab=actor&col=type_id&tpl=select_type&url=actor/field" data-width="270" data-height="100" data-checkbox="1" class="layui-btn layui-btn-primary j-select"><i class="layui-icon">&#xe620;</i>{:lang('type')}</a>
-            <a data-href="{:url('index/select')}?tab=actor&col=actor_level&tpl=select_level&url=actor/field" data-width="270" data-height="100" data-checkbox="1" class="layui-btn layui-btn-primary j-select"><i class="layui-icon">&#xe620;</i>{:lang('level')}</a>
-            <a data-href="{:url('index/select')}?tab=actor&col=actor_hits&tpl=select_hits&url=actor/field" data-width="470" data-height="100" data-checkbox="1" class="layui-btn layui-btn-primary j-select"><i class="layui-icon">&#xe620;</i>{:lang('hits')}</a>
-            <a data-href="{:url('index/select')}?tab=actor&col=actor_status&tpl=select_status&url=actor/field" data-width="470" data-height="100" data-checkbox="1" class="layui-btn layui-btn-primary j-select"><i class="layui-icon">&#xe620;</i>{:lang('status')}</a>
+            <a data-href="{:url('index/select')}?tab=actor&col=type_id&tpl=select_type&url=actor/field"  data-checkbox="1" class="layui-btn layui-btn-primary j-select"><i class="layui-icon">&#xe620;</i>{:lang('type')}</a>
+            <a data-href="{:url('index/select')}?tab=actor&col=actor_level&tpl=select_level&url=actor/field"  data-checkbox="1" class="layui-btn layui-btn-primary j-select"><i class="layui-icon">&#xe620;</i>{:lang('level')}</a>
+            <a data-href="{:url('index/select')}?tab=actor&col=actor_hits&tpl=select_hits&url=actor/field"  data-checkbox="1" class="layui-btn layui-btn-primary j-select"><i class="layui-icon">&#xe620;</i>{:lang('hits')}</a>
+            <a data-href="{:url('index/select')}?tab=actor&col=actor_status&tpl=select_status&url=actor/field"  data-checkbox="1" class="layui-btn layui-btn-primary j-select"><i class="layui-icon">&#xe620;</i>{:lang('status')}</a>
             <a class="layui-btn layui-btn-primary j-iframe" data-href="{:url('images/opt?tab=actor')}" href="javascript:;" title="{:lang('pic_sync')}"><i class="layui-icon">&#xe620;</i>{:lang('pic_sync')}</a>
         </div>
 
@@ -91,11 +91,11 @@
                 <th >{:lang('actor')}</th>
                 <th width="150">{:lang('area')}</th>
                 <th width="150">{:lang('sex')}</th>
-                <th width="40">{:lang('level')}</th>
-                <th width="40">{:lang('height')}</th>
-                <th width="40">{:lang('weight')}</th>
-                <th width="120">{:lang('update_time')}</th>
-                <th width="80">{:lang('opt')}</th>
+                <th width="50">{:lang('level')}</th>
+                <th width="50">{:lang('height')}</th>
+                <th width="50">{:lang('weight')}</th>
+                <th width="180">{:lang('update_time')}</th>
+                <th width="150">{:lang('opt')}</th>
             </tr>
             </thead>
 

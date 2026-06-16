@@ -9,7 +9,7 @@
             <div class="layui-tab-item layui-show">
 
     <div class="my-toolbar-box" >
-        <div class="center mb10">
+        <div class=" mb10">
         <form class="layui-form " method="post">
             <div class="layui-input-inline w300">
                 <input type="text" autocomplete="off" placeholder="{:lang('wd')}" class="layui-input" name="wd" value="{$param['wd']|mac_filter_xss}">
@@ -110,7 +110,7 @@
                     if(row.install =='1'){
                         h+='<a href="javascript:;" class="layui-btn layui-btn-normal layui-btn-sm j-iframe" data-name="'+row.name+'" data-href="{:url('config')}?name='+row.name+'" ><i class="layui-icon">&#xe614;</i>{:lang('config')}</a>';
                         if(row.state=='1'){
-                            h+='<a href="javascript:;" class="layui-btn layui-btn-warm layui-btn-sm btn-disable" data-name="'+row.name+'" data-action="disable"><i class="layui-icon">&#x1006;</i>{:lang('disable')}</a>';
+                            h+='<a href="javascript:;" class="layui-btn layui-btn-primary layui-btn-sm btn-disable" data-name="'+row.name+'" data-action="disable"><i class="layui-icon">&#x1006;</i>{:lang('disable')}</a>';
                         }
                         else{
                             h+='<a href="javascript:;" class="layui-btn  layui-btn-sm btn-enable" data-name="'+row.name+'" data-action="enable"><i class="layui-icon">&#xe605;</i>{:lang('enable')}</a><a href="javascript:;" class="layui-btn layui-btn-danger layui-btn-sm btn-uninstall" data-name="'+row.name+'"><i class="layui-icon">&#x1006;</i>{:lang('uninstall')}</a>';

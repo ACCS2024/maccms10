@@ -20,7 +20,7 @@
                     var ueArray=[];
                     var plot_arr_len = {$vod_plot_list|count};
                 </script>
-                <div class="layui-tab-item layui-show">
+                <div class="layui-tab-item layui-show" id="movementTable">
                     <div id="plot_list" class="contents">
                         {volist name="$vod_plot_list" id="vo"}
                         <div class="layui-form-item" data-i="{$key}">
@@ -47,7 +47,7 @@
                 <div class="layui-form-item center">
                     <div class="layui-input-block">
                         <button type="submit" class="layui-btn" lay-submit="" lay-filter="formSubmit" data-child="">{:lang('btn_save')}</button>
-                        <button class="layui-btn layui-btn-warm" type="reset">{:lang('btn_reset')}</button>
+                        <button class="layui-btn layui-btn-primary" type="reset">{:lang('btn_reset')}</button>
                     </div>
                 </div>
     </form>

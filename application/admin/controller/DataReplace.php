@@ -16,7 +16,7 @@ class DataReplace extends Base
     public function __construct()
     {
         parent::__construct();
-        $this->view->config('view_path', APP_PATH . 'admin/view_new/');
+        $this->view->config('view_path', APP_PATH . 'admin/view/');
     }
 
     public function index()

@@ -14,7 +14,7 @@
             </ul>
             <div class="layui-tab-content">
 
-                <div class="layui-tab-item layui-show">
+                <div class="layui-tab-item layui-show" id="movementTable">
                     
                 <div class="layui-form-item">
                     <label class="layui-form-label">{:lang('param')}：</label>
@@ -186,13 +186,13 @@
                     <div class="layui-form-item">
                         <label class="layui-form-label">{:lang('content')}：</label>
                         <div class="layui-input-block">
-                            <textarea id="actor_content" name="actor_content" type="text/plain" style="width:99%;height:300px">{$info.actor_content|mac_url_content_img}</textarea>
+                            <textarea id="actor_content" name="actor_content" type="text/plain" style="width:100%;height:300px">{$info.actor_content|mac_url_content_img}</textarea>
                         </div>
                     </div>
                     
         </div>
 
-                <div class="layui-tab-item">
+                <div class="layui-tab-item" id="movementTable">
                         <div class="layui-form-item">
                             <label class="layui-form-label">{:lang('up')}：</label>
                             <div class="layui-input-inline ">
@@ -259,7 +259,7 @@
                 <div class="layui-form-item center">
                     <div class="layui-input-block">
                         <button type="submit" class="layui-btn" lay-submit="" lay-filter="formSubmit" data-child="">{:lang('btn_save')}</button>
-                        <button class="layui-btn layui-btn-warm" type="reset">{:lang('btn_reset')}</button>
+                        <button class="layui-btn layui-btn-primary" type="reset">{:lang('btn_reset')}</button>
                     </div>
                 </div>
     </form>

@@ -2,7 +2,7 @@
 <div class="page-container p10">
 
     <div class="my-toolbar-box">
-        <div class="center mb10">
+        <div class=" mb10">
             <form class="layui-form " method="post" action="{:url('index')}">
                 <div class="layui-input-inline">
                     <input type="text" autocomplete="off" placeholder="{:lang('wd')}" class="layui-input" name="wd" value="{$param['wd']|mac_filter_xss}">
@@ -11,7 +11,7 @@
             </form>
         </div>
 
-        <div class="layui-btn-group">
+        <div class="flex gap-5 overflow-x-auto overflow-y-hidden">
             <a data-href="{:url('info')}" class="layui-btn layui-btn-primary j-iframe"><i class="layui-icon">&#xe654;</i>{:lang('add')}</a>
             <a data-href="{:url('batch')}" class="layui-btn layui-btn-primary j-page-btns confirm"><i class="layui-icon">&#xe642;</i>{:lang('edit')}</a>
             <a data-href="{:url('del')}" class="layui-btn layui-btn-primary j-page-btns confirm"><i class="layui-icon">&#xe640;</i>{:lang('del')}</a>
@@ -30,7 +30,7 @@
                 <th >{:lang('name')}</th>
                 <th >{:lang('url')}</th>
                 <th >{:lang('logo')}</th>
-                <th width="130">{:lang('opt')}</th>
+                <th width="230">{:lang('opt')}</th>
             </tr>
             </thead>
 

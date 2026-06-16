@@ -4,7 +4,7 @@
 
     <div class="my-toolbar-box">
 
-        <div class="layui-btn-group">
+        <div class="flex gap-5 overflow-x-auto overflow-y-hidden">
             <a data-href="{:url('info')}" class="layui-btn layui-btn-primary j-iframe" data-width="800px" data-height="610px"><i class="layui-icon">&#xe654;</i>{:lang('add')}</a>
             <a data-href="{:url('del')}" class="layui-btn layui-btn-primary j-page-btns confirm"><i class="layui-icon">&#xe640;</i>{:lang('del')}</a>
             <a data-href="{:url('clearbind')}" class="layui-btn layui-btn-primary j-page-btns confirm" data-checkbox="false" data-ajax="yes"><i class="layui-icon">&#xe640;</i>{:lang('admin/collect/clear_bind')}</a>
@@ -24,6 +24,9 @@
                 {if condition="$collect_break_website neq ''"}
                 <a href="{:url('load')}?flag=website" class="layui-btn layui-btn-danger ">【进入网址断点采集】</a>
                 {/if}
+                {if condition="$collect_break_manga neq ''"}
+                <a href="{:url('load')}?flag=manga" class="layui-btn layui-btn-danger ">【进入漫画断点采集】</a>
+                {/if}
 
         </div>
 
@@ -38,8 +41,8 @@
                 <th width="100">接口类型</th>
                 <th width="100">资源类型</th>
                 <th>资源站</th>
-                <th width="200">采集选项</th>
-                <th width="100">{:lang('opt')}</th>
+                <th width="260">采集选项</th>
+                <th width="180">{:lang('opt')}</th>
             </tr>
             </thead>
 

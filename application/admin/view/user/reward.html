@@ -3,8 +3,8 @@
 
     <div class="my-toolbar-box">
 
-        <div class="center mb10">
-            <form class="layui-form " method="post">
+        <div class="mb-2">
+            <form class="layui-form space-x-1 space-y-1" method="post">
                 <div class="layui-input-inline w150">
                     <select name="level">
                         <option value="">{:lang('admin/user/reward/select_level')}</option>
@@ -21,10 +21,10 @@
             </form>
         </div>
 
-        <div class="layui-btn-group">
+        <div class="">
             <a class="layui-btn ">{:lang('admin/user/reward/one_people_num')}【{$data.level_cc_1}】{:lang('admin/user/reward/total_commission_points')}【{$data.points_cc_1}】</a>
             <a class="layui-btn layui-btn-normal">{:lang('admin/user/reward/two_people_num')}【{$data.level_cc_2}】{:lang('admin/user/reward/total_commission_points')}【{$data.points_cc_2}】</a>
-            <a class="layui-btn layui-btn-warm">{:lang('admin/user/reward/three_people_num')}【{$data.level_cc_3}】{:lang('admin/user/reward/total_commission_points')}【{$data.points_cc_3}】</a>
+            <a class="layui-btn layui-btn-primary">{:lang('admin/user/reward/three_people_num')}【{$data.level_cc_3}】{:lang('admin/user/reward/total_commission_points')}【{$data.points_cc_3}】</a>
         </div>
 
     </div>

@@ -3,8 +3,8 @@
 
     <div class="my-toolbar-box">
         {if condition="$param.select neq 1"}
-        <div class="center mb10">
-            <form class="layui-form " method="post" action="{:url('data')}">
+        <div class="mb-2">
+            <form class="layui-form space-x-1 space-y-1" method="post" action="{:url('data')}">
                 <input type="hidden" value="{$param.select|mac_filter_xss}" name="select">
                 <input type="hidden" value="{$param.input|mac_filter_xss}" name="input">
                 <div class="layui-input-inline w150">
@@ -56,7 +56,7 @@
         </div>
         {/if}
 
-        <div class="layui-btn-group">
+        <div class="flex gap-5 overflow-x-auto overflow-y-hidden">
             {if condition="$param.select eq 1 && $param.rid neq ''"}
             <a data-href="{:url('info')}?tab={$param.tab}&rid={$param.rid}" data-full="1" class="layui-btn layui-btn-primary j-iframe"><i class="layui-icon">&#xe654;</i>{:lang('add')}</a>
             {/if}
@@ -79,11 +79,11 @@
                 <th >{:lang('vod_name')}</th>
                 <th width="150">{:lang('role_name')}</th>
                 <th width="150">{:lang('actor_name')}</th>
-                <th width="40">{:lang('sort')}</th>
-                <th width="40">{:lang('hits')}</th>
-                <th width="40">{:lang('level')}</th>
-                <th width="120">{:lang('update_time')}</th>
-                <th width="80">{:lang('opt')}</th>
+                <th width="50">{:lang('sort')}</th>
+                <th width="50">{:lang('hits')}</th>
+                <th width="50">{:lang('level')}</th>
+                <th width="180">{:lang('update_time')}</th>
+                <th width="150">{:lang('opt')}</th>
             </tr>
             </thead>
 

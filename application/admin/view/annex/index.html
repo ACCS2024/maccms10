@@ -3,7 +3,7 @@
 
     <div class="my-toolbar-box">
         {if condition="$param.select neq 1"}
-        <div class="center mb10">
+        <div class=" mb10">
             <form class="layui-form " method="post" action="{:url('data')}">
                 <input type="hidden" value="{$param.select|mac_filter_xss}" name="select">
                 <input type="hidden" value="{$param.input|mac_filter_xss}" name="input">
@@ -32,7 +32,7 @@
         </div>
         {/if}
 
-        <div class="layui-btn-group">
+        <div class="flex gap-5 overflow-x-auto overflow-y-hidden">
             <a data-href="{:url('del')}" class="layui-btn layui-btn-primary j-page-btns confirm"><i class="layui-icon">&#xe640;</i>{:lang('del')}</a>
             <a href="{:url('file')}" class="layui-btn layui-btn-primary "><i class="layui-icon">&#xe620;</i>{:lang('admin/annex/dir_model')}</a>
             <a class="layui-btn layui-btn-primary j-iframe" data-href="{:url('annex/check')}" href="javascript:;" title="{:lang('admin/annex/check')}"><i class="layui-icon">&#xe620;</i>{:lang('admin/annex/check')}</a>

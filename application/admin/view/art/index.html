@@ -3,7 +3,7 @@
 
     <div class="my-toolbar-box">
 
-        <div class="center mb10">
+        <div class=" mb10">
             <form class="layui-form " method="post" action="{:url('data')}">
                 <input type="hidden" value="{$param.select|mac_filter_xss}" name="select">
                 <input type="hidden" value="{$param.input|mac_filter_xss}" name="input">
@@ -76,7 +76,7 @@
             </form>
         </div>
 
-        <div class="layui-btn-group">
+        <div class="flex gap-5 overflow-x-auto overflow-y-hidden">
             {if condition="$param.recycle eq 1"}
             <a href="{:url('data')}" class="layui-btn layui-btn-primary">{:lang('admin/recycle/back_list')}</a>
             <a data-href="{:url('restore')}" class="layui-btn layui-btn-normal j-page-btns confirm">{:lang('recycle_restore')}</a>
@@ -121,15 +121,15 @@
             <thead>
             <tr>
                 <th width="25"><input type="checkbox" lay-skin="primary" lay-filter="allChoose"></th>
-                <th width="40">{:lang('id')}</th>
+                <th width="60">{:lang('id')}</th>
                 <th >{:lang('name')}</th>
                 <th width="90">{:lang('admin/ai_seo/status_col')}</th>
                 <th width="50">{:lang('hits')}</th>
-                <th width="30">{:lang('score')}</th>
-                <th width="30">{:lang('level')}</th>
-                <th width="30">{:lang('browse')}</th>
+                <th width="60">{:lang('score')}</th>
+                <th width="50">{:lang('level')}</th>
+                <th width="50">{:lang('browse')}</th>
                 <th width="80">{:lang('author')}</th>
-                <th width="120">{:lang('update_time')}</th>
+                <th width="180">{:lang('update_time')}</th>
                 <th width="260">{:lang('opt')}</th>
             </tr>
             </thead>
