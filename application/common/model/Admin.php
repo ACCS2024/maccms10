@@ -114,6 +114,16 @@ class Admin extends Base {
             return ['code'=>1001,'msg'=>lang('param_err')];
         }
 
+        // 安全加固:后台登录按 IP 限流,防暴力破解口令。不依赖验证码(验证码可被关闭或打码绕过),
+        // 即使关掉登录验证码也有兜底。5 分钟内每 IP 最多 10 次登录尝试,超限直接拒绝。
+        $login_ip = function_exists('mac_get_client_ip') ? (string)mac_get_client_ip() : (string)($_SERVER['REMOTE_ADDR'] ?? '');
+        if ($login_ip !== '' && class_exists('\\app\\common\\util\\SlidingWindowIpLimiter')) {
+            $rl = \app\common\util\SlidingWindowIpLimiter::checkHit($login_ip, 'admin_login', 300, 10, 'login_rl');
+            if (empty($rl['allowed'])) {
+                return ['code'=>1002,'msg'=>'登录尝试过于频繁，请稍后再试'];
+            }
+        }
+
         if($GLOBALS['config']['app']['admin_login_verify'] !='0'){
             if(!captcha_check($data['verify'])){
                 return ['code'=>1002,'msg'=>lang('verify_err')];
