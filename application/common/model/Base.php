@@ -34,6 +34,24 @@ class Base extends Model
         if ($this->readFromMaster === true) {
             $query_object = $query_object->master();
         }
+        // COUNT 缓存:列表总数非敏感、变化缓慢;短 TTL 缓存以削减 API/列表对全表 count 的重复开销,
+        // 防高频接口把 count(*) 刷爆 CPU。readFromMaster(刚写需实时)或 count_cache_sec<=0 时不缓存。
+        $ttl = isset($GLOBALS['config']['app']['count_cache_sec']) ? (int)$GLOBALS['config']['app']['count_cache_sec'] : 60;
+        if ($ttl > 0 && $this->readFromMaster !== true) {
+            try {
+                $flag = isset($GLOBALS['config']['app']['cache_flag']) ? $GLOBALS['config']['app']['cache_flag'] : 'mac';
+                $key = $flag . '_cnt_' . md5(get_class($this) . '|' . serialize($cond));
+                $c = \think\Cache::get($key);
+                if (is_int($c) || (is_string($c) && ctype_digit($c))) {
+                    return (int)$c;
+                }
+                $n = (int)$query_object->where($cond)->count();
+                \think\Cache::set($key, $n, $ttl);
+                return $n;
+            } catch (\Throwable $e) {
+                // 缓存层异常 → 回退直查
+            }
+        }
         return (int)$query_object->where($cond)->count();
     }
 
@@ -41,6 +59,9 @@ class Base extends Model
     {
         $offset = max(0, (int)$offset);
         $limit = max(1, (int)$limit);
+        // 通用硬上限:防恶意 limit(如 ?limit=1000000)一次拉巨量行打爆内存/CPU。
+        // 1000 远超任何正常分页,不影响合法使用;公开 API 另有更紧的每端点上限。
+        $limit = min($limit, 1000);
 
         if (empty($orderby)) {
             $orderby = $this->primaryId . " DESC";
