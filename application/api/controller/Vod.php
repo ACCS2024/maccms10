@@ -39,8 +39,9 @@ class Vod extends Base
                 'msg'  => '参数错误: ' . $validate->getError(),
             ]);
         }
-        $offset = isset($param['offset']) ? (int)$param['offset'] : 0;
-        $limit = isset($param['limit']) ? (int)$param['limit'] : 20;
+        $offset = isset($param['offset']) ? max(0, (int)$param['offset']) : 0;
+        // 限制每页上限,防 ?limit=1000000 之类一次拉巨量行打爆 CPU/内存(公开接口收紧到 100)
+        $limit = isset($param['limit']) ? min(max(1, (int)$param['limit']), 100) : 20;
         // 查询条件组装（与前台分类一致：父类下视频多为子类 type_id + 父类 type_id_1）
         $where = [];
         $where['vod_status'] = ['eq', 1];

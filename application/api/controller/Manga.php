@@ -24,7 +24,8 @@ class Manga extends Base
             ]);
         }
         $param['page'] = intval($param['page']) < 1 ? 1 : intval($param['page']);
-        $param['limit'] = intval($param['limit']) < 1 ? 20 : intval($param['limit']);
+        // 限制每页上限,防 ?limit=1000000 之类一次拉巨量行打爆 CPU/内存(公开接口收紧到 100)
+        $param['limit'] = min(intval($param['limit']) < 1 ? 20 : intval($param['limit']), 100);
 
         $where = [];
         $where['manga_status'] = ['eq', 1];

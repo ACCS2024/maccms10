@@ -9,7 +9,7 @@ class Actor extends Validate
     protected $rule = [
         'actor_id'      => 'require|number|between:1,' . PHP_INT_MAX,
         'offset'      => 'number|between:0,' . PHP_INT_MAX,
-        'limit'      => 'number|between:1,' . PHP_INT_MAX,
+        'limit'      => 'number|between:1,500',
         'id'      => 'number|between:1,' . PHP_INT_MAX,
         'type_id'      => 'number|between:1,' . PHP_INT_MAX,
         'sex' =>  'in:男,女',

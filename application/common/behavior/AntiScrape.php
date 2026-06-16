@@ -75,7 +75,10 @@ class AntiScrape
                 }
             }
         }
-        if (in_array($route, array_unique($exempt), true)) {
+        // 采集(provide)/推送(receive)是资源站高频合法调用,控制器级默认免限流,
+        // 使"开启 API 限流"对公开 JSON 接口生效的同时不掐断采集/推送。
+        $exemptCtrl = ['provide', 'receive'];
+        if (in_array($route, array_unique($exempt), true) || in_array($c, $exemptCtrl, true)) {
             return;
         }
 

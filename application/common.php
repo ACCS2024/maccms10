@@ -874,6 +874,11 @@ function mac_perf_env_checks()
         }
     } catch (\Throwable $e) {}
 
+    // 11) API 限流(防公开接口被高频请求刷爆 CPU)
+    $apiRl = !empty($app['anti_scrape_api_enabled']) && (string)$app['anti_scrape_api_enabled'] === '1';
+    $push('API 限流', $apiRl, $apiRl ? '已开启' : '未开启',
+        $apiRl ? '' : '「系统配置」开启 API 防爬/限流:公开 JSON 接口按 IP 限频,防被高频请求刷爆 CPU(采集 provide/推送 receive 已默认免限,不影响)。');
+
     return $checks;
 }
 
