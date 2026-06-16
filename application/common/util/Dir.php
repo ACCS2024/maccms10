@@ -72,13 +72,14 @@ class Dir {
                 $dir[$i]['isReadable'] = is_readable($file);
                 $dir[$i]['isWritable'] = is_writable($file);
             }
-            $cmp_func = create_function('$a,$b', '
-            $k  =  "isDir";
-            if($a[$k]  ==  $b[$k])  return  0;
-            return  $a[$k]>$b[$k]?-1:1;
-            ');
-            // 对结果排序 保证目录在前面
-            usort($dir, $cmp_func);
+            // 对结果排序 保证目录在前面(闭包替代 PHP8 已移除的 create_function)
+            usort($dir, function ($a, $b) {
+                $k = 'isDir';
+                if ($a[$k] == $b[$k]) {
+                    return 0;
+                }
+                return $a[$k] > $b[$k] ? -1 : 1;
+            });
             $this->_values = $dir;
             $_listDirs[$guid] = $dir;
         } else {
