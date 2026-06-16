@@ -139,29 +139,45 @@ class Card extends Base {
             return ['code' => 1002, 'msg' =>lang('model/card/not_found')];
         }
 
-        $where2=[];
-        $where2['user_id'] = $user_info['user_id'];
-        $res = model('User')->where($where2)->setInc('user_points',$info['card_points']);
-        if($res===false){
-            return ['code' => 1003, 'msg' =>lang('model/card/update_user_points_err')];
-        }
-        //积分日志
-        $data = [];
-        $data['user_id'] = $user_info['user_id'];
-        $data['plog_type'] = 1;
-        $data['plog_points'] = $info['card_points'];
-        $result = model('Plog')->saveData($data);
+        Db::startTrans();
+        try {
+            // 原子认领:仅当 card_use_status 仍为 0 时置 1;受影响行数==1 才算抢到本卡。
+            // 修复 TOCTOU:原逻辑"先加分、后置状态"非原子,并发请求可对同一张卡重复兑换(多次加分)。
+            $claim = $this->where([
+                'card_no'         => ['eq', $card_no],
+                'card_pwd'        => ['eq', $card_pwd],
+                'card_use_status' => ['eq', 0],
+            ])->update([
+                'card_sale_status' => 1,
+                'card_use_status'  => 1,
+                'card_use_time'    => time(),
+                'user_id'          => $user_info['user_id'],
+            ]);
+            if (empty($claim)) {
+                // 0 行:已被(并发的)其它请求兑换
+                Db::rollback();
+                return ['code' => 1002, 'msg' => lang('model/card/not_found')];
+            }
 
-        $update=[];
-        $update['card_sale_status'] = 1;
-        $update['card_use_status'] = 1;
-        $update['card_use_time'] = time();
-        $update['user_id'] = $user_info['user_id'];
-        $res = $this->where($where)->update($update);
-        if($res === false){
-            return ['code' => 1004, 'msg' =>lang('model/card/update_card_status_err')];
-        }
+            // 认领成功后再加积分
+            $res = model('User')->where(['user_id' => $user_info['user_id']])->setInc('user_points', $info['card_points']);
+            if ($res === false) {
+                Db::rollback();
+                return ['code' => 1003, 'msg' => lang('model/card/update_user_points_err')];
+            }
 
-        return ['code' => 1, 'msg' => lang('model/card/used_card_ok',[$info['card_points']])];
+            //积分日志
+            model('Plog')->saveData([
+                'user_id'     => $user_info['user_id'],
+                'plog_type'   => 1,
+                'plog_points' => $info['card_points'],
+            ]);
+
+            Db::commit();
+            return ['code' => 1, 'msg' => lang('model/card/used_card_ok',[$info['card_points']])];
+        } catch (\Exception $e) {
+            Db::rollback();
+            return ['code' => 1004, 'msg' => lang('model/card/update_card_status_err')];
+        }
     }
 }
