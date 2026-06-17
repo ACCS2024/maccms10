@@ -10,6 +10,9 @@ class MeilisearchService
     /** @var array<string, array{ok:bool,hits:array,estimatedTotalHits:int}> 单次请求内相同参数去重，避免列表与 AI 联想等对 Meili 重复打网 */
     private static $searchMemo = [];
 
+    /** 历史共享默认索引名。多个 maccms 共用同一 Meilisearch 且都用此名会串库（主键 vod_<id> 全局，互相覆盖）。 */
+    const LEGACY_SHARED_UID = 'maccms_contents';
+
     public static function cfg()
     {
         $c = $GLOBALS['config']['meilisearch'] ?? [];
@@ -21,7 +24,7 @@ class MeilisearchService
         $c = self::cfg();
         return !empty($c['enabled']) && (string)$c['enabled'] === '1'
             && !empty($c['host'])
-            && !empty($c['index_uid']);
+            && self::indexUid() !== '';
     }
 
     public static function host()
@@ -29,9 +32,40 @@ class MeilisearchService
         return rtrim((string)(self::cfg()['host'] ?? ''), '/');
     }
 
+    /**
+     * 本站唯一的默认索引名，按数据库连接派生（库名为主 + host/端口/前缀短哈希兜底），
+     * 保证多个 maccms 共用同一 Meilisearch 时各自独立 index、绝不串库。
+     * 即便两台不同 MySQL 都叫同名库，host/端口/前缀的哈希也会区分开。
+     */
+    public static function defaultIndexUid()
+    {
+        $db = (string)config('database.database');
+        $host = (string)config('database.hostname');
+        $port = (string)config('database.hostport');
+        $prefix = (string)config('database.prefix');
+        // Meili 索引名仅允许 [A-Za-z0-9_-]
+        $name = preg_replace('/[^A-Za-z0-9_-]/', '_', $db);
+        $name = trim((string)$name, '_');
+        if ($name === '') {
+            $name = 'site';
+        }
+        if (strlen($name) > 40) {
+            $name = substr($name, 0, 40);
+        }
+        $hash = substr(md5($host . '|' . $port . '|' . $prefix . '|' . $db), 0, 6);
+        return 'maccms_' . $name . '_' . $hash;
+    }
+
     public static function indexUid()
     {
-        return (string)(self::cfg()['index_uid'] ?? 'maccms_contents');
+        $uid = trim((string)(self::cfg()['index_uid'] ?? ''));
+        return $uid !== '' ? $uid : self::defaultIndexUid();
+    }
+
+    /** 当前用的是否历史共享默认名（后台据此提示多站点串库风险）。 */
+    public static function isLegacySharedUid()
+    {
+        return trim((string)(self::cfg()['index_uid'] ?? '')) === self::LEGACY_SHARED_UID;
     }
 
     public static function apiKey()

@@ -52,3 +52,23 @@ jobs:
           myisam=$(mysql -h127.0.0.1 -uroot -proot -N -e "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA='maccms' AND ENGINE='MyISAM'")
           echo "tables=$total, MyISAM=$myisam"
           if [ "$myisam" != "0" ]; then echo "ERROR: expected all InnoDB"; exit 1; fi
+
+  shellcheck:
+    name: ShellCheck (deploy/ + tests/ shell scripts)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install shellcheck
+        run: sudo apt-get update -qq && sudo apt-get install -y shellcheck
+      - name: Run shellcheck on *.sh under deploy/ and tests/
+        run: |
+          set -euo pipefail
+          fail=0
+          found=0
+          while IFS= read -r -d '' f; do
+            found=1
+            echo "shellcheck $f"
+            shellcheck "$f" || fail=1
+          done < <(find deploy tests -name '*.sh' -print0 2>/dev/null)
+          if [ "$found" = 0 ]; then echo "no shell scripts found"; fi
+          if [ "$fail" = 0 ]; then echo "All shellcheck OK"; else exit 1; fi
