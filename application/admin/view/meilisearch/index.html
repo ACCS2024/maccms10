@@ -1,5 +1,15 @@
 {include file="../../../application/admin/view/public/head" /}
 <div class="page-container p10">
+    {if condition="$shared_uid_warn eq 1"}
+    <blockquote class="layui-elem-quote" style="border-left-color:#ff5722;background:#fff7f5;">
+        <p style="color:#d23f1f;font-weight:600;margin-bottom:6px;">[!] {:lang('admin/meilisearch/multisite_title')}</p>
+        <p style="line-height:1.7;">{:lang('admin/meilisearch/multisite_text')}<code style="color:#d23f1f;">{$suggested_uid}</code></p>
+        <p style="margin-top:8px;">
+            <button type="button" class="layui-btn layui-btn-sm layui-btn-danger" id="btnUseSuggestedUid" data-uid="{$suggested_uid}">{:lang('admin/meilisearch/use_suggested_uid')}</button>
+            <span class="layui-word-aux" style="display:inline;margin-left:8px;">{:lang('admin/meilisearch/multisite_after_switch')}</span>
+        </p>
+    </blockquote>
+    {/if}
     <form id="meiliConfigForm">
         <input type="hidden" name="__token__" value="{$Request.token}" />
         <table class="layui-table">
@@ -12,7 +22,7 @@
                 </td>
             </tr>
             <tr><td>{:lang('admin/meilisearch/host')}</td><td><input type="text" class="layui-input" name="meilisearch[host]" value="{$cfg.host|default=''}" placeholder="http://127.0.0.1:7700"></td></tr>
-            <tr><td>{:lang('admin/meilisearch/index_uid')}</td><td><input type="text" class="layui-input" name="meilisearch[index_uid]" value="{$cfg.index_uid|default='maccms_contents'}"></td></tr>
+            <tr><td>{:lang('admin/meilisearch/index_uid')}</td><td><input type="text" class="layui-input" name="meilisearch[index_uid]" value="{$cfg.index_uid}"><div class="layui-word-aux">{:lang('admin/meilisearch/index_uid_hint')}</div></td></tr>
             <tr>
                 <td>{:lang('admin/meilisearch/api_key')}</td>
                 <td>
@@ -99,10 +109,12 @@
         <button type="button" class="layui-btn layui-btn-danger" id="btnMeiliSetup">{:lang('admin/meilisearch/setup')}</button>
         <a class="layui-btn layui-btn-normal" href="{:url('meilisearch/sync')}">{:lang('admin/meilisearch/full_sync')}</a>
         <button type="button" class="layui-btn layui-btn-warm" id="btnMeiliSelfcheck">{:lang('admin/meilisearch/selfcheck')}</button>
+        <button type="button" class="layui-btn" id="btnMeiliVersion">{:lang('admin/meilisearch/version_check')}</button>
         <span class="layui-word-aux">{:lang('admin/meilisearch/setup_hint')}</span>
     </p>
     <pre id="meiliSetupResult" style="display:none; margin-top:10px; padding:12px; background:#0f172a; color:#e2e8f0; border-radius:6px; overflow:auto; max-height:420px;"></pre>
     <pre id="meiliSelfcheckResult" style="display:none; margin-top:10px; padding:12px; background:#0f172a; color:#e2e8f0; border-radius:6px; overflow:auto; max-height:420px;"></pre>
+    <pre id="meiliVersionResult" style="display:none; margin-top:10px; padding:12px; background:#0f172a; color:#e2e8f0; border-radius:6px; overflow:auto; max-height:420px;"></pre>
 </div>
 <script>
     (function () {
@@ -159,6 +171,41 @@
                 });
             });
         });
+        var useUidBtn = document.getElementById('btnUseSuggestedUid');
+        if (useUidBtn) {
+            useUidBtn.addEventListener('click', function () {
+                var uid = useUidBtn.getAttribute('data-uid') || '';
+                var input = document.querySelector('input[name="meilisearch[index_uid]"]');
+                if (input && uid) {
+                    input.value = uid;
+                    input.focus();
+                    layer.msg('已填入本站唯一名，点「保存」后再「一键初始化索引」+「全量同步」');
+                }
+            });
+        }
+        var verBtn = document.getElementById('btnMeiliVersion');
+        var verBox = document.getElementById('meiliVersionResult');
+        if (verBtn && verBox) {
+            verBtn.addEventListener('click', function () {
+                var url = "{:url('meilisearch/versioncheck')}";
+                verBtn.disabled = true;
+                verBtn.innerText = "{:lang('admin/meilisearch/version_check_running')}";
+                $.get(url, function (res) {
+                    verBox.style.display = 'block';
+                    verBox.textContent = JSON.stringify(res || {}, null, 2);
+                }, 'json').fail(function (xhr) {
+                    verBox.style.display = 'block';
+                    verBox.textContent = JSON.stringify({
+                        code: 0,
+                        msg: "{:lang('admin/meilisearch/request_failed')}",
+                        status: xhr && xhr.status ? xhr.status : 0
+                    }, null, 2);
+                }).always(function () {
+                    verBtn.disabled = false;
+                    verBtn.innerText = "{:lang('admin/meilisearch/version_check')}";
+                });
+            });
+        }
         btn.addEventListener('click', function () {
             var url = "{:url('meilisearch/selfcheck')}";
             btn.disabled = true;

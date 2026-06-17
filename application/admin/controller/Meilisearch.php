@@ -27,7 +27,7 @@ class Meilisearch extends Base
             'enabled' => '0',
             'host' => '',
             'api_key' => '',
-            'index_uid' => 'maccms_contents',
+            'index_uid' => MeilisearchService::defaultIndexUid(),
             'timeout' => '8',
             'ssl_verify' => '1',
             'sync_on_save' => '1',
@@ -64,6 +64,9 @@ class Meilisearch extends Base
         }
         $this->assign('settings_check', $settingsCheck);
         $this->assign('cfg', $cfg);
+        // 多站点串库提示：用的是历史共享默认名 maccms_contents 时，给出本站唯一建议名
+        $this->assign('shared_uid_warn', MeilisearchService::isLegacySharedUid() ? 1 : 0);
+        $this->assign('suggested_uid', MeilisearchService::defaultIndexUid());
         $this->assign('meili_key_saved', trim((string)$cfg['api_key']) !== '' ? 1 : 0);
         $this->assign('meili_key_tail', trim((string)$cfg['api_key']) !== '' ? substr((string)$cfg['api_key'], -6) : '');
         return $this->fetch('admin@meilisearch/index');
@@ -99,7 +102,8 @@ class Meilisearch extends Base
             'search_only_wd' => isset($meili['search_only_wd']) && (string)$meili['search_only_wd'] === '0' ? '0' : '1',
         ];
         if ($row['index_uid'] === '') {
-            $row['index_uid'] = 'maccms_contents';
+            // 清空时派生本站唯一名，绝不回落到会串库的共享默认名
+            $row['index_uid'] = MeilisearchService::defaultIndexUid();
         }
         $newKey = isset($meili['api_key']) ? trim((string)$meili['api_key']) : '';
         if ($newKey !== '') {
@@ -212,6 +216,88 @@ class Meilisearch extends Base
                 ],
             ],
         ]);
+    }
+
+    /**
+     * 版本检查（只读）：回显 Meili 当前运行版本 + GitHub 最新稳定版 + 该在服务器上执行的升级命令。
+     * 不从网站执行任何系统级升级（升级请在服务器跑 deploy/meilisearch/meilisearch.sh upgrade）。
+     */
+    public function versioncheck()
+    {
+        $current = '';
+        if (MeilisearchService::enabled()) {
+            $uid = MeilisearchService::indexUid();
+            $r = MeilisearchHttp::request(
+                MeilisearchService::host(),
+                'GET',
+                '/version',
+                MeilisearchService::apiKey(),
+                null,
+                MeilisearchService::timeout(),
+                MeilisearchService::sslVerify()
+            );
+            if (!empty($r['ok']) && is_array($r['data'] ?? null)) {
+                $current = (string)($r['data']['pkgVersion'] ?? '');
+            }
+        }
+        $latest = $this->fetchLatestMeiliVersion();
+        $upgrade = $current !== '' && $latest !== '' && version_compare(ltrim($current, 'v'), ltrim($latest, 'v'), '<');
+        $cmdDefault = 'cd deploy/meilisearch && sudo bash meilisearch.sh upgrade';
+        $cmdLatest = $latest !== ''
+            ? 'cd deploy/meilisearch && sudo MEILI_VERSION=v' . ltrim($latest, 'v') . ' bash meilisearch.sh upgrade'
+            : '';
+
+        return json([
+            'code' => 1,
+            'msg' => 'ok',
+            'data' => [
+                'enabled' => MeilisearchService::enabled() ? 1 : 0,
+                'current' => $current,
+                'latest' => $latest,
+                'upgrade_available' => $upgrade ? 1 : 0,
+                'command_pinned' => $cmdDefault,
+                'command_latest' => $cmdLatest,
+                'note' => $latest === ''
+                    ? '无法连接 GitHub 获取最新版本（可能网络受限）。可在服务器上运行：cd deploy/meilisearch && sudo bash meilisearch.sh status'
+                    : '升级为系统级操作，请在服务器上执行上述命令（脚本会自动 dump 老数据并迁移）。',
+            ],
+        ]);
+    }
+
+    /**
+     * 取 Meilisearch GitHub 最新稳定版 tag（短超时 + 缓存 1 小时 + 失败返回空，绝不阻塞后台）。
+     */
+    private function fetchLatestMeiliVersion()
+    {
+        $cacheKey = 'meili_latest_release';
+        $cached = cache($cacheKey);
+        if (is_string($cached) && $cached !== '') {
+            return $cached;
+        }
+        $raw = '';
+        if (function_exists('curl_init')) {
+            $ch = curl_init('https://api.github.com/repos/meilisearch/meilisearch/releases/latest');
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 8);
+            curl_setopt($ch, CURLOPT_USERAGENT, 'maccms-meili-version-check');
+            curl_setopt($ch, CURLOPT_HTTPHEADER, ['Accept: application/vnd.github+json']);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+            $raw = (string)@curl_exec($ch);
+            curl_close($ch);
+        }
+        $ver = '';
+        if ($raw !== '') {
+            $j = json_decode($raw, true);
+            if (is_array($j) && !empty($j['tag_name'])) {
+                $ver = ltrim((string)$j['tag_name'], 'v');
+                $ver = preg_replace('/[^0-9.]/', '', $ver);
+            }
+        }
+        if ($ver !== '') {
+            cache($cacheKey, $ver, 3600);
+        }
+        return (string)$ver;
     }
 
     /**
