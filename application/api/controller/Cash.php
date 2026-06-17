@@ -128,6 +128,10 @@ class Cash extends Base
      */
     public function create(Request $request)
     {
+        // 安全加固:按 IP 温和限流(默认开启),防刷提现请求垃圾/CPU 打满
+        if (!mac_fe_write_throttle('fe_cash', 120, 10)) {
+            return json(['code' => 1005, 'msg' => lang('frequently')]);
+        }
         $auth = $this->_checkLogin();
         if (!$auth['ok']) return $auth['response'];
 

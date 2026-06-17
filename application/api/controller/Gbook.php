@@ -106,6 +106,10 @@ class Gbook extends Base
      */
     public function submit(Request $request)
     {
+        // 安全加固:按 IP 温和限流(默认开启),防刷留言垃圾/CPU 打满;cookie 节流可被绕过,此为服务端兜底
+        if (!mac_fe_write_throttle('fe_gbook', 60, 30)) {
+            return json(['code' => 1005, 'msg' => lang('frequently')]);
+        }
         $content = trim($request->param('gbook_content', ''));
         if (empty($content)) return json(['code' => 1004, 'msg' => lang('index/require_content')]);
         $cookie = 'gbook_timespan';

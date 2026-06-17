@@ -1773,6 +1773,29 @@ function mac_get_client_ip()
     return $final;
 }
 
+/**
+ * 前台写接口按 IP 的温和限流(默认开启,独立于 anti_scrape 全局开关),防刷评论/留言/提现等垃圾与 CPU 打满。
+ * 阈值取"远高于真人(含 NAT 共享出口)峰值、却远低于自动化洪泛"的区间,故对正常用户零回归。
+ * 失败开放(限流器不可用或内部异常时放行),不阻断正常业务。
+ *
+ * @param string $scope     逻辑名(如 fe_comment),仅 [a-z0-9_]
+ * @param int    $windowSec 窗口秒
+ * @param int    $maxHits   窗口内最大次数
+ * @return bool   true=放行, false=超限(调用方应拒绝)
+ */
+function mac_fe_write_throttle($scope, $windowSec, $maxHits)
+{
+    if (!class_exists('\\app\\common\\util\\SlidingWindowIpLimiter')) {
+        return true;
+    }
+    $ip = function_exists('mac_get_client_ip') ? (string)mac_get_client_ip() : (string)($_SERVER['REMOTE_ADDR'] ?? '');
+    if ($ip === '' || $ip === '0.0.0.0') {
+        return true;
+    }
+    $rl = \app\common\util\SlidingWindowIpLimiter::checkHit($ip, $scope, $windowSec, $maxHits, 'fe_write_rl');
+    return !empty($rl['allowed']);
+}
+
 function mac_get_ip_long($ip_addr = '')
 {
     $ip_addr = !empty($ip_addr) ? $ip_addr : mac_get_client_ip();

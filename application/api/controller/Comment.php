@@ -128,6 +128,10 @@ class Comment extends Base
      */
     public function submit(Request $request)
     {
+        // 安全加固:按 IP 温和限流(默认开启),防刷评论垃圾/CPU 打满;cookie 节流可被绕过,此为服务端兜底
+        if (!mac_fe_write_throttle('fe_comment', 60, 30)) {
+            return json(['code' => 1005, 'msg' => lang('frequently')]);
+        }
         $param = $request->param();
         $cmid = isset($param['comment_mid']) ? (string) $param['comment_mid'] : '';
         if (!in_array($cmid, ['1', '2', '3', '8', '9', '11', '12'], true)) {
