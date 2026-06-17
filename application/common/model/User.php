@@ -196,6 +196,11 @@ class User extends Base
 
     public function register($param)
     {
+        // 安全加固:注册按 IP 温和限流(默认开启,失败开放),防注册刷量/暴力触发 bcrypt 打满 CPU。
+        // 既有逻辑仅限制"每 IP 当日成功注册数",不限请求频率;此处补齐请求级限流。
+        if (!mac_fe_write_throttle('fe_reg', 120, 10)) {
+            return ['code' => 1429, 'msg' => lang('frequently')];
+        }
         $config = config('maccms');
 
         $data = [];
@@ -609,6 +614,12 @@ class User extends Base
 
     public function login($param, array $options = [])
     {
+        // 安全加固:登录按 IP 温和限流(默认开启,失败开放),防撞库/暴力破解。
+        // 覆盖 index 登录与 Auth::jwt() 等所有调用方;api/User 控制器另有 10/60s 限流,
+        // 本阈值(20/120s)更宽松,不改变其既有行为,仅补齐此前未受保护的入口。
+        if (!mac_fe_write_throttle('fe_login', 120, 20)) {
+            return ['code' => 1429, 'msg' => lang('frequently')];
+        }
         $data = [];
         $password_raw = trim($param['user_pwd']);
         $data['user_name'] = htmlspecialchars(urldecode(trim($param['user_name'])));
@@ -1112,6 +1123,12 @@ class User extends Base
 
     public function send_msg($param)
     {
+        // 安全加固:验证码下发按 IP 温和限流(默认开启,失败开放)。
+        // 既有"重发间隔"按 user_id+msg_to 计,匿名(user_id=0)下轮换收件号即可绕过 → 短信/邮件轰炸;
+        // 此处加 IP 维度兜底(8 条/5 分钟/IP),不影响正常用户取码及有限次重发。
+        if (!mac_fe_write_throttle('fe_sendmsg', 300, 8)) {
+            return ['code' => 9002, 'msg' => lang('model/user/do_not_send_frequently')];
+        }
         $param['to'] = htmlspecialchars(urldecode(trim($param['to'])));
         $param['code'] = htmlspecialchars(urldecode(trim($param['code'])));
 
@@ -1263,6 +1280,11 @@ class User extends Base
 
     public function findpass_reset($param)
     {
+        // 安全加固:密码重置(校验短信/邮件验证码)按 IP 温和限流(默认开启,失败开放),
+        // 防 6 位数字验证码被暴力枚举(10 次/10 分钟/IP,远低于 10^6 空间,结合 5 分钟时效不可枚举)。
+        if (!mac_fe_write_throttle('fe_findpass', 600, 10)) {
+            return ['code' => 2001, 'msg' => lang('index/pwd_frequently')];
+        }
         $to = htmlspecialchars(urldecode(trim($param['user_email'])));
         if(empty($to)){
             $to = htmlspecialchars(urldecode(trim($param['to'])));
