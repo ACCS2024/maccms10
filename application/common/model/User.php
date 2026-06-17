@@ -786,7 +786,9 @@ class User extends Base
         }
         $info = $info->toArray();
         $login_check = md5($info['user_random'] . '-' . $info['user_name']. '-' . $info['user_id'] .'-' );
-        if($login_check != $user_check) {
+        // 安全加固:登录态 cookie 校验改用常量时间比较(与上方 JWT 分支的 hash_equals 一致),
+        // 杜绝对 user_check 的计时侧信道伪造;功能等价,零回归。
+        if(!hash_equals($login_check, (string)$user_check)) {
             return ['code' => 1003, 'msg' => lang('model/user/not_login')];
         }
 
