@@ -445,6 +445,41 @@ php -S 127.0.0.1:8800 -t . >/dev/null 2>&1 &   # 访问 /admin.php 能登录
 - **收尾优化(强烈建议)**:抽 `application/common/util/Installer.php` 共享服务(`createDatabase / writeDbConfig / importSql / createAdmin`),让 `install/controller/Index.php` 与 `command/SiteInstall.php` **同时调用**,彻底消除 §6.3 的 25 行复制、保证两条安装路径零漂移。
 - **TP8 迁移注意**:迁移后 console 命令注册从 `application/command.php` 改为 `config/console.php`,`model()`/`Db::` 写法按 `docs/tp8-migration/` 调整——本命令届时随之迁移(改动很小)。
 
+## 十一、实现状态与实测(已落地)
+
+**状态:已全量实现并在 PHP 8.4 + MySQL 5.7 实测通过。** 实际落地文件:
+
+| 文件 | 说明 |
+|---|---|
+| `think` | console 入口(已建) |
+| `bin/maccms`、`bin/_common.sh`、`bin/README.md` | bash 编排器 + 公共函数 + 使用帮助 |
+| `application/command/SiteInstall.php` | `site:install` 命令 |
+| `application/command/SiteDestroy.php` | `site:destroy` 命令 |
+| `application/common/util/Installer.php` | 安装核心服务(单一事实源) |
+| `application/command.php` | 注册上述命令 |
+
+实现期相对本设计的关键决策(均已验证):
+
+1. **PHP 8.x 兼容**:`think` 入口在框架引导后安装一个错误处理器,**吞掉 `E_DEPRECATED`**、其余错误交回框架。原因:TP5.0(EOL)的处理器会把 PHP 8.4+ 的"隐式可空参数已弃用"升级为致命(`App.php:77` 等),且其 `appError` 在不抛出时仍 `report()` 而触发尚在编译中的 `App` 引用。生产 PHP 7.4 不触发,等价无操作。根治见 `docs/tp8-migration/`。
+2. **安装上下文常量**:`think` 入口定义 `ENTRANCE='install'`(及 `BIND_MODULE`/`IN_FILE`),令 `app_init` 行为(`Init`/`RequestSecurity`/`SessionSameSite`)按网页安装器同样的方式运行(仅读配置、不触库,适配全新环境)。
+3. **管理员模型解析**:命令行无当前模块,`model('Admin')` 会误解析为 `app\model\Admin`;改为显式 `new \app\common\model\Admin()`,口令仍走 `mac_password_hash`(实测入库为 `$2y$12$` bcrypt)。
+4. **重装口令对齐**:应用账号已存在时 `CREATE USER IF NOT EXISTS` 不改口令,补 `ALTER USER ... IDENTIFIED BY` 强制对齐为写入配置的口令,修复"重装后鉴权失败"。
+5. **新增 `--fresh`**:删库重建后再装(干净重装),`bin/maccms reinstall` 使用之;`--cover` 保留为"复用已存在库"。
+6. **共享服务**:已抽 `Installer`(§十 的收尾优化)并供命令使用;网页安装器 `install/controller/Index.php` **暂保持原状未重构**(其表单/会话/视图流需浏览器端 E2E,本轮未触),迁移到 `Installer` 列为低风险跟进项。
+
+实测验证(host PHP 8.4.19 + `mysql:5.7` 容器):
+
+```
+bin/maccms new /tmp/site1 --db-name=clidemo --site-name="CLI Demo" --admin-pass=admin888
+  → ✔ 安装完成;install.lock 生成;clidemo 53 张表;
+    mac_admin 有 admin($2y$12$ bcrypt);database.php 用最小权限账号 clidemo_app(非 root);
+    maccms.php site_name=CLI Demo、api_jwt_secret(32)、interface.pass(16)
+重装(无 --force)        → 退出码 7(幂等拒绝)✓
+重装(--fresh --force)   → 退出码 0,库重建干净、表/管理员正常 ✓
+site:destroy             → 删库/删账号/删锁/删目录 ✓
+doctor                   → PHP/扩展(pdo_mysql/mbstring/curl/zip 等)/rsync 体检 ✓
+```
+
 ## 附:与 WP-CLI 能力对照
 
 | WP-CLI | 本工具 |

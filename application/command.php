@@ -11,4 +11,6 @@
 
 return [
     'app\\command\\SeoAiGenerate',
+    'app\\command\\SiteInstall',
+    'app\\command\\SiteDestroy',
 ];

@@ -1,0 +1,124 @@
+#!/usr/bin/env bash
+# =============================================================================
+# maccms-cli —— WP-CLI 式一键建站工具
+#   new        在指定路径部署并安装一个全新站点
+#   install    在当前代码树就地安装
+#   reinstall  删锁+覆盖重装(开发回到干净态)
+#   destroy    销毁站点(删库/账号 + 删目录)
+#   doctor     环境体检
+#   help       使用帮助
+# 口令安全:MySQL root 口令经 环境变量 MACCMS_DB_ROOT_PASS / stdin / 交互输入,
+#           绝不通过命令行参数传递。
+# =============================================================================
+set -euo pipefail
+
+SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SRC_ROOT="$(cd "$SELF_DIR/.." && pwd)"   # 源码树根(本仓库)
+# shellcheck source=/dev/null
+source "$SELF_DIR/_common.sh"
+
+usage() {
+  cat >&2 <<'EOF'
+maccms-cli —— 一键建站 / 快速部署
+
+用法:
+  bin/maccms <命令> [参数]
+
+命令:
+  new <路径> --db-name=NAME --site-name=NAME [选项]
+        部署代码到 <路径> 并安装一个全新站点。
+        例:  echo "$ROOTPW" | bin/maccms new /var/www/site1 \
+                  --db-name=site1 --site-name="我的站点"
+
+  install --db-name=NAME --site-name=NAME [选项]
+        在当前代码树就地安装(目录本身已是 maccms)。
+
+  reinstall --db-name=NAME [选项]
+        删除安装锁并覆盖重装(--cover --force),开发期秒级回到干净态。
+
+  destroy <路径> [--drop-db --db-name=NAME --drop-user=USER]
+        删除站点目录;加 --drop-db 时同时删库/账号(需 --db-name)。
+
+  doctor
+        体检 PHP 版本 / 扩展 / rsync。
+
+  help
+        显示本帮助。
+
+口令传递(三选一,按优先级):
+  1) 环境变量:  MACCMS_DB_ROOT_PASS=secret bin/maccms install ...
+  2) 标准输入:  echo "$ROOTPW" | bin/maccms install ...
+  3) 交互输入:  bin/maccms install ...        (终端会提示输入,隐藏回显)
+
+常用选项(透传给 php think site:install,详见 `php think site:install --help`):
+  --db-host=127.0.0.1   --db-port=3306   --db-prefix=mac_   --db-charset=utf8mb4
+  --root-user=root      --app-user=NAME  --app-pass=PASS    --no-app-user(仅开发)
+  --admin-user=admin    --admin-pass=PASS(默认随机)
+  --with-initdata=1     --install-dir=/  --lang=zh-cn
+  --cover(库已存在则复用)   --fresh(删库重建/干净重装)   --force(忽略 install.lock)
+
+退出码:0 成功 / 2 参数错 / 3 写入权限 / 4 连接失败 / 5 建库失败 / 6 SQL失败 / 7 已安装
+EOF
+}
+
+cmd="${1:-help}"; shift || true
+
+case "$cmd" in
+  new)
+    dest="${1:-}"; [ -n "$dest" ] || die "用法: bin/maccms new <路径> --db-name=.. --site-name=.."
+    shift
+    log "部署代码 → $dest"
+    provision_code "$SRC_ROOT" "$dest"
+    ensure_writable "$dest"
+    log "开始安装…"
+    rp="$(read_root_pass)"
+    MACCMS_DB_ROOT_PASS="$rp" "$(php_bin)" "$dest/think" site:install "$@" </dev/null
+    log "完成。访问 <站点地址>/admin.php 登录后台。"
+    ;;
+
+  install)
+    ensure_writable "$SRC_ROOT"
+    rp="$(read_root_pass)"
+    MACCMS_DB_ROOT_PASS="$rp" "$(php_bin)" "$SRC_ROOT/think" site:install "$@" </dev/null
+    ;;
+
+  reinstall)
+    rm -f "$SRC_ROOT/application/data/install/install.lock"
+    rp="$(read_root_pass)"
+    MACCMS_DB_ROOT_PASS="$rp" "$(php_bin)" "$SRC_ROOT/think" site:install --fresh --force "$@" </dev/null
+    ;;
+
+  destroy)
+    dest="${1:-}"; [ -n "$dest" ] || die "用法: bin/maccms destroy <路径> [--drop-db --db-name=NAME]"
+    shift
+    drop_db=0; passthru=()
+    for a in "$@"; do
+      case "$a" in
+        --drop-db) drop_db=1 ;;
+        *) passthru+=("$a") ;;
+      esac
+    done
+    if [ "${MACCMS_YES:-0}" != "1" ]; then
+      confirm "确认销毁站点目录 [$dest] ?" || die "已取消"
+    fi
+    if [ "$drop_db" = "1" ]; then
+      [ -f "$dest/think" ] || die "目标无 think 入口,无法删库;请手动指定"
+      rp="$(read_root_pass)"
+      MACCMS_DB_ROOT_PASS="$rp" "$(php_bin)" "$dest/think" site:destroy --yes "${passthru[@]}" </dev/null || warn "删库步骤有告警"
+    fi
+    rm -rf "$dest"
+    log "已删除目录: $dest"
+    ;;
+
+  doctor)
+    check_env
+    ;;
+
+  help|-h|--help|"")
+    usage
+    ;;
+
+  *)
+    die "未知命令: $cmd(运行 bin/maccms help 查看用法)"
+    ;;
+esac
