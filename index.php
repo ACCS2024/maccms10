@@ -32,7 +32,7 @@ try {
         header("Location: ./install.php");
         exit;
     }
-    if (!mb_check_encoding($_SERVER['PATH_INFO'], 'utf-8')){
+    if (isset($_SERVER['PATH_INFO']) && !mb_check_encoding($_SERVER['PATH_INFO'], 'utf-8')){
         $_SERVER['PATH_INFO']=mb_convert_encoding($_SERVER['PATH_INFO'], 'UTF-8', 'GBK');
     }
 

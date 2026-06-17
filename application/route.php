@@ -278,17 +278,39 @@ return array (
     array (
     ),
   ),
-  'vodshow/<id>-<area?>-<by?>-<class?>-<lang?>-<letter?>-<level?>-<order?>-<page?>-<state?>-<tag?>-<year?>' => 
+  'vodshow/<id>' =>
   array (
     0 => 'vod/show',
-    1 => 
+    1 =>
     array (
     ),
-    2 => 
+    2 =>
+    array (
+      'id' => '[^-]+',
+    ),
+  ),
+  'vodshow/<id>-<area?>-<by?>-<class?>-<lang?>-<letter?>-<level?>-<order?>-<page?>-<state?>-<tag?>-<year?>' =>
+  array (
+    0 => 'vod/show',
+    1 =>
+    array (
+    ),
+    2 =>
     array (
     ),
   ),
-  'vodsearch/<wd?>-<actor?>-<area?>-<by?>-<class?>-<director?>-<lang?>-<letter?>-<level?>-<order?>-<page?>-<state?>-<tag?>-<year?>' => 
+  'vodsearch/<wd>' =>
+  array (
+    0 => 'vod/search',
+    1 =>
+    array (
+    ),
+    2 =>
+    array (
+      'wd' => '[^-]+',
+    ),
+  ),
+  'vodsearch/<wd?>-<actor?>-<area?>-<by?>-<class?>-<director?>-<lang?>-<letter?>-<level?>-<order?>-<page?>-<state?>-<tag?>-<year?>' =>
   array (
     0 => 'vod/search',
     1 => 
