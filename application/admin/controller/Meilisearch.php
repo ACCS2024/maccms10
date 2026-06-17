@@ -64,11 +64,11 @@ class Meilisearch extends Base
         }
         $this->assign('settings_check', $settingsCheck);
         $this->assign('cfg', $cfg);
-        // 多站点串库提示：用的是历史共享默认名 maccms_contents 时，给出本站唯一建议名
         $this->assign('shared_uid_warn', MeilisearchService::isLegacySharedUid() ? 1 : 0);
         $this->assign('suggested_uid', MeilisearchService::defaultIndexUid());
         $this->assign('meili_key_saved', trim((string)$cfg['api_key']) !== '' ? 1 : 0);
         $this->assign('meili_key_tail', trim((string)$cfg['api_key']) !== '' ? substr((string)$cfg['api_key'], -6) : '');
+        $this->assign('title', 'Meilisearch 全文检索');
         return $this->fetch('admin@meilisearch/index');
     }
 
