@@ -1347,6 +1347,17 @@ function mac_curl_post($url,$data,$heads=array(),$cookie='')
     return $response;//显示返回信息
 }
 // CurlPOST数据提交-----------------------------------------
+/**
+ * SSRF 防护说明(已评审并接受残留):
+ * 调用方在所有受源控制的取数点(Image::down_exec 图片下载、Collect 全部 fetch 经 checkCjUrl、
+ * 外链检测)前置调用 mac_is_safe_remote_url(),解析 A/AAAA 并以 FILTER_FLAG_NO_PRIV_RANGE|
+ * NO_RES_RANGE 拒绝字面内网/保留/回环/链路本地(含云元数据 169.254.169.254)IP 与内网域名;
+ * 本函数另限定 http/https 协议并限制重定向跳数。
+ * 已知残留(接受并记录):公网域名 302 跳转到内网、DNS-rebinding 可绕过"预检→连接"间隙——
+ * 属高级且为盲打(响应不回显给请求方)。彻底封堵需连接期校验(CURLOPT_OPENSOCKETFUNCTION),
+ * 但该常量在部分 PHP 构建缺失,且本函数被支付/推送/上传/采集广泛调用,改动爆炸半径大,
+ * 故暂不在此公共函数实施;如需收口,优先在 Image/Collect 处做"关闭自动重定向 + 逐跳重校验"。
+ */
 function mac_curl_get($url,$heads=array(),$cookie='')
 {
     // 安全加固:切断与官方服务器的通信(防止下发病毒)
