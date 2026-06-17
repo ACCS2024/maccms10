@@ -585,7 +585,7 @@ class Vod extends Base {
             }
             $order = ['[rand]' => '[rand]'];
         } else {
-            $order = 'vod_' . $by . ' ' . $order;
+            $order = mac_safe_order('vod_', $by, $order);
         }
         $meili = null;
         if (!$use_rand && MeilisearchService::enabled()) {

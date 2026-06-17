@@ -314,7 +314,7 @@ class Actor extends Base {
             if ($by == 'in' && empty($name)) {
                 $by = 'time';
             }
-            $order = 'actor_' . $by . ' ' . $order;
+            $order = mac_safe_order('actor_', $by, $order);
         }
 
         $meili = null;

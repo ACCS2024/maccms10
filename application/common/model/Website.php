@@ -406,7 +406,7 @@ class Website extends Base {
             if ($by == 'in' && empty($name)) {
                 $by = 'time';
             }
-            $order = 'website_' . $by . ' ' . $order;
+            $order = mac_safe_order('website_', $by, $order);
         }
 
         $meili = null;

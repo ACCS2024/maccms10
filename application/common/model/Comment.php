@@ -192,7 +192,7 @@ class Comment extends Base {
         if(!in_array($order, ['asc', 'desc'])) {
             $order = 'desc';
         }
-        $order= 'comment_'.$by .' ' . $order;
+        $order = mac_safe_order('comment_', $by, $order);
 
         $cach_name = $GLOBALS['config']['app']['cache_flag']. '_' .md5('comment_listcache_'.join('&',$where).'_'.$order.'_'.$page.'_'.$num.'_'.$start);
 

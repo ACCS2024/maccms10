@@ -200,7 +200,7 @@ class Type extends Base {
         $where['type_status'] = ['eq',1];
 
         $by = 'type_'.$by;
-        $order = 'type_pid asc,'. $by . ' ' . $order;
+        $order = 'type_pid asc,' . mac_safe_order('', $by, $order, 'type_id');
 
         $cach_name = $GLOBALS['config']['app']['cache_flag']. '_' .md5('type_listcache_'.http_build_query($where).'_'.$order.'_'.$num.'_'.$start);
         $res = Cache::get($cach_name);

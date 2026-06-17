@@ -240,7 +240,7 @@ class Topic extends Base {
         if ($use_rnd_order) {
             $order = ['[rand]' => '[rand]'];
         } else {
-            $order = 'topic_' . $by . ' ' . $order;
+            $order = mac_safe_order('topic_', $by, $order);
         }
         $meili = null;
         if (!$use_rnd_order && MeilisearchService::enabled()) {

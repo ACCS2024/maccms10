@@ -108,7 +108,7 @@ class Gbook extends Base {
         if(!in_array($order, ['asc', 'desc'])) {
             $order = 'desc';
         }
-        $order= 'gbook_'.$by .' ' . $order;
+        $order = mac_safe_order('gbook_', $by, $order);
 
 
         $cach_name = $GLOBALS['config']['app']['cache_flag']. '_' .md5('gbook_listcache_'.join('&',$where).'_'.$order.'_'.$page.'_'.$num.'_'.$start);

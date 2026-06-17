@@ -1796,6 +1796,30 @@ function mac_fe_write_throttle($scope, $windowSec, $maxHits)
     return !empty($rl['allowed']);
 }
 
+/**
+ * 列表排序参数归一,返回安全的 ORDER BY 片段 "$prefix$by $dir"。
+ * - $by 仅保留 [A-Za-z0-9_](列名/后缀本就如此),非法字符剔除;归一后为空则回退 $default。
+ * - $dir 仅允许 asc/desc(大小写不敏感),否则回退 desc。
+ * 目的:消除畸形 by/order 参数触发的 TP5 parseKey 异常(500),并对 ORDER BY 作字符级纵深防御。
+ * 对合法输入(单字段后缀 + asc/desc)语义等价,零回归。
+ *
+ * @param string $prefix  列前缀,如 'vod_'(可为空)
+ * @param string $by      排序字段/后缀(可能来自用户)
+ * @param string $dir     排序方向(可能来自用户)
+ * @param string $default $by 归一为空时的回退字段后缀(默认 'id')
+ * @return string 形如 'vod_time desc'
+ */
+function mac_safe_order($prefix, $by, $dir, $default = 'id')
+{
+    $by = preg_replace('/[^A-Za-z0-9_]/', '', (string)$by);
+    if ($by === '') {
+        $by = $default;
+    }
+    $dir = strtolower(trim((string)$dir));
+    $dir = ($dir === 'asc') ? 'asc' : 'desc';
+    return $prefix . $by . ' ' . $dir;
+}
+
 function mac_get_ip_long($ip_addr = '')
 {
     $ip_addr = !empty($ip_addr) ? $ip_addr : mac_get_client_ip();

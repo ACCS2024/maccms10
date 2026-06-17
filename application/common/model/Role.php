@@ -252,7 +252,7 @@ class Role extends Base {
         if ($use_rnd_order) {
             $order = ['[rand]' => '[rand]'];
         } else {
-            $order = 'role_' . $by . ' ' . $order;
+            $order = mac_safe_order('role_', $by, $order);
         }
         $meili = null;
         if (!$use_rnd_order && MeilisearchService::enabled()) {

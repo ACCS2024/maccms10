@@ -396,7 +396,7 @@ class Manga extends Base {
         if ($use_rnd_order) {
             $order = ['[rand]' => '[rand]'];
         } else {
-            $order = 'manga_' . $by . ' ' . $order;
+            $order = mac_safe_order('manga_', $by, $order);
         }
         $meili = null;
         if (!$use_rnd_order && MeilisearchService::enabled()) {
