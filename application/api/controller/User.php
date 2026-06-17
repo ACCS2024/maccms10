@@ -746,7 +746,16 @@ class User extends Base
         }
 
         $order = 'user_id desc';
-        $res   = model('User')->listData($where, $order, $page, $limit);
+        $userModel = model('User');
+        $res   = $userModel->listData($where, $order, $page, $limit);
+        // 安全加固:listData 走 SELECT *,会带出下线用户的 user_pwd / user_random 等敏感字段。
+        // user_random 是构造登录 cookie(md5(user_random-name-id-))与 JWT 的密钥,泄露即可伪造会话/接管账号。
+        // 输出前逐行剥离敏感字段(前端只用 user_id/user_name/user_reg_time)。
+        if (!empty($res['list']) && is_array($res['list'])) {
+            foreach ($res['list'] as $k => $row) {
+                $res['list'][$k] = $userModel->stripSensitiveFields($row);
+            }
+        }
 
         return json([
             'code' => 1,

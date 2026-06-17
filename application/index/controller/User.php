@@ -906,7 +906,15 @@ class User extends Base
         }
 
         $order = 'user_id desc';
-        $res = model('User')->listData($where, $order, $param['page'], $param['limit']);
+        $userModel = model('User');
+        $res = $userModel->listData($where, $order, $param['page'], $param['limit']);
+        // 安全加固:listData 走 SELECT *,剥离 user_pwd / user_random 等敏感字段后再传模板,
+        // 防止自定义主题循环输出 $list 时泄露下线用户凭证(user_random 泄露可伪造会话)。
+        if (!empty($res['list']) && is_array($res['list'])) {
+            foreach ($res['list'] as $k => $row) {
+                $res['list'][$k] = $userModel->stripSensitiveFields($row);
+            }
+        }
 
         $this->assign('param',$param);
         $this->assign('list', $res['list']);
