@@ -48,7 +48,9 @@ class Alipay {
         //验证成功
         if($isSign) {
             if ($param['trade_status'] == 'TRADE_SUCCESS') {
-                $res = model('Order')->notify($param['out_trade_no'],'alipay');
+                // 安全加固:回传支付宝金额(元)做二次核对,防改价低付
+                $paid = isset($param['total_amount']) ? $param['total_amount'] : (isset($param['total_fee']) ? $param['total_fee'] : null);
+                $res = model('Order')->notify($param['out_trade_no'],'alipay',$paid);
                 if($res['code']>1){
                     echo "fail2";
                 }

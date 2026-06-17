@@ -78,7 +78,9 @@ class Codepay {
             echo 'fail';
         }
         else{
-            $res = model('Order')->notify($param['pay_id'],'codepay');
+            // 安全加固:码支付 money 单位为元,二次核对防改价低付
+            $paid = isset($param['money']) ? $param['money'] : null;
+            $res = model('Order')->notify($param['pay_id'],'codepay',$paid);
             if($res['code'] >1){
                 echo 'fail2';
             }

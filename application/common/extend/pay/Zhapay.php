@@ -79,7 +79,10 @@ class Zhapay {
             echo 'fail';
         }
         else{
-            $res = model('Order')->notify($param['out_trade_no'],'zhapay');
+            // 安全加固:回传金额(按元)二次核对防改价低付。单位若实际为分则换算后只会偏大,
+            // 仅触发“多付不挡”不会误伤正常支付。
+            $paid = isset($param['total_fee']) ? $param['total_fee'] : (isset($param['money']) ? $param['money'] : null);
+            $res = model('Order')->notify($param['out_trade_no'],'zhapay',$paid);
             if($res['code'] >1){
                 echo 'fail2';
             }

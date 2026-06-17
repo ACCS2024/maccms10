@@ -59,7 +59,9 @@ class Weixin {
         $sign = $this->makeSign($data);
         // 判断签名是否正确  判断支付状态
         if ( ($sign===$data_sign) && ($data['return_code']=='SUCCESS') && ($data['result_code']=='SUCCESS') ) {
-            $res = model('Order')->notify($data['out_trade_no'],'weixin');
+            // 安全加固:微信 total_fee 单位为「分」,换算为元后二次核对,防改价低付
+            $paid = isset($data['total_fee']) ? ($data['total_fee'] / 100) : null;
+            $res = model('Order')->notify($data['out_trade_no'],'weixin',$paid);
             echo '<xml><return_code><![CDATA[SUCCESS]]></return_code><return_msg><![CDATA[OK]]></return_msg></xml>';
         }
         else{

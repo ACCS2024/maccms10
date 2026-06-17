@@ -104,7 +104,7 @@ class Order extends Base {
      * 任何充值接口，回调接口里直接调用该接口更新订单状态、用户积分
      * pay_type预留值alipay,weixin,bank，可以继续自定义最长10个字符
      */
-    public function notify($order_code,$pay_type)
+    public function notify($order_code,$pay_type,$paid_yuan=null)
     {
         if(empty($order_code) || empty($pay_type)){
             return ['code'=>1001,'msg'=>lang('param_err')];
@@ -118,6 +118,18 @@ class Order extends Base {
         }
         if($order['info']['order_status'] == 1){
             return ['code'=>1,'msg'=>lang('model/order/pay_over')];
+        }
+
+        // 安全加固:回调金额二次核对(防改价/低付高额到账)。仅当调用方传入可解析的正数金额、
+        // 且明显低于订单应付额(order_price,单位:元;留 0.01 容差)时拒绝入账。无法判定
+        // (null / 0 / 不可解析)一律放行——各渠道金额字段/单位不一,宁可漏挡也不误伤正常支付,
+        // 故调用方只对“元”单位、且确无误的金额传值(微信 fen 已 /100,其余本就为元)。
+        if ($paid_yuan !== null) {
+            $paid = round((float)$paid_yuan, 2);
+            $expect = round((float)$order['info']['order_price'], 2);
+            if ($paid > 0 && $expect > 0 && ($paid + 0.01) < $expect) {
+                return ['code'=>2005,'msg'=>'order amount mismatch'];
+            }
         }
 
         $where2=[];
