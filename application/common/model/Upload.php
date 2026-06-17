@@ -45,6 +45,11 @@ class Upload extends Base {
         $param['from'] = empty($param['from']) ? '' : $param['from'];
         $param['input'] = empty($param['input']) ? 'file' : $param['input'];
         $param['flag'] = empty($param['flag']) ? 'vod' : $param['flag'];
+        // 安全加固:flag 直接拼进上传目录($_upload_path = ROOT_PATH.'upload/'.flag.'/',且 move 时递归 mkdir),
+        // 原样取自请求且无 ../ 过滤 → 可目录穿越把文件写到 upload/ 之外。仅允许字母数字下划线,
+        // 合法 flag(vod/user/topic/actor/art/website...)全部满足,零回归。
+        $param['flag'] = preg_replace('/[^A-Za-z0-9_]/', '', (string)$param['flag']);
+        if ($param['flag'] === '') { $param['flag'] = 'vod'; }
         $param['thumb'] = empty($param['thumb']) ? '0' : $param['thumb'];
         $param['thumb_class'] = empty($param['thumb_class']) ? '' : $param['thumb_class'];
         $param['user_id'] = empty($param['user_id']) ? '0' : $param['user_id'];
