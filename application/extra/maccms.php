@@ -7,8 +7,8 @@ return array (
     'server' => '127.0.0.1',
     'port' => '3306',
     'name' => 'maccms10',
-    'user' => 'root',
-    'pass' => 'root',
+    'user' => 'maccms',
+    'pass' => 'MacCms@2026#Smoke',
     'tablepre' => 'mac_',
     'backup_path' => './application/data/backup/database/',
     'part_size' => 20971520,
@@ -18,8 +18,8 @@ return array (
   'site' => 
   array (
     'site_name' => '免费短剧电影电视剧、小说漫画 - 最新全集在线观看',
-    'site_url' => 'www.test.cn',
-    'site_wapurl' => 'wap.test.cn',
+    'site_url' => '216.180.225.139',
+    'site_wapurl' => '216.180.225.139',
     'site_keywords' => '短视频,搞笑视频,视频分享,免费视频,在线视频,预告片',
     'site_description' => '提供最新最快的视频分享数据',
     'site_icp' => 'icp123',
@@ -567,8 +567,8 @@ return array (
   'rewrite' => 
   array (
     'suffix_hide' => '0',
-    'route_status' => '0',
-    'status' => '0',
+    'route_status' => '1',
+    'status' => '1',
     'encode_key' => 'abcdefg',
     'encode_len' => '6',
     'vod_id' => '0',
@@ -733,9 +733,9 @@ plotdetail/<id>   => plot/detail',
   ),
   'meilisearch' =>
   array (
-    'enabled' => '0',
+    'enabled' => '1',
     'host' => 'http://127.0.0.1:7700',
-    'api_key' => '',
+    'api_key' => '638ef93e842cf196be687e77f04ff8c73c07fbe451c694093b121383e3df43dd',
     'index_uid' => 'maccms_contents',
     'timeout' => '8',
     'ssl_verify' => '1',
