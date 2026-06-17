@@ -210,7 +210,13 @@ polyfill;
             $user['vip_nav'] = 1;
         }
         $GLOBALS['user'] = $user;
-        $this->assign('user',$user);
+        // 安全加固:模板变量 user 会渲染进每个登录页的 HTML。剥离会话伪造相关字段后再下发——
+        // user_random 是构造登录 cookie(md5(user_random-name-id-))与 JWT 的密钥、user_pwd 为口令哈希,
+        // 不属任何前台展示需求;避免自定义主题误打印 {$user.user_random} 或经 XSS 读取 DOM 致会话伪造。
+        // $GLOBALS['user'] 仍保留完整行供服务端逻辑使用(服务端不读这两个字段)。
+        $tpl_user = $user;
+        unset($tpl_user['user_pwd'], $tpl_user['user_random']);
+        $this->assign('user',$tpl_user);
     }
 
     protected function label_comment()
