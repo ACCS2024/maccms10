@@ -158,7 +158,10 @@ return [
     // 错误显示信息,非调试模式有效
     'error_message'          => '页面错误！请稍后再试～',
     // 显示错误信息
-    'show_error_msg'         => true,
+    // 安全加固:生产模式(app_debug=false)下原样回显未捕获异常的原始 message,可能泄露 SQL 片段/
+    // 表名/内部细节。改为 false 后 500 页只显示上面的通用 error_message;需排错时临时开 app_debug 即可。
+    // 注:$this->error() 等业务提示走 dispatch_jump 不受影响。
+    'show_error_msg'         => false,
     // 异常处理handle类 留空使用 \think\exception\Handle
     'exception_handle'       => '',
 
