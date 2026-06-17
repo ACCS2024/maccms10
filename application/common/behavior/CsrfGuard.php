@@ -66,6 +66,13 @@ class CsrfGuard
             self::deny($req, $app);
         }
 
+        // 高危写操作(按 controller/action 精确限定,默认 database/import 数据库恢复)强制 POST:
+        // 这些动作名(如 import)在其他控制器另有 GET 读语义,不能按动作名全局拒绝,故用 c/a 精确限定。
+        // 合法入口本就是带 X-CSRF-Token 的 $.post(列表页 j-ajax 按钮),GET 触发(顶层导航式 CSRF)直接拒绝。
+        if (!$req->isPost() && in_array($routeKey, self::forcePostRoutes($app), true)) {
+            self::deny($req, $app);
+        }
+
         // 非变更类的 GET 不校验令牌(保持列表/表单页可直接导航访问)
         if (!$req->isPost()) {
             return;
@@ -135,6 +142,26 @@ class CsrfGuard
         if ($cfg !== '') {
             foreach (explode(',', $cfg) as $one) {
                 $one = strtolower(trim($one));
+                if ($one !== '' && !in_array($one, $list, true)) {
+                    $list[] = $one;
+                }
+            }
+        }
+        return $list;
+    }
+
+    /**
+     * 需强制 POST 的高危写操作(controller/action 小写;默认 database/import 数据库恢复)。
+     * 动作名(如 import)在其他控制器另有 GET 读语义,故按 c/a 精确限定,不进 mutatingActions 全局名单。
+     * 合法调用本就走带令牌的 $.post;站点可经 config app.security_csrf_admin_post_routes(逗号分隔 c/a)追加。
+     */
+    private static function forcePostRoutes(array $app)
+    {
+        $list = ['database/import'];
+        $cfg = isset($app['security_csrf_admin_post_routes']) ? trim((string)$app['security_csrf_admin_post_routes']) : '';
+        if ($cfg !== '') {
+            foreach (explode(',', $cfg) as $one) {
+                $one = strtolower(trim(str_replace('\\', '/', $one)));
                 if ($one !== '' && !in_array($one, $list, true)) {
                     $list[] = $one;
                 }
