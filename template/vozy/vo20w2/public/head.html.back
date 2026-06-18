@@ -1,0 +1,113 @@
+<link href="{$maccms.path_tpl}tuo/assets/style.css" rel="stylesheet" type="text/css">
+<script src="{$maccms.path_tpl}tuo/assets/jquery.min.js.download"></script>
+<link href="{$maccms.path_tpl}tuo/assets/sweetalert2.min.css" rel="stylesheet">
+<script src="{$maccms.path_tpl}tuo/assets/sweetalert2.min.js.download"></script>
+<link href="{$maccms.path_tpl}tuo/assets/home.css?12" type="text/css" rel="stylesheet">
+<link href="{$maccms.path_tpl}tuo/assets/home(1).css" rel="stylesheet" type="text/css">
+<script src="{$maccms.path_tpl}tuo/assets/jquery.autocomplete.js.download"></script>
+<link rel="shortcut icon" href="favicon.ico"> 
+<script src="{$maccms.path_tpl}tuo/assets/tpl.js.download"></script>
+<script></script>
+</head>
+<body class="" style="padding-right: 0px;">
+  <header class="index-header">
+    <ul class="index-card">
+<li><a href="/ads/"><img style="width:100%" src="/ads/960-80.gif"></a>
+        </li>
+       <li><span class="titlestart" style="font-size: 18px;">公告</span>
+        </li>
+        <hr>  
+        <li><span class="titlestart">暴风资源全面升级，无水印，三网直连，秒拉秒播，全网最快没有之一</a></li>
+<li>
+  <hr>  
+<a class="titlestart" href="http://qm.qq.com/cgi-bin/qm/qr?_wv=1027&k=noKs2Mdn3hhmFRJr4oNFEkWNthINBt8V&authKey=cGuu6i7N3ibwNu0Ybe1F8txZS93FpAiKWy5W8m9fymhKguG9W%2BHzEdtDhu9oE%2B3q&noverify=0&group_code=328678667">站长QQ群</a> |  
+<a class="titlestart" href="https://t.me/bfzy_tv">飞机群</a>
+</li>
+
+        <hr>
+        <li><span class="titlestart">暴风资源<a href="http://bfzy.tv/">bfzy.tv </a></a> 备用网址:</span><a href="http://bfzy1.tv/">bfzy1.tv </a></a> (1-10)均可使用</a></li>
+        <hr>
+        <li><span class="titlestart">04/10  最新 m3u8解析接口:<a target="_blank" href="https://vip.vipuuvip.com/?url=">https://vip.vipuuvip.com/?url=</a></b></span></li>
+         <hr>
+        <li><span class="card-content">本站图片地址将采用图床方式，可以调用， 但采集的同时建议将图片同步本地，避免日后图片失效。</span></li>
+ <li><span class="card-content">2024/02/24 播放域名替换</span>
+
+<span class="card-content">
+登录MACCMS后台>>数据库>>数据库批量替换>>选择数据表-点击尾部箭头>>拉到底层选择【mac_vod】>>vod_play_url</span>
+<span class="card-content">bfbfvip.com  替换为  bfengbf.com</span>
+<span class="card-content">
+其他cms自行查看使用帮助
+不会操作的，全部重新采集入库一次即可。</span></li>  <hr>
+<li>
+<a href="https://www.iycms.com?bfzy" target="_blank"><font color="#FF0000">推荐使用爱影CMS:www.iycms.com</font></a></li>
+<li>
+<font color="#FF0000">屏蔽美国、欧洲播放，测试请关闭加速器播放</font></li>
+    </ul>
+</header>
+</body></html>
+</span>
+ </p>
+	　</td>
+</tr></table>
+		</span>
+        </p>
+     </td>
+	</tr>
+</tbody>
+</table>
+<div class="head_box">
+<div class="width1200 header">
+	<div class="header_left"><a href="/"><img src="/upload/site/20230327-1/30518bd97dc4ae8725db2d8a13200031.png" alt="{$maccms.site_name}"></a></div>
+    <div class="header_right">
+        <div class="header_submit">
+            <div class="header_submit_b">  
+			<form id="search" name="search" method="get" action="/s/" onSubmit="return qrsearch();">
+                <input type="text" name="keys" class="search-input mac_wd" placeholder="请在此处输入影片名或演员名称"/>
+                <input type="submit" id="searchbutton" class="search-button mac_search" value="搜索"/>
+            </form>
+            </div>
+        </div>
+        <div class="header_list">
+        	<ul>
+            	<li>今日更新：<span style="color:red;;font-weight: bold;">{:mac_data_count(0,'today','vod')}</span></li>
+            	<li>本站总计：<span style="color:red;;font-weight: bold;">{:mac_data_count(0,'all','vod')}</span></li>
+            	<li><a href="/help/?home" target="_blank"><span style="color:red;">采集教程帮助中心</span></a></li>
+            	<li><a href="https://t.me/bfzy_tv" target="_blank"><span style="color:red;">留言求片</span></a></li>
+	<li><a href="https://bfys.tv" target="_blank"><span style="color:red;">演示站</span></a></li>
+
+
+            </ul>
+        </div>
+        </div>
+<div class="header_fl">
+<div class="qq-c"><a target="_blank" href="https://t.me/bfzy_tv">
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;加入资源群</a></div>
+<div class="qq-c"><a target="_blank" href="https://t.me/bfzytv">
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;加入頻道</a></div>
+
+	</div>
+</div>
+<div class="nav">
+	<div class="width1200" >
+        <ul>
+			<li class="yes"><a class="nav-link" href="/" title="首页">首页</a></li>
+            {maccms:type ids="20,30,39,45,51,52,53,58" order="asc" by="sort" id="vo2" key="key2"}
+			<li   style="width:70px">  
+             <div class="dropdown">
+			  <a href="{:mac_url_type($vo2)}" title="{$vo2.type_name}">{$vo2.type_name}</a>
+			  			  <div class="dropdown-content">
+			  	<ul>{maccms:type parent="'.$vo2['type_id'].'" order="asc" by="sort"}
+                                  <li><a href="{:mac_url_type($vo)}" title="{$vo.type_name}">{$vo.type_name}</a></li>{/maccms:type}
+                			    </ul>
+			  </div>
+			  			</div>
+             </li>
+			 {/maccms:type}
+
+
+<li style="width:70px" class=""><a class="nav-link" href="http://news.bfzyapi.com/index.php/actor/type/id/20.html" title="首页">演员</a></li>
+<li style="width:70px" class=""><a class="nav-link" href="http://news.bfzyapi.com/index.php/art/type/id/5.html" title="首页">资讯</a></li>
+        </ul>
+    </div>
+  </div>
+</div>

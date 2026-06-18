@@ -1,0 +1,48 @@
+
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="renderer" content="webkit">
+<link rel="shortcut icon" href="/template/default/img/favicon.png" type="image/x-icon" />
+  <title>{$maccms.site_name}</title>
+    <meta name="keywords" content="{$maccms.site_keywords}" />
+    <meta name="description" content="{$maccms.site_description}" />
+ {include file="public/include"}
+</head>
+<body>
+{include file="public/head"}
+<div class="container">
+<div class="addition-content">
+	<p class="videotitle">
+		<span class="videoName" style="width:370px;">影片名称</span>
+		<span class="region" style="width:200px;">影片地区</span>
+		<span class="category">影片类别</span>  
+		<span class="address">豆瓣评分</span>
+		<span class="time">更新时间</span>  
+	</p>
+<ul class="videoContent">
+  {maccms:vod num="50" paging="yes" pageurl="index/index" type="current" order="desc" by="time"}
+<li>
+<a class="videoName" target="_blank" href="{:mac_url_vod_detail($vo)}" style="width:370px;">{$vo.vod_name}<i>{if condition="$vo.vod_serial gt 0"}第{$vo.vod_serial}集{else/}{$vo.vod_remarks}{/if}</i></a>
+			<span class="region" style="width:200px;">{$vo.vod_area}</span>
+			<span class="category type">{$vo.type.type_name}</span>  
+			<a href="{:mac_url_vod_detail($vo)}" class="address">豆瓣:{$vo.vod_score}</a>
+			
+			<span class="time1">{$vo.vod_time|mac_day=###,'color'}</span>
+</li>
+{/maccms:vod}
+
+</ul>
+</div>
+<div class="clear"></div>
+<div class="kscont">
+	<div class="pages">
+		{include file="public/paging"}
+	</div>  
+</div>
+</div>
+<div class="clear"></div>
+{include file="public/foot"}
+</body>
+</html>

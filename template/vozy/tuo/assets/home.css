@@ -1,0 +1,176 @@
+@charset "utf-8";
+*html,
+*html body {
+  background-attachment: fixed;
+  height: 100%;
+}
+body {
+  margin: 0;
+  padding: 0;
+  font-size: 12px;
+  font-family: Tahoma, "hiragino sans gb", Helvetica, Arial;
+  width: 100%;
+  width: expression(document.body.clientWidth <=1000? "1000px": "auto");
+  min-width: 1000px;
+}
+div,
+form,
+img,
+ul,
+ol,
+li,
+dl,
+dt,
+dd,
+p,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+ul,
+li {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+a,
+div {
+  color: #585858;
+}
+a:link {
+  text-decoration: none;
+}
+a:visited {
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: none;
+  color: #008ffd;
+  text-decoration: none;
+}
+a:active {
+  text-decoration: none;
+}
+em,
+i {
+  font-style: normal;
+}
+a:focus,
+input {
+  outline: none;
+}
+textarea {
+  resize: none;
+}
+.fl {
+  float: left;
+}
+.input:after {
+  clear: both;
+  content: "";
+  display: block;
+  height: 0;
+  visibility: hidden;
+}
+/*头部*/
+.xing_top {
+  width: 1000px;
+  margin: 0 auto;
+  margin-bottom: 5px;
+  display: flex;
+  margin-top: 5px;
+}
+.xing_top_center {
+  width: 1000px;
+  display: flex;
+  flex-direction: row;
+}
+.index-header {
+  text-align: center;
+  background: #008ffd;
+  background-size: cover;
+  padding: 12px 0;
+}
+.index-card {
+  padding: 15px;
+  text-align: start;
+  display: inline-block;
+  border-radius: 6px;
+  margin: 0 auto;
+  font-size: 14px;
+  background-color: white;
+  width: 930px;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.2), 0 1px 1px 0 rgba(0, 0, 0, 0.14),
+    0 2px 1px -1px rgba(0, 0, 0, 0.12);text-align: center; 
+}
+.index-card li {
+  list-style: none;
+}
+.imagelogo {
+  width: 240px;
+  margin: auto 0;
+}
+.headtitle2 {
+  font-size: 15px;
+}
+.headimg {
+  width: 1000px;
+  margin: auto;
+  height: 200px;
+  text-align: center;
+  background: url(../images/bgjy.jpg);
+  background-size: cover;
+}
+.titlestart {
+  color: #ff0000;
+  font-weight: bold;
+}
+.card-content {
+  color: #474957;
+  font-weight: bold;
+}
+.threetitle {
+  display: flex;
+  text-align: center;
+  justify-content: center;
+}
+.title2 {
+  font-size: 18px;
+  border-radius: 24px;
+  margin: 5px;
+  color: white;
+  padding: 3px 10px;
+  border:1px white solid;
+}
+.todayupdate {
+  display: flex;
+  text-align: center;
+  justify-content: center;
+  justify-items: center;
+}
+.divupdate {
+  border-radius: 35px;
+  padding: 8px 40px;
+  text-align: start;
+  background: rgba(235,64,8);
+  margin: 10px 55px;
+}
+.updatenumber {
+  font-size: 16px;
+  font-weight: bold;
+  color: white;
+}
+.updatetitle {
+  font-size: 16px;
+  color: white;
+}
+
+.swal2-styled.swal2-confirm{
+background-color: #f39b17;
+}
