@@ -1,7 +1,7 @@
 <?php
 namespace app\common\taglib;
 use think\template\TagLib;
-use think\Db;
+use think\facade\Db;
 
 class Macdiy extends Taglib {
 

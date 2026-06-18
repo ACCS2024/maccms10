@@ -13,7 +13,7 @@ class Payment extends Base
 
     public function notify()
     {
-        $param = input();
+        $param = \think\facade\Request::param();
         $pay_type = $param['pay_type'] ?? '';
 
         if (empty($pay_type)) {

@@ -1,8 +1,8 @@
 <?php
 namespace app\index\controller;
 use think\Controller;
-use think\Db;
-use think\Request;
+use think\facade\Db;
+use think\facade\Request;
 use login\ThinkOauth;
 use app\index\event\LoginEvent;
 use app\common\util\Qrcode;
@@ -24,7 +24,7 @@ class User extends Base
             $this->assign('obj', $GLOBALS['user']);
         } else {
             if ($GLOBALS['user']['user_id'] < 1) {
-                model('User')->logout();
+                (new \app\common\model\User())->logout();
                 redirect(url('user/login'))->send();
                 exit;
             }
@@ -44,7 +44,7 @@ class User extends Base
 
     public function ajax_ulog()
     {
-        $param = input();
+        $param = \think\facade\Request::param();
         if ($param['ac'] == 'set') {
             $data = [];
             $data['ulog_mid'] = intval($param['mid']);
@@ -57,7 +57,7 @@ class User extends Base
             if ($data['ulog_mid'] == 1 && $data['ulog_type'] > 3) {
                 $where2 = [];
                 $where2['vod_id'] = $data['ulog_rid'];
-                $res = model('Vod')->infoData($where2);
+                $res = (new \app\common\model\Vod())->infoData($where2);
                 if ($res['code'] > 1) {
                     return $res;
                 }
@@ -66,13 +66,13 @@ class User extends Base
             }
             $data['ulog_points'] = intval($data['ulog_points']);
 
-            $res = model('Ulog')->infoData($data);
+            $res = (new \app\common\model\Ulog())->infoData($data);
             if ($res['code'] == 1) {
-                $r = model('Ulog')->where($data)->update(['ulog_time'=>time()]);
+                $r = (new \app\common\model\Ulog())->where($data)->update(['ulog_time'=>time()]);
                 return json($res);
             }
             if ($data['ulog_points'] == 0) {
-                $res = model('Ulog')->saveData($data);
+                $res = (new \app\common\model\Ulog())->saveData($data);
             } else {
                 $res = ['code' => 2001, 'msg' => lang('index/ulog_fee')];
             }
@@ -91,14 +91,14 @@ class User extends Base
                 $where['ulog_type'] = intval($param['type']);
             }
             $order = 'ulog_time desc';
-            $res = model('Ulog')->listData($where, $order, $param['page'], $param['limit']);
+            $res = (new \app\common\model\Ulog())->listData($where, $order, $param['page'], $param['limit']);
         }
         return json($res);
     }
 
     public function ajax_buy_popedom()
     {
-        $param = input();
+        $param = \think\facade\Request::param();
         $data = [];
         $data['ulog_mid'] = intval($param['mid']) <=0 ? 1: intval($param['mid']);
         $data['ulog_rid'] = intval($param['id']);
@@ -115,7 +115,7 @@ class User extends Base
         if($param['mid']=='12'){
             // 漫画购买（扣费额与 check_user_popedom 一致）
             $where['manga_id'] = $data['ulog_rid'];
-            $res = model('Manga')->infoData($where);
+            $res = (new \app\common\model\Manga())->infoData($where);
             if ($res['code'] > 1) {
                 return json([$res]);
             }
@@ -128,7 +128,7 @@ class User extends Base
         elseif($param['type']=='1'){
             // 文章购买
             $where['art_id'] = $data['ulog_rid'];
-            $res = model('Art')->infoData($where);
+            $res = (new \app\common\model\Art())->infoData($where);
             if ($res['code'] > 1) {
                 return json([$res]);
             }
@@ -141,7 +141,7 @@ class User extends Base
         else{
             // 视频播放/下载购买
             $where['vod_id'] = $data['ulog_rid'];
-            $res = model('Vod')->infoData($where);
+            $res = (new \app\common\model\Vod())->infoData($where);
             if ($res['code'] > 1) {
                 return json([$res]);
             }
@@ -154,7 +154,7 @@ class User extends Base
             $data['ulog_points'] = intval($res['info'][$col]);
         }
 
-        $res = model('Ulog')->infoData($data);
+        $res = (new \app\common\model\Ulog())->infoData($data);
         if ($res['code'] == 1) {
             return json(['code' => 1, 'msg' => lang('index/buy_popedom1')]);
         }
@@ -182,12 +182,12 @@ class User extends Base
             $data2['user_id'] = $GLOBALS['user']['user_id'];
             $data2['plog_type'] = 8;
             $data2['plog_points'] = $data['ulog_points'];
-            model('Plog')->saveData($data2);
+            (new \app\common\model\Plog())->saveData($data2);
 
             //分销日志
-            model('User')->reward($data['ulog_points']);
+            (new \app\common\model\User())->reward($data['ulog_points']);
 
-            $res = model('Ulog')->saveData($data);
+            $res = (new \app\common\model\Ulog())->saveData($data);
 
             Db::commit();
             return json($res);
@@ -205,8 +205,8 @@ class User extends Base
     public function login()
     {
         if (Request()->isPost()) {
-            $param = input();
-            $res = model('User')->login($param);
+            $param = \think\facade\Request::param();
+            $res = (new \app\common\model\User())->login($param);
             return json($res);
         }
         if (!empty(cookie('user_id') && !empty(cookie('user_name')))) {
@@ -217,7 +217,7 @@ class User extends Base
 
     public function logout()
     {
-        $res = model('User')->logout();
+        $res = (new \app\common\model\User())->logout();
         if (request()->isAjax()) {
             return json($res);
         } else {
@@ -254,7 +254,7 @@ class User extends Base
                 $openid = $res['info']['openid'];
                 $col = 'user_openid_' . $type;
                 //如果已登录,是否需要重新绑定
-                $check = model('User')->checkLogin();
+                $check = (new \app\common\model\User())->checkLogin();
                 if ($check['code'] == 1) {
 
                     if ($check['info'][$col] == $openid) {
@@ -266,20 +266,20 @@ class User extends Base
                         $where[$col] = $openid;
                         $update = [];
                         $update[$col] = '';
-                        model('User')->where($where)->update($update);
+                        (new \app\common\model\User())->where($where)->update($update);
                         //新绑定
                         $where = [];
                         $where['user_id'] = $GLOBALS['user']['user_id'];
                         $update = [];
                         $update[$col] = $openid;
-                        model('User')->where($where)->update($update);
+                        (new \app\common\model\User())->where($where)->update($update);
                         return json(['code' => 1, 'msg' => lang('index/bind_ok')]);
                     }
                 }
 
                 $where = [];
                 $where[$col] = $openid;
-                $res2 = model('User')->infoData($where);
+                $res2 = (new \app\common\model\User())->infoData($where);
                 //未绑定的需要先创建用户并绑定
                 if ($res2['code'] > 1) {
                     $data = [];
@@ -289,14 +289,14 @@ class User extends Base
                     $data['user_pwd'] = $pwd;
                     $data['user_pwd2'] = $pwd;
                     $data[$col] = $openid;
-                    $reg = model('User')->register($data);
+                    $reg = (new \app\common\model\User())->register($data);
                     if ($reg['code'] > 1) {
                         //注册失败
                         return $this->error(lang('index/logincallback1'));
                     }
                 }
                 //直接登录。。。
-                $login = model('User')->login(['col' => $col, 'openid' => $openid]);
+                $login = (new \app\common\model\User())->login(['col' => $col, 'openid' => $openid]);
                 if ($login['code'] > 1) {
                     return $this->error($login['msg']);
                 }
@@ -311,16 +311,16 @@ class User extends Base
 
     public function bindmsg()
     {
-        $param = input();
-        $res = model('User')->bindmsg($param);
+        $param = \think\facade\Request::param();
+        $res = (new \app\common\model\User())->bindmsg($param);
         return json($res);
     }
 
     public function bind()
     {
-        $param = input();
+        $param = \think\facade\Request::param();
         if (Request()->isPost()) {
-            $res = model('User')->bind($param);
+            $res = (new \app\common\model\User())->bind($param);
             return json($res);
         }
 
@@ -338,9 +338,9 @@ class User extends Base
 
     public function unbind()
     {
-        $param = input();
+        $param = \think\facade\Request::param();
         if (Request()->isPost()) {
-            $res = model('User')->unbind($param);
+            $res = (new \app\common\model\User())->unbind($param);
             return json($res);
         }
         $this->assign('param',$param);
@@ -349,9 +349,9 @@ class User extends Base
 
     public function info()
     {
-        $param = input();
+        $param = \think\facade\Request::param();
         if (Request()->isPost()) {
-            $res = model('User')->info($param);
+            $res = (new \app\common\model\User())->info($param);
             if ($res['code'] == 1) {
                 $this->success($res['msg']);
                 exit;
@@ -365,10 +365,10 @@ class User extends Base
 
     public function regcheck()
     {
-        $param = input();
+        $param = \think\facade\Request::param();
         $t = htmlspecialchars(urldecode(trim($param['t'])));
         $str = htmlspecialchars(urldecode(trim($param['str'])));
-        $res = model('User')->regcheck($t, $str);
+        $res = (new \app\common\model\User())->regcheck($t, $str);
         if ($res['code'] > 1) {
             return $str;
         }
@@ -377,18 +377,18 @@ class User extends Base
 
     public function reg()
     {
-        $param = input();
+        $param = \think\facade\Request::param();
         if (Request()->isPost()) {
             if (!empty(cookie('uid'))) {
                 $param['uid'] = intval(cookie('uid'));
             }
-            $res = model('User')->register($param);
+            $res = (new \app\common\model\User())->register($param);
             if ($res['code'] > 1) {
                 return json($res);
             }
 
             $GLOBALS['config']['user']['login_verify'] = '0';
-            $res = model('User')->login($param);
+            $res = (new \app\common\model\User())->login($param);
             $res['msg'] = lang('index/reg_ok').'，' . $res['msg'];
             return json($res);
         }
@@ -404,8 +404,8 @@ class User extends Base
 
     public function reg_msg()
     {
-        $param = input();
-        $res = model('User')->reg_msg($param);
+        $param = \think\facade\Request::param();
+        $res = (new \app\common\model\User())->reg_msg($param);
         return json($res);
     }
 
@@ -420,7 +420,7 @@ class User extends Base
             $param['input'] = 'file';
             $param['flag'] = 'user';
             $param['user_id'] = $GLOBALS['user']['user_id'];
-            $res = model('Upload')->upload($param);
+            $res = (new \app\common\model\Upload())->upload($param);
             return json($res);
         }
         return $this->fetch('user/portrait');
@@ -428,9 +428,9 @@ class User extends Base
 
     public function findpass()
     {
-        $param = input();
+        $param = \think\facade\Request::param();
         if (Request()->isPost()) {
-            $res = model('User')->findpass($param);
+            $res = (new \app\common\model\User())->findpass($param);
             return json($res);
         }
         $this->assign('param',$param);
@@ -439,9 +439,9 @@ class User extends Base
 
     public function findpass_msg()
     {
-        $param = input();
+        $param = \think\facade\Request::param();
         if (Request()->isPost()) {
-            $res = model('User')->findpass_msg($param);
+            $res = (new \app\common\model\User())->findpass_msg($param);
             return json($res);
         }
         $param['ac_text'] = $param['ac'] == 'phone' ? lang('mobile') : lang('email');
@@ -452,22 +452,22 @@ class User extends Base
     public function findpass_reset()
     {
         if (Request()->isPost()) {
-            $param = input();
-            $res = model('User')->findpass_reset($param);
+            $param = \think\facade\Request::param();
+            $res = (new \app\common\model\User())->findpass_reset($param);
             return json($res);
         }
     }
 
     public function buy()
     {
-        $param = input();
+        $param = \think\facade\Request::param();
         if (Request()->isPost()) {
             $flag = input('param.flag');
             if ($flag == 'card') {
                 $card_no = htmlspecialchars(urldecode(trim($param['card_no'])));
                 $card_pwd = htmlspecialchars(urldecode(trim($param['card_pwd'])));
 
-                $res = model('Card')->useData($card_no, $card_pwd, $GLOBALS['user']);
+                $res = (new \app\common\model\Card())->useData($card_no, $card_pwd, $GLOBALS['user']);
                 return json($res);
             } else {
                 $price = input('param.price');
@@ -485,9 +485,9 @@ class User extends Base
                 $data['order_price'] = $price;
                 $data['order_time'] = time();
                 $data['order_points'] = intval($GLOBALS['config']['pay']['scale'] * $price);
-                $res = model('Order')->saveData($data);
+                $res = (new \app\common\model\Order())->saveData($data);
                 if ($res['code'] == 1) {
-                    $orderInfo = model('Order')->infoData(['order_code' => $data['order_code'], 'user_id' => $data['user_id']]);
+                    $orderInfo = (new \app\common\model\Order())->infoData(['order_code' => $data['order_code'], 'user_id' => $data['user_id']]);
                     if ($orderInfo['code'] == 1) {
                         $data['order_id'] = $orderInfo['info']['order_id'];
                     }
@@ -505,12 +505,12 @@ class User extends Base
 
     public function pay()
     {
-        $param = input();
+        $param = \think\facade\Request::param();
         $order_code = htmlspecialchars(urldecode(trim($param['order_code'])));
         $where = [];
         $where['order_code'] = $order_code;
         $where['user_id'] = $GLOBALS['user']['user_id'];
-        $res = model('Order')->infoData($where);
+        $res = (new \app\common\model\Order())->infoData($where);
         if ($res['code'] > 1) {
             return $this->error($res['msg']);
         }
@@ -527,7 +527,7 @@ class User extends Base
 
     public function gopay()
     {
-        $param = input();
+        $param = \think\facade\Request::param();
 
         $order_code = htmlspecialchars(urldecode(trim($param['order_code'])));
         $order_id = intval((trim($param['order_id'])));
@@ -545,7 +545,7 @@ class User extends Base
         $where['order_id'] = $order_id;
         $where['order_code'] = $order_code;
         $where['user_id'] = $GLOBALS['user']['user_id'];
-        $res = model('Order')->infoData($where);
+        $res = (new \app\common\model\Order())->infoData($where);
         if ($res['code'] > 1) {
             return $this->error(lang('index/order_not'));
         }
@@ -573,7 +573,7 @@ class User extends Base
     {
         ob_end_clean();
         header('Content-Type:image/png;');
-        $param = input();
+        $param = \think\facade\Request::param();
         $data = $param['data'];
         if(substr($data, 0, 6) == "weixin") {
             QRcode::png($data,false,QR_ECLEVEL_L,10);
@@ -585,13 +585,13 @@ class User extends Base
 
     public function upgrade()
     {
-        $param = input();
+        $param = \think\facade\Request::param();
         if (Request()->isPost()) {
-            $res = model('User')->upgrade($param);
+            $res = (new \app\common\model\User())->upgrade($param);
             return json($res);
         }
 
-        $group_list = model('Group')->getCache();
+        $group_list = (new \app\common\model\Group())->getCache();
         $this->assign('group_list', $group_list);
         $this->assign('pay_config', $GLOBALS['config']['pay']);
         $this->assign('param',$param);
@@ -619,17 +619,17 @@ class User extends Base
      */
     public function ajax_upgrade()
     {
-        $group_list = model('Group')->getCache();
+        $group_list = (new \app\common\model\Group())->getCache();
         $this->assign('group_list', $group_list);
         $this->assign('pay_config', $GLOBALS['config']['pay']);
-        $this->assign('param', input());
+        $this->assign('param', \think\facade\Request::param());
         $html = $this->fetch('user/ajax_upgrade');
         return json($html);
     }
 
     public function popedom()
     {
-        $type_tree = model('Type')->getCache('type_tree');
+        $type_tree = (new \app\common\model\Type())->getCache('type_tree');
         $this->assign('type_tree', $type_tree);
 
         $n = 1;
@@ -640,7 +640,7 @@ class User extends Base
             foreach ($ids as $a => $b) {
                 if ($a > $max_a) break;
                 $n++;
-                $type_tree[$k1]['popedom'][$b] = model('User')->popedom($v1['type_id'], $a, $GLOBALS['user']['group_id']);
+                $type_tree[$k1]['popedom'][$b] = (new \app\common\model\User())->popedom($v1['type_id'], $a, $GLOBALS['user']['group_id']);
             }
             foreach ($v1['child'] as $k2 => $v2) {
                 unset($type_tree[$k1]['child'][$k2]['type_extend']);
@@ -648,7 +648,7 @@ class User extends Base
                 foreach ($ids as $a => $b) {
                     if ($a > $max_a) break;
                     $n++;
-                    $type_tree[$k1]['child'][$k2]['popedom'][$b] = model('User')->popedom($v2['type_id'], $a, $GLOBALS['user']['group_id']);
+                    $type_tree[$k1]['child'][$k2]['popedom'][$b] = (new \app\common\model\User())->popedom($v2['type_id'], $a, $GLOBALS['user']['group_id']);
                 }
             }
         }
@@ -660,7 +660,7 @@ class User extends Base
 
     public function plays()
     {
-        $param = input();
+        $param = \think\facade\Request::param();
         $param['page'] = intval($param['page']) < 1 ? 1 : intval($param['page']);
         $param['limit'] = intval($param['limit']) < 20 ? 20 : intval($param['limit']);
         $param['mid'] = intval($param['mid']);
@@ -672,7 +672,7 @@ class User extends Base
             $where['ulog_mid'] = $param['mid'];
         }
         $order = 'ulog_time desc';
-        $res = model('Ulog')->listData($where, $order, $param['page'], $param['limit']);
+        $res = (new \app\common\model\Ulog())->listData($where, $order, $param['page'], $param['limit']);
 
         $this->assign('param',$param);
         $this->assign('list', $res['list']);
@@ -684,7 +684,7 @@ class User extends Base
 
     public function downs()
     {
-        $param = input();
+        $param = \think\facade\Request::param();
         $param['page'] = intval($param['page']) < 1 ? 1 : intval($param['page']);
         $param['limit'] = intval($param['limit']) < 20 ? 20 : intval($param['limit']);
 
@@ -693,7 +693,7 @@ class User extends Base
         $where['ulog_mid'] = 1;
         $where['ulog_type'] = 5;
         $order = 'ulog_time desc';
-        $res = model('Ulog')->listData($where, $order, $param['page'], $param['limit']);
+        $res = (new \app\common\model\Ulog())->listData($where, $order, $param['page'], $param['limit']);
 
         $this->assign('param',$param);
         $this->assign('list', $res['list']);
@@ -704,7 +704,7 @@ class User extends Base
 
     public function favs()
     {
-        $param = input();
+        $param = \think\facade\Request::param();
         $param['page'] = intval($param['page']) < 1 ? 1 : intval($param['page']);
         $param['limit'] = intval($param['limit']) < 20 ? 20 : intval($param['limit']);
         $param['mid'] = intval($param['mid']);
@@ -716,7 +716,7 @@ class User extends Base
         }
         $where['ulog_type'] = 2;
         $order = 'ulog_time desc';
-        $res = model('Ulog')->listData($where, $order, $param['page'], $param['limit']);
+        $res = (new \app\common\model\Ulog())->listData($where, $order, $param['page'], $param['limit']);
 
         $this->assign('param',$param);
         $this->assign('list', $res['list']);
@@ -728,7 +728,7 @@ class User extends Base
 
     public function ulog()
     {
-        $param = input();
+        $param = \think\facade\Request::param();
         $param['page'] = intval($param['page']) < 1 ? 1 : intval($param['page']);
         $param['limit'] = intval($param['limit']) < 20 ? 20 : intval($param['limit']);
 
@@ -742,7 +742,7 @@ class User extends Base
         }
 
         $order = 'ulog_time desc';
-        $res = model('Ulog')->listData($where, $order, $param['page'], $param['limit']);
+        $res = (new \app\common\model\Ulog())->listData($where, $order, $param['page'], $param['limit']);
 
         $this->assign('param',$param);
         $this->assign('list', $res['list']);
@@ -753,7 +753,7 @@ class User extends Base
 
     public function ulog_del()
     {
-        $param = input();
+        $param = \think\facade\Request::param();
         $ids = htmlspecialchars(urldecode(trim($param['ids'])));
         $type = $param['type'];
         $all = $param['all'];
@@ -779,13 +779,13 @@ class User extends Base
         if ($all != '1') {
             $where['ulog_id'] = array('in', array_values($arr));
         }
-        $return = model('Ulog')->delData($where);
+        $return = (new \app\common\model\Ulog())->delData($where);
         return json($return);
     }
 
     public function plog()
     {
-        $param = input();
+        $param = \think\facade\Request::param();
         $param['page'] = intval($param['page']) < 1 ? 1 : intval($param['page']);
         $param['limit'] = intval($param['limit']) < 20 ? 20 : intval($param['limit']);
         $param['filter'] = trim($param['filter']);
@@ -799,7 +799,7 @@ class User extends Base
             $where['plog_type'] = [7, 8, 9];
         }
         $order = 'plog_id desc';
-        $res = model('Plog')->listData($where, $order, $param['page'], $param['limit']);
+        $res = (new \app\common\model\Plog())->listData($where, $order, $param['page'], $param['limit']);
 
         $this->assign('param',$param);
         $this->assign('list', $res['list']);
@@ -811,7 +811,7 @@ class User extends Base
 
     public function plog_del()
     {
-        $param = input();
+        $param = \think\facade\Request::param();
         $ids = htmlspecialchars(urldecode(trim($param['ids'])));
         $type = $param['type'];
         $all = $param['all'];
@@ -832,16 +832,16 @@ class User extends Base
         if ($all != '1') {
             $where['plog_id'] = array('in', array_values($arr));
         }
-        $return = model('Plog')->delData($where);
+        $return = (new \app\common\model\Plog())->delData($where);
         return json($return);
     }
 
     public function cash()
     {
-        $param = input();
+        $param = \think\facade\Request::param();
         if (Request()->isPost()) {
             $param['user_id'] = $GLOBALS['user']['user_id'];
-            $res = model('Cash')->saveData($param);
+            $res = (new \app\common\model\Cash())->saveData($param);
             return json($res);
         }
 
@@ -851,7 +851,7 @@ class User extends Base
         $where = [];
         $where['user_id'] = $GLOBALS['user']['user_id'];
         $order = 'cash_id desc';
-        $res = model('Cash')->listData($where, $order, $param['page'], $param['limit']);
+        $res = (new \app\common\model\Cash())->listData($where, $order, $param['page'], $param['limit']);
 
         $this->assign('param',$param);
         $this->assign('list', $res['list']);
@@ -862,7 +862,7 @@ class User extends Base
 
     public function cash_del()
     {
-        $param = input();
+        $param = \think\facade\Request::param();
         $ids = htmlspecialchars(urldecode(trim($param['ids'])));
         $type = $param['type'];
         $all = $param['all'];
@@ -883,13 +883,13 @@ class User extends Base
         if ($all != '1') {
             $where['cash_id'] = array('in', array_values($arr));
         }
-        $return = model('Cash')->delData($where);
+        $return = (new \app\common\model\Cash())->delData($where);
         return json($return);
     }
 
     public function reward()
     {
-        $param = input();
+        $param = \think\facade\Request::param();
 
         $param['page'] = intval($param['page']) < 1 ? 1 : intval($param['page']);
         $param['limit'] = intval($param['limit']) < 20 ? 20 : intval($param['limit']);
@@ -906,7 +906,7 @@ class User extends Base
         }
 
         $order = 'user_id desc';
-        $userModel = model('User');
+        $userModel = (new \app\common\model\User());
         $res = $userModel->listData($where, $order, $param['page'], $param['limit']);
         // 安全加固:listData 走 SELECT *,剥离 user_pwd / user_random 等敏感字段后再传模板,
         // 防止自定义主题循环输出 $list 时泄露下线用户凭证(user_random 泄露可伪造会话)。
@@ -925,7 +925,7 @@ class User extends Base
 
     public function orders()
     {
-        $param = input();
+        $param = \think\facade\Request::param();
         $param['page'] = intval($param['page']) < 1 ? 1 : intval($param['page']);
         $param['limit'] = intval($param['limit']) < 20 ? 20 : intval($param['limit']);
 
@@ -933,7 +933,7 @@ class User extends Base
         $where['o.user_id'] = $GLOBALS['user']['user_id'];
 
         $order = 'o.order_id desc';
-        $res = model('Order')->listData($where, $order, $param['page'], $param['limit']);
+        $res = (new \app\common\model\Order())->listData($where, $order, $param['page'], $param['limit']);
 
         $pages = mac_page_param($res['total'], $param['limit'], $param['page'], url('user/orders', ['page' => 'PAGELINK']));
         $this->assign('__PAGING__', $pages);
@@ -944,12 +944,12 @@ class User extends Base
 
     public function order_info()
     {
-        $param = input();
+        $param = \think\facade\Request::param();
         $where = [];
         $where['order_id'] = intval($param['order_id']);
         // 安全加固(CVE-2026-4563):订单详情必须绑定当前登录用户,防止越权遍历他人订单
         $where['user_id'] = $GLOBALS['user']['user_id'];
-        $res = model('Order')->infoData($where);
+        $res = (new \app\common\model\Order())->infoData($where);
         if (request()->isAjax()) {
             return json($res);
         }
@@ -960,7 +960,7 @@ class User extends Base
 
     public function cards()
     {
-        $param = input();
+        $param = \think\facade\Request::param();
         $param['page'] = intval($param['page']) < 1 ? 1 : intval($param['page']);
         $param['limit'] = intval($param['limit']) < 20 ? 20 : intval($param['limit']);
 
@@ -969,7 +969,7 @@ class User extends Base
         $where['card_use_status'] = 1;
 
         $order = 'card_id desc';
-        $res = model('Card')->listData($where, $order, $param['page'], $param['limit']);
+        $res = (new \app\common\model\Card())->listData($where, $order, $param['page'], $param['limit']);
 
         $pages = mac_page_param($res['total'], $param['limit'], $param['page'], url('user/cards', ['page' => 'PAGELINK']));
         $this->assign('__PAGING__', $pages);
@@ -980,14 +980,14 @@ class User extends Base
 
     public function comment()
     {
-        $param = input();
+        $param = \think\facade\Request::param();
         $this->assign('param',$param);
         return $this->fetch('user/comment');
     }
 
     public function gbook()
     {
-        $param = input();
+        $param = \think\facade\Request::param();
         $this->assign('param',$param);
         return $this->fetch('user/gbook');
     }
@@ -997,7 +997,7 @@ class User extends Base
      */
     public function invite()
     {
-        $param = input();
+        $param = \think\facade\Request::param();
         $param['page']  = intval($param['page'])  < 1 ? 1  : intval($param['page']);
         $param['limit'] = intval($param['limit']) < 1 ? 20 : intval($param['limit']);
 
@@ -1011,9 +1011,9 @@ class User extends Base
             ? $base_url . $reg_path . '?invite_code=' . $invite_code
             : '';
 
-        $total = model('User')->where('user_pid', $user_id)->count();
+        $total = (new \app\common\model\User())->where('user_pid', $user_id)->count();
 
-        $invitees_raw = model('User')
+        $invitees_raw = (new \app\common\model\User())
             ->field('user_id,user_name,user_nick_name,user_invite_code,user_invite_count,user_reg_time')
             ->where('user_pid', $user_id)
             ->order('user_id desc')
@@ -1028,7 +1028,7 @@ class User extends Base
         if (!empty($invitees)) {
             $level1_ids = array_column($invitees, 'user_id');
 
-            $sub_raw  = model('User')
+            $sub_raw  = (new \app\common\model\User())
                 ->field('user_id,user_name,user_nick_name,user_invite_count,user_reg_time,user_pid')
                 ->where('user_pid', 'in', $level1_ids)
                 ->order('user_id desc')
@@ -1063,8 +1063,8 @@ class User extends Base
 
     public function visit()
     {
-        $param = input();
-        $res = model('User')->visit($param);
+        $param = \think\facade\Request::param();
+        $res = (new \app\common\model\User())->visit($param);
         $url = '/';
         if(!empty($param['url'])){
             $tempu = @parse_url($param['url']);

@@ -17,7 +17,7 @@ class Addon extends Base
 
     public function index()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
 
         $this->assign('title',lang('admin/addon/title'));
         return $this->fetch('admin@addon/index');
@@ -25,7 +25,7 @@ class Addon extends Base
 
     public function config()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         $name = $param['name'];
         if(empty($name)){
             return $this->error(lang('param_err'));
@@ -153,7 +153,7 @@ class Addon extends Base
      */
     public function install()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         $name = $param['name'];
         $force = (int)$param['force'];
         if (!$name) {
@@ -191,7 +191,7 @@ class Addon extends Base
      */
     public function uninstall()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         $name = $param['name'];
         $force = (int)$param['force'];
         if (!$name) {
@@ -218,7 +218,7 @@ class Addon extends Base
      */
     public function state()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         $name = $param['name'];
         $action = $param['action'];
         $force = (int)$param['force'];
@@ -247,11 +247,8 @@ class Addon extends Base
      */
     public function local()
     {
-        $param = \think\facadeRequest::param();
-        $validate = \think\Loader::validate('Token');
-        if(!$validate->check($param)){
-            return $this->error($validate->getError());
-        }
+        $param = \think\facade\Request::param();
+        // Addon upload disabled; \think\Loader removed in TP8
         echo 'closed';exit;
         $file = $this->request->file('file');
         $addonTmpDir = RUNTIME_PATH . 'addons' . DS;

@@ -25,7 +25,7 @@ class Label extends Base
             $rankTypeIdsRaw = 'parent';
         }
 
-        $typeModel = model('Type');
+        $typeModel = (new \app\common\model\Type());
         $typeListCache = $typeModel->getCache('type_list');
         $rankTypeList = [];
         if (!is_array($typeListCache)) {

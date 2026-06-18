@@ -6,7 +6,7 @@ use app\common\util\AiChatService;
 use app\common\util\ApiMeilisearchSuggest;
 use app\common\util\MeilisearchService;
 use app\common\util\SearchService;
-use think\Cache;
+use think\facade\Cache;
 
 class Ajax extends Base
 {
@@ -47,7 +47,7 @@ class Ajax extends Base
         $where[$pre.'_status'] = 1;
         if(!empty($type_id)) {
             if(in_array($mid, ['1', '2'])){
-                $type_list = model('Type')->getCache('type_list');
+                $type_list = (new \app\common\model\Type())->getCache('type_list');
                 $type_info = $type_list[$type_id];
                 if(!empty($type_info)) {
                     $ids = $type_info['type_pid'] == 0 ? $type_info['childids'] : $type_info['type_id'];
@@ -373,7 +373,7 @@ class Ajax extends Base
         $id = $info[$pre.'_id'];
 
         //来路访问记录验证
-        $res = model('Website')->visit($this->_param);
+        $res = (new \app\common\model\Website())->visit($this->_param);
         if($res['code']>1){
             return json($res);
         }
@@ -547,7 +547,7 @@ class Ajax extends Base
         if($mid=='1'){
             $where=[];
             $where['vod_id'] = $id;
-            $info = model('Vod')->infoData($where);
+            $info = (new \app\common\model\Vod())->infoData($where);
             if($info['code'] >1){
                 return json(['code'=>1011,'msg'=>$info['msg']]);
             }
@@ -570,7 +570,7 @@ class Ajax extends Base
         else{
             $where=[];
             $where['art_id'] = $id;
-            $info = model('Art')->infoData($where);
+            $info = (new \app\common\model\Art())->infoData($where);
             if($info['code'] >1){
                 return json(['code'=>1021,'msg'=>$info['msg']]);
             }
@@ -599,14 +599,14 @@ class Ajax extends Base
         if ($tid > 0) $where['type_id'] = $tid;
 
         $order = 'manga_hits desc, manga_id desc';
-        $res = model('Manga')->listData($where, $order, 1, $num, 0, '*', 1);
+        $res = (new \app\common\model\Manga())->listData($where, $order, 1, $num, 0, '*', 1);
         if ($res['code'] != 1) {
             return json($res);
         }
         $pagecount = max(1, (int)$res['pagecount']);
         $page = mt_rand(1, min(5, $pagecount));
         if ($page !== 1) {
-            $res = model('Manga')->listData($where, $order, $page, $num, 0, '*', 1);
+            $res = (new \app\common\model\Manga())->listData($where, $order, $page, $num, 0, '*', 1);
             if ($res['code'] != 1) {
                 return json($res);
             }
@@ -648,14 +648,14 @@ class Ajax extends Base
         if ($tid > 0) $where['type_id'] = $tid;
 
         $order = 'art_hits desc, art_id desc';
-        $res = model('Art')->listData($where, $order, 1, $num, 0, '*', 1);
+        $res = (new \app\common\model\Art())->listData($where, $order, 1, $num, 0, '*', 1);
         if ($res['code'] != 1) {
             return json($res);
         }
         $pagecount = max(1, (int)$res['pagecount']);
         $page = mt_rand(1, min(5, $pagecount));
         if ($page !== 1) {
-            $res = model('Art')->listData($where, $order, $page, $num, 0, '*', 1);
+            $res = (new \app\common\model\Art())->listData($where, $order, $page, $num, 0, '*', 1);
             if ($res['code'] != 1) {
                 return json($res);
             }
@@ -762,7 +762,7 @@ class Ajax extends Base
         $ids = $this->resolveTypeIds($typeId);
         $where['type_id|type_id_1'] = $ids; // TODO:TP8-pipe-or
 
-        $model = model('Vod');
+        $model = (new \app\common\model\Vod());
         $imgRes = $model->listData($where, 'vod_hits_month desc', 1, 6, 0, '*', 1, 1);
         $txtRes = $model->listData($where, 'vod_hits_month desc', 1, 12, 6, '*', 1, 1);
 
@@ -777,7 +777,7 @@ class Ajax extends Base
                 }
             }
             if ($userId > 0 && !empty($vodIds)) {
-                $favRows = model('Ulog')->where([
+                $favRows = (new \app\common\model\Ulog())->where([
                     'user_id' => $userId,
                     'ulog_type' => 2,
                     'ulog_rid' => array_values(array_unique($vodIds)),
@@ -845,7 +845,7 @@ class Ajax extends Base
             return ['tab' => $tab, 'content_type' => 'manga', 'img_list' => [], 'txt_list' => []];
         }
 
-        $model = model('Manga');
+        $model = (new \app\common\model\Manga());
         $imgRes = $model->listData(['manga_status' => 1], 'manga_hits_month desc', 1, intval($vars['index_manga_hnum_str']), 0, '*', 1, 1);
         $txtRes = $model->listData(['manga_status' => 1], 'manga_hits_month desc', 1, intval($vars['index_manga_hot_txt_num']), intval($vars['index_manga_hot_txt_start']), '*', 1, 1);
 
@@ -883,7 +883,7 @@ class Ajax extends Base
             return ['tab' => $tab, 'content_type' => 'art', 'img_list' => [], 'txt_list' => []];
         }
 
-        $model = model('Art');
+        $model = (new \app\common\model\Art());
         $imgRes = $model->listData(['art_status' => 1], 'art_time desc', 1, intval($vars['index_art_hnum']), 0, '*', 1, 1);
         $txtRes = $model->listData(['art_status' => 1], 'art_time desc', 1, intval($vars['index_art_hot_txt_num']), intval($vars['index_art_hot_txt_start']), '*', 1, 1);
 
@@ -922,7 +922,7 @@ class Ajax extends Base
         if ($typeId <= 0) {
             return [];
         }
-        $typeList = model('Type')->getCache('type_list');
+        $typeList = (new \app\common\model\Type())->getCache('type_list');
         $info = is_array($typeList) && isset($typeList[$typeId]) ? $typeList[$typeId] : [];
         if (empty($info)) {
             return [$typeId];
@@ -936,7 +936,7 @@ class Ajax extends Base
 
     public function verify_check()
     {
-        $param = input();
+        $param = \think\facade\Request::param();
         if(!in_array($param['type'],['search','show'])){
             return ['code' => 1001, 'msg' => lang('param_err')];
         }
@@ -1029,7 +1029,7 @@ class Ajax extends Base
 
     private function readAiChatPayload()
     {
-        $payload = input('post.');
+        $payload = \think\facade\Request::post();
         if (!is_array($payload)) {
             $payload = [];
         }

@@ -42,7 +42,7 @@ class Gbook extends Base
     }
     
     public function saveData() {
-        $param = input();
+        $param = \think\facade\Request::param();
 
         if($GLOBALS['config']['gbook']['verify'] == 1){
             if(!captcha_check($param['verify'])){
@@ -54,7 +54,7 @@ class Gbook extends Base
             if(empty(cookie('user_id'))){
                 return ['code' => 1003, 'msg' => lang('index/require_login')];
             }
-            $res = model('User')->checkLogin();
+            $res = (new \app\common\model\User())->checkLogin();
             if($res['code']>1) {
                 return ['code' => 1003, 'msg' => lang('index/require_login')];
             }
@@ -83,7 +83,7 @@ class Gbook extends Base
         else{
             $param['gbook_name'] = cookie('user_name');
             $param['user_id'] = intval(cookie('user_id'));
-            $user_data = model('User')->field('user_nick_name')->where(['user_id' => $param['user_id']])->find();
+            $user_data = (new \app\common\model\User())->field('user_nick_name')->where(['user_id' => $param['user_id']])->find();
             if (!empty($user_data['user_nick_name'])) {
                 $param['gbook_name'] = $user_data['user_nick_name'];
             }
@@ -96,7 +96,7 @@ class Gbook extends Base
 
         $param['gbook_ip'] = mac_get_ip_long();
 
-        $res = model('Gbook')->saveData($param);
+        $res = (new \app\common\model\Gbook())->saveData($param);
 
         if($res['code']>1){
             return $res;

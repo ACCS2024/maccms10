@@ -28,7 +28,7 @@ class Actor extends Base
         $param = mac_param_url();
         $type_id_specified = 0;
         if (empty($param['id'])) {
-            $default_actor_type = model('Type')->where(['type_mid' => 8, 'type_status' => 1])->find();
+            $default_actor_type = (new \app\common\model\Type())->where(['type_mid' => 8, 'type_status' => 1])->find();
             $type_id_specified = isset($default_actor_type->type_id) ? $default_actor_type->type_id : 0;
         }
         $info = $this->label_type(0, $type_id_specified);

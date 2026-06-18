@@ -13,7 +13,7 @@ class Qrcode extends Controller
 
     public function index()
     {
-        $param = input();
+        $param = \think\facade\Request::param();
         $url = $param['url'];
         if(!empty($url) && filter_var($url, FILTER_VALIDATE_URL)){
             ob_end_clean();

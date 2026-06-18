@@ -35,7 +35,7 @@ class Comment extends Base
     }
 
     public function saveData() {
-        $param = input();
+        $param = \think\facade\Request::param();
 
         // 兼容：部分模板/历史版本会使用 mid/rid 作为参数名
         if (empty($param['comment_mid']) && isset($param['mid'])) {
@@ -77,7 +77,7 @@ class Comment extends Base
             if(empty(cookie('user_id'))){
                 return ['code' => 1003, 'msg' =>lang('index/require_login')];
             }
-            $res = model('User')->checkLogin();
+            $res = (new \app\common\model\User())->checkLogin();
             if($res['code']>1) {
                 return ['code' => 1003, 'msg' => lang('index/require_login')];
             }
@@ -107,7 +107,7 @@ class Comment extends Base
         else{
             $param['comment_name'] = cookie('user_name');
             $param['user_id'] = intval(cookie('user_id'));
-            $user_data = model('User')->field('user_nick_name')->where(['user_id' => $param['user_id']])->find();
+            $user_data = (new \app\common\model\User())->field('user_nick_name')->where(['user_id' => $param['user_id']])->find();
             if (!empty($user_data['user_nick_name'])) {
                 $param['comment_name'] = $user_data['user_nick_name'];
             }
@@ -137,7 +137,7 @@ class Comment extends Base
             }
         }
 
-        $res = model('Comment')->saveData($param);
+        $res = (new \app\common\model\Comment())->saveData($param);
         if($res['code']>1){
             return $res;
         }
@@ -155,7 +155,7 @@ class Comment extends Base
 
     public function report()
     {
-        $param = input();
+        $param = \think\facade\Request::param();
         $id = intval($param['id']);
 
         if(empty($id) ) {
@@ -168,7 +168,7 @@ class Comment extends Base
         }
         $where = [];
         $where['comment_id'] = $id;
-        model('comment')->where($where)->setInc('comment_report');
+        (new \app\common\model\comment())->where($where)->setInc('comment_report');
         cookie($cookie, 't', $GLOBALS['config']['comment']['timespan']);
 
         return json(['code'=>1,'msg'=>lang('opt_ok')]);
@@ -176,7 +176,7 @@ class Comment extends Base
 
     public function digg()
     {
-        $param = input();
+        $param = \think\facade\Request::param();
         $id = intval($param['id']);
         $type = $param['type'];
 
