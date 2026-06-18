@@ -754,7 +754,18 @@ class Provide extends Base
             if ($this->_param['ac'] == 'detail') {
                 $field = '*';
             }
-            $res = model('manga')->listData($where, $order, $this->_param['pg'], $pagesize, 0, $field, 0);
+            // 关键词搜索接 Meilisearch；未启用/无命中/含不可翻译条件→回退 MySQL LIKE
+            $meili = !empty($this->_param['wd']) ? mac_meili_api_apply('manga', $where, $this->_param['wd'], $this->_param['pg'], $pagesize, $order, 0) : false;
+            if ($meili !== false) {
+                $res = model('manga')->listData($meili[0], $meili[1], 1, $pagesize, 0, $field, 0);
+                $res['page'] = $this->_param['pg'];
+                if ($meili[2] !== null) {
+                    $res['total'] = (int)$meili[2];
+                    $res['pagecount'] = $pagesize > 0 ? (int)ceil($meili[2] / $pagesize) : 0;
+                }
+            } else {
+                $res = model('manga')->listData($where, $order, $this->_param['pg'], $pagesize, 0, $field, 0);
+            }
 
 
             if ($this->_param['at'] == 'xml') {

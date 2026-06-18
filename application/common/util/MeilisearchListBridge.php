@@ -23,12 +23,15 @@ class MeilisearchListBridge
                 return null;
             }
         }
-        if (!is_array($where) || !empty($where['_string'])) {
+        if (!is_array($where)) {
             return null;
         }
 
         $w = self::stripVodTextSearchKeys($where);
-        $filter = self::buildVodFilter($w);
+        // _string（datafilter/自定义SQL）不能放进 Meilisearch filter，但可留在 $nw 让 MySQL 对缩小后的 ID 集做后置过滤
+        $wf = $w;
+        unset($wf['_string']);
+        $filter = self::buildVodFilter($wf);
         if ($filter === null) {
             return null;
         }
@@ -94,12 +97,14 @@ class MeilisearchListBridge
                 return null;
             }
         }
-        if (!is_array($where) || !empty($where['_string'])) {
+        if (!is_array($where)) {
             return null;
         }
 
         $w = self::stripArtTextSearchKeys($where);
-        $filter = self::buildArtFilter($w);
+        $wf = $w;
+        unset($wf['_string']);
+        $filter = self::buildArtFilter($wf);
         if ($filter === null) {
             return null;
         }
@@ -165,12 +170,14 @@ class MeilisearchListBridge
                 return null;
             }
         }
-        if (!is_array($where) || !empty($where['_string'])) {
+        if (!is_array($where)) {
             return null;
         }
 
         $w = self::stripMangaTextSearchKeys($where);
-        $filter = self::buildMangaFilter($w);
+        $wf = $w;
+        unset($wf['_string']);
+        $filter = self::buildMangaFilter($wf);
         if ($filter === null) {
             return null;
         }
@@ -627,81 +634,67 @@ class MeilisearchListBridge
      */
     private static function buildVodFilter(array $w)
     {
-        $parts = ['kind = "vod"', 'recycle = 0', 'status = 1'];
-        $allowed = [
-            'type_id', 'type_id|type_id_1', 'vod_level', 'vod_year', 'vod_area', 'vod_lang',
-            'vod_state', 'vod_version', 'vod_isend', 'vod_plot', 'vod_time', 'vod_time_add', 'vod_time_hits',
-            'group_id',
-        ];
-        foreach ($w as $key => $val) {
-            if ($key === 'vod_status') {
-                continue;
-            }
-            if ($key === 'vod_id' || $key === 'vod_name' || strpos($key, 'vod_rel') === 0) {
-                return null;
-            }
-            if (!in_array($key, $allowed, true)) {
-                return null;
-            }
-            if (is_array($val) && isset($val[0]) && is_array($val[0])) {
-                return null;
-            }
-        }
-        $f = self::thinkCondToMeili('type_id', $w['type_id'] ?? null, true);
-        if ($f === false) {
+        // 唯一强制中止：$where 已有 vod_id 约束（ids 参数优先级高于 wd，属于直接 ID 查询而非搜索，让 MySQL 按 ids 走）
+        if (isset($w['vod_id'])) {
             return null;
         }
-        if ($f !== '') {
-            $parts[] = $f;
+
+        $parts = ['kind = "vod"', 'recycle = 0', 'status = 1'];
+
+        // --- 以下所有条件：能翻译加进 filter，不能翻译静默跳过（条件留在 $nw 由 MySQL 后置处理缩小 ID 集）---
+
+        // type_id（兼容原始 scalar 和 ThinkPHP array 格式）
+        if (isset($w['type_id'])) {
+            $f = self::thinkCondToMeili('type_id', $w['type_id'], true);
+            if ($f !== false && $f !== '') {
+                $parts[] = $f;
+            }
         }
+
+        // type_id|type_id_1（大分类，用 OR）
         if (isset($w['type_id|type_id_1'])) {
             $t = self::parseEq($w['type_id|type_id_1']);
-            if ($t === null) {
-                return null;
-            }
-            $parts[] = '(type_id = ' . $t . ' OR type_id_1 = ' . $t . ')';
-        }
-        if (isset($w['vod_status'])) {
-            if (!is_array($w['vod_status']) || ($w['vod_status'][0] ?? '') !== 'eq' || (int)($w['vod_status'][1] ?? 0) !== 1) {
-                return null;
+            if ($t !== null) {
+                $parts[] = '(type_id = ' . $t . ' OR type_id_1 = ' . $t . ')';
             }
         }
+
+        // 数值等值/IN 过滤
         foreach (['vod_level' => 'level', 'group_id' => 'group_id', 'vod_isend' => 'isend', 'vod_plot' => 'plot'] as $tk => $mk) {
             if (!isset($w[$tk])) {
                 continue;
             }
             $f = self::thinkCondToMeili($mk, $w[$tk], true);
-            if ($f === false) {
-                return null;
-            }
-            if ($f !== '') {
+            if ($f !== false && $f !== '') {
                 $parts[] = $f;
             }
         }
+
+        // 字符串等值/IN 过滤
         foreach (['vod_year' => 'year', 'vod_area' => 'area', 'vod_lang' => 'lang', 'vod_state' => 'state', 'vod_version' => 'version'] as $tk => $mk) {
             if (!isset($w[$tk])) {
                 continue;
             }
             $f = self::thinkStringInOrEq($mk, $w[$tk]);
-            if ($f === false) {
-                return null;
-            }
-            if ($f !== '') {
+            if ($f !== false && $f !== '') {
                 $parts[] = $f;
             }
         }
+
+        // 时间范围过滤（支持单条件 ['gt',ts] 和双范围 [['gt',ts1],['lt',ts2]]）
         foreach (['vod_time' => 'ts', 'vod_time_add' => 'ts', 'vod_time_hits' => 'ts'] as $tk => $mk) {
             if (!isset($w[$tk])) {
                 continue;
             }
             $f = self::thinkTimeToMeili($w[$tk], $mk);
-            if ($f === false) {
-                return null;
-            }
-            if ($f !== '') {
+            if ($f !== false && $f !== '') {
                 $parts[] = $f;
             }
         }
+
+        // 其余所有 key（vod_play_from / vod_name / _string 已在上游 strip/unset，不会到达这里；
+        // 如有残留未知 key，静默跳过，由 MySQL 在缩小后的 ID 集上后置处理）
+
         return implode(' AND ', $parts);
     }
 
@@ -1115,7 +1108,14 @@ class MeilisearchListBridge
         if ($cond === null) {
             return '';
         }
-        if (!is_array($cond) || !isset($cond[0])) {
+        // 原始 scalar（ThinkPHP 直接赋值等值，如 $where['type_id'] = 1 或 '1'）
+        if (!is_array($cond)) {
+            if ($numeric) {
+                return $field . ' = ' . (int)$cond;
+            }
+            return $field . ' = "' . self::escStr((string)$cond) . '"';
+        }
+        if (!isset($cond[0])) {
             return false;
         }
         $op = $cond[0];
@@ -1170,8 +1170,25 @@ class MeilisearchListBridge
         if (!is_array($cond) || !isset($cond[0])) {
             return false;
         }
-        if ($cond[0] === 'gt' && isset($cond[1])) {
-            return $meiliField . ' > ' . (int)$cond[1];
+        // 嵌套范围：[['gt', ts1], ['lt', ts2]]（h 参数生成的时间窗口）
+        if (is_array($cond[0])) {
+            $parts = [];
+            $opMap = ['gt' => '>', 'egt' => '>=', 'lt' => '<', 'elt' => '<='];
+            foreach ($cond as $c) {
+                if (!is_array($c) || !isset($c[0], $c[1])) {
+                    return false;
+                }
+                if (!isset($opMap[$c[0]])) {
+                    return false;
+                }
+                $parts[] = $meiliField . ' ' . $opMap[$c[0]] . ' ' . (int)$c[1];
+            }
+            return empty($parts) ? '' : implode(' AND ', $parts);
+        }
+        // 单条件
+        $opMap = ['gt' => '>', 'egt' => '>=', 'lt' => '<', 'elt' => '<='];
+        if (isset($opMap[$cond[0]]) && isset($cond[1])) {
+            return $meiliField . ' ' . $opMap[$cond[0]] . ' ' . (int)$cond[1];
         }
         return false;
     }
