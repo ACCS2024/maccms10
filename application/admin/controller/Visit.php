@@ -1,6 +1,6 @@
 <?php
 namespace app\admin\controller;
-use think\Db;
+use think\facade\Db;
 
 class Visit extends Base
 {
@@ -11,7 +11,7 @@ class Visit extends Base
 
     public function index()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $param['page'] = intval($param['page']) <1 ? 1 : $param['page'];
         $param['limit'] = intval($param['limit']) <1 ? $this->_pagesize : $param['limit'];
         $where=[];
@@ -38,7 +38,7 @@ class Visit extends Base
         }
 
         $order='visit_id desc';
-        $res = model('Visit')->listData($where,$order,$param['page'],$param['limit']);
+        $res = (new \app\common\model\Visit())->listData($where,$order,$param['page'],$param['limit']);
 
         $this->assign('list',$res['list']);
         $this->assign('total',$res['total']);
@@ -55,7 +55,7 @@ class Visit extends Base
 
     public function del()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $ids = $param['ids'];
         $all = $param['all'];
         if(!empty($ids)){
@@ -64,7 +64,7 @@ class Visit extends Base
             if($all==1){
                 $where[] = ['visit_id', '>', 0];
             }
-            $res = model('Visit')->delData($where);
+            $res = (new \app\common\model\Visit())->delData($where);
             if($res['code']>1){
                 return $this->error($res['msg']);
             }

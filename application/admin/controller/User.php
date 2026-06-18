@@ -1,6 +1,6 @@
 <?php
 namespace app\admin\controller;
-use think\Db;
+use think\facade\Db;
 
 class User extends Base
 {
@@ -11,12 +11,12 @@ class User extends Base
 
     public function data()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $param['page'] = intval($param['page']) <1 ? 1 : $param['page'];
         $param['limit'] = intval($param['limit']) <1 ? $this->_pagesize : $param['limit'];
 
         if($param['page'] ==1){
-            model('User')->expire();
+            (new \app\common\model\User())->expire();
         }
 
         $where=[];
@@ -32,9 +32,9 @@ class User extends Base
         }
 
         $order='user_id desc';
-        $res = model('User')->listData($where,$order,$param['page'],$param['limit']);
+        $res = (new \app\common\model\User())->listData($where,$order,$param['page'],$param['limit']);
 
-        $group_list = model('Group')->getCache('group_list');
+        $group_list = (new \app\common\model\Group())->getCache('group_list');
         foreach($res['list'] as $k=>$v){
             $group_ids = explode(',', $v['group_id']);
             $names = [];
@@ -63,7 +63,7 @@ class User extends Base
 
     public function reward()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $param['page'] = intval($param['page']) <1 ? 1 : $param['page'];
         $param['limit'] = intval($param['limit']) <1 ? $this->_pagesize : $param['limit'];
         $param['uid'] = intval($param['uid']);
@@ -89,8 +89,8 @@ class User extends Base
         }
 
         $order='user_id desc';
-        $res = model('User')->listData($where,$order,$param['page'],$param['limit']);
-        $group_list = model('Group')->getCache('group_list');
+        $res = (new \app\common\model\User())->listData($where,$order,$param['page'],$param['limit']);
+        $group_list = (new \app\common\model\Group())->getCache('group_list');
         foreach($res['list'] as $k=>$v){
             $res['list'][$k]['group_name'] = $group_list[$v['group_id']]['group_name'];
         }
@@ -144,7 +144,7 @@ class User extends Base
 
     public function invite()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $param['page'] = intval($param['page']) <1 ? 1 : $param['page'];
         $param['limit'] = intval($param['limit']) <1 ? $this->_pagesize : $param['limit'];
 
@@ -159,9 +159,9 @@ class User extends Base
         }
 
         $order='user_invite_count desc, user_id desc';
-        $res = model('User')->listData($where,$order,$param['page'],$param['limit']);
+        $res = (new \app\common\model\User())->listData($where,$order,$param['page'],$param['limit']);
         
-        $group_list = model('Group')->getCache('group_list');
+        $group_list = (new \app\common\model\Group())->getCache('group_list');
         
         $user_ids = array_column($res['list'], 'user_id');
         $invited_users_map = [];
@@ -211,7 +211,7 @@ class User extends Base
     public function info()
     {
         if (Request()->isPost()) {
-            $param = input('post.');
+            $param = \think\facade\Request::post();
             if(isset($param['group_id']) && is_array($param['group_id'])) {
                 $param['group_id'] = implode(',', $param['group_id']);
             }
@@ -224,20 +224,20 @@ class User extends Base
                     $param[$__xss_f] = htmlspecialchars(trim($param[$__xss_f]));
                 }
             }
-            $res = model('User')->saveData($param);
+            $res = (new \app\common\model\User())->saveData($param);
             if($res['code']>1){
                 return $this->error($res['msg']);
             }
             return $this->success($res['msg']);
         }
 
-        $id = input('id/d');
+        $id = (int)\think\facadeRequest::param("id");
         $where=[];
         $where['user_id'] = $id;
-        $res = model('User')->infoData($where);
+        $res = (new \app\common\model\User())->infoData($where);
         $info = $res['info'];
 
-        $group_list = model('Group')->getCache('group_list');
+        $group_list = (new \app\common\model\Group())->getCache('group_list');
         $group_ids = isset($info['group_id']) ? explode(',', $info['group_id']) : [];
         $has_vip_group = false;
         foreach($group_ids as $gid){
@@ -254,13 +254,13 @@ class User extends Base
 
     public function del()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $ids = $param['ids'];
 
         if(!empty($ids)){
             $where=[];
             $where['user_id'] = $ids;
-            $res = model('User')->delData($where);
+            $res = (new \app\common\model\User())->delData($where);
             if($res['code']>1){
                 return $this->error($res['msg']);
             }
@@ -271,7 +271,7 @@ class User extends Base
 
     public function field()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $ids = $param['ids'];
         $col = $param['col'];
         $val = $param['val'];
@@ -280,7 +280,7 @@ class User extends Base
             $where=[];
             $where['user_id'] = $ids;
 
-            $res = model('User')->fieldData($where,$col,$val);
+            $res = (new \app\common\model\User())->fieldData($where,$col,$val);
             if($res['code']>1){
                 return $this->error($res['msg']);
             }
@@ -292,14 +292,14 @@ class User extends Base
     public function generateInviteCode()
     {
         $count = 0;
-        $model = model('User');
+        $model = (new \app\common\model\User());
         
-        \think\Db::name('User')
+        \think\facade\Db::name('User')
             ->where('user_invite_code', '=', '')
             ->chunk(500, function ($users) use ($model, &$count) {
                 foreach ($users as $user) {
                     $invite_code = $model->generateUniqueInviteCode($user['user_id']);
-                    \think\Db::name('User')
+                    \think\facade\Db::name('User')
                         ->where('user_id', $user['user_id'])
                         ->update(['user_invite_code' => $invite_code]);
                     $count++;

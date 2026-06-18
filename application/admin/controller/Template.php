@@ -1,6 +1,6 @@
 <?php
 namespace app\admin\controller;
-use think\Db;
+use think\facade\Db;
 
 class Template extends Base
 {
@@ -11,7 +11,7 @@ class Template extends Base
 
     public function index()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $path = $param['path'];
         $path = str_replace('\\','',$path);
         $path = str_replace('/','',$path);
@@ -148,7 +148,7 @@ class Template extends Base
 
     public function info()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
 
         $fname = $param['fname'];
         $fpath = $param['fpath'];
@@ -213,7 +213,7 @@ class Template extends Base
 
     public function del()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $fname = $param['fname'];
         if(!empty($fname)){
             if(!is_array($fname)){

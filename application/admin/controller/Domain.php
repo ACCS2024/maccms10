@@ -1,8 +1,8 @@
 <?php
 namespace app\admin\controller;
-use think\Db;
-use think\Config;
-use think\Cache;
+use think\facade\Db;
+use think\facade\Config;
+use think\facade\Cache;
 
 class Domain extends Base
 {
@@ -10,7 +10,7 @@ class Domain extends Base
     public function index()
     {
         if (Request()->isPost()) {
-            $config = input();
+            $config = \think\facadeRequest::param();
 
             $tmp = $config['domain'];
             $domain=[];
@@ -55,7 +55,7 @@ class Domain extends Base
 
     public function del()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         if(!empty($param['ids'])){
             $list = config('domain');
             unset($list[$param['ids']]);

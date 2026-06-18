@@ -1,6 +1,6 @@
 <?php
 namespace app\admin\controller;
-use think\Db;
+use think\facade\Db;
 use think\Log;
 use app\common\util\UeditorAiCsrf;
 use app\common\util\UeditorAiProxy;
@@ -16,7 +16,7 @@ class Upload extends Base
 
     public function index()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $this->assign('path',$param['path']);
         $this->assign('id',$param['id']);
 
@@ -37,7 +37,7 @@ class Upload extends Base
 
     public function upload($p=[])
     {
-		return model('Upload')->upload($p);
+		return (new \app\common\model\Upload())->upload($p);
     }
 
     /**
@@ -46,7 +46,7 @@ class Upload extends Base
     public function ueditorAi()
     {
         /* 对话框与后台可能不同 iframe/静态域，读不到 UE_AI_CSRF；用同源 GET + Cookie 取 session 内令牌再 POST */
-        if ($this->request->isGet() && (string) input('fetch_csrf', '') === '1') {
+        if ($this->request->isGet() && (string) \think\facade\Request::param("fetch_csrf", "") === '1') {
             return json(['code' => 0, 'msg' => 'ok', 'data' => ['token' => UeditorAiCsrf::token()]]);
         }
 

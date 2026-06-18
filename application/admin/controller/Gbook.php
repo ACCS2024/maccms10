@@ -1,6 +1,6 @@
 <?php
 namespace app\admin\controller;
-use think\Db;
+use think\facade\Db;
 
 class Gbook extends Base
 {
@@ -11,7 +11,7 @@ class Gbook extends Base
 
     public function data()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $param['page'] = intval($param['page']) <1 ? 1 : $param['page'];
         $param['limit'] = intval($param['limit']) <1 ? $this->_pagesize : $param['limit'];
 
@@ -40,7 +40,7 @@ class Gbook extends Base
 
 
         $order='gbook_id desc';
-        $res = model('Gbook')->listData($where,$order,$param['page'],$param['limit']);
+        $res = (new \app\common\model\Gbook())->listData($where,$order,$param['page'],$param['limit']);
 
         $this->assign('list',$res['list']);
         $this->assign('total',$res['total']);
@@ -57,18 +57,18 @@ class Gbook extends Base
     public function info()
     {
         if (Request()->isPost()) {
-            $param = input();
-            $res = model('Gbook')->saveData($param);
+            $param = \think\facadeRequest::param();
+            $res = (new \app\common\model\Gbook())->saveData($param);
             if($res['code']>1){
                 return $this->error($res['msg']);
             }
             return $this->success($res['msg']);
         }
 
-        $id = input('id');
+        $id = \think\facadeRequest::param("id");
         $where=[];
         $where['gbook_id'] = $id;
-        $res = model('Gbook')->infoData($where);
+        $res = (new \app\common\model\Gbook())->infoData($where);
 
         $this->assign('info',$res['info']);
         $this->assign('title',lang('admin/gbook/title'));
@@ -77,7 +77,7 @@ class Gbook extends Base
 
     public function del()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $ids = $param['ids'];
         $all = $param['all'];
 
@@ -87,7 +87,7 @@ class Gbook extends Base
             if($all==1){
                 $where[] = ['gbook_id', '>', 0];
             }
-            $res = model('Gbook')->delData($where);
+            $res = (new \app\common\model\Gbook())->delData($where);
             if($res['code']>1){
                 return $this->error($res['msg']);
             }
@@ -98,7 +98,7 @@ class Gbook extends Base
 
     public function field()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $ids = $param['ids'];
         $col = $param['col'];
         $val = $param['val'];
@@ -107,7 +107,7 @@ class Gbook extends Base
             $where=[];
             $where['gbook_id'] = $ids;
 
-            $res = model('Gbook')->fieldData($where,$col,$val);
+            $res = (new \app\common\model\Gbook())->fieldData($where,$col,$val);
             if($res['code']>1){
                 return $this->error($res['msg']);
             }

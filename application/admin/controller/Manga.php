@@ -1,6 +1,6 @@
 <?php
 namespace app\admin\controller;
-use think\Db;
+use think\facade\Db;
 use app\common\util\Pinyin;
 
 class Manga extends Base
@@ -12,7 +12,7 @@ class Manga extends Base
 
     public function data()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $param['page'] = intval($param['page']) < 1 ? 1 : $param['page'];
         $param['limit'] = intval($param['limit']) < 1 ? $this->_pagesize : $param['limit'];
 
@@ -70,11 +70,11 @@ class Manga extends Base
                 Db::execute('INSERT INTO `'.config('database.prefix').'tmpmanga` (SELECT min(manga_id)as id1,manga_name as name1 FROM '.config('database.prefix').'manga WHERE manga_recycle_time = 0 GROUP BY name1 HAVING COUNT(name1)>1)');
             }
             $order='manga_name asc';
-            $res = model('Manga')->listRepeatData($where,$order,$param['page'],$param['limit']);
+            $res = (new \app\common\model\Manga())->listRepeatData($where,$order,$param['page'],$param['limit']);
         }
         else{
             $order='manga_time desc';
-            $res = model('Manga')->listData($where,$order,$param['page'],$param['limit']);
+            $res = (new \app\common\model\Manga())->listData($where,$order,$param['page'],$param['limit']);
         }
 
         foreach($res['list'] as $k=>&$v){
@@ -93,7 +93,7 @@ class Manga extends Base
         $param['limit'] = '{limit}';
         $this->assign('param', $param);
 
-        $type_tree = model('Type')->getCache('type_tree');
+        $type_tree = (new \app\common\model\Type())->getCache('type_tree');
         $this->assign('type_tree', $type_tree);
 
         $this->assign('title', lang('admin/manga/title'));
@@ -102,7 +102,7 @@ class Manga extends Base
 
     public function batch()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         if (!empty($param)) {
 
             mac_echo('<style type="text/css">body{font-size:12px;color: #333333;line-height:21px;}span{font-weight:bold;color:#FF0000}</style>');
@@ -112,13 +112,13 @@ class Manga extends Base
             }
             $where = $this->mangaBatchFilterWhere($param);
             if($param['ck_del'] == 1){
-                $res = model('Manga')->recycleData($where);
+                $res = (new \app\common\model\Manga())->recycleData($where);
                 mac_echo($res['code'] == 1 ? lang('recycle_ok') : $res['msg']);
                 mac_jump( url('manga/batch') ,3);
                 exit;
             }
             if($param['ck_del'] == 4){
-                $res = model('Manga')->delData($where);
+                $res = (new \app\common\model\Manga())->delData($where);
                 mac_echo(lang('multi_del_ok'));
                 mac_jump( url('manga/batch') ,3);
                 exit;
@@ -131,7 +131,7 @@ class Manga extends Base
                 $param['limit'] = 100;
             }
             if(empty($param['total'])) {
-                $param['total'] = model('Manga')->countData($where);
+                $param['total'] = (new \app\common\model\Manga())->countData($where);
                 $param['page_count'] = ceil($param['total'] / $param['limit']);
             }
 
@@ -144,7 +144,7 @@ class Manga extends Base
 
             $page = $param['page_count'] - $param['page'] + 1;
             $order='manga_id desc';
-            $res = model('Manga')->listData($where,$order,$page,$param['limit']);
+            $res = (new \app\common\model\Manga())->listData($where,$order,$page,$param['limit']);
 
             foreach($res['list'] as  $k=>$v){
                 $where2 = [];
@@ -178,7 +178,7 @@ class Manga extends Base
                     if(!empty($replaceres['des'])) $des .= $replaceres['des'];
                 }
                 mac_echo($des);
-                $res2 = model('Manga')->where($where2)->update($update);
+                $res2 = (new \app\common\model\Manga())->where($where2)->update($update);
 
             }
             $param['page']++;
@@ -187,7 +187,7 @@ class Manga extends Base
             exit;
         }
 
-        $type_tree = model('Type')->getCache('type_tree');
+        $type_tree = (new \app\common\model\Type())->getCache('type_tree');
         $this->assign('type_tree',$type_tree);
 
         $this->assign('title',lang('admin/manga/title'));
@@ -233,7 +233,7 @@ class Manga extends Base
 
     public function exportData()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $where = $this->mangaBatchFilterWhere($param);
         $this->base_export($param,'manga',$where);
     }
@@ -246,19 +246,19 @@ class Manga extends Base
     public function info()
     {
         if (Request()->isPost()) {
-            $param = input('post.');
-            $res = model('Manga')->saveData($param);
+            $param = \think\facade\Request::post();
+            $res = (new \app\common\model\Manga())->saveData($param);
             if($res['code']>1){
                 return $this->error($res['msg']);
             }
             return $this->success($res['msg']);
         }
 
-        $id = input('id');
+        $id = \think\facadeRequest::param("id");
         $where=[];
         $where['manga_id'] = $id;
         $where['_recycle'] = 'all';
-        $res = model('Manga')->infoData($where);
+        $res = (new \app\common\model\Manga())->infoData($where);
 
         $info = $res['info'];
         if (empty($info)) {
@@ -267,7 +267,7 @@ class Manga extends Base
         $this->assign('info',$info);
         $this->assign('manga_page_list', !empty($info['manga_page_list']) ? (array)$info['manga_page_list'] : []);
 
-        $type_tree = model('Type')->getCache('type_tree');
+        $type_tree = (new \app\common\model\Type())->getCache('type_tree');
         $this->assign('type_tree',$type_tree);
 
         $this->assign('title',lang('admin/manga/title'));
@@ -276,13 +276,13 @@ class Manga extends Base
 
     public function restore()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $ids = $param['ids'];
         if (empty($ids)) {
             return $this->error(lang('param_err'));
         }
         $where = ['manga_id' => ['in', $ids]];
-        $res = model('Manga')->restoreData($where);
+        $res = (new \app\common\model\Manga())->restoreData($where);
         if ($res['code'] > 1) {
             return $this->error($res['msg']);
         }
@@ -291,7 +291,7 @@ class Manga extends Base
 
     public function del()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $ids = $param['ids'];
         $purge = !empty($param['purge']);
 
@@ -299,9 +299,9 @@ class Manga extends Base
             $where=[];
             $where['manga_id'] = $ids;
             if ($purge) {
-                $res = model('Manga')->delData($where);
+                $res = (new \app\common\model\Manga())->delData($where);
             } else {
-                $res = model('Manga')->recycleData($where);
+                $res = (new \app\common\model\Manga())->recycleData($where);
             }
             if($res['code']>1){
                 return $this->error($res['msg']);
@@ -314,7 +314,7 @@ class Manga extends Base
                 $st=' in ';
             }
             $sql = 'delete from '.config('database.prefix').'manga where manga_name in(select name1 from '.config('database.prefix').'tmpmanga) and manga_id '.$st.'(select id1 from '.config('database.prefix').'tmpmanga)';
-            $res = model('Manga')->execute($sql);
+            $res = (new \app\common\model\Manga())->execute($sql);
             if($res===false){
                 return $this->success(lang('del_err'));
             }
@@ -325,7 +325,7 @@ class Manga extends Base
 
     public function field()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $ids = $param['ids'];
         $col = $param['col'];
         $val = $param['val'];
@@ -342,11 +342,11 @@ class Manga extends Base
             if(empty($start)) {
                 $update[$col] = $val;
                 if($col == 'type_id'){
-                    $type_list = model('Type')->getCache();
+                    $type_list = (new \app\common\model\Type())->getCache();
                     $id1 = intval($type_list[$val]['type_pid']);
                     $update['type_id_1'] = $id1;
                 }
-                $res = model('Manga')->fieldData($where, $update);
+                $res = (new \app\common\model\Manga())->fieldData($where, $update);
             }
             else{
                 if(empty($end)){$end = 9999;}
@@ -355,7 +355,7 @@ class Manga extends Base
                     $val = rand($start,$end);
                     $where['manga_id'] = $v;
                     $update[$col] = $val;
-                    $res = model('Manga')->fieldData($where, $update);
+                    $res = (new \app\common\model\Manga())->fieldData($where, $update);
                 }
             }
             if($res['code']>1){
@@ -368,15 +368,15 @@ class Manga extends Base
 
     public function updateToday()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $flag = $param['flag'];
-        $res = model('Manga')->updateToday($flag);
+        $res = (new \app\common\model\Manga())->updateToday($flag);
         return json($res);
     }
 
     public function batchGenerateTag()
     {
-        $ids = input('post.ids/a');
+        $ids = \think\facade\Request::post("ids", []);
         if(empty($ids)){
             return json(['code'=>0,'msg'=>lang('admin/tag/select_manga_tag')]);
         }
@@ -384,11 +384,11 @@ class Manga extends Base
         $success = 0;
         $fail = 0;
         foreach($ids as $id){
-            $info = model('Manga')->where('manga_id',$id)->find();
+            $info = (new \app\common\model\Manga())->where('manga_id',$id)->find();
             if($info){
                 $tag = mac_get_tag($info['manga_name'], $info['manga_content']);
                 if($tag !== false){
-                    $res = model('Manga')->where('manga_id',$id)->update(['manga_tag'=>$tag]);
+                    $res = (new \app\common\model\Manga())->where('manga_id',$id)->update(['manga_tag'=>$tag]);
                     if($res){
                         $success++;
                     }else{

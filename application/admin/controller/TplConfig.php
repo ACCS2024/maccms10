@@ -10,7 +10,7 @@ class TplConfig extends Base
     public function theme()
     {
         if (request()->isPost()) {
-            $tplconfig = input();
+            $tplconfig = \think\facadeRequest::param();
             if (empty($tplconfig) || !isset($tplconfig['theme'])) {
                 return $this->error(lang('param_err'));
             }
@@ -150,7 +150,7 @@ class TplConfig extends Base
         }
 
         $tplconfig = isset($GLOBALS['mctheme']) ? $GLOBALS['mctheme'] : (config('mctheme') ?: ['theme' => []]);
-        $type_tree = model('Type')->getCache('type_tree');
+        $type_tree = (new \app\common\model\Type())->getCache('type_tree');
         if (!is_array($type_tree)) {
             $type_tree = [];
         }

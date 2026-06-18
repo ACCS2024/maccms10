@@ -1,7 +1,7 @@
 <?php
 namespace app\admin\controller;
-use think\Db;
-use think\Cache;
+use think\facade\Db;
+use think\facade\Cache;
 
 class Collect extends Base
 {
@@ -34,13 +34,13 @@ class Collect extends Base
             mac_arr2file(APP_PATH . 'extra/maccms.php', $config);
         }
 
-        $param = input();
+        $param = \think\facadeRequest::param();
         $param['page'] = intval($param['page']) < 1 ? 1 : $param['page'];
         $param['limit'] = intval($param['limit']) < 1 ? 100 : $param['limit'];
         $where = [];
 
         $order = 'collect_id desc';
-        $res = model('Collect')->listData($where, $order, $param['page'], $param['limit']);
+        $res = (new \app\common\model\Collect())->listData($where, $order, $param['page'], $param['limit']);
 
         $this->assign('list', $res['list']);
         $this->assign('total', $res['total']);
@@ -78,30 +78,30 @@ class Collect extends Base
 
     public function test()
     {
-        $param = input();
-        $res = model('Collect')->vod($param);
+        $param = \think\facadeRequest::param();
+        $res = (new \app\common\model\Collect())->vod($param);
         return json($res);
     }
 
     public function info()
     {
         if (Request()->isPost()) {
-            $param = input('post.');
+            $param = \think\facade\Request::post();
             $validate = \think\Loader::validate('Token');
             if(!$validate->check($param)){
                 return $this->error($validate->getError());
             }
-            $res = model('Collect')->saveData($param);
+            $res = (new \app\common\model\Collect())->saveData($param);
             if ($res['code'] > 1) {
                 return $this->error($res['msg']);
             }
             return $this->success($res['msg']);
         }
 
-        $id = input('id');
+        $id = \think\facadeRequest::param("id");
         $where = [];
         $where['collect_id'] = $id;
-        $res = model('Collect')->infoData($where);
+        $res = (new \app\common\model\Collect())->infoData($where);
         $this->assign('info', $res['info']);
         $this->assign('title', lang('admin/collect/title'));
         return $this->fetch('admin@collect/info');
@@ -109,14 +109,14 @@ class Collect extends Base
 
     public function del()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $ids = $param['ids'];
 
         if (!empty($ids)) {
             $where = [];
             $where['collect_id'] = $ids;
 
-            $res = model('Collect')->delData($where);
+            $res = (new \app\common\model\Collect())->delData($where);
             if ($res['code'] > 1) {
                 return $this->error($res['msg']);
             }
@@ -153,7 +153,7 @@ class Collect extends Base
 
     public function load()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $key = $GLOBALS['config']['app']['cache_flag']. '_'. 'collect_break_' . $param['flag'];
         $collect_break = Cache::get($key);
         $url = $this->_ref;
@@ -166,13 +166,13 @@ class Collect extends Base
 
     public function api($pp = [])
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         if (!empty($pp)) {
             $param = $pp;
         }
 
         //分类
-        $type_list = model('Type')->getCache('type_list');
+        $type_list = (new \app\common\model\Type())->getCache('type_list');
         $this->assign('type_list', $type_list);
 
         if (!empty($param['pg'])) {
@@ -202,7 +202,7 @@ class Collect extends Base
     public function timing()
     {
         //当日视频分类ids
-        $res = model('Vod')->updateToday('type');
+        $res = (new \app\common\model\Vod())->updateToday('type');
         $this->assign('vod_type_ids_today', $res['data']);
 
         return $this->fetch('admin@collect/timing');
@@ -210,7 +210,7 @@ class Collect extends Base
 
     public function clearbind()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $config = [];
         if(!empty($param['cjflag'])){
             $bind_list = config('bind');
@@ -230,7 +230,7 @@ class Collect extends Base
 
     public function bind()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $ids = $param['ids'];
         $col = $param['col'];
         $val = $param['val'];
@@ -245,7 +245,7 @@ class Collect extends Base
             $data['local_type_name'] = '';
             if(intval($val)>0){
                 $data['st'] = 1;
-                $type_list = model('Type')->getCache('type_list');
+                $type_list = (new \app\common\model\Type())->getCache('type_list');
                 $data['local_type_name'] = $type_list[$val]['type_name'];
             }
 
@@ -264,7 +264,7 @@ class Collect extends Base
             $key = $GLOBALS['config']['app']['cache_flag']. '_'.'collect_break_vod';
             Cache::set($key, url('collect/api').'?'. http_build_query($param) );
         }
-        $res = model('Collect')->vod($param);
+        $res = (new \app\common\model\Collect())->vod($param);
         if($res['code']>1){
             return $this->error($res['msg']);
         }
@@ -272,7 +272,7 @@ class Collect extends Base
         if($param['ac'] == 'list'){
 
             $bind_list = config('bind');
-            $type_list = model('Type')->getCache('type_list');
+            $type_list = (new \app\common\model\Type())->getCache('type_list');
 
             foreach($res['type'] as $k=>$v){
                 $key = $param['cjflag'] . '_' . $v['type_id'];
@@ -308,7 +308,7 @@ class Collect extends Base
         $page_now = isset($param['page']) && strlen($param['page']) > 0 ? (int)$param['page'] : 1;
         mac_echo('<title>' . $page_now . '/' . (int)$res['page']['pagecount'] . ' collecting..</title>');
         mac_echo('<style type="text/css">body{font-size:12px;color: #333333;line-height:21px;}span{font-weight:bold;color:#FF0000}</style>');
-        model('Collect')->vod_data($param,$res );
+        (new \app\common\model\Collect())->vod_data($param,$res );
 
     }
 
@@ -318,7 +318,7 @@ class Collect extends Base
             $key = $GLOBALS['config']['app']['cache_flag']. '_'.'collect_break_art';
             Cache::set($key, url('collect/api').'?'. http_build_query($param) );
         }
-        $res = model('Collect')->art($param);
+        $res = (new \app\common\model\Collect())->art($param);
         if($res['code']>1){
             return $this->error($res['msg']);
         }
@@ -326,7 +326,7 @@ class Collect extends Base
         if($param['ac'] == 'list'){
 
             $bind_list = config('bind');
-            $type_list = model('Type')->getCache('type_list');
+            $type_list = (new \app\common\model\Type())->getCache('type_list');
 
             foreach($res['type'] as $k=>$v){
                 $key = $param['cjflag'] . '_' . $v['type_id'];
@@ -361,7 +361,7 @@ class Collect extends Base
         }
 
         mac_echo('<style type="text/css">body{font-size:12px;color: #333333;line-height:21px;}span{font-weight:bold;color:#FF0000}</style>');
-        model('Collect')->art_data($param,$res );
+        (new \app\common\model\Collect())->art_data($param,$res );
     }
 
     public function actor($param)
@@ -370,7 +370,7 @@ class Collect extends Base
             $key = $GLOBALS['config']['app']['cache_flag']. '_'.'collect_break_actor';
             Cache::set($key, url('collect/api').'?'. http_build_query($param) );
         }
-        $res = model('Collect')->actor($param);
+        $res = (new \app\common\model\Collect())->actor($param);
         if($res['code']>1){
             return $this->error($res['msg']);
         }
@@ -378,7 +378,7 @@ class Collect extends Base
         if($param['ac'] == 'list'){
 
             $bind_list = config('bind');
-            $type_list = model('Type')->getCache('type_list');
+            $type_list = (new \app\common\model\Type())->getCache('type_list');
 
             foreach($res['type'] as $k=>$v){
                 $key = $param['cjflag'] . '_' . $v['type_id'];
@@ -413,7 +413,7 @@ class Collect extends Base
         }
 
         mac_echo('<style type="text/css">body{font-size:12px;color: #333333;line-height:21px;}span{font-weight:bold;color:#FF0000}</style>');
-        model('Collect')->actor_data($param,$res );
+        (new \app\common\model\Collect())->actor_data($param,$res );
     }
 
     public function role($param)
@@ -422,7 +422,7 @@ class Collect extends Base
             $key = $GLOBALS['config']['app']['cache_flag']. '_'.'collect_break_role';
             Cache::set($key, url('collect/api') . '?' . http_build_query($param));
         }
-        $res = model('Collect')->role($param);
+        $res = (new \app\common\model\Collect())->role($param);
         if ($res['code'] > 1) {
             return $this->error($res['msg']);
         }
@@ -430,7 +430,7 @@ class Collect extends Base
         if ($param['ac'] == 'list') {
 
             $bind_list = config('bind');
-            $type_list = model('Type')->getCache('type_list');
+            $type_list = (new \app\common\model\Type())->getCache('type_list');
 
             foreach ($res['type'] as $k => $v) {
                 $key = $param['cjflag'] . '_' . $v['type_id'];
@@ -465,7 +465,7 @@ class Collect extends Base
         }
 
         mac_echo('<style type="text/css">body{font-size:12px;color: #333333;line-height:21px;}span{font-weight:bold;color:#FF0000}</style>');
-        model('Collect')->role_data($param,$res );
+        (new \app\common\model\Collect())->role_data($param,$res );
     }
 
     public function website($param)
@@ -474,7 +474,7 @@ class Collect extends Base
             $key = $GLOBALS['config']['app']['cache_flag']. '_'.'collect_break_website';
             Cache::set($key, url('collect/api') . '?' . http_build_query($param));
         }
-        $res = model('Collect')->website($param);
+        $res = (new \app\common\model\Collect())->website($param);
         if ($res['code'] > 1) {
             return $this->error($res['msg']);
         }
@@ -482,7 +482,7 @@ class Collect extends Base
         if ($param['ac'] == 'list') {
 
             $bind_list = config('bind');
-            $type_list = model('Type')->getCache('type_list');
+            $type_list = (new \app\common\model\Type())->getCache('type_list');
 
             foreach ($res['type'] as $k => $v) {
                 $key = $param['cjflag'] . '_' . $v['type_id'];
@@ -517,7 +517,7 @@ class Collect extends Base
         }
 
         mac_echo('<style type="text/css">body{font-size:12px;color: #333333;line-height:21px;}span{font-weight:bold;color:#FF0000}</style>');
-        model('Collect')->website_data($param,$res );
+        (new \app\common\model\Collect())->website_data($param,$res );
     }
 
     public function manga($param)
@@ -526,7 +526,7 @@ class Collect extends Base
             $key = $GLOBALS['config']['app']['cache_flag']. '_'.'collect_break_manga';
             Cache::set($key, url('collect/api').'?'. http_build_query($param) );
         }
-        $res = model('Collect')->manga($param);
+        $res = (new \app\common\model\Collect())->manga($param);
         if($res['code']>1){
             return $this->error($res['msg']);
         }
@@ -534,7 +534,7 @@ class Collect extends Base
         if($param['ac'] == 'list'){
 
             $bind_list = config('bind');
-            $type_list = model('Type')->getCache('type_list');
+            $type_list = (new \app\common\model\Type())->getCache('type_list');
             $manga_type_list = [];
             foreach($type_list as $k=>$v){
                 if($v['type_mid'] == 12){
@@ -576,6 +576,6 @@ class Collect extends Base
         }
 
         mac_echo('<style type="text/css">body{font-size:12px;color: #333333;line-height:21px;}span{font-weight:bold;color:#FF0000}</style>');
-        model('Collect')->manga_data($param,$res );
+        (new \app\common\model\Collect())->manga_data($param,$res );
     }
 }

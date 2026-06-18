@@ -1,7 +1,7 @@
 <?php
 namespace app\admin\controller;
-use think\Db;
-use think\Cache;
+use think\facade\Db;
+use think\facade\Cache;
 
 /**
  * 批量播放器设定控制器
@@ -33,7 +33,7 @@ class BatchPlayer extends Base
      */
     public function batchStatus()
     {
-        $param = input('post.');
+        $param = \think\facade\Request::post();
         $froms = $param['froms'] ?? [];
         $status = intval($param['status'] ?? 1);
 
@@ -66,7 +66,7 @@ class BatchPlayer extends Base
      */
     public function batchSort()
     {
-        $param = input('post.');
+        $param = \think\facade\Request::post();
         $sorts = $param['sorts'] ?? [];
 
         if (empty($sorts)) {
@@ -94,7 +94,7 @@ class BatchPlayer extends Base
      */
     public function batchParse()
     {
-        $param = input('post.');
+        $param = \think\facade\Request::post();
         $froms = $param['froms'] ?? [];
         $parse = trim($param['parse'] ?? '');
 
@@ -127,7 +127,7 @@ class BatchPlayer extends Base
      */
     public function batchDel()
     {
-        $param = input('post.');
+        $param = \think\facade\Request::post();
         $froms = $param['froms'] ?? [];
 
         if (empty($froms)) {
@@ -159,7 +159,7 @@ class BatchPlayer extends Base
      */
     public function replaceFrom()
     {
-        $param = input('post.');
+        $param = \think\facade\Request::post();
         $old_from = trim($param['old_from'] ?? '');
         $new_from = trim($param['new_from'] ?? '');
 

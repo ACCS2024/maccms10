@@ -1,6 +1,6 @@
 <?php
 namespace app\admin\controller;
-use think\Db;
+use think\facade\Db;
 
 class Type extends Base
 {
@@ -14,37 +14,37 @@ class Type extends Base
     {
         $order='type_sort asc';
         $where=[];
-        $res = model('Type')->listData($where,$order,'tree');
+        $res = (new \app\common\model\Type())->listData($where,$order,'tree');
 
         $list_count =[];
         //视频数量
-        $tmp = model('Vod')->field('type_id_1,type_id,count(vod_id) as cc')->where($where)->group('type_id_1,type_id')->select();
+        $tmp = (new \app\common\model\Vod())->field('type_id_1,type_id,count(vod_id) as cc')->where($where)->group('type_id_1,type_id')->select();
         foreach($tmp as $k=>$v){
             $list_count[$v['type_id_1']] += $v['cc'];
             $list_count[$v['type_id']] = $v['cc'];
         }
         //文章数量
-        $tmp = model('Art')->field('type_id_1,type_id,count(art_id) as cc')->where($where)->group('type_id_1,type_id')->select();
+        $tmp = (new \app\common\model\Art())->field('type_id_1,type_id,count(art_id) as cc')->where($where)->group('type_id_1,type_id')->select();
         foreach($tmp as $k=>$v){
             $list_count[$v['type_id_1']] += $v['cc'];
             $list_count[$v['type_id']] = $v['cc'];
         }
 
         //演员数量
-        $tmp = model('Actor')->field('type_id_1,type_id,count(actor_id) as cc')->where($where)->group('type_id_1,type_id')->select();
+        $tmp = (new \app\common\model\Actor())->field('type_id_1,type_id,count(actor_id) as cc')->where($where)->group('type_id_1,type_id')->select();
         foreach($tmp as $k=>$v){
             $list_count[$v['type_id_1']] += $v['cc'];
             $list_count[$v['type_id']] = $v['cc'];
         }
         //网址数量
-        $tmp = model('Website')->field('type_id_1,type_id,count(website_id) as cc')->where($where)->group('type_id_1,type_id')->select();
+        $tmp = (new \app\common\model\Website())->field('type_id_1,type_id,count(website_id) as cc')->where($where)->group('type_id_1,type_id')->select();
         foreach($tmp as $k=>$v){
             $list_count[$v['type_id_1']] += $v['cc'];
             $list_count[$v['type_id']] = $v['cc'];
         }
 
         //漫画数量
-        $tmp = model('Manga')->field('type_id_1,type_id,count(manga_id) as cc')->where($where)->group('type_id_1,type_id')->select();
+        $tmp = (new \app\common\model\Manga())->field('type_id_1,type_id,count(manga_id) as cc')->where($where)->group('type_id_1,type_id')->select();
         foreach($tmp as $k=>$v){
             $list_count[$v['type_id_1']] += $v['cc'];
             $list_count[$v['type_id']] = $v['cc'];
@@ -67,28 +67,28 @@ class Type extends Base
     public function info()
     {
         if (Request()->isPost()) {
-            $param = input('post.');
+            $param = \think\facade\Request::post();
             $validate = \think\Loader::validate('Token');
             if(!$validate->check($param)){
                 return $this->error($validate->getError());
             }
-            $res = model('Type')->saveData($param);
+            $res = (new \app\common\model\Type())->saveData($param);
             if($res['code']>1){
                 return $this->error($res['msg']);
             }
-            model('Type')->setCache();
+            (new \app\common\model\Type())->setCache();
             return $this->success($res['msg']);
         }
 
-        $id = input('id');
-        $pid = input('pid');
+        $id = \think\facadeRequest::param("id");
+        $pid = \think\facadeRequest::param("pid");
         $where=[];
         $where['type_id'] = $id;
-        $res = model('Type')->infoData($where);
+        $res = (new \app\common\model\Type())->infoData($where);
 
         $where=[];
         $where['type_id'] = $pid;
-        $resp = model('Type')->infoData($where);
+        $resp = (new \app\common\model\Type())->infoData($where);
 
         $this->assign('info',$res['info']);
         $this->assign('infop',$resp['info']);
@@ -97,7 +97,7 @@ class Type extends Base
         $where=[];
         $where['type_pid'] = '0';
         $order='type_sort asc';
-        $parent = model('Type')->listData($where,$order);
+        $parent = (new \app\common\model\Type())->listData($where,$order);
         $this->assign('parent',$parent['list']);
 
         return $this->fetch('admin@type/info');
@@ -105,13 +105,13 @@ class Type extends Base
 
     public function del()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $ids = $param['ids'];
 
         if(!empty($ids)){
             $where=[];
             $where['type_id'] = $ids;
-            $res = model('Type')->delData($where);
+            $res = (new \app\common\model\Type())->delData($where);
             if($res['code']>1){
                 return $this->error($res['msg']);
             }
@@ -122,7 +122,7 @@ class Type extends Base
 
     public function field()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $ids = $param['ids'];
         $col = $param['col'];
         $val = $param['val'];
@@ -131,7 +131,7 @@ class Type extends Base
             $where=[];
             $where['type_id'] = $ids;
 
-            $res = model('Type')->fieldData($where,$col,$val);
+            $res = (new \app\common\model\Type())->fieldData($where,$col,$val);
             if($res['code']>1){
                 return $this->error($res['msg']);
             }
@@ -142,7 +142,7 @@ class Type extends Base
 
     public function batch()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $ids = $param['ids'];
         foreach ($ids as $k=>$id) {
 
@@ -159,7 +159,7 @@ class Type extends Base
                 $data['type_name'] = lang('unknown');
             }
 
-            $res = model('Type')->saveData($data);
+            $res = (new \app\common\model\Type())->saveData($data);
             if($res['code']>1){
                 return $this->error($res['msg']);
             }
@@ -169,9 +169,9 @@ class Type extends Base
 
     public function extend()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         if(!empty($param['id'])){
-            $type_list = model('Type')->getCache('type_list');
+            $type_list = (new \app\common\model\Type())->getCache('type_list');
             $type_info = $type_list[$param['id']];
             if(!empty($type_info)){
                 $type_mid = $type_info['type_mid'];
@@ -253,13 +253,13 @@ class Type extends Base
 
     public function move()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $ids = $param['ids'];
         $val = $param['val'];
         if(!empty($ids) && !empty($val)){
             $where=[];
             $where['type_id'] = $ids;
-            $res = model('Type')->moveData($where,$val);
+            $res = (new \app\common\model\Type())->moveData($where,$val);
             if($res['code']>1){
                 return $this->error($res['msg']);
             }

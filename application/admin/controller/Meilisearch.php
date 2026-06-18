@@ -85,7 +85,7 @@ class Meilisearch extends Base
         if (!request()->isPost()) {
             return json(['code' => 0, 'msg' => lang('param_err')]);
         }
-        $post = input('post.');
+        $post = \think\facade\Request::post();
         $meili = isset($post['meilisearch']) && is_array($post['meilisearch']) ? $post['meilisearch'] : [];
         $sanitize = function ($v) {
             return trim(strip_tags((string)$v));
@@ -133,7 +133,7 @@ class Meilisearch extends Base
         $health = MeilisearchService::health();
         $enabled = MeilisearchService::enabled();
         $opencc = OpenccConverter::available();
-        $sampleQuery = trim((string)input('wd', ''));
+        $sampleQuery = trim((string)\think\facade\Request::param("wd", ""));
         if ($sampleQuery === '') {
             $rawHot = (string)($GLOBALS['config']['app']['search_hot'] ?? '');
             $rawHot = str_replace('，', ',', $rawHot);

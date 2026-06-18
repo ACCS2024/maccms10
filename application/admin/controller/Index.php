@@ -3,7 +3,7 @@
 namespace app\admin\controller;
 
 use think\Hook;
-use think\Db;
+use think\facade\Db;
 use Exception;
 use ip_limit\IpLocationQuery;
 class Index extends Base
@@ -16,8 +16,8 @@ class Index extends Base
     public function login()
     {
         if (Request()->isPost()) {
-            $data = input('post.');
-            $res = model('Admin')->login($data);
+            $data = \think\facade\Request::post();
+            $res = (new \app\common\model\Admin())->login($data);
             if ($res['code'] > 1) {
                 return $this->error($res['msg']);
             }
@@ -29,7 +29,7 @@ class Index extends Base
 
     public function logout()
     {
-        $res = model('Admin')->logout();
+        $res = (new \app\common\model\Admin())->logout();
         $this->redirect('index/login');
     }
 
@@ -143,12 +143,12 @@ class Index extends Base
     public function quickmenu()
     {
         if (Request()->isPost()) {
-            $param = input();
+            $param = \think\facadeRequest::param();
             $validate = \think\Loader::validate('Token');
             if (!$validate->check($param)) {
                 return $this->error($validate->getError());
             }
-            $quickmenu = input('post.quickmenu');
+            $quickmenu = \think\facade\Request::post("quickmenu");
             $quickmenu = str_replace(chr(10), '', $quickmenu);
             $menu_arr = explode(chr(13), $quickmenu);
             $res = mac_arr2file(APP_PATH . 'extra/quickmenu.php', $menu_arr);
@@ -188,13 +188,13 @@ class Index extends Base
             $this->error(lang('admin/index/clear_err'));
         }
         // 搜索缓存结果清理
-        model('VodSearch')->clearOldResult(true);
+        (new \app\common\model\VodSearch())->clearOldResult(true);
         return $this->success(lang('admin/index/clear_ok'));
     }
 
     public function iframe()
     {
-        $val = input('post.val', 0);
+        $val = \think\facade\Request::post('val', 0);
         if ($val != 0 && $val != 1) {
             return $this->error(lang('admin/index/clear_ok'));
         }
@@ -208,7 +208,7 @@ class Index extends Base
 
     public function unlocked()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $password = $param['password'];
 
         // 安全加固(V4):兼容 bcrypt/旧md5 的解锁校验
@@ -221,14 +221,14 @@ class Index extends Base
 
     public function check_back_link()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $res = mac_check_back_link($param['url']);
         return json($res);
     }
 
     public function select()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $tpl = $param['tpl'];
         $tab = $param['tab'];
         $col = $param['col'];
@@ -268,7 +268,7 @@ class Index extends Base
         $this->assign('mid', $mid);
 
         if ($tpl == 'select_type') {
-            $type_tree = model('Type')->getCache('type_tree');
+            $type_tree = (new \app\common\model\Type())->getCache('type_tree');
             $this->assign('type_tree', $type_tree);
         } elseif ($tpl == 'select_level') {
             $level_list = [1, 2, 3, 4, 5, 6, 7, 8, 9];
@@ -818,19 +818,19 @@ class Index extends Base
     {
         $result = [];
         //已注册总用户数量
-        $result['user_count'] = model('User')->count();
+        $result['user_count'] = (new \app\common\model\User())->count();
         $result['user_count'] = number_format($result['user_count'], 0, '.', ',');
         //已审核用户数量
-        $result['user_active_count'] = model('User')->where('user_status', 1)->count();
+        $result['user_active_count'] = (new \app\common\model\User())->where('user_status', 1)->count();
         $result['user_active_count'] = number_format($result['user_active_count'], 0, '.', ',');
 
         $today_start = strtotime(date('Y-m-d 00:00:00'));
         $today_end = $today_start + 86399;
         //本日来客量
-        $result['today_visit_count'] = model('Visit')->where('visit_time', 'between', $today_start . ',' . $today_end)->count();
+        $result['today_visit_count'] = (new \app\common\model\Visit())->where('visit_time', 'between', $today_start . ',' . $today_end)->count();
         $result['today_visit_count'] = number_format($result['today_visit_count'], 0, '.', ',');
         //本日总入金
-        $result['today_money_get'] = model('Order')->where('order_time', 'between', $today_start . ',' . $today_end)->where('order_status', 1)->sum('order_price');
+        $result['today_money_get'] = (new \app\common\model\Order())->where('order_time', 'between', $today_start . ',' . $today_end)->where('order_status', 1)->sum('order_price');
         $result['today_money_get'] = number_format($result['today_money_get'], 2, '.', ',');
         //前七天 每日用户访问数
         $tmp_arr = Db::query("select FROM_UNIXTIME(visit_time, '%Y-%c-%d' ) days,count(*) count from (SELECT * from ".config('database.prefix')."visit where visit_time >= (unix_timestamp(CURDATE())-604800)) as temp group by days");
@@ -987,7 +987,7 @@ class Index extends Base
 
     public function botlog()
     {
-        $parm = input();
+        $parm = \think\facadeRequest::param();
         $data = (string)($parm['data'] ?? '');
         // 安全加固(V5):仅允许安全文件名,杜绝 ../ 路径穿越读取任意 .txt
         if ($data === '' || !preg_match('/^[A-Za-z0-9_\-]{1,64}$/', $data)) {

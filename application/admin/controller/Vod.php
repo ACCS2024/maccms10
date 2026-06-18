@@ -1,7 +1,7 @@
 <?php
 namespace app\admin\controller;
-use think\Cache;
-use think\Db;
+use think\facade\Cache;
+use think\facade\Db;
 
 class Vod extends Base
 {
@@ -12,7 +12,7 @@ class Vod extends Base
 
     public function data()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $param['page'] = intval($param['page']) <1 ? 1 : $param['page'];
         $param['limit'] = intval($param['limit']) <1 ? $this->_pagesize : $param['limit'];
 
@@ -127,7 +127,7 @@ class Vod extends Base
 
         if(!empty($param['repeat'])){
             if(!empty($param['cache'])){
-                model('Vod')->createRepeatCache();
+                (new \app\common\model\Vod())->createRepeatCache();
                 return $this->success(lang('update_ok'));
             }
 
@@ -136,14 +136,14 @@ class Vod extends Base
                 $cacheResult = Cache::get('vod_repeat_table_created_time',0);
                 //缓存时间超过7天和没有创建过缓存都会重建缓存
                 if( $cacheResult == 0 || time() - $cacheResult > 604800){
-                    model('Vod')->createRepeatCache();
+                    (new \app\common\model\Vod())->createRepeatCache();
                 }
             }
             $order='vod_name asc';
-            $res = model('Vod')->listRepeatData($where,$order,$param['page'],$param['limit']);
+            $res = (new \app\common\model\Vod())->listRepeatData($where,$order,$param['page'],$param['limit']);
         }
         else{
-            $res = model('Vod')->listData($where,$order,$param['page'],$param['limit']);
+            $res = (new \app\common\model\Vod())->listData($where,$order,$param['page'],$param['limit']);
         }
 
 
@@ -191,7 +191,7 @@ class Vod extends Base
         $queryString = '?' . http_build_query($param);
         $this->assign('query_string',$queryString);
         //分类
-        $type_tree = model('Type')->getCache('type_tree');
+        $type_tree = (new \app\common\model\Type())->getCache('type_tree');
         $this->assign('type_tree',$type_tree);
 
         //播放器
@@ -202,7 +202,7 @@ class Vod extends Base
 
     public function batch()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         if (!empty($param)) {
 
             mac_echo('<style type="text/css">body{font-size:12px;color: #333333;line-height:21px;}span{font-weight:bold;color:#FF0000}</style>');
@@ -223,13 +223,13 @@ class Vod extends Base
             }
             $where = $this->vodBatchFilterWhere($param);
             if($param['ck_del'] == 1){
-                $res = model('Vod')->recycleData($where);
+                $res = (new \app\common\model\Vod())->recycleData($where);
                 mac_echo($res['code'] == 1 ? lang('recycle_ok') : $res['msg']);
                 mac_jump( url('vod/batch') ,3);
                 exit;
             }
             if($param['ck_del'] == 4){
-                $res = model('Vod')->delData($where);
+                $res = (new \app\common\model\Vod())->delData($where);
                 mac_echo(lang('multi_del_ok'));
                 mac_jump( url('vod/batch') ,3);
                 exit;
@@ -243,7 +243,7 @@ class Vod extends Base
                 $param['limit'] = 100;
             }
             if(empty($param['total'])) {
-                $param['total'] = model('Vod')->countData($where);
+                $param['total'] = (new \app\common\model\Vod())->countData($where);
                 $param['page_count'] = ceil($param['total'] / $param['limit']);
             }
 
@@ -256,7 +256,7 @@ class Vod extends Base
 
             $page = $param['page_count'] - $param['page'] + 1;
             $order='vod_id desc';
-            $res = model('Vod')->listData($where,$order,$page,$param['limit']);
+            $res = (new \app\common\model\Vod())->listData($where,$order,$page,$param['limit']);
 
             foreach($res['list'] as  $k=>$v){
                 $where2 = [];
@@ -297,7 +297,7 @@ class Vod extends Base
                 // 新增：批量修改分类
                 if(!empty($param['ck_type']) && !empty($param['val_type'])){
                     $update['type_id'] = intval($param['val_type']);
-                    $type_list = model('Type')->getCache();
+                    $type_list = (new \app\common\model\Type())->getCache();
                     if(isset($type_list[$update['type_id']])){
                         $id1 = intval($type_list[$update['type_id']]['type_pid']);
                         $update['type_id_1'] = $id1;
@@ -372,7 +372,7 @@ class Vod extends Base
                 }
 
                 mac_echo($des);
-                $res2 = model('Vod')->where($where2)->update($update);
+                $res2 = (new \app\common\model\Vod())->where($where2)->update($update);
 
             }
             $param['page']++;
@@ -382,7 +382,7 @@ class Vod extends Base
         }
 
         //分类
-        $type_tree = model('Type')->getCache('type_tree');
+        $type_tree = (new \app\common\model\Type())->getCache('type_tree');
         $this->assign('type_tree',$type_tree);
 
         //播放器
@@ -493,7 +493,7 @@ class Vod extends Base
 
     public function exportData()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $where = $this->vodBatchFilterWhere($param);
         $this->base_export($param,'vod',$where);
     }
@@ -506,26 +506,26 @@ class Vod extends Base
     public function info()
     {
         if (Request()->isPost()) {
-            $param = input('post.');
-            $res = model('Vod')->saveData($param);
+            $param = \think\facade\Request::post();
+            $res = (new \app\common\model\Vod())->saveData($param);
             if($res['code']>1){
                 return $this->error($res['msg']);
             }
             return $this->success($res['msg']);
         }
 
-        $id = input('id');
+        $id = \think\facadeRequest::param("id");
         $where=[];
         $where['vod_id'] = $id;
         $where['_recycle'] = 'all';
-        $res = model('Vod')->infoData($where);
+        $res = (new \app\common\model\Vod())->infoData($where);
 
 
         $info = $res['info'];
         $this->assign('info',$info);
         $seoAiStatus = 0;
         if (!empty($info['vod_id'])) {
-            $seoAi = model('SeoAiResult')->getByObject(1, intval($info['vod_id']));
+            $seoAi = (new \app\common\model\SeoAiResult())->getByObject(1, intval($info['vod_id']));
             if (!empty($seoAi)) {
                 $seoAiStatus = intval($seoAi['seo_status']);
             }
@@ -534,7 +534,7 @@ class Vod extends Base
         $this->assign('vod_ai_cover_can_revert', !empty($info['vod_pic_original']));
 
         //分类
-        $type_tree = model('Type')->getCache('type_tree');
+        $type_tree = (new \app\common\model\Type())->getCache('type_tree');
         $this->assign('type_tree',$type_tree);
 
         //地区、语言
@@ -545,7 +545,7 @@ class Vod extends Base
         $this->assign('lang_list',$lang_list);
 
         //用户组
-        $group_list = model('Group')->getCache('group_list');
+        $group_list = (new \app\common\model\Group())->getCache('group_list');
         $this->assign('group_list',$group_list);
 
         //播放器
@@ -566,7 +566,7 @@ class Vod extends Base
         if (!Request()->isPost()) {
             return json(['code' => 0, 'msg' => lang('illegal_request'), 'data' => []]);
         }
-        $id = intval(input('post.id'));
+        $id = intval(\think\facade\Request::post("id"));
         if ($id <= 0) {
             return json(['code' => 0, 'msg' => lang('param_err'), 'data' => []]);
         }
@@ -587,7 +587,7 @@ class Vod extends Base
         if (!Request()->isPost()) {
             return json(['code' => 0, 'msg' => lang('illegal_request'), 'data' => []]);
         }
-        $id = intval(input('post.id'));
+        $id = intval(\think\facade\Request::post("id"));
         if ($id <= 0) {
             return json(['code' => 0, 'msg' => lang('param_err'), 'data' => []]);
         }
@@ -595,7 +595,7 @@ class Vod extends Base
         if (!\app\common\util\VodAiCover::consumeGenerateRateLimit($adminId)) {
             return json(['code' => 0, 'msg' => lang('admin/ai_cover/msg_rate_limit'), 'data' => []]);
         }
-        $extraPrompt = input('post.extra_prompt', '', '');
+        $extraPrompt = \think\facade\Request::post('extra_prompt', '');
         if (!is_string($extraPrompt)) {
             $extraPrompt = '';
         }
@@ -616,7 +616,7 @@ class Vod extends Base
         if (!Request()->isPost()) {
             return json(['code' => 0, 'msg' => lang('illegal_request'), 'data' => []]);
         }
-        $id = intval(input('post.id'));
+        $id = intval(\think\facade\Request::post("id"));
         if ($id <= 0) {
             return json(['code' => 0, 'msg' => lang('param_err'), 'data' => []]);
         }
@@ -635,19 +635,19 @@ class Vod extends Base
     public function iplot()
     {
         if (Request()->isPost()) {
-            $param = input('post.');
-            $res = model('Vod')->savePlot($param);
+            $param = \think\facade\Request::post();
+            $res = (new \app\common\model\Vod())->savePlot($param);
             if($res['code']>1){
                 return $this->error($res['msg']);
             }
             return $this->success($res['msg']);
         }
 
-        $id = input('id');
+        $id = \think\facadeRequest::param("id");
         $where=[];
         $where['vod_id'] = $id;
         $where['_recycle'] = 'all';
-        $res = model('Vod')->infoData($where);
+        $res = (new \app\common\model\Vod())->infoData($where);
 
 
         $info = $res['info'];
@@ -661,13 +661,13 @@ class Vod extends Base
 
     public function restore()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $ids = $param['ids'];
         if (empty($ids)) {
             return $this->error(lang('param_err'));
         }
         $where = ['vod_id' => ['in', $ids]];
-        $res = model('Vod')->restoreData($where);
+        $res = (new \app\common\model\Vod())->restoreData($where);
         if ($res['code'] > 1) {
             return $this->error($res['msg']);
         }
@@ -677,7 +677,7 @@ class Vod extends Base
 
     public function del()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $ids = $param['ids'];
         $purge = !empty($param['purge']);
 
@@ -685,9 +685,9 @@ class Vod extends Base
             $where=[];
             $where['vod_id'] = $ids;
             if ($purge) {
-                $res = model('Vod')->delData($where);
+                $res = (new \app\common\model\Vod())->delData($where);
             } else {
-                $res = model('Vod')->recycleData($where);
+                $res = (new \app\common\model\Vod())->recycleData($where);
             }
             if($res['code']>1){
                 return $this->error($res['msg']);
@@ -718,7 +718,7 @@ class Vod extends Base
             )';
             }
 
-            $res = model('Vod')->execute($sql);
+            $res = (new \app\common\model\Vod())->execute($sql);
             if($res===false){
                 return $this->success(lang('del_err'));
             }
@@ -730,7 +730,7 @@ class Vod extends Base
 
     public function field()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $ids = $param['ids'];
         $col = $param['col'];
         $val = $param['val'];
@@ -748,11 +748,11 @@ class Vod extends Base
             if(empty($start)) {
                 $update[$col] = $val;
                 if($col == 'type_id'){
-                    $type_list = model('Type')->getCache();
+                    $type_list = (new \app\common\model\Type())->getCache();
                     $id1 = intval($type_list[$val]['type_pid']);
                     $update['type_id_1'] = $id1;
                 }
-                $res = model('Vod')->fieldData($where, $update);
+                $res = (new \app\common\model\Vod())->fieldData($where, $update);
             }
             else{
                 if(empty($end)){$end = 9999;}
@@ -761,7 +761,7 @@ class Vod extends Base
                     $val = rand($start,$end);
                     $where['vod_id'] = $v;
                     $update[$col] = $val;
-                    $res = model('Vod')->fieldData($where, $update);
+                    $res = (new \app\common\model\Vod())->fieldData($where, $update);
                 }
             }
             if($res['code']>1){
@@ -774,9 +774,9 @@ class Vod extends Base
 
     public function updateToday()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $flag = $param['flag'];
-        $res = model('Vod')->updateToday($flag);
+        $res = (new \app\common\model\Vod())->updateToday($flag);
         return json($res);
     }
 

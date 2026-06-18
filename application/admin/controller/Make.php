@@ -1,6 +1,6 @@
 <?php
 namespace app\admin\controller;
-use think\Db;
+use think\facade\Db;
 use think\View;
 
 class Make extends Base
@@ -10,7 +10,7 @@ class Make extends Base
     public function __construct()
     {
         //header('X-Accel-Buffering: no');
-        $this->_param = input();
+        $this->_param = \think\facadeRequest::param();
         $GLOBALS['ismake'] = '1';
 
         if($this->_param['ac2']=='wap'){
@@ -57,7 +57,7 @@ class Make extends Base
     public function opt()
     {
         //分类列表
-        $type_list = model('Type')->getCache('type_list');
+        $type_list = (new \app\common\model\Type())->getCache('type_list');
         $this->assign('type_list',$type_list);
 
         $vod_type_list = [];
@@ -84,11 +84,11 @@ class Make extends Base
 
 
         //当日视频分类ids
-        $res = model('Vod')->updateToday('type');
+        $res = (new \app\common\model\Vod())->updateToday('type');
         $this->assign('vod_type_ids_today',$res['data']);
 
         //当日文章分类ids
-        $res = model('Art')->updateToday('type');
+        $res = (new \app\common\model\Art())->updateToday('type');
         $this->assign('art_type_ids_today',$res['data']);
 
 
@@ -96,7 +96,7 @@ class Make extends Base
         $where = [];
         $where['topic_status'] = 1;
         $order = 'topic_id desc';
-        $topic_list = model('Topic')->listData($where,$order,1,999);
+        $topic_list = (new \app\common\model\Topic())->listData($where,$order,1,999);
         $this->assign('topic_list',$topic_list['list']);
         $topic_ids = join(',',array_keys($topic_list['list']));
         $this->assign('topic_ids',$topic_ids);
@@ -244,7 +244,7 @@ class Make extends Base
         if($this->_param['tab'] =='art'){
             $ids = $this->_param['arttype'];
             if(empty($ids) && $this->_param['ac2']=='day'){
-                $res = model('Art')->updateToday('type');
+                $res = (new \app\common\model\Art())->updateToday('type');
                 $ids = $res['data'];
             }
             $GLOBALS['mid'] = 2;
@@ -253,7 +253,7 @@ class Make extends Base
         else{
             $ids = $this->_param['vodtype'];
             if(empty($ids) && $this->_param['ac2']=='day'){
-                $res = model('Vod')->updateToday('type');
+                $res = (new \app\common\model\Vod())->updateToday('type');
                 $ids = $res['data'];
             }
             $GLOBALS['mid'] = 1;
@@ -298,7 +298,7 @@ class Make extends Base
         }
 
         $id = $ids[$num];
-        $type_list = model('Type')->getCache('type_list');
+        $type_list = (new \app\common\model\Type())->getCache('type_list');
         $type_info = $type_list[$id];
 
         if(empty($data_count)){
@@ -307,13 +307,13 @@ class Make extends Base
 
             if($this->_param['tab'] =='art') {
                 $where['art_status'] = 1;
-                $data_count = model('Art')->countData($where);
+                $data_count = (new \app\common\model\Art())->countData($where);
                 $html = mac_read_file($GLOBALS['MAC_ROOT_TEMPLATE'] . 'art/'.$type_info['type_tpl']);
                 $labelRule = '{maccms:art(.*?)num="(.*?)"(.*?)paging="yes"([\s\S]*?)}([\s\S]*?){/maccms:art}';
             }
             else{
                 $where['vod_status'] = 1;
-                $data_count = model('Vod')->countData($where);
+                $data_count = (new \app\common\model\Vod())->countData($where);
                 $html = mac_read_file($GLOBALS['MAC_ROOT_TEMPLATE'] . 'vod/'.$type_info['type_tpl']);
                 $labelRule = '{maccms:vod(.*?)num="(.*?)"(.*?)paging="yes"([\s\S]*?)}([\s\S]*?){/maccms:vod}';
             }
@@ -440,7 +440,7 @@ class Make extends Base
         if(empty($data_count)){
             $where = [];
             $where['topic_status'] = 1;
-            $data_count = model('Topic')->countData($where);
+            $data_count = (new \app\common\model\Topic())->countData($where);
             $html = mac_read_file($GLOBALS['MAC_ROOT_TEMPLATE'] . 'topic/index.html');
             $labelRule = '{maccms:topic(.*?)num="(.*?)"(.*?)paging="yes"([\s\S]*?)}([\s\S]*?){/maccms:topic}';
 
@@ -541,7 +541,7 @@ class Make extends Base
             $where = [];
             $where['topic_id'] = $a;
             $where['topic_status'] = 1;
-            $res = model('Topic')->infoData($where);
+            $res = (new \app\common\model\Topic())->infoData($where);
             if($res['code'] == 1) {
                 $topic_info = $res['info'];
 
@@ -640,7 +640,7 @@ class Make extends Base
             }
 
             $type_id = $type_ids[$num];
-            $type_list = model('Type')->getCache('type_list');
+            $type_list = (new \app\common\model\Type())->getCache('type_list');
             $type_info = $type_list[$type_id];
 
             $type_name = $type_info['type_name'];
@@ -690,10 +690,10 @@ class Make extends Base
 
         if(empty($data_count)){
             if($this->_param['tab'] =='art'){
-                $data_count = model('Art')->countData($where);
+                $data_count = (new \app\common\model\Art())->countData($where);
             }
             else{
-                $data_count = model('Vod')->countData($where);
+                $data_count = (new \app\common\model\Vod())->countData($where);
             }
 
 
@@ -737,10 +737,10 @@ class Make extends Base
         $this->echoLink(lang('admin/make/info_tip',[$type_name,$this->_param['data_count'],$this->_param['page_count'],$this->_param['page_size'],$start]));
 
         if($this->_param['tab'] =='art') {
-            $res = model('Art')->listData($where, $order, $start, $GLOBALS['config']['app']['makesize']);
+            $res = (new \app\common\model\Art())->listData($where, $order, $start, $GLOBALS['config']['app']['makesize']);
         }
         else{
-            $res = model('Vod')->listData($where, $order, $start, $GLOBALS['config']['app']['makesize']);
+            $res = (new \app\common\model\Vod())->listData($where, $order, $start, $GLOBALS['config']['app']['makesize']);
         }
 
 

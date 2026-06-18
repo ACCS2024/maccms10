@@ -1,6 +1,6 @@
 <?php
 namespace app\admin\controller;
-use think\Db;
+use think\facade\Db;
 
 class Group extends Base
 {
@@ -11,7 +11,7 @@ class Group extends Base
 
     public function index()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $where=[];
 
         if(in_array($param['status'],['0','1'],true)){
@@ -23,7 +23,7 @@ class Group extends Base
         }
 
         $order='group_id asc';
-        $res = model('Group')->listData($where,$order);
+        $res = (new \app\common\model\Group())->listData($where,$order);
 
         $this->assign('list',$res['list']);
         $this->assign('total',$res['total']);
@@ -36,27 +36,27 @@ class Group extends Base
     public function info()
     {
         if (Request()->isPost()) {
-            $param = input('post.');
+            $param = \think\facade\Request::post();
 
             if($GLOBALS['config']['user']['reg_group'] == $param['group_id']){
                 $param['group_status'] = 1;
             }
-            $res = model('Group')->saveData($param);
+            $res = (new \app\common\model\Group())->saveData($param);
             if($res['code']>1){
                 return $this->error($res['msg']);
             }
             return $this->success($res['msg']);
         }
 
-        $id = input('id');
+        $id = \think\facadeRequest::param("id");
         $where=[];
         $where['group_id'] = $id;
-        $res = model('Group')->infoData($where);
+        $res = (new \app\common\model\Group())->infoData($where);
 
         $this->assign('info',$res['info']);
 
 
-        $type_tree = model('Type')->getCache('type_tree');
+        $type_tree = (new \app\common\model\Type())->getCache('type_tree');
         $this->assign('type_tree',$type_tree);
 
         $this->assign('title',lang('admin/group/title'));
@@ -65,7 +65,7 @@ class Group extends Base
 
     public function del()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $ids = $param['ids'];
 
         if(!empty($ids)){
@@ -76,7 +76,7 @@ class Group extends Base
 
             $where=[];
             $where['group_id'] = $ids;
-            $res = model('Group')->delData($where);
+            $res = (new \app\common\model\Group())->delData($where);
             if($res['code']>1){
                 return $this->error($res['msg']);
             }
@@ -87,7 +87,7 @@ class Group extends Base
 
     public function field()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $ids = $param['ids'];
         $col = $param['col'];
         $val = $param['val'];
@@ -96,7 +96,7 @@ class Group extends Base
             $where=[];
             $where['group_id'] = $ids;
 
-            $res = model('Group')->fieldData($where,$col,$val);
+            $res = (new \app\common\model\Group())->fieldData($where,$col,$val);
             if($res['code']>1){
                 return $this->error($res['msg']);
             }

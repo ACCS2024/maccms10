@@ -2,8 +2,8 @@
 namespace app\admin\controller;
 
 use app\common\util\SensitiveDataCrypto;
-use think\Db;
-use think\Request;
+use think\facade\Db;
+use think\facade\Request;
 
 class Adminaudit extends Base
 {
@@ -14,7 +14,7 @@ class Adminaudit extends Base
 
     public function index()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $param['page'] = intval($param['page']) < 1 ? 1 : intval($param['page']);
         $param['limit'] = intval($param['limit']) < 1 ? $this->_pagesize : intval($param['limit']);
         $where = [];
@@ -31,7 +31,7 @@ class Adminaudit extends Base
         }
 
         $order = 'audit_id desc';
-        $res = model('AdminAuditLog')->listData($where, $order, $param['page'], $param['limit']);
+        $res = (new \app\common\model\AdminAuditLog())->listData($where, $order, $param['page'], $param['limit']);
 
         $this->assign('list', $res['list']);
         $this->assign('total', $res['total']);

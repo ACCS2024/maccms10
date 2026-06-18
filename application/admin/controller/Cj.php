@@ -1,6 +1,6 @@
 <?php
 namespace app\admin\controller;
-use think\Db;
+use think\facade\Db;
 use app\common\util\Collection as cjOper;
 
 class Cj extends Base
@@ -15,13 +15,13 @@ class Cj extends Base
     //列表
     public function index()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $param['page'] = intval($param['page']) <1 ? 1 : $param['page'];
         $param['limit'] = intval($param['limit']) <1 ? $this->_pagesize : $param['limit'];
         $where=[];
 
         $order='nodeid desc';
-        $res = model('Cj')->listData('cj_node',$where,$order,$param['page'],$param['limit']);
+        $res = (new \app\common\model\Cj())->listData('cj_node',$where,$order,$param['page'],$param['limit']);
 
         $this->assign('list',$res['list']);
         $this->assign('total',$res['total']);
@@ -40,7 +40,7 @@ class Cj extends Base
     public function info()
     {
         if (Request()->isPost()) {
-            $param = input();
+            $param = \think\facadeRequest::param();
             $data = $param['data'];
             $data['urlpage'] = (string)$param['urlpage'.$data['sourcetype']];
             if(!empty($data['customize_config'])){
@@ -52,17 +52,17 @@ class Cj extends Base
                 }
                 $data['customize_config'] = json_encode($data['customize_config'],JSON_FORCE_OBJECT);
             }
-            $res = model('Cj')->saveData($data);
+            $res = (new \app\common\model\Cj())->saveData($data);
             if($res['code']>1){
                 return $this->error($res['msg']);
             }
             return $this->success($res['msg']);
         }
 
-        $id = input('id');
+        $id = \think\facadeRequest::param("id");
         $where=[];
         $where['nodeid'] = $id;
-        $res = model('Cj')->infoData('cj_node',$where);
+        $res = (new \app\common\model\Cj())->infoData('cj_node',$where);
         if(!empty($res['info']['customize_config'])){
             $res['info']['customize_config'] = json_decode($res['info']['customize_config'],true);
         }
@@ -73,10 +73,10 @@ class Cj extends Base
 
     public function program()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $where=[];
         $where['nodeid'] = $param['id'];
-        $res = model('Cj')->infoData('cj_node',$where);
+        $res = (new \app\common\model\Cj())->infoData('cj_node',$where);
         if($res['code']>1){
             return $this->error($res['msg']);
         }
@@ -92,7 +92,7 @@ class Cj extends Base
             $update=[];
             $update['nodeid'] = $param['id'];
             $update['program_config'] = json_encode($program_config);
-            $res = model('Cj')->saveData($update);
+            $res = (new \app\common\model\Cj())->saveData($update);
             if($res['code']>1){
                 return $this->error(lang('save_err'));
             }
@@ -138,12 +138,12 @@ class Cj extends Base
     //采集网址
     public function col_url($param=[]) {
         if(empty($param)){
-            $param = input();
+            $param = \think\facadeRequest::param();
         }
 
         $where=[];
         $where['nodeid'] = $param['id'];
-        $res = model('Cj')->infoData('cj_node',$where);
+        $res = (new \app\common\model\Cj())->infoData('cj_node',$where);
         if($res['code']>1){
             return $this->error($res['msg']);
         }
@@ -173,7 +173,7 @@ class Cj extends Base
                 $md5 = md5($v['url']);
                 $where=[];
                 $where['md5'] = $md5;
-                $history = model('Cj')->infoData('cj_history',$where);
+                $history = (new \app\common\model\Cj())->infoData('cj_history',$where);
                 if($history['code']>1){
                     Db::name('cj_history')->insert(array('md5' => $md5));
                     Db::name('cj_content')->insert(array('nodeid'=>$param['id'], 'status'=>1, 'url'=>$v['url'], 'title'=>$v['title']));
@@ -215,7 +215,7 @@ class Cj extends Base
     //采集文章
     public function col_content($param=[]) {
         if(empty($param)){
-            $param = input();
+            $param = \think\facadeRequest::param();
         }
 
         $collection = new cjOper();
@@ -224,7 +224,7 @@ class Cj extends Base
 
         $where=[];
         $where['nodeid'] = $param['id'];
-        $res = model('Cj')->infoData('cj_node',$where);
+        $res = (new \app\common\model\Cj())->infoData('cj_node',$where);
         if($res['code']>1){
             return $this->error($res['msg']);
         }
@@ -283,7 +283,7 @@ class Cj extends Base
 
     public function publish()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
 
         $param['page'] = intval($param['page']) <1 ? 1 : $param['page'];
         $param['limit'] = intval($param['limit']) <20 ? $this->_pagesize : $param['limit'];
@@ -294,7 +294,7 @@ class Cj extends Base
         }
 
         $order='id desc';
-        $res = model('Cj')->listData('cj_content',$where,$order,$param['page'],$param['limit']);
+        $res = (new \app\common\model\Cj())->listData('cj_content',$where,$order,$param['page'],$param['limit']);
 
         $this->assign('list',$res['list']);
         $this->assign('total',$res['total']);
@@ -311,7 +311,7 @@ class Cj extends Base
 
     public function show()
     {
-        $id = input('id');
+        $id = \think\facadeRequest::param("id");
         $where=[];
         $where['id'] = $id;
         $info = Db::name('cj_content')->where($where)->find();
@@ -326,7 +326,7 @@ class Cj extends Base
 
     public function content_del()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $ids = $param['ids'];
         $all = $param['all'];
 
@@ -358,7 +358,7 @@ class Cj extends Base
     public function content_into($param=[])
     {
         if(empty($param)){
-            $param = input();
+            $param = \think\facadeRequest::param();
         }
 
         $nodeid = $param['id'];
@@ -369,7 +369,7 @@ class Cj extends Base
 
         $where=[];
         $where['nodeid'] = $param['id'];
-        $res = model('Cj')->infoData('cj_node',$where);
+        $res = (new \app\common\model\Cj())->infoData('cj_node',$where);
         if($res['code']>1){
             return $this->error($res['msg']);
         }
@@ -422,10 +422,10 @@ class Cj extends Base
 
 
             if($node['mid'] == '2'){
-                $res = model('Collect')->art_data([],$data,0);
+                $res = (new \app\common\model\Collect())->art_data([],$data,0);
             }
             else{
-                $res = model('Collect')->vod_data([],$data,0);
+                $res = (new \app\common\model\Collect())->vod_data([],$data,0);
             }
             if($res['code'] ==1){
                 $update_ids[] = $v['id'];
@@ -461,7 +461,7 @@ class Cj extends Base
     //序列网址测试
     public function show_url()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $data = $param['data'];
         $data['urlpage'] = (string)$param['urlpage'.$data['sourcetype']];
         $collection = new cjOper();
@@ -474,13 +474,13 @@ class Cj extends Base
 
     public function del()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $ids = $param['ids'];
 
         if(!empty($ids)){
             $where=[];
             $where['nodeid'] = $ids;
-            $res = model('Cj')->delData($where);
+            $res = (new \app\common\model\Cj())->delData($where);
             if($res['code']>1){
                 return $this->error($res['msg']);
             }
@@ -491,11 +491,11 @@ class Cj extends Base
 
     public function export()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
 
         $where=[];
         $where['nodeid'] = $param['id'];
-        $res = model('Cj')->infoData('cj_node',$where);
+        $res = (new \app\common\model\Cj())->infoData('cj_node',$where);
         if($res['code']>1){
             return $this->error($res['msg']);
         }
@@ -520,7 +520,7 @@ class Cj extends Base
             @unlink($info->getpathName());
             if($data){
                 unset($data['nodeid']);
-                $res = model('Cj')->saveData($data);
+                $res = (new \app\common\model\Cj())->saveData($data);
                 if($res['code']>1){
                     return $this->success($res['msg']);
                 }

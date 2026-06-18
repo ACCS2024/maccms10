@@ -9,13 +9,13 @@ class Urlsend extends Base
     public function __construct()
     {
         parent::__construct();
-        $this->_param = input();
+        $this->_param = \think\facadeRequest::param();
     }
 
     public function index()
     {
         if (Request()->isPost()) {
-            $config = input();
+            $config = \think\facadeRequest::param();
             $config_new['urlsend'] = $config['urlsend'];
 
             $config_old = config('maccms');
@@ -74,7 +74,7 @@ class Urlsend extends Base
                 $col = 'vod';
                 $order = 'vod_id asc';
                 $fun = 'mac_url_vod_detail';
-                $res = model('Vod')->listData($where,$order,$this->_param['page'],$this->_param['limit']);
+                $res = (new \app\common\model\Vod())->listData($where,$order,$this->_param['page'],$this->_param['limit']);
                 break;
             case 2:
                 $where['art_status'] = 1;
@@ -93,7 +93,7 @@ class Urlsend extends Base
                 $col = 'art';
                 $order = 'art_id asc';
                 $fun = 'mac_url_art_detail';
-                $res = model('Art')->listData($where,$order,$this->_param['page'],$this->_param['limit']);
+                $res = (new \app\common\model\Art())->listData($where,$order,$this->_param['page'],$this->_param['limit']);
                 break;
             case 3:
                 $where['topic_status'] = 1;
@@ -112,7 +112,7 @@ class Urlsend extends Base
                 $col = 'topic';
                 $order = 'topic_id asc';
                 $fun = 'mac_url_topic_detail';
-                $res = model('Topic')->listData($where,$order,$this->_param['page'],$this->_param['limit']);
+                $res = (new \app\common\model\Topic())->listData($where,$order,$this->_param['page'],$this->_param['limit']);
                 break;
             case 8:
                 $where['actor_status'] = 1;
@@ -130,7 +130,7 @@ class Urlsend extends Base
                 $col = 'actor';
                 $order = 'actor_id asc';
                 $fun = 'mac_url_actor_detail';
-                $res = model('Actor')->listData($where,$order,$this->_param['page'],$this->_param['limit']);
+                $res = (new \app\common\model\Actor())->listData($where,$order,$this->_param['page'],$this->_param['limit']);
                 break;
             case 9:
                 $where['role_status'] = 1;
@@ -148,7 +148,7 @@ class Urlsend extends Base
                 $col = 'role';
                 $order = 'role_id asc';
                 $fun = 'mac_url_role_detail';
-                $res = model('Role')->listData($where,$order,$this->_param['page'],$this->_param['limit']);
+                $res = (new \app\common\model\Role())->listData($where,$order,$this->_param['page'],$this->_param['limit']);
                 break;
             case 11:
                 $where['website_status'] = 1;
@@ -166,7 +166,7 @@ class Urlsend extends Base
                 $col = 'website';
                 $order = 'website_id asc';
                 $fun = 'mac_url_website_detail';
-                $res = model('Website')->listData($where,$order,$this->_param['page'],$this->_param['limit']);
+                $res = (new \app\common\model\Website())->listData($where,$order,$this->_param['page'],$this->_param['limit']);
                 break;
             case 12:
                 $where['manga_status'] = 1;
@@ -184,7 +184,7 @@ class Urlsend extends Base
                 $col = 'manga';
                 $order = 'manga_id asc';
                 $fun = 'mac_url_manga_detail';
-                $res = model('Manga')->listData($where,$order,$this->_param['page'],$this->_param['limit']);
+                $res = (new \app\common\model\Manga())->listData($where,$order,$this->_param['page'],$this->_param['limit']);
                 break;
         }
 

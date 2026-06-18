@@ -1,6 +1,6 @@
 <?php
 namespace app\admin\controller;
-use think\Db;
+use think\facade\Db;
 use app\common\util\Pinyin;
 
 class Art extends Base
@@ -12,7 +12,7 @@ class Art extends Base
 
     public function data()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $param['page'] = intval($param['page']) < 1 ? 1 : $param['page'];
         $param['limit'] = intval($param['limit']) < 1 ? $this->_pagesize : $param['limit'];
 
@@ -59,11 +59,11 @@ class Art extends Base
                 Db::execute('INSERT INTO `'.config('database.prefix').'tmpart` (SELECT min(art_id)as id1,art_name as name1 FROM '.config('database.prefix').'art WHERE art_recycle_time = 0 GROUP BY name1 HAVING COUNT(name1)>1)');
             }
             $order='art_name asc';
-            $res = model('Art')->listRepeatData($where,$order,$param['page'],$param['limit']);
+            $res = (new \app\common\model\Art())->listRepeatData($where,$order,$param['page'],$param['limit']);
         }
         else{
             $order='art_time desc';
-            $res = model('Art')->listData($where,$order,$param['page'],$param['limit']);
+            $res = (new \app\common\model\Art())->listData($where,$order,$param['page'],$param['limit']);
         }
 
         $artIds = array_column($res['list'], 'art_id');
@@ -97,7 +97,7 @@ class Art extends Base
         $param['limit'] = '{limit}';
         $this->assign('param', $param);
 
-        $type_tree = model('Type')->getCache('type_tree');
+        $type_tree = (new \app\common\model\Type())->getCache('type_tree');
         $this->assign('type_tree', $type_tree);
 
         $this->assign('title', lang('admin/art/title'));
@@ -106,7 +106,7 @@ class Art extends Base
 
     public function batch()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         if (!empty($param)) {
 
             mac_echo('<style type="text/css">body{font-size:12px;color: #333333;line-height:21px;}span{font-weight:bold;color:#FF0000}</style>');
@@ -116,13 +116,13 @@ class Art extends Base
             }
             $where = $this->artBatchFilterWhere($param);
             if($param['ck_del'] == 1){
-                $res = model('Art')->recycleData($where);
+                $res = (new \app\common\model\Art())->recycleData($where);
                 mac_echo($res['code'] == 1 ? lang('recycle_ok') : $res['msg']);
                 mac_jump( url('art/batch') ,3);
                 exit;
             }
             if($param['ck_del'] == 4){
-                $res = model('Art')->delData($where);
+                $res = (new \app\common\model\Art())->delData($where);
                 mac_echo(lang('multi_del_ok'));
                 mac_jump( url('art/batch') ,3);
                 exit;
@@ -135,7 +135,7 @@ class Art extends Base
                 $param['limit'] = 100;
             }
             if(empty($param['total'])) {
-                $param['total'] = model('Art')->countData($where);
+                $param['total'] = (new \app\common\model\Art())->countData($where);
                 $param['page_count'] = ceil($param['total'] / $param['limit']);
             }
 
@@ -148,7 +148,7 @@ class Art extends Base
 
             $page = $param['page_count'] - $param['page'] + 1;
             $order='art_id desc';
-            $res = model('Art')->listData($where,$order,$page,$param['limit']);
+            $res = (new \app\common\model\Art())->listData($where,$order,$page,$param['limit']);
 
             foreach($res['list'] as  $k=>$v){
                 $where2 = [];
@@ -184,7 +184,7 @@ class Art extends Base
                 }
 
                 mac_echo($des);
-                $res2 = model('Art')->where($where2)->update($update);
+                $res2 = (new \app\common\model\Art())->where($where2)->update($update);
 
             }
             $param['page']++;
@@ -193,7 +193,7 @@ class Art extends Base
             exit;
         }
 
-        $type_tree = model('Type')->getCache('type_tree');
+        $type_tree = (new \app\common\model\Type())->getCache('type_tree');
         $this->assign('type_tree',$type_tree);
 
         $this->assign('title',lang('admin/art/title'));
@@ -239,7 +239,7 @@ class Art extends Base
 
     public function exportData()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $where = $this->artBatchFilterWhere($param);
         $this->base_export($param,'art',$where);
     }
@@ -252,33 +252,33 @@ class Art extends Base
     public function info()
     {
         if (Request()->isPost()) {
-            $param = input('post.');
-            $res = model('Art')->saveData($param);
+            $param = \think\facade\Request::post();
+            $res = (new \app\common\model\Art())->saveData($param);
             if($res['code']>1){
                 return $this->error($res['msg']);
             }
             return $this->success($res['msg']);
         }
 
-        $id = input('id');
+        $id = \think\facadeRequest::param("id");
         $where=[];
         $where['art_id'] = $id;
         $where['_recycle'] = 'all';
-        $res = model('Art')->infoData($where);
+        $res = (new \app\common\model\Art())->infoData($where);
 
         $info = $res['info'];
         $this->assign('info',$info);
         $this->assign('art_page_list',(array)$info['art_page_list']);
         $seoAiStatus = 0;
         if (!empty($info['art_id'])) {
-            $seoAi = model('SeoAiResult')->getByObject(2, intval($info['art_id']));
+            $seoAi = (new \app\common\model\SeoAiResult())->getByObject(2, intval($info['art_id']));
             if (!empty($seoAi)) {
                 $seoAiStatus = intval($seoAi['seo_status']);
             }
         }
         $this->assign('seo_ai_status', $seoAiStatus);
 
-        $type_tree = model('Type')->getCache('type_tree');
+        $type_tree = (new \app\common\model\Type())->getCache('type_tree');
         $this->assign('type_tree',$type_tree);
 
         $this->assign('title',lang('admin/art/title'));
@@ -290,7 +290,7 @@ class Art extends Base
         if (!Request()->isPost()) {
             return json(['code' => 0, 'msg' => lang('illegal_request'), 'data' => []]);
         }
-        $id = intval(input('post.id'));
+        $id = intval(\think\facade\Request::post("id"));
         if ($id <= 0) {
             return json(['code' => 0, 'msg' => lang('param_err'), 'data' => []]);
         }
@@ -308,13 +308,13 @@ class Art extends Base
 
     public function restore()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $ids = $param['ids'];
         if (empty($ids)) {
             return $this->error(lang('param_err'));
         }
         $where = ['art_id' => ['in', $ids]];
-        $res = model('Art')->restoreData($where);
+        $res = (new \app\common\model\Art())->restoreData($where);
         if ($res['code'] > 1) {
             return $this->error($res['msg']);
         }
@@ -323,7 +323,7 @@ class Art extends Base
 
     public function del()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $ids = $param['ids'];
         $purge = !empty($param['purge']);
 
@@ -331,9 +331,9 @@ class Art extends Base
             $where=[];
             $where['art_id'] = $ids;
             if ($purge) {
-                $res = model('Art')->delData($where);
+                $res = (new \app\common\model\Art())->delData($where);
             } else {
-                $res = model('Art')->recycleData($where);
+                $res = (new \app\common\model\Art())->recycleData($where);
             }
             if($res['code']>1){
                 return $this->error($res['msg']);
@@ -346,7 +346,7 @@ class Art extends Base
                 $st=' in ';
             }
             $sql = 'delete from '.config('database.prefix').'art where art_name in(select name1 from '.config('database.prefix').'tmpart) and art_id '.$st.'(select id1 from '.config('database.prefix').'tmpart)';
-            $res = model('Art')->execute($sql);
+            $res = (new \app\common\model\Art())->execute($sql);
             if($res===false){
                 return $this->success(lang('del_err'));
             }
@@ -357,7 +357,7 @@ class Art extends Base
 
     public function field()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $ids = $param['ids'];
         $col = $param['col'];
         $val = $param['val'];
@@ -374,11 +374,11 @@ class Art extends Base
             if(empty($start)) {
                 $update[$col] = $val;
                 if($col == 'type_id'){
-                    $type_list = model('Type')->getCache();
+                    $type_list = (new \app\common\model\Type())->getCache();
                     $id1 = intval($type_list[$val]['type_pid']);
                     $update['type_id_1'] = $id1;
                 }
-                $res = model('Art')->fieldData($where, $update);
+                $res = (new \app\common\model\Art())->fieldData($where, $update);
             }
             else{
                 if(empty($end)){$end = 9999;}
@@ -387,7 +387,7 @@ class Art extends Base
                     $val = rand($start,$end);
                     $where['art_id'] = $v;
                     $update[$col] = $val;
-                    $res = model('Art')->fieldData($where, $update);
+                    $res = (new \app\common\model\Art())->fieldData($where, $update);
                 }
             }
             if($res['code']>1){
@@ -400,9 +400,9 @@ class Art extends Base
 
     public function updateToday()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $flag = $param['flag'];
-        $res = model('Art')->updateToday($flag);
+        $res = (new \app\common\model\Art())->updateToday($flag);
         return json($res);
     }
 

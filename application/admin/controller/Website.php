@@ -1,6 +1,6 @@
 <?php
 namespace app\admin\controller;
-use think\Db;
+use think\facade\Db;
 use app\common\util\Pinyin;
 
 class Website extends Base
@@ -12,7 +12,7 @@ class Website extends Base
 
     public function data()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $param['page'] = intval($param['page']) < 1 ? 1 : $param['page'];
         $param['limit'] = intval($param['limit']) < 1 ? $this->_pagesize : $param['limit'];
 
@@ -55,11 +55,11 @@ class Website extends Base
                 Db::execute('INSERT INTO `'.config('database.prefix').'tmpwebsite` (SELECT min(website_id)as id1,website_name as name1 FROM '.config('database.prefix').'website GROUP BY name1 HAVING COUNT(name1)>1)');
             }
             $order='website_name asc';
-            $res = model('Website')->listRepeatData($where,$order,$param['page'],$param['limit']);
+            $res = (new \app\common\model\Website())->listRepeatData($where,$order,$param['page'],$param['limit']);
         }
         else{
             $order='website_time desc';
-            $res = model('Website')->listData($where,$order,$param['page'],$param['limit']);
+            $res = (new \app\common\model\Website())->listData($where,$order,$param['page'],$param['limit']);
         }
 
         foreach($res['list'] as $k=>&$v){
@@ -78,7 +78,7 @@ class Website extends Base
         $param['limit'] = '{limit}';
         $this->assign('param', $param);
 
-        $type_tree = model('Type')->getCache('type_tree');
+        $type_tree = (new \app\common\model\Type())->getCache('type_tree');
         $this->assign('type_tree', $type_tree);
 
         $this->assign('title',lang('admin/website/title'));
@@ -87,7 +87,7 @@ class Website extends Base
 
     public function batch()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         if (!empty($param)) {
 
             mac_echo('<style type="text/css">body{font-size:12px;color: #333333;line-height:21px;}span{font-weight:bold;color:#FF0000}</style>');
@@ -129,7 +129,7 @@ class Website extends Base
 
 
             if($param['ck_del'] == 1){
-                $res = model('Website')->delData($where);
+                $res = (new \app\common\model\Website())->delData($where);
                 mac_echo(lang('multi_del_ok'));
                 mac_jump( url('website/batch') ,3);
                 exit;
@@ -142,7 +142,7 @@ class Website extends Base
                 $param['limit'] = 100;
             }
             if(empty($param['total'])) {
-                $param['total'] = model('Website')->countData($where);
+                $param['total'] = (new \app\common\model\Website())->countData($where);
                 $param['page_count'] = ceil($param['total'] / $param['limit']);
             }
 
@@ -154,7 +154,7 @@ class Website extends Base
             mac_echo( "<font color=red>".lang('admin/batch_tip',[$param['total'],$param['limit'],$param['page_count'],$param['page']])."</font>");
 
             $order='website_id desc';
-            $res = model('Website')->listData($where,$order,$param['page'],$param['limit']);
+            $res = (new \app\common\model\Website())->listData($where,$order,$param['page'],$param['limit']);
 
             foreach($res['list'] as  $k=>$v){
                 $where2 = [];
@@ -180,7 +180,7 @@ class Website extends Base
                     $des .= '&nbsp;'.lang('hits').'：'.$update['website_hits'].'；';
                 }
                 mac_echo($des);
-                $res2 = model('Website')->where($where2)->update($update);
+                $res2 = (new \app\common\model\Website())->where($where2)->update($update);
 
             }
             $param['page']++;
@@ -189,7 +189,7 @@ class Website extends Base
             exit;
         }
 
-        $type_tree = model('Type')->getCache('type_tree');
+        $type_tree = (new \app\common\model\Type())->getCache('type_tree');
         $this->assign('type_tree',$type_tree);
 
         $this->assign('title',lang('admin/website/title'));
@@ -199,25 +199,25 @@ class Website extends Base
     public function info()
     {
         if (Request()->isPost()) {
-            $param = input('post.');
+            $param = \think\facade\Request::post();
             $param['website_content'] = str_replace( $GLOBALS['config']['upload']['protocol'].':','mac:',$param['website_content']);
-            $res = model('Website')->saveData($param);
+            $res = (new \app\common\model\Website())->saveData($param);
             if($res['code']>1){
                 return $this->error($res['msg']);
             }
             return $this->success($res['msg']);
         }
 
-        $id = input('id');
+        $id = \think\facadeRequest::param("id");
         $where=[];
         $where['website_id'] = $id;
-        $res = model('Website')->infoData($where);
+        $res = (new \app\common\model\Website())->infoData($where);
 
         $info = $res['info'];
         $this->assign('info',$info);
         $this->assign('website_page_list',$info['website_page_list']);
 
-        $type_tree = model('Type')->getCache('type_tree');
+        $type_tree = (new \app\common\model\Type())->getCache('type_tree');
         $this->assign('type_tree',$type_tree);
 
         $this->assign('title',lang('admin/website/title'));
@@ -226,13 +226,13 @@ class Website extends Base
 
     public function del()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $ids = $param['ids'];
 
         if(!empty($ids)){
             $where=[];
             $where['website_id'] = $ids;
-            $res = model('Website')->delData($where);
+            $res = (new \app\common\model\Website())->delData($where);
             if($res['code']>1){
                 return $this->error($res['msg']);
             }
@@ -244,7 +244,7 @@ class Website extends Base
                 $st=' in ';
             }
             $sql = 'delete from '.config('database.prefix').'website where website_name in(select name1 from '.config('database.prefix').'tmpwebsite) and website_id '.$st.'(select id1 from '.config('database.prefix').'tmpwebsite)';
-            $res = model('Website')->execute($sql);
+            $res = (new \app\common\model\Website())->execute($sql);
             if($res===false){
                 return $this->success(lang('del_err'));
             }
@@ -255,7 +255,7 @@ class Website extends Base
 
     public function field()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $ids = $param['ids'];
         $col = $param['col'];
         $val = $param['val'];
@@ -272,11 +272,11 @@ class Website extends Base
             if(empty($start)) {
                 $update[$col] = $val;
                 if($col == 'type_id'){
-                    $type_list = model('Type')->getCache();
+                    $type_list = (new \app\common\model\Type())->getCache();
                     $id1 = intval($type_list[$val]['type_pid']);
                     $update['type_id_1'] = $id1;
                 }
-                $res = model('Website')->fieldData($where, $update);
+                $res = (new \app\common\model\Website())->fieldData($where, $update);
             }
             else{
                 if(empty($end)){$end = 9999;}
@@ -285,7 +285,7 @@ class Website extends Base
                     $val = rand($start,$end);
                     $where['website_id'] = $v;
                     $update[$col] = $val;
-                    $res = model('Website')->fieldData($where, $update);
+                    $res = (new \app\common\model\Website())->fieldData($where, $update);
                 }
             }
             if($res['code']>1){
@@ -298,9 +298,9 @@ class Website extends Base
 
     public function updateToday()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $flag = $param['flag'];
-        $res = model('Website')->updateToday($flag);
+        $res = (new \app\common\model\Website())->updateToday($flag);
         return json($res);
     }
 

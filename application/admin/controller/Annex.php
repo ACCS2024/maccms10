@@ -1,7 +1,7 @@
 <?php
 namespace app\admin\controller;
 
-use think\Db;
+use think\facade\Db;
 
 class Annex extends Base
 {
@@ -12,7 +12,7 @@ class Annex extends Base
 
     public function data()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $param['page'] = intval($param['page']) < 1 ? 1 : $param['page'];
         $param['limit'] = intval($param['limit']) < 1 ? $this->_pagesize : $param['limit'];
 
@@ -29,7 +29,7 @@ class Annex extends Base
         }
 
         $order='annex_time desc';
-        $res = model('Annex')->listData($where,$order,$param['page'],$param['limit']);
+        $res = (new \app\common\model\Annex())->listData($where,$order,$param['page'],$param['limit']);
 
         $this->assign('list', $res['list']);
         $this->assign('total', $res['total']);
@@ -46,7 +46,7 @@ class Annex extends Base
 
     public function file()
     {
-        $path = input('path');
+        $path = \think\facadeRequest::param("path");
         $path = str_replace('\\','',$path);
         $path = str_replace('/','',$path);
 
@@ -133,18 +133,18 @@ class Annex extends Base
     public function info()
     {
         if (Request()->isPost()) {
-            $param = input('post.');
-            $res = model('Annex')->saveData($param);
+            $param = \think\facade\Request::post();
+            $res = (new \app\common\model\Annex())->saveData($param);
             if($res['code']>1){
                 return $this->error($res['msg']);
             }
             return $this->success($res['msg']);
         }
 
-        $id = input('id');
+        $id = \think\facadeRequest::param("id");
         $where=[];
         $where['annex_id'] = $id;
-        $res = model('Annex')->infoData($where);
+        $res = (new \app\common\model\Annex())->infoData($where);
         $info = $res['info'];
         $this->assign('info',$info);
 
@@ -154,7 +154,7 @@ class Annex extends Base
 
     public function del()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $ids = $param['ids'];
 
         if(!empty($ids)){
@@ -165,7 +165,7 @@ class Annex extends Base
             }
             $where=[];
             $where['annex_id|annex_file'] = $ids; // TODO:TP8-pipe-or
-            $res = model('Annex')->delData($where);
+            $res = (new \app\common\model\Annex())->delData($where);
             if($res['code']>1){
                 return $this->error($res['msg']);
             }
@@ -178,7 +178,7 @@ class Annex extends Base
     {
         mac_echo('<style type="text/css">body{font-size:12px;color: #333333;line-height:21px;}span{font-weight:bold;color:#FF0000}</style>');
 
-        $param = input();
+        $param = \think\facadeRequest::param();
         $num = intval($param['num']);
         $start = intval($param['start']);
         $page_count = intval($param['page_count']);
@@ -192,7 +192,7 @@ class Annex extends Base
         $page_size = 500;
         if(empty($data_count)){
             $where=[];
-            $data_count = model('Annex')->countData($where);
+            $data_count = (new \app\common\model\Annex())->countData($where);
             $page_count = ceil($data_count / $page_size);
 
             $param['data_count'] = $data_count;
@@ -225,7 +225,7 @@ class Annex extends Base
 
     public function init()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
 
         if($param['ck']){
             mac_echo('<style type="text/css">body{font-size:12px;color: #333333;line-height:21px;}span{font-weight:bold;color:#FF0000}</style>');
@@ -334,7 +334,7 @@ class Annex extends Base
                             foreach($v['imgs'] as $k2 => $v2){
                                 $where = [];
                                 $where['annex_file'] = $v2['annex_file'];
-                                $r = model('Annex')->infoData($where);
+                                $r = (new \app\common\model\Annex())->infoData($where);
                                 if ($r['code'] !== 1) {
                                     $insert[] = $v2;
                                     $des = '<font color=green>ok</font>';
@@ -342,7 +342,7 @@ class Annex extends Base
                             }
                         }
                         mac_echo($v['name'] . '...' . $des);
-                        model('Annex')->insertAll($insert);
+                        (new \app\common\model\Annex())->insertAll($insert);
                     }
                 }
             }

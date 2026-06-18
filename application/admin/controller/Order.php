@@ -1,6 +1,6 @@
 <?php
 namespace app\admin\controller;
-use think\Db;
+use think\facade\Db;
 
 class Order extends Base
 {
@@ -11,7 +11,7 @@ class Order extends Base
 
     public function index()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $param['page'] = intval($param['page']) <1 ? 1 : $param['page'];
         $param['limit'] = intval($param['limit']) <1 ? $this->_pagesize : $param['limit'];
         $where=[];
@@ -27,7 +27,7 @@ class Order extends Base
         }
 
         $order='order_id desc';
-        $res = model('Order')->listData($where,$order,$param['page'],$param['limit']);
+        $res = (new \app\common\model\Order())->listData($where,$order,$param['page'],$param['limit']);
 
 
         $this->assign('list',$res['list']);
@@ -47,7 +47,7 @@ class Order extends Base
 
     public function del()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $ids = $param['ids'];
         $all = $param['all'];
 
@@ -57,7 +57,7 @@ class Order extends Base
             if($all==1){
                 $where[] = ['order_id', '>', 0];
             }
-            $res = model('Order')->delData($where);
+            $res = (new \app\common\model\Order())->delData($where);
             if($res['code']>1){
                 return $this->error($res['msg']);
             }

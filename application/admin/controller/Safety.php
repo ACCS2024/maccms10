@@ -1,6 +1,6 @@
 <?php
 namespace app\admin\controller;
-use think\Db;
+use think\facade\Db;
 
 class Safety extends Base
 {
@@ -36,7 +36,7 @@ class Safety extends Base
 
     public function file()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         if($param['ck']){
             $ft = $param['ft'];
             if(empty($ft)){
@@ -78,7 +78,7 @@ class Safety extends Base
 
     public function data()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         if ($param['ck']) {
             $pre = config('database.prefix');
             $schema = Db::query('select * from information_schema.columns where table_schema = ?', [config('database.database')]);

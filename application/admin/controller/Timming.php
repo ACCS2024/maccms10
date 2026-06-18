@@ -1,6 +1,6 @@
 <?php
 namespace app\admin\controller;
-use think\Db;
+use think\facade\Db;
 
 class Timming extends Base
 {
@@ -20,7 +20,7 @@ class Timming extends Base
 
     public function info()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $list = config('timming');
         if (Request()->isPost()) {
             $validate = \think\Loader::validate('Token');
@@ -47,7 +47,7 @@ class Timming extends Base
 
     public function del()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $list = config('timming');
         unset($list[$param['ids']]);
         $res = mac_arr2file(APP_PATH. 'extra/timming.php', $list);
@@ -60,7 +60,7 @@ class Timming extends Base
 
     public function field()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $ids = $param['ids'];
         $col = $param['col'];
         $val = $param['val'];

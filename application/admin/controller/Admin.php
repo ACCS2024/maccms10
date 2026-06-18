@@ -1,6 +1,6 @@
 <?php
 namespace app\admin\controller;
-use think\Db;
+use think\facade\Db;
 
 class Admin extends Base
 {
@@ -11,7 +11,7 @@ class Admin extends Base
 
     public function index()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $param['page'] = intval($param['page']) <1 ? 1 : $param['page'];
         $param['limit'] = intval($param['limit']) <1 ? $this->_pagesize : $param['limit'];
         $where=[];
@@ -21,7 +21,7 @@ class Admin extends Base
         }
 
         $order='admin_id desc';
-        $res = model('Admin')->listData($where,$order,$param['page'],$param['limit']);
+        $res = (new \app\common\model\Admin())->listData($where,$order,$param['page'],$param['limit']);
 
         $this->assign('list',$res['list']);
         $this->assign('total',$res['total']);
@@ -41,7 +41,7 @@ class Admin extends Base
     public function info()
     {
         if (Request()->isPost()) {
-            $param = input('post.');
+            $param = \think\facade\Request::post();
             if(!in_array('index/welcome',$param['admin_auth'])){
                 $param['admin_auth'][] = 'index/welcome';
             }
@@ -49,19 +49,19 @@ class Admin extends Base
             if(!$validate->check($param)){
                 return $this->error($validate->getError());
             }
-            $res = model('Admin')->saveData($param);
+            $res = (new \app\common\model\Admin())->saveData($param);
             if($res['code']>1){
                 return $this->error($res['msg']);
             }
             return $this->success($res['msg']);
         }
 
-        $id = input('id');
+        $id = \think\facadeRequest::param("id");
 
         $where=[];
         $where['admin_id'] = $id;
 
-        $res = model('Admin')->infoData($where);
+        $res = (new \app\common\model\Admin())->infoData($where);
         $this->assign('info',$res['info']);
 
         //权限列表
@@ -98,7 +98,7 @@ class Admin extends Base
 
     public function del()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $ids = $param['ids'];
 
         if(!empty($ids)){
@@ -110,7 +110,7 @@ class Admin extends Base
             if(in_array($this->_admin['admin_id'],$ids)){
                 return $this->error(lang('admin/admin/del_cur_err'));
             }
-            $res = model('Admin')->delData($where);
+            $res = (new \app\common\model\Admin())->delData($where);
             if($res['code']>1){
                 return $this->error($res['msg']);
             }
@@ -121,7 +121,7 @@ class Admin extends Base
 
     public function field()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $ids = $param['ids'];
         $col = $param['col'];
         $val = $param['val'];
@@ -130,7 +130,7 @@ class Admin extends Base
             $where=[];
             $where['admin_id'] = $ids;
 
-            $res = model('Admin')->fieldData($where,$col,$val);
+            $res = (new \app\common\model\Admin())->fieldData($where,$col,$val);
             if($res['code']>1){
                 return $this->error($res['msg']);
             }

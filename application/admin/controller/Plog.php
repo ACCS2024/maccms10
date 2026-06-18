@@ -1,6 +1,6 @@
 <?php
 namespace app\admin\controller;
-use think\Db;
+use think\facade\Db;
 
 class Plog extends Base
 {
@@ -11,7 +11,7 @@ class Plog extends Base
 
     public function index()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $param['page'] = intval($param['page']) <1 ? 1 : $param['page'];
         $param['limit'] = intval($param['limit']) <1 ? $this->_pagesize : $param['limit'];
         $where=[];
@@ -23,7 +23,7 @@ class Plog extends Base
         }
 
         $order='plog_id desc';
-        $res = model('Plog')->listData($where,$order,$param['page'],$param['limit']);
+        $res = (new \app\common\model\Plog())->listData($where,$order,$param['page'],$param['limit']);
 
         $this->assign('list',$res['list']);
         $this->assign('total',$res['total']);
@@ -40,7 +40,7 @@ class Plog extends Base
 
     public function del()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $ids = $param['ids'];
         $all = $param['all'];
         if(!empty($ids)){
@@ -49,7 +49,7 @@ class Plog extends Base
             if($all==1){
                 $where[] = ['plog_id', '>', 0];
             }
-            $res = model('Plog')->delData($where);
+            $res = (new \app\common\model\Plog())->delData($where);
             if($res['code']>1){
                 return $this->error($res['msg']);
             }

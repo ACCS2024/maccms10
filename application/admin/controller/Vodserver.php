@@ -1,6 +1,6 @@
 <?php
 namespace app\admin\controller;
-use think\Db;
+use think\facade\Db;
 
 class VodServer extends Base
 {
@@ -22,7 +22,7 @@ class VodServer extends Base
 
     public function info()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $list = config($this->_pre);
         if (Request()->isPost()) {
             $validate = \think\Loader::validate('Token');
@@ -60,7 +60,7 @@ class VodServer extends Base
 
     public function del()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $list = config($this->_pre);
         unset($list[$param['ids']]);
         $res = mac_arr2file(APP_PATH. 'extra/'.$this->_pre.'.php', $list);
@@ -73,7 +73,7 @@ class VodServer extends Base
 
     public function field()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $ids = $param['ids'];
         $col = $param['col'];
         $val = $param['val'];

@@ -1,6 +1,6 @@
 <?php
 namespace app\admin\controller;
-use think\Db;
+use think\facade\Db;
 
 class Task extends Base
 {
@@ -12,7 +12,7 @@ class Task extends Base
     // 任务列表
     public function data()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $param['page'] = intval($param['page']) < 1 ? 1 : $param['page'];
         $param['limit'] = intval($param['limit']) < 1 ? $this->_pagesize : $param['limit'];
 
@@ -29,7 +29,7 @@ class Task extends Base
         }
 
         $order = 'task_type asc, task_sort asc, task_id asc';
-        $res = model('Task')->listData($where, $order, $param['page'], $param['limit']);
+        $res = (new \app\common\model\Task())->listData($where, $order, $param['page'], $param['limit']);
 
         $this->assign('list', $res['list']);
         $this->assign('total', $res['total']);
@@ -46,20 +46,20 @@ class Task extends Base
     public function info()
     {
         if (request()->isPost()) {
-            $param = input();
-            $res = model('Task')->saveData($param);
+            $param = \think\facadeRequest::param();
+            $res = (new \app\common\model\Task())->saveData($param);
             if ($res['code'] > 1) {
                 return $this->error($res['msg']);
             }
             return $this->success($res['msg']);
         }
 
-        $param = input();
+        $param = \think\facadeRequest::param();
         $info = [];
         if (!empty($param['id'])) {
             $where = [];
             $where['task_id'] = $param['id'];
-            $res = model('Task')->infoData($where);
+            $res = (new \app\common\model\Task())->infoData($where);
             if ($res['code'] == 1) {
                 $info = $res['info'];
             }
@@ -72,12 +72,12 @@ class Task extends Base
     // 删除任务
     public function del()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $ids = $param['ids'];
         if (!empty($ids)) {
             $where = [];
             $where['task_id'] = $ids;
-            $res = model('Task')->delData($where);
+            $res = (new \app\common\model\Task())->delData($where);
             if ($res['code'] > 1) {
                 return $this->error($res['msg']);
             }
@@ -89,14 +89,14 @@ class Task extends Base
     // 修改状态
     public function field()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $ids = $param['ids'];
         $col = $param['col'];
         $val = $param['val'];
         if (!empty($ids) && in_array($col, ['task_status'])) {
             $where = [];
             $where['task_id'] = $ids;
-            $res = model('Task')->fieldData($where, $col, $val);
+            $res = (new \app\common\model\Task())->fieldData($where, $col, $val);
             if ($res['code'] > 1) {
                 return $this->error($res['msg']);
             }
@@ -108,7 +108,7 @@ class Task extends Base
     // 任务记录列表
     public function log()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $param['page'] = intval($param['page']) < 1 ? 1 : $param['page'];
         $param['limit'] = intval($param['limit']) < 1 ? $this->_pagesize : $param['limit'];
 
@@ -124,7 +124,7 @@ class Task extends Base
         }
 
         $order = 'log_id desc';
-        $res = model('TaskLog')->listData($where, $order, $param['page'], $param['limit']);
+        $res = (new \app\common\model\TaskLog())->listData($where, $order, $param['page'], $param['limit']);
 
         $this->assign('list', $res['list']);
         $this->assign('total', $res['total']);
@@ -140,7 +140,7 @@ class Task extends Base
     // 删除任务记录
     public function log_del()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $ids = $param['ids'];
         $all = $param['all'];
         if (!empty($ids) || !empty($all)) {
@@ -149,7 +149,7 @@ class Task extends Base
             if ($all == 1) {
                 $where[] = ['log_id', '>', 0];
             }
-            $res = model('TaskLog')->delData($where);
+            $res = (new \app\common\model\TaskLog())->delData($where);
             if ($res['code'] > 1) {
                 return $this->error($res['msg']);
             }

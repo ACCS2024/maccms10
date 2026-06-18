@@ -1,6 +1,6 @@
 <?php
 namespace app\admin\controller;
-use think\Db;
+use think\facade\Db;
 
 class Ulog extends Base
 {
@@ -11,7 +11,7 @@ class Ulog extends Base
 
     public function index()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $param['page'] = intval($param['page']) <1 ? 1 : $param['page'];
         $param['limit'] = intval($param['limit']) <1 ? $this->_pagesize : $param['limit'];
         $where=[];
@@ -26,7 +26,7 @@ class Ulog extends Base
         }
 
         $order='ulog_id desc';
-        $res = model('Ulog')->listData($where,$order,$param['page'],$param['limit']);
+        $res = (new \app\common\model\Ulog())->listData($where,$order,$param['page'],$param['limit']);
 
         $this->assign('list',$res['list']);
         $this->assign('total',$res['total']);
@@ -43,7 +43,7 @@ class Ulog extends Base
 
     public function del()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $ids = $param['ids'];
         $all = $param['all'];
         if(!empty($ids)){
@@ -52,7 +52,7 @@ class Ulog extends Base
             if($all==1){
                 $where[] = ['ulog_id', '>', 0];
             }
-            $res = model('Ulog')->delData($where);
+            $res = (new \app\common\model\Ulog())->delData($where);
             if($res['code']>1){
                 return $this->error($res['msg']);
             }

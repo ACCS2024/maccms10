@@ -1,6 +1,6 @@
 <?php
 namespace app\admin\controller;
-use think\Db;
+use think\facade\Db;
 use app\common\util\Pinyin;
 
 class Actor extends Base
@@ -12,7 +12,7 @@ class Actor extends Base
 
     public function data()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $param['page'] = intval($param['page']) < 1 ? 1 : $param['page'];
         $param['limit'] = intval($param['limit']) < 1 ? $this->_pagesize : $param['limit'];
 
@@ -46,7 +46,7 @@ class Actor extends Base
         }
 
         $order='actor_time desc';
-        $res = model('Actor')->listData($where,$order,$param['page'],$param['limit']);
+        $res = (new \app\common\model\Actor())->listData($where,$order,$param['page'],$param['limit']);
 
         $this->assign('list', $res['list']);
         $this->assign('total', $res['total']);
@@ -57,7 +57,7 @@ class Actor extends Base
         $param['limit'] = '{limit}';
         $this->assign('param', $param);
 
-        $type_tree = model('Type')->getCache('type_tree');
+        $type_tree = (new \app\common\model\Type())->getCache('type_tree');
         $this->assign('type_tree', $type_tree);
 
         $this->assign('title', lang('admin/actor/title'));
@@ -67,22 +67,22 @@ class Actor extends Base
     public function info()
     {
         if (Request()->isPost()) {
-            $param = input('post.');
-            $res = model('Actor')->saveData($param);
+            $param = \think\facade\Request::post();
+            $res = (new \app\common\model\Actor())->saveData($param);
             if($res['code']>1){
                 return $this->error($res['msg']);
             }
             return $this->success($res['msg']);
         }
 
-        $id = input('id');
+        $id = \think\facadeRequest::param("id");
         $where=[];
         $where['actor_id'] = $id;
-        $res = model('Actor')->infoData($where);
+        $res = (new \app\common\model\Actor())->infoData($where);
         $info = $res['info'];
         $this->assign('info',$info);
 
-        $type_tree = model('Type')->getCache('type_tree');
+        $type_tree = (new \app\common\model\Type())->getCache('type_tree');
         $this->assign('type_tree', $type_tree);
 
         $this->assign('title',lang('admin/actor/title'));
@@ -91,13 +91,13 @@ class Actor extends Base
 
     public function del()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $ids = $param['ids'];
 
         if(!empty($ids)){
             $where=[];
             $where['actor_id'] = $ids;
-            $res = model('Actor')->delData($where);
+            $res = (new \app\common\model\Actor())->delData($where);
             if($res['code']>1){
                 return $this->error($res['msg']);
             }
@@ -108,7 +108,7 @@ class Actor extends Base
 
     public function field()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $ids = $param['ids'];
         $col = $param['col'];
         $val = $param['val'];
@@ -123,11 +123,11 @@ class Actor extends Base
             if(empty($start)){
                 $update[$col] = $val;
                 if($col == 'type_id'){
-                    $type_list = model('Type')->getCache();
+                    $type_list = (new \app\common\model\Type())->getCache();
                     $id1 = intval($type_list[$val]['type_pid']);
                     $update['type_id_1'] = $id1;
                 }
-                $res = model('Actor')->fieldData($where, $update);
+                $res = (new \app\common\model\Actor())->fieldData($where, $update);
             }
             else{
                 if(empty($end)){$end = 9999;}
@@ -136,7 +136,7 @@ class Actor extends Base
                     $val = rand($start,$end);
                     $where['actor_id'] = $v;
                     $update[$col] = $val;
-                    $res = model('Actor')->fieldData($where, $update);
+                    $res = (new \app\common\model\Actor())->fieldData($where, $update);
                 }
             }
             if($res['code']>1){

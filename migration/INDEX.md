@@ -12,12 +12,12 @@
 | 优先级 | 文件 | 完成/总计 | 状态 |
 |--------|------|----------|------|
 | P0 | [P0.md](P0.md) — 启动层（入口+Shim+Middleware+Addons） | 25/25 | ✅ 完成 |
-| P1 | [P1.md](P1.md) — ORM/DB 层 | 6/8 | 🟡 P1-08 待做 |
-| P2 | [P2.md](P2.md) — API 模块 | 4/6 | 🟡 P2-06 待做 |
-| P3 | [P3.md](P3.md) — Admin 模块 | 0/6 | 🔴 未开始 |
+| P1 | [P1.md](P1.md) — ORM/DB 层 | 7/8 | 🟡 P1-07 烟雾测试待做 |
+| P2 | [P2.md](P2.md) — API 模块 | 5/6 | 🟡 P2-05 回归测试待做 |
+| P3 | [P3.md](P3.md) — Admin 模块 | 0/6 | 🔴 P3-01 开始 |
 | P4 | [P4.md](P4.md) — 前台 + Console | 0/6 | 🔴 未开始 |
 | P5 | [P5.md](P5.md) — 清理 + 回归 | 0/9 | 🔴 未开始 |
-| **合计** | | **35/63** | |
+| **合计** | | **37/63** | |
 
 ---
 
@@ -64,7 +64,7 @@
 | [P1-05](P1.md#p1-05-修复-fetchsqlfalse-调用) | 修复 fetchSql(false) → fetchSql()（3 处） | [x] |
 | [P1-06](P1.md#p1-06-config-database-键名迁移验证) | 验证 config/database.php 键名与 TP8 ORM 对齐 | [x] |
 | [P1-07](P1.md#p1-07-后台登录冒烟测试) | 后台登录冒烟测试（验证 DB + Session + Model 全链路） | [ ] |
-| [P1-08](P1.md#p1-08-修复-commonmodel--commonphp-tp5-数组条件语法新增) | **NEW** common/model + common.php TP5 数组条件 → TP8（~306+22 处） | [ ] |
+| [P1-08](P1.md#p1-08-修复-commonmodel--commonphp-tp5-数组条件语法新增) | **NEW** common/model + common.php TP5 数组条件 → TP8（~306+22 处） | [x] |
 
 ---
 
@@ -77,7 +77,7 @@
 | [P2-03](P2.md#p2-03-api-控制器-input-替换) | api/controller/：input() → request()->方法（约 5 处） | [x] |
 | [P2-04](P2.md#p2-04-创建-routeapiphp) | 创建 route/api.php（从 application/route.php 提取 API 路由段） | [x] |
 | [P2-05](P2.md#p2-05-api-接口回归测试) | API 接口回归测试（列表/搜索/用户接口） | [ ] |
-| [P2-06](P2.md#p2-06-修复-apicontroller-tp5-数组条件语法新增) | **NEW** api/controller TP5 数组条件 → TP8（~132 处，依赖 P1-08） | [ ] |
+| [P2-06](P2.md#p2-06-修复-apicontroller-tp5-数组条件语法新增) | **NEW** api/controller TP5 数组条件 → TP8（~132 处，依赖 P1-08） | [x] |
 
 ---
 

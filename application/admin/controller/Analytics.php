@@ -2,13 +2,13 @@
 namespace app\admin\controller;
 
 use app\common\util\BulkTableIo;
-use think\Db;
+use think\facade\Db;
 
 class Analytics extends Base
 {
     public function index()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $endDate = empty($param['end_date']) ? date('Y-m-d') : $param['end_date'];
         $startDate = empty($param['start_date']) ? date('Y-m-d', strtotime('-6 day')) : $param['start_date'];
         $dimType = empty($param['dim_type']) ? 'device' : trim($param['dim_type']);
@@ -33,9 +33,9 @@ class Analytics extends Base
 
     public function trend()
     {
-        $startDate = input('start_date/s', date('Y-m-d', strtotime('-6 day')));
-        $endDate = input('end_date/s', date('Y-m-d'));
-        $dimType = input('dim_type/s', 'device');
+        $startDate = (string)\think\facade\Request::param('start_date', date('Y-m-d', strtotime('-6 day')));
+        $endDate = (string)\think\facade\Request::param('end_date', date('Y-m-d'));
+        $dimType = (string)\think\facade\Request::param('dim_type', 'device');
         try {
             $data = $this->buildReportData($startDate, $endDate, $dimType);
         } catch (\Throwable $e) {
@@ -52,10 +52,10 @@ class Analytics extends Base
 
     public function export()
     {
-        $startDate = input('start_date/s', date('Y-m-d', strtotime('-6 day')));
-        $endDate = input('end_date/s', date('Y-m-d'));
-        $dimType = input('dim_type/s', 'device');
-        $format = input('format/s', 'xlsx');
+        $startDate = (string)\think\facade\Request::param('start_date', date('Y-m-d', strtotime('-6 day')));
+        $endDate = (string)\think\facade\Request::param('end_date', date('Y-m-d'));
+        $dimType = (string)\think\facade\Request::param('dim_type', 'device');
+        $format = (string)\think\facade\Request::param('format', 'xlsx');
         try {
             $data = $this->buildReportData($startDate, $endDate, $dimType);
         } catch (\Throwable $e) {
@@ -468,7 +468,7 @@ class Analytics extends Base
     private function resolveCurrentAdminLang()
     {
         $candidates = [
-            strtolower((string)input('lang/s', '')),
+            strtolower((string)(string)\think\facade\Request::param('lang', '')),
             strtolower((string)cookie('admin_lang')),
             strtolower((string)cookie('think_var')),
             strtolower((string)config('default_lang')),

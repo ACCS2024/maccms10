@@ -1,6 +1,6 @@
 <?php
 namespace app\admin\controller;
-use think\Db;
+use think\facade\Db;
 
 class Cash extends Base
 {
@@ -11,7 +11,7 @@ class Cash extends Base
 
     public function index()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $param['page'] = intval($param['page']) <1 ? 1 : $param['page'];
         $param['limit'] = intval($param['limit']) <1 ? $this->_pagesize : $param['limit'];
         $where=[];
@@ -27,7 +27,7 @@ class Cash extends Base
         }
 
         $order='cash_id desc';
-        $res = model('Cash')->listData($where,$order,$param['page'],$param['limit']);
+        $res = (new \app\common\model\Cash())->listData($where,$order,$param['page'],$param['limit']);
 
         $this->assign('list',$res['list']);
         $this->assign('total',$res['total']);
@@ -44,7 +44,7 @@ class Cash extends Base
 
     public function del()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $ids = $param['ids'];
         $all = $param['all'];
         if(!empty($ids)){
@@ -53,7 +53,7 @@ class Cash extends Base
             if($all==1){
                 $where[] = ['cash_id', '>', 0];
             }
-            $res = model('Cash')->delData($where);
+            $res = (new \app\common\model\Cash())->delData($where);
             if($res['code']>1){
                 return $this->error($res['msg']);
             }
@@ -64,12 +64,12 @@ class Cash extends Base
 
     public function audit()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $ids = $param['ids'];
         if(!empty($ids)){
             $where=[];
             $where['cash_id'] = $ids;
-            $res = model('Cash')->auditData($where);
+            $res = (new \app\common\model\Cash())->auditData($where);
             if($res['code']>1){
                 return $this->error($res['msg']);
             }

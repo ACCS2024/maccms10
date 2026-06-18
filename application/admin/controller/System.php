@@ -4,9 +4,9 @@ use app\common\util\ExternalSyncRunner;
 use app\common\util\JwtService;
 use app\common\util\PublishPage;
 use app\common\util\SensitiveDataCrypto;
-use think\Db;
-use think\Config;
-use think\Cache;
+use think\facade\Db;
+use think\facade\Config;
+use think\facade\Cache;
 use think\View;
 
 class System extends Base
@@ -14,7 +14,7 @@ class System extends Base
 
     public function test_email()
     {
-        $post = input();
+        $post = \think\facadeRequest::param();
         $conf = [
             'nick' => $post['nick'],
         ];
@@ -43,7 +43,7 @@ class System extends Base
 
     public function test_cache()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
 
         if (!isset($param['type']) || empty($param['host']) || empty($param['port'])) {
             return $this->error(lang('param_err'));
@@ -70,7 +70,7 @@ class System extends Base
     public function config()
     {
         if (Request()->isPost()) {
-            $config = input('','','htmlentities');
+            $config = \think\facade\Request::param();
             $validate = \think\Loader::validate('Token');
             if(!$validate->check($config)){
                 $err = $validate->getError();
@@ -252,7 +252,7 @@ class System extends Base
         if (!isset($config['app']['input_type'])) {
             $config['app']['input_type'] = 1;
         }
-        $config['app']['vod_search_optimise_cache_minutes'] = model('VodSearch')->getResultCacheMinutes($config);
+        $config['app']['vod_search_optimise_cache_minutes'] = (new \app\common\model\VodSearch())->getResultCacheMinutes($config);
         if (!isset($config['ai_seo']) || !is_array($config['ai_seo'])) {
             $config['ai_seo'] = [
                 'enabled' => '0',
@@ -289,7 +289,7 @@ class System extends Base
         $this->assign('form_action_configseo', (string) url('configseo'));
         $this->assign('form_action_configaiseo', (string) url('configaiseo'));
         $this->assign('form_action_configaicover', (string) url('configaicover'));
-        $tab = (string) input('tab', '');
+        $tab = (string) \think\facade\Request::param('tab', '');
         $allowTab = ['', 'seo', 'aiseo', 'aicover'];
         $this->assign('config_merge_tab', in_array($tab, $allowTab, true) ? $tab : '');
         $this->assign('audit_crypto_gcm_supported', SensitiveDataCrypto::supportsAes256Gcm() ? 1 : 0);
@@ -303,7 +303,7 @@ class System extends Base
     public function configurl()
     {
         if (Request()->isPost()) {
-            $config = input();
+            $config = \think\facadeRequest::param();
 
             $validate = \think\Loader::validate('Token');
             if(!$validate->check($config)){
@@ -395,7 +395,7 @@ class System extends Base
     public function configuser()
     {
         if (Request()->isPost()) {
-            $config = input('','','htmlentities');
+            $config = \think\facade\Request::param();
 
             $validate = \think\Loader::validate('Token');
             if(!$validate->check($config)){
@@ -450,11 +450,11 @@ class System extends Base
         }
         $this->assign('invite_reward_form', $invite_reward_form);
         
-        $group_list = \think\Db::name('group')->select();
+        $group_list = \think\facade\Db::name('group')->select();
         $this->assign('group_list', $group_list);
         
         $this->assign('form_action_configcomment', (string) url('configcomment'));
-        $tab = (string) input('tab', '');
+        $tab = (string) \think\facade\Request::param('tab', '');
         $allowTab = ['', 'comment'];
         $this->assign('config_merge_tab', in_array($tab, $allowTab, true) ? $tab : '');
         $this->assign('config', $config);
@@ -466,7 +466,7 @@ class System extends Base
     {
         $phar_status = file_exists(ROOT_PATH . 'extend/aws/src/Aws/aws.phar');
         if (Request()->isPost()){
-            $config = input('','','htmlentities');
+            $config = \think\facade\Request::param();
             $invalidSubmitMsg = '提交数据不完整，请刷新页面后重试';
             if (
                 !isset($config['upload']) || !is_array($config['upload']) ||
@@ -527,7 +527,7 @@ class System extends Base
 
         $this->assign('form_action_configurl', (string) url('configurl'));
         $this->assign('form_action_configplay', (string) url('configplay'));
-        $tab = (string) input('tab', '');
+        $tab = (string) \think\facade\Request::param('tab', '');
         $allowTab = ['', 'url', 'play'];
         $this->assign('config_merge_tab', in_array($tab, $allowTab, true) ? $tab : '');
         $this->assign('title', lang('admin/system/configupload/title'));
@@ -537,7 +537,7 @@ class System extends Base
     public function configcomment()
     {
         if (Request()->isPost()) {
-            $config = input('','','htmlentities');
+            $config = \think\facade\Request::param();
             $invalidSubmitMsg = '提交数据不完整，请刷新页面后重试';
             // 评论留言独立表单只提交 gbook / comment，不包含会员配置 user[*]
             if (
@@ -574,7 +574,7 @@ class System extends Base
     public function configweixin()
     {
         if (Request()->isPost()) {
-            $config = input('','','htmlentities');
+            $config = \think\facade\Request::param();
 
             $validate = \think\Loader::validate('Token');
             if(!$validate->check($config)){
@@ -602,7 +602,7 @@ class System extends Base
     public function configpay()
     {
         if (Request()->isPost()) {
-            $config = input('','','htmlentities');
+            $config = \think\facade\Request::param();
 
             $validate = \think\Loader::validate('Token');
             if(!$validate->check($config)){
@@ -630,7 +630,7 @@ class System extends Base
     public function configconnect()
     {
         if (Request()->isPost()) {
-            $config = input('','','htmlentities');
+            $config = \think\facade\Request::param();
 
             $validate = \think\Loader::validate('Token');
             if(!$validate->check($config)){
@@ -658,7 +658,7 @@ class System extends Base
         $this->assign('extends', $extends);
         $this->assign('form_action_configweixin', (string) url('configweixin'));
         $this->assign('form_action_configpay', (string) url('configpay'));
-        $tab = (string) input('tab', '');
+        $tab = (string) \think\facade\Request::param('tab', '');
         $allowTab = ['', 'weixin', 'pay'];
         $this->assign('config_merge_tab', in_array($tab, $allowTab, true) ? $tab : '');
         $this->assign('title', lang('admin/system/configconnect/title'));
@@ -668,7 +668,7 @@ class System extends Base
     public function configemail()
     {
         if (Request()->isPost()) {
-            $config = input('','','htmlentities');
+            $config = \think\facade\Request::param();
 
             $validate = \think\Loader::validate('Token');
             if(!$validate->check($config)){
@@ -701,7 +701,7 @@ class System extends Base
     public function configsms()
     {
         if (Request()->isPost()) {
-            $config = input('','','htmlentities');
+            $config = \think\facade\Request::param();
 
             $validate = \think\Loader::validate('Token');
             if(!$validate->check($config)){
@@ -735,7 +735,7 @@ class System extends Base
     public function configapi()
     {
         if (Request()->isPost()) {
-            $config = input('','','htmlentities');
+            $config = \think\facade\Request::param();
 
             $validate = \think\Loader::validate('Token');
             if(!$validate->check($config)){
@@ -769,7 +769,7 @@ class System extends Base
     public function configinterface()
     {
         if (Request()->isPost()) {
-            $config = input('','','htmlentities');
+            $config = \think\facade\Request::param();
 
             $validate = \think\Loader::validate('Token');
             if(!$validate->check($config)){
@@ -807,7 +807,7 @@ class System extends Base
     public function configcollect()
     {
         if (Request()->isPost()) {
-            $config = input('','','htmlentities');
+            $config = \think\facade\Request::param();
             $validate = \think\Loader::validate('Token');
             if(!$validate->check($config)){
                 $err = $validate->getError();
@@ -925,7 +925,7 @@ class System extends Base
         }
         $this->assign('form_action_configinterface', (string) url('configinterface'));
         $this->assign('form_action_configapi', (string) url('configapi'));
-        $tab = (string) input('tab', '');
+        $tab = (string) \think\facade\Request::param('tab', '');
         $allowTab = ['', 'api', 'interface'];
         $this->assign('config_merge_tab', in_array($tab, $allowTab, true) ? $tab : '');
         $this->assign('config', $config);
@@ -936,7 +936,7 @@ class System extends Base
     public function configplay()
     {
         if (Request()->isPost()) {
-            $config = input('','','htmlentities');
+            $config = \think\facade\Request::param();
 
             $validate = \think\Loader::validate('Token');
             if(!$validate->check($config)){
@@ -976,7 +976,7 @@ class System extends Base
     public function configseo()
     {
         if (Request()->isPost()) {
-            $config = input('','','htmlentities');
+            $config = \think\facade\Request::param();
 
             $validate = \think\Loader::validate('Token');
             if(!$validate->check($config)){
@@ -1003,7 +1003,7 @@ class System extends Base
     public function configaiseo()
     {
         if (Request()->isPost()) {
-            $post = input('post.', '', 'htmlentities');
+            $post = \think\facade\Request::post();
             $validate = \think\Loader::validate('Token');
             if (!$validate->check($post)) {
                 $err = $validate->getError();
@@ -1062,7 +1062,7 @@ class System extends Base
     public function configaicover()
     {
         if (Request()->isPost()) {
-            $post = input('post.', '', 'htmlentities');
+            $post = \think\facade\Request::post();
             $validate = \think\Loader::validate('Token');
             if (!$validate->check($post)) {
                 $err = $validate->getError();
@@ -1137,7 +1137,7 @@ class System extends Base
     public function configaisearch()
     {
         if (Request()->isPost()) {
-            $post = input('post.', '', 'htmlentities');
+            $post = \think\facade\Request::post();
             $validate = \think\Loader::validate('Token');
             if (!$validate->check($post)) {
                 $err = $validate->getError();
@@ -1494,7 +1494,7 @@ class System extends Base
     public function configassistant()
     {
         if (Request()->isPost()) {
-            $post = input('post.', '', 'htmlentities');
+            $post = \think\facade\Request::post();
             $validate = \think\Loader::validate('Token');
             if (!$validate->check($post)) {
                 $err = $validate->getError();
@@ -1574,7 +1574,7 @@ class System extends Base
 
     public function aisearchsync()
     {
-        $post = input('post.', '', 'htmlentities');
+        $post = \think\facade\Request::post();
         $token = isset($post['__token__']) ? (string)$post['__token__'] : '';
         $sessionToken = (string)session('__token__');
         if ($token === '' || $sessionToken === '' || !$this->safeHashEquals($sessionToken, $token)) {
@@ -1612,7 +1612,7 @@ class System extends Base
     }
 
     public function configlang(){
-        $param = input();
+        $param = \think\facadeRequest::param();
         $config = config('maccms');
         if (!isset($config['app'])) {
             $config['app'] = [];
@@ -1626,7 +1626,7 @@ class System extends Base
     }
 
     public function configVersion(){
-        $param = input();
+        $param = \think\facadeRequest::param();
         $config = config('maccms');
         if (!isset($config['site'])) {
             $config['site'] = [];

@@ -1,6 +1,6 @@
 <?php
 namespace app\admin\controller;
-use think\Db;
+use think\facade\Db;
 
 class Card extends Base
 {
@@ -11,7 +11,7 @@ class Card extends Base
 
     public function index()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $param['page'] = intval($param['page']) <1 ? 1 : $param['page'];
         $param['limit'] = intval($param['limit']) <1 ? $this->_pagesize : $param['limit'];
 
@@ -29,7 +29,7 @@ class Card extends Base
         if(isset($param['time'])){
             $t=0;
             if($param['time']=='1'){
-                $t = model('Card')->max('card_add_time');
+                $t = (new \app\common\model\Card())->max('card_add_time');
             }
             else{
                 $t = strtotime(date('Y-m-d',strtotime('-'.$param['time'] .' day')));
@@ -43,7 +43,7 @@ class Card extends Base
         }
 
         $order='card_id desc';
-        $res = model('Card')->listData($where,$order,$param['page'],$param['limit']);
+        $res = (new \app\common\model\Card())->listData($where,$order,$param['page'],$param['limit']);
 
         if($param['export'] =='1'){
             $filename = 'card_' . date('Y-m-d'). '.csv';
@@ -78,13 +78,13 @@ class Card extends Base
     public function info()
     {
         if (Request()->isPost()) {
-            $param = input('post.');
+            $param = \think\facade\Request::post();
 
             if(empty($param['num']) || empty($param['money']) || empty($param['point']) ){
                 return $this->error(lang('param_err'));
             }
 
-            $res = model('Card')->saveAllData(intval($param['num']),intval($param['money']),intval($param['point']),$param['role_no'],$param['role_pwd']);
+            $res = (new \app\common\model\Card())->saveAllData(intval($param['num']),intval($param['money']),intval($param['point']),$param['role_no'],$param['role_pwd']);
             if($res['code']>1){
                 return $this->error($res['msg']);
             }
@@ -92,10 +92,10 @@ class Card extends Base
         }
 
 
-        $id = input('id');
+        $id = \think\facadeRequest::param("id");
         $where=[];
         $where['card_id'] = $id;
-        $res = model('Card')->infoData($where);
+        $res = (new \app\common\model\Card())->infoData($where);
 
         $this->assign('info',$res['info']);
 
@@ -104,7 +104,7 @@ class Card extends Base
 
     public function del()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $ids = $param['ids'];
         $all = $param['all'];
 
@@ -115,7 +115,7 @@ class Card extends Base
                 $where[] = ['card_id', '>', 0];
             }
 
-            $res = model('Card')->delData($where);
+            $res = (new \app\common\model\Card())->delData($where);
             if($res['code']>1){
                 return $this->error($res['msg']);
             }

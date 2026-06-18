@@ -1,6 +1,6 @@
 <?php
 namespace app\admin\controller;
-use think\Db;
+use think\facade\Db;
 
 class Topic extends Base
 {
@@ -11,7 +11,7 @@ class Topic extends Base
 
     public function data()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $param['page'] = intval($param['page']) <1 ? 1 : $param['page'];
         $param['limit'] = intval($param['limit']) <1 ? $this->_pagesize : $param['limit'];
 
@@ -28,7 +28,7 @@ class Topic extends Base
         }
 
         $order='topic_time desc';
-        $res = model('Topic')->listData($where,$order,$param['page'],$param['limit']);
+        $res = (new \app\common\model\Topic())->listData($where,$order,$param['page'],$param['limit']);
 
         foreach($res['list'] as $k=>&$v){
             $v['ismake'] = 1;
@@ -52,8 +52,8 @@ class Topic extends Base
     public function info()
     {
         if (Request()->isPost()) {
-            $param = input('post.');
-            $res = model('Topic')->saveData($param);
+            $param = \think\facade\Request::post();
+            $res = (new \app\common\model\Topic())->saveData($param);
             if($res['code']>1){
                 return $this->error($res['msg']);
             }
@@ -61,10 +61,10 @@ class Topic extends Base
         }
 
 
-        $id = input('id');
+        $id = \think\facadeRequest::param("id");
         $where=[];
         $where['topic_id'] = $id;
-        $res = model('Topic')->infoData($where);
+        $res = (new \app\common\model\Topic())->infoData($where);
 
 
         $this->assign('info',$res['info']);
@@ -77,13 +77,13 @@ class Topic extends Base
 
     public function del()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $ids = $param['ids'];
 
         if(!empty($ids)){
             $where=[];
             $where['topic_id'] = $ids;
-            $res = model('Topic')->delData($where);
+            $res = (new \app\common\model\Topic())->delData($where);
             if($res['code']>1){
                 return $this->error($res['msg']);
             }
@@ -94,7 +94,7 @@ class Topic extends Base
 
     public function field()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $ids = $param['ids'];
         $col = $param['col'];
         $val = $param['val'];
@@ -103,7 +103,7 @@ class Topic extends Base
             $where=[];
             $where['topic_id'] = $ids;
 
-            $res = model('Topic')->fieldData($where,$col,$val);
+            $res = (new \app\common\model\Topic())->fieldData($where,$col,$val);
             if($res['code']>1){
                 return $this->error($res['msg']);
             }

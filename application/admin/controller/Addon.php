@@ -1,10 +1,10 @@
 <?php
 namespace app\admin\controller;
-use think\Db;
+use think\facade\Db;
 use think\addons\AddonException;
 use think\addons\Service;
-use think\Cache;
-use think\Config;
+use think\facade\Cache;
+use think\facade\Config;
 use think\Exception;
 use app\common\util\Dir;
 
@@ -17,7 +17,7 @@ class Addon extends Base
 
     public function index()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
 
         $this->assign('title',lang('admin/addon/title'));
         return $this->fetch('admin@addon/index');
@@ -25,7 +25,7 @@ class Addon extends Base
 
     public function config()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $name = $param['name'];
         if(empty($name)){
             return $this->error(lang('param_err'));
@@ -153,7 +153,7 @@ class Addon extends Base
      */
     public function install()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $name = $param['name'];
         $force = (int)$param['force'];
         if (!$name) {
@@ -191,7 +191,7 @@ class Addon extends Base
      */
     public function uninstall()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $name = $param['name'];
         $force = (int)$param['force'];
         if (!$name) {
@@ -218,7 +218,7 @@ class Addon extends Base
      */
     public function state()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $name = $param['name'];
         $action = $param['action'];
         $force = (int)$param['force'];
@@ -247,7 +247,7 @@ class Addon extends Base
      */
     public function local()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $validate = \think\Loader::validate('Token');
         if(!$validate->check($param)){
             return $this->error($validate->getError());

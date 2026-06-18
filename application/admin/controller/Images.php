@@ -1,6 +1,6 @@
 <?php
 namespace app\admin\controller;
-use think\Db;
+use think\facade\Db;
 
 class Images extends Base
 {
@@ -17,14 +17,14 @@ class Images extends Base
 
     public function opt()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $this->assign('tab',$param['tab']);
         return $this->fetch('admin@images/opt');
     }
 
     public function del()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $fname = $param['ids'];
         if(!empty($fname)){
             foreach($fname as $a){
@@ -44,7 +44,7 @@ class Images extends Base
 
     public function sync()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
 
         $param['page'] = intval($param['page']) < 1 ? 1 : $param['page'];
         $param['limit'] = intval($param['limit']) < 1 ? 10 : $param['limit'];
@@ -161,7 +161,7 @@ class Images extends Base
                 {
                     $matchfieldvalue=$matchfieldstrarr[$f];
                     $img_old = trim(preg_replace("/[ \r\n\t\f]{1,}/"," ",$matchfieldstr));
-                    $img_url = model('Image')->down_load($img_old, $config, $param['tab']);
+                    $img_url = (new \app\common\model\Image())->down_load($img_old, $config, $param['tab']);
 
                     $des = '';
                     if(in_array($config['mode'],['local']) || substr($img_url,0,7)=='upload/'){
@@ -196,7 +196,7 @@ class Images extends Base
                     $img_old = $picarr[0];
                 }
 
-                $img_url = model('Image')->down_load($img_old, $config, $param['tab']);
+                $img_url = (new \app\common\model\Image())->down_load($img_old, $config, $param['tab']);
                 $des = '';
                 if(in_array($config['mode'],['local']) || substr($img_url,0,7)=='upload/'){
                     $link = MAC_PATH . $img_url;

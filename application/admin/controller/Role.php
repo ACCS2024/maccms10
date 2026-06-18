@@ -1,6 +1,6 @@
 <?php
 namespace app\admin\controller;
-use think\Db;
+use think\facade\Db;
 use app\common\util\Pinyin;
 
 class Role extends Base
@@ -12,7 +12,7 @@ class Role extends Base
 
     public function data()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $param['page'] = intval($param['page']) < 1 ? 1 : $param['page'];
         $param['limit'] = intval($param['limit']) < 1 ? $this->_pagesize : $param['limit'];
 
@@ -47,7 +47,7 @@ class Role extends Base
 
 
         $order='role_time desc';
-        $res = model('Role')->listData($where,$order,$param['page'],$param['limit']);
+        $res = (new \app\common\model\Role())->listData($where,$order,$param['page'],$param['limit']);
 
         $this->assign('list', $res['list']);
         $this->assign('total', $res['total']);
@@ -65,21 +65,21 @@ class Role extends Base
     public function info()
     {
         if (Request()->isPost()) {
-            $param = input('post.');
-            $res = model('Role')->saveData($param);
+            $param = \think\facade\Request::post();
+            $res = (new \app\common\model\Role())->saveData($param);
             if($res['code']>1){
                 return $this->error($res['msg']);
             }
             return $this->success($res['msg']);
         }
 
-        $id = input('id');
-        $tab = input('tab');
-        $rid = input('rid');
+        $id = \think\facadeRequest::param("id");
+        $tab = \think\facadeRequest::param("tab");
+        $rid = \think\facadeRequest::param("rid");
 
         $where=[];
         $where['role_id'] = $id;
-        $res = model('Role')->infoData($where);
+        $res = (new \app\common\model\Role())->infoData($where);
         $info = $res['info'];
         if(empty($info)){
             $info['role_rid'] =  $rid;
@@ -89,7 +89,7 @@ class Role extends Base
         $where=[];
         $where['vod_id'] = $info['role_rid'] ;
         $where['_recycle'] = 'all';
-        $res = model('Vod')->infoData($where);
+        $res = (new \app\common\model\Vod())->infoData($where);
         $data = $res['info'];
         $this->assign('data',$data);
 
@@ -99,13 +99,13 @@ class Role extends Base
 
     public function del()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $ids = $param['ids'];
 
         if(!empty($ids)){
             $where=[];
             $where['role_id'] = $ids;
-            $res = model('Role')->delData($where);
+            $res = (new \app\common\model\Role())->delData($where);
             if($res['code']>1){
                 return $this->error($res['msg']);
             }
@@ -116,7 +116,7 @@ class Role extends Base
 
     public function field()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $ids = $param['ids'];
         $col = $param['col'];
         $val = $param['val'];
@@ -128,7 +128,7 @@ class Role extends Base
             $where=[];
             $where['role_id'] = $ids;
             if(empty($start)) {
-                $res = model('Role')->fieldData($where, $col, $val);
+                $res = (new \app\common\model\Role())->fieldData($where, $col, $val);
             }
             else{
                 if(empty($end)){$end = 9999;}
@@ -136,7 +136,7 @@ class Role extends Base
                 foreach($ids as $k=>$v){
                     $val = rand($start,$end);
                     $where['role_id'] = $v;
-                    $res = model('Role')->fieldData($where, $col, $val);
+                    $res = (new \app\common\model\Role())->fieldData($where, $col, $val);
                 }
             }
             if($res['code']>1){

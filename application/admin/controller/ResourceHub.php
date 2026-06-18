@@ -1,7 +1,7 @@
 <?php
 namespace app\admin\controller;
-use think\Db;
-use think\Cache;
+use think\facade\Db;
+use think\facade\Cache;
 use app\common\util\Pinyin;
 
 /**
@@ -307,7 +307,7 @@ class ResourceHub extends Base
      */
     public function check()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $url = $param['url'];
         if (empty($url)) {
             return json(['code' => 0, 'msg' => lang('param_err')]);
@@ -339,7 +339,7 @@ class ResourceHub extends Base
      */
     public function getTypes()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $url = $param['url'];
         $type = $param['type'] ?? '2';
 
@@ -385,7 +385,7 @@ class ResourceHub extends Base
         }
 
         // 获取本地分类
-        $local_types = model('Type')->getCache('type_list');
+        $local_types = (new \app\common\model\Type())->getCache('type_list');
         $local_type_names = [];
         if (!empty($local_types)) {
             foreach ($local_types as $lt) {
@@ -406,7 +406,7 @@ class ResourceHub extends Base
      */
     public function syncTypes()
     {
-        $param = input('post.');
+        $param = \think\facade\Request::post();
         $type_names = $param['type_names'] ?? [];
         $pid = intval($param['pid'] ?? 0);
 
@@ -488,7 +488,7 @@ class ResourceHub extends Base
      */
     public function autoBind()
     {
-        $param = input('post.');
+        $param = \think\facade\Request::post();
         $url = $param['url'] ?? '';
         $type = $param['type'] ?? '2';
 
@@ -714,7 +714,7 @@ class ResourceHub extends Base
      */
     public function autoPlayer()
     {
-        $param = input('post.');
+        $param = \think\facade\Request::post();
         $url = $param['url'] ?? '';
         $type = $param['type'] ?? '2';
 
@@ -836,7 +836,7 @@ MacPlayer.Show();
      */
     public function addToCollect()
     {
-        $param = input('post.');
+        $param = \think\facade\Request::post();
         $name = $param['name'] ?? '';
         $url = $param['url'] ?? '';
         $type = $param['type'] ?? '2';
@@ -878,7 +878,7 @@ MacPlayer.Show();
      */
     public function addTimming()
     {
-        $param = input('post.');
+        $param = \think\facade\Request::post();
         $name = $param['name'] ?? '';
         $url = $param['url'] ?? '';
         $type = $param['type'] ?? '2';
@@ -954,7 +954,7 @@ MacPlayer.Show();
             return json(['code' => 0, 'msg' => lang('illegal_request')]);
         }
 
-        $param = input('post.');
+        $param = \think\facade\Request::post();
         $url = $param['url'] ?? '';
         $type = $param['type'] ?? '2';
         $mid = $param['mid'] ?? '1';
@@ -1137,7 +1137,7 @@ MacPlayer.Show();
      */
     public function addCustomSite()
     {
-        $param = input('post.');
+        $param = \think\facade\Request::post();
         $name = trim($param['name'] ?? '');
         $url = trim($param['url'] ?? '');
         $type = $param['type'] ?? '2';
@@ -1170,7 +1170,7 @@ MacPlayer.Show();
      */
     public function delCustomSite()
     {
-        $param = input('post.');
+        $param = \think\facade\Request::post();
         $index = intval($param['index'] ?? -1);
 
         if ($index < 0) {
@@ -1194,7 +1194,7 @@ MacPlayer.Show();
      */
     public function multiCollect()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $this->assign('param', $param);
         $this->assign('title', lang('admin/resourcehub/multi_collect'));
         return $this->fetch('resourcehub/multi_collect');
@@ -1205,7 +1205,7 @@ MacPlayer.Show();
      */
     public function poster()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $param['page'] = intval($param['page'] ?? 1) < 1 ? 1 : intval($param['page']);
         $limit = intval($param['limit'] ?? 40);
         if ($limit < 1) $limit = 40;
@@ -1248,7 +1248,7 @@ MacPlayer.Show();
      */
     public function setRecommend()
     {
-        $param = input('post.');
+        $param = \think\facade\Request::post();
         $ids = $param['ids'] ?? '';
         $level = intval($param['level'] ?? 9);
 
@@ -1360,7 +1360,7 @@ MacPlayer.Show();
         $raw = file_get_contents('php://input');
         $param = json_decode($raw, true);
         if (empty($param)) {
-            $param = input('post.');
+            $param = \think\facade\Request::post();
         }
         $actions = $param['actions'] ?? [];
 

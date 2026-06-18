@@ -1,6 +1,6 @@
 <?php
 namespace app\admin\controller;
-use think\Db;
+use think\facade\Db;
 
 class SignMilestone extends Base
 {
@@ -12,7 +12,7 @@ class SignMilestone extends Base
     // 里程碑列表
     public function data()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $param['page'] = intval($param['page']) < 1 ? 1 : $param['page'];
         $param['limit'] = intval($param['limit']) < 1 ? $this->_pagesize : $param['limit'];
 
@@ -22,7 +22,7 @@ class SignMilestone extends Base
         }
 
         $order = 'milestone_sort asc, milestone_days asc';
-        $res = model('SignMilestone')->listData($where, $order, $param['page'], $param['limit']);
+        $res = (new \app\common\model\SignMilestone())->listData($where, $order, $param['page'], $param['limit']);
 
         $this->assign('list', $res['list']);
         $this->assign('total', $res['total']);
@@ -39,20 +39,20 @@ class SignMilestone extends Base
     public function info()
     {
         if (request()->isPost()) {
-            $param = input();
-            $res = model('SignMilestone')->saveData($param);
+            $param = \think\facadeRequest::param();
+            $res = (new \app\common\model\SignMilestone())->saveData($param);
             if ($res['code'] > 1) {
                 return $this->error($res['msg']);
             }
             return $this->success($res['msg']);
         }
 
-        $param = input();
+        $param = \think\facadeRequest::param();
         $info = [];
         if (!empty($param['id'])) {
             $where = [];
             $where['milestone_id'] = $param['id'];
-            $res = model('SignMilestone')->infoData($where);
+            $res = (new \app\common\model\SignMilestone())->infoData($where);
             if ($res['code'] == 1) {
                 $info = $res['info'];
             }
@@ -65,12 +65,12 @@ class SignMilestone extends Base
     // 删除里程碑
     public function del()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $ids = $param['ids'];
         if (!empty($ids)) {
             $where = [];
             $where['milestone_id'] = $ids;
-            $res = model('SignMilestone')->delData($where);
+            $res = (new \app\common\model\SignMilestone())->delData($where);
             if ($res['code'] > 1) {
                 return $this->error($res['msg']);
             }
@@ -82,14 +82,14 @@ class SignMilestone extends Base
     // 修改状态
     public function field()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $ids = $param['ids'];
         $col = $param['col'];
         $val = $param['val'];
         if (!empty($ids) && in_array($col, ['milestone_status'])) {
             $where = [];
             $where['milestone_id'] = $ids;
-            $res = model('SignMilestone')->fieldData($where, $col, $val);
+            $res = (new \app\common\model\SignMilestone())->fieldData($where, $col, $val);
             if ($res['code'] > 1) {
                 return $this->error($res['msg']);
             }

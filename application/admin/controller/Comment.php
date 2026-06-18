@@ -1,6 +1,6 @@
 <?php
 namespace app\admin\controller;
-use think\Db;
+use think\facade\Db;
 
 class Comment extends Base
 {
@@ -11,7 +11,7 @@ class Comment extends Base
 
     public function data()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $param['page'] = intval($param['page']) <1 ? 1 : $param['page'];
         $param['limit'] = intval($param['limit']) <1 ? $this->_pagesize : $param['limit'];
 
@@ -39,7 +39,7 @@ class Comment extends Base
         }
 
         $order='comment_id desc';
-        $res = model('Comment')->listData($where,$order,$param['page'],$param['limit']);
+        $res = (new \app\common\model\Comment())->listData($where,$order,$param['page'],$param['limit']);
 
         $this->assign('list',$res['list']);
         $this->assign('total',$res['total']);
@@ -56,18 +56,18 @@ class Comment extends Base
     public function info()
     {
         if (Request()->isPost()) {
-            $param = input();
-            $res = model('Comment')->saveData($param);
+            $param = \think\facadeRequest::param();
+            $res = (new \app\common\model\Comment())->saveData($param);
             if($res['code']>1){
                 return $this->error($res['msg']);
             }
             return $this->success($res['msg']);
         }
 
-        $id = input('id');
+        $id = \think\facadeRequest::param("id");
         $where=[];
         $where['comment_id'] = $id;
-        $res = model('Comment')->infoData($where);
+        $res = (new \app\common\model\Comment())->infoData($where);
 
         $this->assign('info',$res['info']);
         $this->assign('title',lang('admin/comment/title'));
@@ -76,7 +76,7 @@ class Comment extends Base
 
     public function del()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $ids = $param['ids'];
         $all = $param['all'];
 
@@ -86,7 +86,7 @@ class Comment extends Base
             if($all==1){
                 $where[] = ['comment_id', '>', 0];
             }
-            $res = model('Comment')->delData($where);
+            $res = (new \app\common\model\Comment())->delData($where);
             if($res['code']>1){
                 return $this->error($res['msg']);
             }
@@ -97,7 +97,7 @@ class Comment extends Base
 
     public function field()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $ids = $param['ids'];
         $col = $param['col'];
         $val = $param['val'];
@@ -106,7 +106,7 @@ class Comment extends Base
             $where=[];
             $where['comment_id'] = $ids;
 
-            $res = model('Comment')->fieldData($where,$col,$val);
+            $res = (new \app\common\model\Comment())->fieldData($where,$col,$val);
             if($res['code']>1){
                 return $this->error($res['msg']);
             }

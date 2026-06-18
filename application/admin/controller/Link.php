@@ -10,7 +10,7 @@ class Link extends Base
 
     public function index()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $param['page'] = intval($param['page']) <1 ? 1 : $param['page'];
         $param['limit'] = intval($param['limit']) <1 ? $this->_pagesize : $param['limit'];
         $where=[];
@@ -21,7 +21,7 @@ class Link extends Base
         }
 
         $order='link_id desc';
-        $res = model('Link')->listData($where,$order,$param['page'],$param['limit']);
+        $res = (new \app\common\model\Link())->listData($where,$order,$param['page'],$param['limit']);
 
         $this->assign('list',$res['list']);
         $this->assign('total',$res['total']);
@@ -38,18 +38,18 @@ class Link extends Base
     public function info()
     {
         if (Request()->isPost()) {
-            $param = input();
-            $res = model('Link')->saveData($param);
+            $param = \think\facadeRequest::param();
+            $res = (new \app\common\model\Link())->saveData($param);
             if($res['code']>1){
                 return $this->error($res['msg']);
             }
             return $this->success($res['msg']);
         }
 
-        $id = input('id');
+        $id = \think\facadeRequest::param("id");
         $where=[];
         $where['link_id'] = $id;
-        $res = model('Link')->infoData($where);
+        $res = (new \app\common\model\Link())->infoData($where);
 
 
         $this->assign('info',$res['info']);
@@ -59,13 +59,13 @@ class Link extends Base
 
     public function del()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $ids = $param['ids'];
 
         if(!empty($ids)){
             $where=[];
             $where['link_id'] = $ids;
-            $res = model('Link')->delData($where);
+            $res = (new \app\common\model\Link())->delData($where);
             if($res['code']>1){
                 return $this->error($res['msg']);
             }
@@ -76,7 +76,7 @@ class Link extends Base
 
     public function batch()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $ids = $param['ids'];
         foreach ($ids as $k=>$id) {
             $data = [];
@@ -90,7 +90,7 @@ class Link extends Base
             if (empty($data['link_name'])) {
                 $data['link_name'] = lang('unknown');
             }
-            $res = model('Link')->saveData($data);
+            $res = (new \app\common\model\Link())->saveData($data);
             if($res['code']>1){
                 return $this->error($res['msg']);
             }

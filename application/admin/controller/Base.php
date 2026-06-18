@@ -3,9 +3,9 @@ namespace app\admin\controller;
 use think\Controller;
 use app\common\controller\All;
 use app\common\util\BulkTableIo;
-use think\Cache;
+use think\facade\Cache;
 use app\common\util\Dir;
-use think\Db;
+use think\facade\Db;
 
 class Base extends All
 {
@@ -43,7 +43,7 @@ class Base extends All
 
         }
         else {
-            $res = model('Admin')->checkLogin();
+            $res = (new \app\common\model\Admin())->checkLogin();
             if ($res['code'] > 1) {
                 if(ENTRANCE=='api'){
                     echo json_encode(['code'=>1009,'msg'=>'not login']);
@@ -195,7 +195,7 @@ class Base extends All
         if (!request()->isPost()) {
             return $this->error(lang('illegal_request'));
         }
-        $param = input('post.');
+        $param = \think\facade\Request::post();
         $validate = \think\Loader::validate('Token');
         if (!$validate->check($param)) {
             return $this->error($validate->getError());

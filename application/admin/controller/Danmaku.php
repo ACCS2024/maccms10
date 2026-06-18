@@ -1,6 +1,6 @@
 <?php
 namespace app\admin\controller;
-use think\Db;
+use think\facade\Db;
 
 class Danmaku extends Base
 {
@@ -11,7 +11,7 @@ class Danmaku extends Base
 
     public function data()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $param['page'] = intval($param['page']) < 1 ? 1 : $param['page'];
         $param['limit'] = intval($param['limit']) < 1 ? $this->_pagesize : $param['limit'];
         // 分页硬上限，防止单次查询返回过多数据
@@ -48,7 +48,7 @@ class Danmaku extends Base
         }
 
         $order = 'danmaku_id desc';
-        $res = model('Danmaku')->listData($where, $order, $param['page'], $param['limit']);
+        $res = (new \app\common\model\Danmaku())->listData($where, $order, $param['page'], $param['limit']);
 
         $this->assign('list', $res['list']);
         $this->assign('total', $res['total']);
@@ -64,7 +64,7 @@ class Danmaku extends Base
 
     public function del()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $ids = $param['ids'];
         $all = $param['all'];
 
@@ -74,7 +74,7 @@ class Danmaku extends Base
             if ($all == 1) {
                 $where[] = ['danmaku_id', '>', 0];
             }
-            $res = model('Danmaku')->delData($where);
+            $res = (new \app\common\model\Danmaku())->delData($where);
             if ($res['code'] > 1) {
                 return $this->error($res['msg']);
             }
@@ -85,7 +85,7 @@ class Danmaku extends Base
 
     public function field()
     {
-        $param = input();
+        $param = \think\facadeRequest::param();
         $ids = $param['ids'];
         $col = $param['col'];
         $val = $param['val'];
@@ -94,7 +94,7 @@ class Danmaku extends Base
             $where = [];
             $where['danmaku_id'] = $ids;
 
-            $res = model('Danmaku')->fieldData($where, $col, $val);
+            $res = (new \app\common\model\Danmaku())->fieldData($where, $col, $val);
             if ($res['code'] > 1) {
                 return $this->error($res['msg']);
             }

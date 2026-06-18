@@ -1,6 +1,6 @@
 <?php
 namespace app\admin\controller;
-use think\Db;
+use think\facade\Db;
 
 /**
  * 数据替换控制器
@@ -30,7 +30,7 @@ class DataReplace extends Base
      */
     public function doReplace()
     {
-        $param = input('post.');
+        $param = \think\facade\Request::post();
         $table = trim($param['table'] ?? '');
         $field = trim($param['field'] ?? '');
         $search = $param['search'] ?? '';
@@ -89,7 +89,7 @@ class DataReplace extends Base
      */
     public function getFields()
     {
-        $table = input('table');
+        $table = \think\facadeRequest::param("table");
         if (empty($table)) {
             return json(['code' => 0, 'msg' => lang('param_err')]);
         }
