@@ -39,7 +39,7 @@ class Plog extends Base {
             $where2=[];
             $where2['user_id'] = $user_ids;
             $order='user_id desc';
-            $user_list = model('User')->listData($where2,$order,1,999);
+            $user_list = (new \app\common\model\User())->listData($where2,$order,1,999);
             $user_list = mac_array_rekey($user_list['list'],'user_id');
 
             foreach($list as $k=>&$v){

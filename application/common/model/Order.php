@@ -112,7 +112,7 @@ class Order extends Base {
 
         $where = [];
         $where['order_code'] = $order_code;
-        $order = model('Order')->infoData($where);
+        $order = (new \app\common\model\Order())->infoData($where);
         if($order['code']>1){
             return $order;
         }
@@ -134,7 +134,7 @@ class Order extends Base {
 
         $where2=[];
         $where2['user_id'] = $order['info']['user_id'];
-        $user = model('User')->infoData($where2);
+        $user = (new \app\common\model\User())->infoData($where2);
         if($user['code']>1){
             return $user;
         }
@@ -153,7 +153,7 @@ class Order extends Base {
 
             $where2 = [];
             $where2['user_id'] = $user['info']['user_id'];
-            $res = model('User')->where($where2)->setInc('user_points',$order['info']['order_points']);
+            $res = (new \app\common\model\User())->where($where2)->setInc('user_points',$order['info']['order_points']);
             if($res===false){
                 Db::rollback();
                 return ['code'=>2003,'msg'=>lang('model/order/update_user_points_err')];
@@ -164,16 +164,16 @@ class Order extends Base {
             $data['user_id'] = $user['info']['user_id'];
             $data['plog_type'] = 1;
             $data['plog_points'] = $order['info']['order_points'];
-            model('Plog')->saveData($data);
+            (new \app\common\model\Plog())->saveData($data);
 
             $remarks = json_decode($order['info']['order_remarks'], true);
             if(!empty($remarks) && is_array($remarks) && ($remarks['biz'] ?? '') === 'member_upgrade'){
-                $user_latest = model('User')->infoData(['user_id' => $user['info']['user_id']]);
+                $user_latest = (new \app\common\model\User())->infoData(['user_id' => $user['info']['user_id']]);
                 if($user_latest['code'] > 1){
                     Db::rollback();
                     return $user_latest;
                 }
-                $upgrade_res = model('User')->upgradeByPaidOrder($order['info'], $user_latest['info']);
+                $upgrade_res = (new \app\common\model\User())->upgradeByPaidOrder($order['info'], $user_latest['info']);
                 if($upgrade_res['code'] > 1){
                     Db::rollback();
                     return $upgrade_res;

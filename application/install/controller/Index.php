@@ -65,7 +65,7 @@ class Index extends Controller
                 return self::step5();
                 break;
             default:
-                $param = input();
+                $param = \think\facade\Request::param();
 
                 if(!in_array($param['lang'],$langs)) {
                     $param['lang'] = 'zh-cn';
@@ -117,7 +117,7 @@ class Index extends Controller
             if (!is_writable(APP_PATH.'database.php')) {
                 return $this->error('[app/database.php]'.lang('install/write_read_err'));
             }
-            $data = input('post.');
+            $data = \think\facade\Request::post();
             $data['type'] = 'mysql';
             $rule = [
                 'hostname|'.lang('install/server_address') => 'require',
@@ -185,10 +185,10 @@ class Index extends Controller
      */
     private function step5()
     {
-        $account = input('post.account');
-        $password = input('post.password');
-        $install_dir = input('post.install_dir');
-        $initdata = input('post.initdata');
+        $account = \think\facade\Request::post('account');
+        $password = \think\facade\Request::post('password');
+        $install_dir = \think\facade\Request::post('install_dir');
+        $initdata = \think\facade\Request::post('initdata');
 
         $config = include APP_PATH.'database.php';
         if (empty($config['hostname']) || empty($config['database']) || empty($config['username'])) {
@@ -271,7 +271,7 @@ class Index extends Controller
             'admin_pwd' => $password,
             'admin_status' =>1,
         ];
-        $res = model('Admin')->saveData($data);
+        $res = (new \app\common\model\Admin())->saveData($data);
         if (!$res['code']>1) {
             return $this->error(lang('install/admin_name_err').'：'.$res['msg']);
         }

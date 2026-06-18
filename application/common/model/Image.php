@@ -90,7 +90,7 @@ class Image extends Base {
             $this->makethumb($_file_path,$config,$flag);
         }
         //上传到远程
-        $_file_path = model('Upload')->api($_file_path, $config);
+        $_file_path = (new \app\common\model\Upload())->api($_file_path, $config);
 
         $tmp = $_file_path;
         if (str_starts_with($tmp, '/upload')) {
@@ -101,7 +101,7 @@ class Image extends Base {
             $annex['annex_file'] = $tmp;
             $annex['annex_type'] = 'image';
             $annex['annex_size'] = $file_size;
-            model('Annex')->saveData($annex);
+            (new \app\common\model\Annex())->saveData($annex);
         }
         return $_file_path;
     }

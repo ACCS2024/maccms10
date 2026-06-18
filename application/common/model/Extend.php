@@ -16,35 +16,35 @@ class Extend extends Base {
             //视频
             $where = [];
             $where['vod_status'] = 1;
-            $tmp = model('Vod')->field('type_id_1,type_id,count(vod_id) as cc')->where($where)->group('type_id_1,type_id')->select();
+            $tmp = (new \app\common\model\Vod())->field('type_id_1,type_id,count(vod_id) as cc')->where($where)->group('type_id_1,type_id')->select();
             foreach($tmp as $k=>$v){
                 $data['vod_all'] += intval($v['cc']);
                 $list['type_all_'.$v['type_id']] = $v->toArray();
             }
 
             $where[] = ['vod_time', '>=', $totay];
-            $tmp = model('Vod')->field('type_id_1,type_id,count(vod_id) as cc')->where($where)->group('type_id_1,type_id')->select();
+            $tmp = (new \app\common\model\Vod())->field('type_id_1,type_id,count(vod_id) as cc')->where($where)->group('type_id_1,type_id')->select();
             foreach($tmp as $k=>$v){
                 $data['vod_today'] += intval($v['cc']);
                 $list['type_today_'.$v['type_id']] = $v->toArray();
             }
-            $data['vod_min'] = model('Vod')->min('vod_id');
+            $data['vod_min'] = (new \app\common\model\Vod())->min('vod_id');
 
             //文章
             $where = [];
             $where['art_status'] = 1;
-            $tmp = model('Art')->field('type_id_1,type_id,count(art_id) as cc')->where($where)->group('type_id_1,type_id')->select();
+            $tmp = (new \app\common\model\Art())->field('type_id_1,type_id,count(art_id) as cc')->where($where)->group('type_id_1,type_id')->select();
             foreach($tmp as $k=>$v){
                 $data['art_all'] += intval($v['cc']);
                 $list['type_all_'.$v['type_id']] = $v->toArray();
             }
             $where[] = ['art_time', '>=', $totay];
-            $tmp = model('Art')->field('type_id_1,type_id,count(art_id) as cc')->where($where)->group('type_id_1,type_id')->select();
+            $tmp = (new \app\common\model\Art())->field('type_id_1,type_id,count(art_id) as cc')->where($where)->group('type_id_1,type_id')->select();
             foreach($tmp as $k=>$v){
                 $data['art_today'] += intval($v['cc']);
                 $list['type_today_'.$v['type_id']] = $v->toArray();
             }
-            $data['art_min'] = model('Art')->min('art_id');
+            $data['art_min'] = (new \app\common\model\Art())->min('art_id');
 
             //分类
             foreach($list as $k=>$v) {
@@ -61,43 +61,43 @@ class Extend extends Base {
             //专题
             $where = [];
             $where['topic_status'] = 1;
-            $tmp = model('Topic')->where($where)->count();
+            $tmp = (new \app\common\model\Topic())->where($where)->count();
             $data['topic_all'] = $tmp;
             $where[] = ['topic_time', '>=', $totay];
-            $tmp = model('Topic')->where($where)->count();
+            $tmp = (new \app\common\model\Topic())->where($where)->count();
             $data['topic_today'] = $tmp;
-            $data['tpoic_min'] = model('Topic')->min('topic_id');
+            $data['tpoic_min'] = (new \app\common\model\Topic())->min('topic_id');
 
 
             //演员库
             $where = [];
             $where['actor_status'] = 1;
-            $tmp = model('Actor')->where($where)->count();
+            $tmp = (new \app\common\model\Actor())->where($where)->count();
             $data['actor_all'] = $tmp;
             $where[] = ['actor_time', '>=', $totay];
-            $tmp = model('Actor')->where($where)->count();
+            $tmp = (new \app\common\model\Actor())->where($where)->count();
             $data['actor_today'] = $tmp;
-            $data['actor_min'] = model('Actor')->min('actor_id');
+            $data['actor_min'] = (new \app\common\model\Actor())->min('actor_id');
 
             //角色库
             $where = [];
             $where['role_status'] = 1;
-            $tmp = model('Role')->where($where)->count();
+            $tmp = (new \app\common\model\Role())->where($where)->count();
             $data['role_all'] = $tmp;
             $where[] = ['role_time', '>=', $totay];
-            $tmp = model('Role')->where($where)->count();
+            $tmp = (new \app\common\model\Role())->where($where)->count();
             $data['role_today'] = $tmp;
-            $data['role_min'] = model('Role')->min('role_id');
+            $data['role_min'] = (new \app\common\model\Role())->min('role_id');
 
             //网址库
             $where = [];
             $where['website_status'] = 1;
-            $tmp = model('Website')->where($where)->count();
+            $tmp = (new \app\common\model\Website())->where($where)->count();
             $data['website_all'] = $tmp;
             $where[] = ['website_time', '>=', $totay];
-            $tmp = model('Website')->where($where)->count();
+            $tmp = (new \app\common\model\Website())->where($where)->count();
             $data['website_today'] = $tmp;
-            $data['website_min'] = model('Website')->min('website_id');
+            $data['website_min'] = (new \app\common\model\Website())->min('website_id');
 
             Cache::set($key,$data,$GLOBALS['config']['app']['cache_time']);
         }
@@ -114,7 +114,7 @@ class Extend extends Base {
         $config = config('maccms.app');
         $data_str = $config['vod_extend_area'];
         if($tid>0){
-            $type_list = model('Type')->getCache('tree_list');
+            $type_list = (new \app\common\model\Type())->getCache('tree_list');
             $type_info = $type_list[$tid];
             if(!empty($type_info)){
                 $type_extend = json_decode($type_info['type_extend'],true);
@@ -158,7 +158,7 @@ class Extend extends Base {
         $config = config('maccms.app');
         $data_str = $config['vod_extend_lang'];
         if($tid>0){
-            $type_list = model('Type')->getCache('tree_list');
+            $type_list = (new \app\common\model\Type())->getCache('tree_list');
             $type_info = $type_list[$tid];
             if(!empty($type_info)){
                 $type_extend = json_decode($type_info['type_extend'],true);
@@ -201,7 +201,7 @@ class Extend extends Base {
         $config = config('maccms.app');
         $data_str = $config['vod_extend_class'];
         if($tid>0){
-            $type_list = model('Type')->getCache('tree_list');
+            $type_list = (new \app\common\model\Type())->getCache('tree_list');
             $type_info = $type_list[$tid];
             if(!empty($type_info)){
                 $type_extend = json_decode($type_info['type_extend'],true);
@@ -244,7 +244,7 @@ class Extend extends Base {
         $config = config('maccms.app');
         $data_str = $config['vod_extend_year'];
         if($tid>0){
-            $type_list = model('Type')->getCache('tree_list');
+            $type_list = (new \app\common\model\Type())->getCache('tree_list');
             $type_info = $type_list[$tid];
             if(!empty($type_info)){
                 $type_extend = json_decode($type_info['type_extend'],true);
@@ -287,7 +287,7 @@ class Extend extends Base {
         $config = config('maccms.app');
         $data_str = $config['vod_extend_version'];
         if($tid>0){
-            $type_list = model('Type')->getCache('tree_list');
+            $type_list = (new \app\common\model\Type())->getCache('tree_list');
             $type_info = $type_list[$tid];
             if(!empty($type_info)){
                 $type_extend = json_decode($type_info['type_extend'],true);
@@ -331,7 +331,7 @@ class Extend extends Base {
         $config = config('maccms.app');
         $data_str = $config['vod_extend_state'];
         if($tid>0){
-            $type_list = model('Type')->getCache('tree_list');
+            $type_list = (new \app\common\model\Type())->getCache('tree_list');
             $type_info = $type_list[$tid];
             if(!empty($type_info)){
                 $type_extend = json_decode($type_info['type_extend'],true);

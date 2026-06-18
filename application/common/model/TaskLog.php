@@ -161,7 +161,7 @@ class TaskLog extends Base {
                 'plog_points' => $points,
                 'plog_remarks' => lang('task/reward_log', [$task['task_name'], $points]),
             ];
-            $plogRes = model('Plog')->saveData($plog);
+            $plogRes = (new \app\common\model\Plog())->saveData($plog);
             if (empty($plogRes['code']) || (int)$plogRes['code'] !== 1) {
                 throw new \Exception('plog');
             }
@@ -180,7 +180,7 @@ class TaskLog extends Base {
      */
     public function getUserTaskStatus($user_id, $user_info = [])
     {
-        $tasks = model('Task')->getActiveTasks();
+        $tasks = (new \app\common\model\Task())->getActiveTasks();
         $today = date('Y-m-d');
 
         // 取今日每日任务记录

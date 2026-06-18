@@ -94,7 +94,7 @@ class User extends Base
         $info = $info->toArray();
 
         //用户组
-        $group_list = model('Group')->getCache('group_list');
+        $group_list = (new \app\common\model\Group())->getCache('group_list');
         $group_ids = explode(',', $info['group_id']);
         $info['group'] = $group_list[$group_ids[0]];
         $info['groups'] = [];
@@ -352,7 +352,7 @@ class User extends Base
                     $data['user_id'] = $uid;
                     $data['plog_type'] = 2;
                     $data['plog_points'] = $config['user']['invite_reg_points'];
-                    model('Plog')->saveData($data);
+                    (new \app\common\model\Plog())->saveData($data);
                 }
                 $this->addInviteCount($uid);
             }
@@ -571,7 +571,7 @@ class User extends Base
                         $pdata['user_id'] = $uid;
                         $pdata['plog_type'] = 2;
                         $pdata['plog_points'] = $config['user']['invite_reg_points'];
-                        model('Plog')->saveData($pdata);
+                        (new \app\common\model\Plog())->saveData($pdata);
                     }
                     $this->addInviteCount($uid);
                 }
@@ -595,7 +595,7 @@ class User extends Base
      */
     private function _setLoginCookie($row, $random)
     {
-        $group_list = model('Group')->getCache('group_list');
+        $group_list = (new \app\common\model\Group())->getCache('group_list');
         $group_ids = explode(',', $row['group_id']);
         $group = [];
         foreach ($group_ids as $gid) {
@@ -689,7 +689,7 @@ class User extends Base
         }
 
         //用户组
-        $group_list = model('Group')->getCache('group_list');
+        $group_list = (new \app\common\model\Group())->getCache('group_list');
         $group_ids = explode(',', $row['group_id']);
         $group = [];
         foreach($group_ids as $gid){
@@ -816,7 +816,7 @@ class User extends Base
      */
     private function finalizeUserLoginPayload(array $info, array $whereUpdate)
     {
-        $group_list = model('Group')->getCache('group_list');
+        $group_list = (new \app\common\model\Group())->getCache('group_list');
         $group_ids = explode(',', $info['group_id']);
         $user_groups = [];
         $user_group_types = [];
@@ -921,7 +921,7 @@ class User extends Base
 
     public function popedom($type_id, $popedom, $group_ids = 1)
     {
-        $group_list = model('Group')->getCache();
+        $group_list = (new \app\common\model\Group())->getCache();
         $group_ids = explode(',', $group_ids);
         
         foreach($group_ids as $group_id) {
@@ -951,7 +951,7 @@ class User extends Base
             return ['code'=>1002,'msg'=>lang('model/user/select_diy_group_err')];
         }
 
-        $group_list = model('Group')->getCache();
+        $group_list = (new \app\common\model\Group())->getCache();
         $group_info = $group_list[$group_id];
         if(empty($group_info)){
             return ['code'=>1003,'msg'=>lang('model/user/group_not_found')];
@@ -1005,7 +1005,7 @@ class User extends Base
             $data['user_id'] = $GLOBALS['user']['user_id'];
             $data['plog_type'] = 7;
             $data['plog_points'] = $point;
-            model('Plog')->saveData($data);
+            (new \app\common\model\Plog())->saveData($data);
             //分销日志(每次成功扣费仅触发一次)
             $this->reward($point);
 
@@ -1036,7 +1036,7 @@ class User extends Base
             return ['code' => 1002, 'msg' => lang('model/user/upgrade_param_invalid')];
         }
 
-        $group_list = model('Group')->getCache();
+        $group_list = (new \app\common\model\Group())->getCache();
         if (!isset($group_list[$group_id]) || intval($group_list[$group_id]['group_status']) !== 1) {
             return ['code' => 1003, 'msg' => lang('model/user/group_not_found')];
         }
@@ -1075,7 +1075,7 @@ class User extends Base
         $plog['plog_type'] = 7;
         $plog['plog_points'] = $point;
         $plog['plog_remarks'] = '支付后自动升级会员：' . ($group_list[$group_id]['group_name'] ?? '');
-        model('Plog')->saveData($plog);
+        (new \app\common\model\Plog())->saveData($plog);
 
         // 为了复用原有分销逻辑，临时填充全局用户上下文
         $prevUser = $GLOBALS['user'] ?? null;
@@ -1114,7 +1114,7 @@ class User extends Base
         $where[] = ['msg_time', '>', $stime];
         $where['msg_code'] = $param['code'];
         $where['msg_type'] = $param['type'] ;
-        $res = model('msg')->infoData($where);
+        $res = (new \app\common\model\Msg())->infoData($where);
         if($res['code'] >1){
             return ['code'=>9002,'msg'=>lang('model/user/msg_not_found')];
         }
@@ -1165,7 +1165,7 @@ class User extends Base
         $where[] = ['msg_time', '>', $stime];
         $where['msg_type'] = $param['type'] ;
         $where['msg_to'] = $param['to'] ;
-        $res = model('msg')->infoData($where);
+        $res = (new \app\common\model\Msg())->infoData($where);
         if($res['code'] ==1){
             return ['code'=>9002,'msg'=>lang('model/user/do_not_send_frequently')];
         }
@@ -1198,7 +1198,7 @@ class User extends Base
             $data['msg_code'] = $code;
             $data['msg_content'] = $msg;
             $data['msg_time'] = time();
-            $res = model('msg')->saveData($data);
+            $res = (new \app\common\model\Msg())->saveData($data);
 
             return ['code'=>1,'msg'=>lang('model/user/msg_send_ok')];
         }
@@ -1363,7 +1363,7 @@ class User extends Base
         $where['user_id'] = $param['uid'];
         $where['visit_ip'] = $ip;
         $where[] = ['visit_time', '>', $todayunix];
-        $cc = model('visit')->where($where)->count();
+        $cc = (new \app\common\model\Visit())->where($where)->count();
         if ($cc>= $max_cc){
             return ['code' => 102, 'msg' => lang('model/user/visit_tip')];
         }
@@ -1373,7 +1373,7 @@ class User extends Base
         $data['visit_ip'] = $ip;
         $data['visit_time'] = time();
         $data['visit_ly'] = htmlspecialchars(mac_get_refer());
-        $res = model('visit')->saveData($data);
+        $res = (new \app\common\model\Visit())->saveData($data);
 
         if ($res['code'] > 1) {
             return ['code' => 103, 'msg' => lang('model/user/visit_err')];
@@ -1386,7 +1386,7 @@ class User extends Base
             $data['user_id'] = $param['uid'];
             $data['plog_type'] = 3;
             $data['plog_points'] = intval($GLOBALS['config']['user']['invite_visit_points']);
-            model('Plog')->saveData($data);
+            (new \app\common\model\Plog())->saveData($data);
         }
 
         return ['code'=>1,'msg'=>lang('model/user/visit_ok')];
@@ -1402,14 +1402,14 @@ class User extends Base
                 if($points>0){
                     $where=[];
                     $where['user_id'] = $GLOBALS['user']['user_pid'];
-                    $r = model('User')->where($where)->setInc('user_points',$points);
+                    $r = (new \app\common\model\User())->where($where)->setInc('user_points',$points);
                     if($r){
                         $data = [];
                         $data['user_id'] = $GLOBALS['user']['user_pid'];
                         $data['plog_type'] = 4;
                         $data['plog_points'] = $points;
                         $data['plog_remarks'] = lang('model/user/reward_tip',[$GLOBALS['user']['user_id'],$GLOBALS['user']['user_name'],$fee_points,$points]);
-                        model('Plog')->saveData($data);
+                        (new \app\common\model\Plog())->saveData($data);
                     }
                 }
             }
@@ -1418,14 +1418,14 @@ class User extends Base
                 if($points>0){
                     $where=[];
                     $where['user_id'] = $GLOBALS['user']['user_pid_2'];
-                    $r = model('User')->where($where)->setInc('user_points',$points);
+                    $r = (new \app\common\model\User())->where($where)->setInc('user_points',$points);
                     if($r){
                         $data = [];
                         $data['user_id'] = $GLOBALS['user']['user_pid_2'];
                         $data['plog_type'] = 5;
                         $data['plog_points'] = $points;
                         $data['plog_remarks'] =lang('model/user/reward_tip',[$GLOBALS['user']['user_id'],$GLOBALS['user']['user_name'],$fee_points,$points]);
-                        model('Plog')->saveData($data);
+                        (new \app\common\model\Plog())->saveData($data);
                     }
                 }
             }
@@ -1434,14 +1434,14 @@ class User extends Base
                 if($points>0){
                     $where=[];
                     $where['user_id'] = $GLOBALS['user']['user_pid_3'];
-                    $r = model('User')->where($where)->setInc('user_points',$points);
+                    $r = (new \app\common\model\User())->where($where)->setInc('user_points',$points);
                     if($r){
                         $data = [];
                         $data['user_id'] = $GLOBALS['user']['user_pid_3'];
                         $data['plog_type'] = 6;
                         $data['plog_points'] = $points;
                         $data['plog_remarks'] = lang('model/user/reward_tip',[$GLOBALS['user']['user_id'],$GLOBALS['user']['user_name'],$fee_points,$points]);
-                        model('Plog')->saveData($data);
+                        (new \app\common\model\Plog())->saveData($data);
                     }
                 }
             }
@@ -1592,7 +1592,7 @@ class User extends Base
                             $data['plog_type'] = 8;
                             $data['plog_points'] = 0;
                             $data['plog_remarks'] = '邀请奖：邀请' . $invite_count . '人，获得VIP ' . ($long == 'day' ? '1天' : ($long == 'week' ? '1周' : ($long == 'month' ? '1个月' : '1年')));
-                            model('Plog')->saveData($data);
+                            (new \app\common\model\Plog())->saveData($data);
                         }
                     }
                     
@@ -1604,7 +1604,7 @@ class User extends Base
                         $data['plog_type'] = 8;
                         $data['plog_points'] = $points;
                         $data['plog_remarks'] = '邀请奖励：邀请' . $invite_count . '人，获得' . $points . '积分';
-                        model('Plog')->saveData($data);
+                        (new \app\common\model\Plog())->saveData($data);
                     }
                     
                     $update['user_invite_reward_level'] = $count;

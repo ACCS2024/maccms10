@@ -39,7 +39,7 @@ class Alipay {
 
     public function notify()
     {
-        $param = input();
+        $param = \think\facade\Request::param();
         $GLOBALS['config']['pay'] = config('maccms.pay');
         unset($param['/payment/notify/pay_type/alipay']);
         unset($param['pay_type']);
@@ -50,7 +50,7 @@ class Alipay {
             if ($param['trade_status'] == 'TRADE_SUCCESS') {
                 // 安全加固:回传支付宝金额(元)做二次核对,防改价低付
                 $paid = isset($param['total_amount']) ? $param['total_amount'] : (isset($param['total_fee']) ? $param['total_fee'] : null);
-                $res = model('Order')->notify($param['out_trade_no'],'alipay',$paid);
+                $res = (new \app\common\model\Order())->notify($param['out_trade_no'],'alipay',$paid);
                 if($res['code']>1){
                     echo "fail2";
                 }

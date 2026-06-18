@@ -87,7 +87,7 @@ class Group extends Base {
 
     public function delData($where)
     {
-        $cc = model('User')->countData($where);
+        $cc = (new \app\common\model\User())->countData($where);
         if($cc>0){
             return ['code'=>1002,'msg'=>lang('del_err').'：'.lang('model/group/have_user') ];
         }

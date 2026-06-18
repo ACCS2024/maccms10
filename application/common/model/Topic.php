@@ -323,7 +323,7 @@ class Topic extends Base {
                 $where['vod_status'] = 1;
                 $order = 'vod_time desc';
                 $field = '*';
-                $res = model('Vod')->listData($where, $order, 1, 999, 0, $field);
+                $res = (new \app\common\model\Vod())->listData($where, $order, 1, 999, 0, $field);
                 if ($res['code'] == 1) {
                     $info['vod_list'] = $res['list'];
                 }
@@ -334,7 +334,7 @@ class Topic extends Base {
                 $where['art_status'] = 1;
                 $order = 'art_time desc';
                 $field = '*';
-                $res = model('Art')->listData($where, $order, 1, 999, 0, $field);
+                $res = (new \app\common\model\Art())->listData($where, $order, 1, 999, 0, $field);
                 if ($res['code'] == 1) {
                     $info['art_list'] = $res['list'];
                 }
@@ -346,7 +346,7 @@ class Topic extends Base {
                 $where['vod_status'] = 1;
                 $order = 'vod_time desc';
                 $field = '*';
-                $res = model('Vod')->listData($where, $order, 1, 999, 0, $field);
+                $res = (new \app\common\model\Vod())->listData($where, $order, 1, 999, 0, $field);
                 if ($res['code'] == 1) {
                     $info['vod_list'] = array_merge($info['vod_list'],$res['list']);
                 }
@@ -356,7 +356,7 @@ class Topic extends Base {
                 $where['art_status'] = 1;
                 $order = 'art_time desc';
                 $field = '*';
-                $res = model('Art')->listData($where, $order, 1, 999, 0, $field);
+                $res = (new \app\common\model\Art())->listData($where, $order, 1, 999, 0, $field);
                 if ($res['code'] == 1) {
                     $info['art_list'] = array_merge($info['art_list'],$res['list']);
                 }

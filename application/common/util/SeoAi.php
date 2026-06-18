@@ -8,14 +8,14 @@ class SeoAi
         $mid = intval($mid);
         $objId = intval($objId);
         if ($mid === 1) {
-            $res = model('Vod')->infoData(['vod_id' => $objId], '*', 0);
+            $res = (new \app\common\model\Vod())->infoData(['vod_id' => $objId], '*', 0);
             if ($res['code'] !== 1 || empty($res['info'])) {
                 return ['code' => 0, 'msg' => 'vod not found'];
             }
             return self::generateForVod($res['info']);
         }
         if ($mid === 2) {
-            $res = model('Art')->infoData(['art_id' => $objId], '*', 0);
+            $res = (new \app\common\model\Art())->infoData(['art_id' => $objId], '*', 0);
             if ($res['code'] !== 1 || empty($res['info'])) {
                 return ['code' => 0, 'msg' => 'art not found'];
             }
@@ -79,7 +79,7 @@ class SeoAi
             'error' => $result['error'],
             'status' => $result['status'],
         ];
-        model('SeoAiResult')->saveByObject($payload['mid'], $payload['obj_id'], $saveData);
+        (new \app\common\model\SeoAiResult())->saveByObject($payload['mid'], $payload['obj_id'], $saveData);
         return ['code' => $result['status'] ? 1 : 0, 'msg' => $result['error'], 'data' => $saveData];
     }
 

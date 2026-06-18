@@ -180,10 +180,10 @@ polyfill;
         $user_check = cookie('user_check');
 
         $user = ['user_id'=>0,'user_name'=>lang('controller/visitor'),'user_portrait'=>'static_new/images/touxiang.png','group_id'=>1,'points'=>0];
-        $group_list = model('Group')->getCache();
+        $group_list = (new \app\common\model\Group())->getCache();
 
         if(!empty($user_id) && !empty($user_name) && !empty($user_check)){
-            $res = model('User')->checkLogin();
+            $res = (new \app\common\model\User())->checkLogin();
             if($res['code'] == 1){
                 $user = $res['info'];
             }
@@ -436,7 +436,7 @@ polyfill;
         if($total=='') {
             $where = [];
             $where['topic_status'] = 1;
-            $total = model('Topic')->countData($where);
+            $total = (new \app\common\model\Topic())->countData($where);
         }
 
         $url = mac_url_topic_index(['page'=>'PAGELINK']);
@@ -499,7 +499,7 @@ polyfill;
         }
 
         $this->assign('obj',$info);
-        $seo_ai = model('SeoAiResult')->getByObject(2, intval($info['art_id']));
+        $seo_ai = (new \app\common\model\SeoAiResult())->getByObject(2, intval($info['art_id']));
         $this->assign('seo_ai', $seo_ai);
         $this->mergeDetailSeoIntoMaccms(2, $info, $seo_ai);
 
@@ -589,7 +589,7 @@ polyfill;
             }
         }
         $this->assign('obj',$info);
-        $seo_ai = model('SeoAiResult')->getByObject(1, intval($info['vod_id']));
+        $seo_ai = (new \app\common\model\SeoAiResult())->getByObject(1, intval($info['vod_id']));
         $this->assign('seo_ai', $seo_ai);
         $this->mergeDetailSeoIntoMaccms(1, $info, $seo_ai);
         $this->assign('comment_mid', 1);
@@ -775,7 +775,7 @@ polyfill;
         $player_info['nid'] = $param['nid'];
         $info['player_info'] = $player_info;
         $this->assign('obj',$info);
-        $seo_ai = model('SeoAiResult')->getByObject(1, intval($info['vod_id']));
+        $seo_ai = (new \app\common\model\SeoAiResult())->getByObject(1, intval($info['vod_id']));
         $this->assign('seo_ai', $seo_ai);
         $this->mergeDetailSeoIntoMaccms(1, $info, $seo_ai);
         $favPlay = mac_user_fav_state((int)($GLOBALS['user']['user_id'] ?? 0), 1, (int)($info['vod_id'] ?? 0));
@@ -813,7 +813,7 @@ polyfill;
     {
         $user = $GLOBALS['user'];
         $group_ids = explode(',', $user['group_id']);
-        $group_list = model('Group')->getCache();
+        $group_list = (new \app\common\model\Group())->getCache();
 
         $res = false;
         $read_popedoms = [$popedom];
@@ -896,7 +896,7 @@ polyfill;
                             $where['ulog_sid'] = 0;
                             $where['ulog_nid'] = 0;
                         }
-                        $ulogRes = model('Ulog')->infoData($where);
+                        $ulogRes = (new \app\common\model\Ulog())->infoData($where);
                         if ($ulogRes['code'] == 1) {
                             return ['code' => 1, 'msg' => lang('controller/popedom_ok')];
                         }
@@ -920,7 +920,7 @@ polyfill;
                     $where['ulog_sid'] = 0;
                     $where['ulog_nid'] = 0;
                 }
-                $res = model('Ulog')->infoData($where);
+                $res = (new \app\common\model\Ulog())->infoData($where);
 
                 if ($res['code'] > 1) {
                     return ['code' => 3003, 'msg' => lang('controller/pay_play_points', [$points]), 'points' => $points, 'confirm' => 1, 'trysee' => 0];
@@ -959,7 +959,7 @@ polyfill;
                     $where['ulog_sid'] = 0;
                     $where['ulog_nid'] = 0;
                 }
-                $res_ulog = model('Ulog')->infoData($where);
+                $res_ulog = (new \app\common\model\Ulog())->infoData($where);
 
                 if ($res_ulog['code'] > 1) {
                     return ['code' => 3003, 'msg' => lang('controller/pay_play_points', [$points]), 'points' => $points, 'confirm' => 1, 'trysee' => 0];
@@ -985,7 +985,7 @@ polyfill;
                         $where['ulog_sid'] = 0;
                         $where['ulog_nid'] = 0;
                     }
-                    $res = model('Ulog')->infoData($where);
+                    $res = (new \app\common\model\Ulog())->infoData($where);
 
                     if ($res['code'] > 1) {
                         return ['code' => 4003, 'msg' => lang('controller/pay_down_points', [$points]), 'points' => $points, 'confirm' => 1, 'trysee' => 0];
@@ -1020,7 +1020,7 @@ polyfill;
                         $where['ulog_sid'] = 0;
                         $where['ulog_nid'] = 0;
                     }
-                    $res = model('Ulog')->infoData($where);
+                    $res = (new \app\common\model\Ulog())->infoData($where);
 
                     if ($points > 0 && $res['code'] == 1) {
                         return ['code' => 5001, 'msg' => lang('controller/popedom_ok')];

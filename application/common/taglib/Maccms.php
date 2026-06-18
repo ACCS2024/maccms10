@@ -96,7 +96,7 @@ class Maccms extends Taglib {
 
         $parse = '<?php ';
         $parse .= '$__TAG__ = \'' . addslashes(json_encode($tag)) . '\';';
-        $parse .= '$__LIST__ = model("Extend")->areaData($__TAG__);';
+        $parse .= '$__LIST__ = (new \\app\\common\\model\\Extend())->areaData($__TAG__);';
         $parse .= ' ?>';
         $parse .= '{volist name="__LIST__[\'list\']" id="'.$tag['id'].'" key="'.$tag['key'].'"';
         if(!empty($tag['offset'])){
@@ -129,7 +129,7 @@ class Maccms extends Taglib {
 
         $parse = '<?php ';
         $parse .= '$__TAG__ = \'' . addslashes(json_encode($tag)) . '\';';
-        $parse .= '$__LIST__ = model("Extend")->langData($__TAG__);';
+        $parse .= '$__LIST__ = (new \\app\\common\\model\\Extend())->langData($__TAG__);';
         $parse .= ' ?>';
         $parse .= '{volist name="__LIST__[\'list\']" id="'.$tag['id'].'" key="'.$tag['key'].'"';
         if(!empty($tag['offset'])){
@@ -162,7 +162,7 @@ class Maccms extends Taglib {
 
         $parse = '<?php ';
         $parse .= '$__TAG__ = \'' . addslashes(json_encode($tag)) . '\';';
-        $parse .= '$__LIST__ = model("Extend")->classData($__TAG__);';
+        $parse .= '$__LIST__ = (new \\app\\common\\model\\Extend())->classData($__TAG__);';
         $parse .= ' ?>';
         $parse .= '{volist name="__LIST__[\'list\']" id="'.$tag['id'].'" key="'.$tag['key'].'"';
         if(!empty($tag['offset'])){
@@ -195,7 +195,7 @@ class Maccms extends Taglib {
 
         $parse = '<?php ';
         $parse .= '$__TAG__ = \'' . addslashes(json_encode($tag)) . '\';';
-        $parse .= '$__LIST__ = model("Extend")->YearData($__TAG__);';
+        $parse .= '$__LIST__ = (new \\app\\common\\model\\Extend())->YearData($__TAG__);';
         $parse .= ' ?>';
         $parse .= '{volist name="__LIST__[\'list\']" id="'.$tag['id'].'" key="'.$tag['key'].'"';
         if(!empty($tag['offset'])){
@@ -228,7 +228,7 @@ class Maccms extends Taglib {
 
         $parse = '<?php ';
         $parse .= '$__TAG__ = \'' . addslashes(json_encode($tag)) . '\';';
-        $parse .= '$__LIST__ = model("Extend")->versionData($__TAG__);';
+        $parse .= '$__LIST__ = (new \\app\\common\\model\\Extend())->versionData($__TAG__);';
         $parse .= ' ?>';
         $parse .= '{volist name="__LIST__[\'list\']" id="'.$tag['id'].'" key="'.$tag['key'].'"';
         if(!empty($tag['offset'])){
@@ -261,7 +261,7 @@ class Maccms extends Taglib {
 
         $parse = '<?php ';
         $parse .= '$__TAG__ = \'' . addslashes(json_encode($tag)) . '\';';
-        $parse .= '$__LIST__ = model("Extend")->stateData($__TAG__);';
+        $parse .= '$__LIST__ = (new \\app\\common\\model\\Extend())->stateData($__TAG__);';
         $parse .= ' ?>';
         $parse .= '{volist name="__LIST__[\'list\']" id="'.$tag['id'].'" key="'.$tag['key'].'"';
         if(!empty($tag['offset'])){
@@ -294,7 +294,7 @@ class Maccms extends Taglib {
 
         $parse = '<?php ';
         $parse .= '$__TAG__ = \'' . addslashes(json_encode($tag)) . '\';';
-        $parse .= '$__LIST__ = model("Extend")->letterData($__TAG__);';
+        $parse .= '$__LIST__ = (new \\app\\common\\model\\Extend())->letterData($__TAG__);';
         $parse .= ' ?>';
         $parse .= '{volist name="__LIST__[\'list\']" id="'.$tag['id'].'" key="'.$tag['key'].'"';
         if(!empty($tag['offset'])){
@@ -327,7 +327,7 @@ class Maccms extends Taglib {
 
         $parse = '<?php ';
         $parse .= '$__TAG__ = \'' . addslashes(json_encode($tag)) . '\';';
-        $parse .= '$__LIST__ = model("Link")->listCacheData($__TAG__);';
+        $parse .= '$__LIST__ = (new \\app\\common\\model\\Link())->listCacheData($__TAG__);';
         $parse .= ' ?>';
         $parse .= '{volist name="__LIST__[\'list\']" id="'.$tag['id'].'" key="'.$tag['key'].'"';
         if(!empty($tag['offset'])){
@@ -360,7 +360,7 @@ class Maccms extends Taglib {
 
         $parse = '<?php ';
         $parse .= '$__TAG__ = \'' . addslashes(json_encode($tag)) . '\';';
-        $parse .= '$__LIST__ = model("Type")->listCacheData($__TAG__);';
+        $parse .= '$__LIST__ = (new \\app\\common\\model\\Type())->listCacheData($__TAG__);';
         $parse .= ' ?>';
         $parse .= '{volist name="__LIST__[\'list\']" id="'.$tag['id'].'" key="'.$tag['key'].'"';
         if(!empty($tag['offset'])){
@@ -395,7 +395,7 @@ class Maccms extends Taglib {
         $parse .= '$__TAG__ = json_decode(\'' . addslashes(json_encode($tag)) . '\', true);';
         $parse .= 'if(isset($comment_mid)) $__TAG__["mid"] = $comment_mid;';
         $parse .= 'if(isset($comment_rid)) $__TAG__["rid"] = $comment_rid;';
-        $parse .= '$__LIST__ = model("Comment")->listCacheData($__TAG__);';
+        $parse .= '$__LIST__ = (new \\app\\common\\model\\Comment())->listCacheData($__TAG__);';
         if($tag['paging']=='yes'){
             $parse .= '$__PAGING__ = mac_page_param($__LIST__[\'total\'],$__LIST__[\'limit\'],$__LIST__[\'page\'],$__LIST__[\'pageurl\'],$__LIST__[\'half\']);';
         }
@@ -431,7 +431,7 @@ class Maccms extends Taglib {
 
         $parse = '<?php ';
         $parse .= '$__TAG__ = \'' . addslashes(json_encode($tag)) . '\';';
-        $parse .= '$__LIST__ = model("Gbook")->listCacheData($__TAG__);';
+        $parse .= '$__LIST__ = (new \\app\\common\\model\\Gbook())->listCacheData($__TAG__);';
         if($tag['paging']=='yes'){
             $parse .= '$__PAGING__ = mac_page_param($__LIST__[\'total\'],$__LIST__[\'limit\'],$__LIST__[\'page\'],$__LIST__[\'pageurl\'],$__LIST__[\'half\']);';
         }
@@ -467,7 +467,7 @@ class Maccms extends Taglib {
 
         $parse = '<?php ';
         $parse .= '$__TAG__ = \'' . addslashes(json_encode($tag)) . '\';';
-        $parse .= '$__LIST__ = model("Topic")->listCacheData($__TAG__);';
+        $parse .= '$__LIST__ = (new \\app\\common\\model\\Topic())->listCacheData($__TAG__);';
         if($tag['paging']=='yes'){
             $parse .= '$__PAGING__ = mac_page_param($__LIST__[\'total\'],$__LIST__[\'limit\'],$__LIST__[\'page\'],$__LIST__[\'pageurl\'],$__LIST__[\'half\']);';
         }
@@ -503,7 +503,7 @@ class Maccms extends Taglib {
 
         $parse = '<?php ';
         $parse .= '$__TAG__ = \'' . addslashes(json_encode($tag)) . '\';';
-        $parse .= '$__LIST__ = model("Actor")->listCacheData($__TAG__);';
+        $parse .= '$__LIST__ = (new \\app\\common\\model\\Actor())->listCacheData($__TAG__);';
         if($tag['paging']=='yes'){
             $parse .= '$__PAGING__ = mac_page_param($__LIST__[\'total\'],$__LIST__[\'limit\'],$__LIST__[\'page\'],$__LIST__[\'pageurl\'],$__LIST__[\'half\']);';
         }
@@ -539,7 +539,7 @@ class Maccms extends Taglib {
 
         $parse = '<?php ';
         $parse .= '$__TAG__ = \'' . addslashes(json_encode($tag)) . '\';';
-        $parse .= '$__LIST__ = model("Role")->listCacheData($__TAG__);';
+        $parse .= '$__LIST__ = (new \\app\\common\\model\\Role())->listCacheData($__TAG__);';
         if($tag['paging']=='yes'){
             $parse .= '$__PAGING__ = mac_page_param($__LIST__[\'total\'],$__LIST__[\'limit\'],$__LIST__[\'page\'],$__LIST__[\'pageurl\'],$__LIST__[\'half\']);';
         }
@@ -575,7 +575,7 @@ class Maccms extends Taglib {
 
         $parse = '<?php ';
         $parse .= '$__TAG__ = \'' . addslashes(json_encode($tag)) . '\';';
-        $parse .= '$__LIST__ = model("Art")->listCacheData($__TAG__);';
+        $parse .= '$__LIST__ = (new \\app\\common\\model\\Art())->listCacheData($__TAG__);';
         if($tag['paging']=='yes'){
             $parse .= '$__PAGING__ = mac_page_param($__LIST__[\'total\'],$__LIST__[\'limit\'],$__LIST__[\'page\'],$__LIST__[\'pageurl\'],$__LIST__[\'half\']);';
         }
@@ -611,7 +611,7 @@ class Maccms extends Taglib {
 
         $parse = '<?php ';
         $parse .= '$__TAG__ = \'' . addslashes(json_encode($tag)) . '\';';
-        $parse .= '$__LIST__ = model("Manga")->listCacheData($__TAG__);';
+        $parse .= '$__LIST__ = (new \\app\\common\\model\\Manga())->listCacheData($__TAG__);';
         if($tag['paging']=='yes'){
             $parse .= '$__PAGING__ = mac_page_param($__LIST__[\'total\'],$__LIST__[\'limit\'],$__LIST__[\'page\'],$__LIST__[\'pageurl\'],$__LIST__[\'half\']);';
         }
@@ -647,7 +647,7 @@ class Maccms extends Taglib {
 
         $parse = '<?php ';
         $parse .= '$__TAG__ = \'' . addslashes(json_encode($tag)) . '\';';
-        $parse .= '$__LIST__ = model("Vod")->listCacheData($__TAG__);';
+        $parse .= '$__LIST__ = (new \\app\\common\\model\\Vod())->listCacheData($__TAG__);';
         if($tag['paging']=='yes'){
             $parse .= '$__PAGING__ = mac_page_param($__LIST__[\'total\'],$__LIST__[\'limit\'],$__LIST__[\'page\'],$__LIST__[\'pageurl\'],$__LIST__[\'half\']);';
         }
@@ -683,7 +683,7 @@ class Maccms extends Taglib {
 
         $parse = '<?php ';
         $parse .= '$__TAG__ = \'' . addslashes(json_encode($tag)) . '\';';
-        $parse .= '$__LIST__ = model("Website")->listCacheData($__TAG__);';
+        $parse .= '$__LIST__ = (new \\app\\common\\model\\Website())->listCacheData($__TAG__);';
         if($tag['paging']=='yes'){
             $parse .= '$__PAGING__ = mac_page_param($__LIST__[\'total\'],$__LIST__[\'limit\'],$__LIST__[\'page\'],$__LIST__[\'pageurl\'],$__LIST__[\'half\']);';
         }

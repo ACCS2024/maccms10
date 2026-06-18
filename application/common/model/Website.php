@@ -53,9 +53,9 @@ class Website extends Base {
         }
         $list = Db::name('Website')->field($field)->where($where)->where($where2)->orderRaw($order)->limit($limit_str)->select();
         //分类
-        $type_list = model('Type')->getCache('type_list');
+        $type_list = (new \app\common\model\Type())->getCache('type_list');
         //用户组
-        $group_list = model('Group')->getCache('group_list');
+        $group_list = (new \app\common\model\Group())->getCache('group_list');
 
         foreach($list as $k=>$v){
             if($addition==1){
@@ -97,9 +97,9 @@ class Website extends Base {
         //dump($where);die;
         //echo $this->getLastSql();die;
         //分类
-        $type_list = model('Type')->getCache('type_list');
+        $type_list = (new \app\common\model\Type())->getCache('type_list');
         //用户组
-        $group_list = model('Group')->getCache('group_list');
+        $group_list = (new \app\common\model\Group())->getCache('group_list');
 
         foreach($list as $k=>$v){
             if($addition==1){
@@ -227,7 +227,7 @@ class Website extends Base {
             $param['page'] = 'PAGELINK';
             if($pageurl=='website/type' || $pageurl=='website/show'){
                 $type = intval( $GLOBALS['type_id'] );
-                $type_list = model('Type')->getCache('type_list');
+                $type_list = (new \app\common\model\Type())->getCache('type_list');
                 $type_info = $type_list[$type];
                 $flag='type';
                 if($pageurl == 'website/show'){
@@ -280,7 +280,7 @@ class Website extends Base {
             }
             if($type!='all') {
                 $tmp_arr = explode(',', $type);
-                $type_list = model('Type')->getCache('type_list');
+                $type_list = (new \app\common\model\Type())->getCache('type_list');
                 $type = [];
                 foreach ($type_list as $k2 => $v2) {
                     if (in_array($v2['type_id'] . '', $tmp_arr) || in_array($v2['type_pid'] . '', $tmp_arr)) {
@@ -482,7 +482,7 @@ class Website extends Base {
             }
             //分类
             if (!empty($info['type_id'])) {
-                $type_list = model('Type')->getCache('type_list');
+                $type_list = (new \app\common\model\Type())->getCache('type_list');
                 $info['type'] = $type_list[$info['type_id']];
                 $info['type_1'] = $type_list[$info['type']['type_pid']];
             }
@@ -507,7 +507,7 @@ class Website extends Base {
         $key = 'website_detail_'.$data['website_id'].'_'.$data['website_en'];
         Cache::rm($key);
 
-        $type_list = model('Type')->getCache('type_list');
+        $type_list = (new \app\common\model\Type())->getCache('type_list');
         $type_info = $type_list[$data['type_id']];
         $data['type_id_1'] = $type_info['type_pid'];
 
@@ -653,7 +653,7 @@ class Website extends Base {
         $where['user_id'] = 0;
         $where['visit_ip'] = $ip;
         $where[] = ['visit_time', '>', $todayunix];
-        $cc = model('visit')->where($where)->count();
+        $cc = (new \app\common\model\Visit())->where($where)->count();
         if ($cc>= $max_cc){
             return ['code' => 102, 'msg' =>lang('model/website/refer_max')];
         }
@@ -663,7 +663,7 @@ class Website extends Base {
         $data['visit_ip'] = $ip;
         $data['visit_time'] = time();
         $data['visit_ly'] = htmlspecialchars($param['url']);
-        $res = model('visit')->saveData($data);
+        $res = (new \app\common\model\Visit())->saveData($data);
 
         if ($res['code'] > 1) {
             return ['code' => 103, 'msg' =>lang('model/website/visit_err')];

@@ -53,7 +53,7 @@ class Actor extends Base {
         }
         $list = Db::name('Actor')->field($field)->where($where)->where($where2)->orderRaw($order)->limit($limit_str)->select();
         //分类
-        $type_list = model('Type')->getCache('type_list');
+        $type_list = (new \app\common\model\Type())->getCache('type_list');
 
         foreach($list as $k=>$v){
             if($addition==1){
@@ -169,7 +169,7 @@ class Actor extends Base {
             $param['page'] = 'PAGELINK';
             if($pageurl=='actor/type' || $pageurl=='actor/show'){
                 $type = intval( $GLOBALS['type_id'] );
-                $type_list = model('Type')->getCache('type_list');
+                $type_list = (new \app\common\model\Type())->getCache('type_list');
                 $type_info = $type_list[$type];
                 $flag='type';
                 if($pageurl == 'actor/show'){
@@ -226,7 +226,7 @@ class Actor extends Base {
             }
             if($type!='all') {
                 $tmp_arr = explode(',', $type);
-                $type_list = model('Type')->getCache('type_list');
+                $type_list = (new \app\common\model\Type())->getCache('type_list');
                 $type = [];
                 foreach ($type_list as $k2 => $v2) {
                     if (in_array($v2['type_id'] . '', $tmp_arr) || in_array($v2['type_pid'] . '', $tmp_arr)) {
@@ -385,7 +385,7 @@ class Actor extends Base {
             $info = $info->toArray();
             //分类
             if (!empty($info['type_id'])) {
-                $type_list = model('Type')->getCache('type_list');
+                $type_list = (new \app\common\model\Type())->getCache('type_list');
                 $info['type'] = $type_list[$info['type_id']];
                 $info['type_1'] = $type_list[$info['type']['type_pid']];
             }
@@ -410,7 +410,7 @@ class Actor extends Base {
         $key = 'actor_detail_'.$data['actor_id'].'_'.$data['actor_en'];
         Cache::rm($key);
 
-        $type_list = model('Type')->getCache('type_list');
+        $type_list = (new \app\common\model\Type())->getCache('type_list');
         $type_info = $type_list[$data['type_id']];
         $data['type_id_1'] = $type_info['type_pid'];
 

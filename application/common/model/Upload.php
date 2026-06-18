@@ -37,7 +37,7 @@ class Upload extends Base {
 
     public function upload($p=[])
     {
-        $param = input();
+        $param = \think\facade\Request::param();
         if(!empty($p)){
             $param = array_merge($param,$p);
         }
@@ -211,7 +211,7 @@ class Upload extends Base {
             $update['user_portrait'] = $new_file;
             $where = [];
             $where['user_id'] = $GLOBALS['user']['user_id'];
-            $res = model('User')->where($where)->update($update);
+            $res = (new \app\common\model\User())->where($where)->update($update);
             if ($res === false) {
                 return self::upload_return(lang('index/portrait_err'), $param['from']);
             }
@@ -219,10 +219,10 @@ class Upload extends Base {
         else {
             if ($type == 'image') {
                 if ($config['watermark'] == 1) {
-                    model('Image')->watermark($data['file'], $config, $param['flag']);
+                    (new \app\common\model\Image())->watermark($data['file'], $config, $param['flag']);
                 }
                 if ($param['thumb'] == 1 && $config['thumb'] == 1) {
-                    $dd = model('Image')->makethumb($data['file'], $config, $param['flag']);
+                    $dd = (new \app\common\model\Image())->makethumb($data['file'], $config, $param['flag']);
                     if (is_array($dd)) {
                         $data = array_merge($data, $dd);
                     }
@@ -247,9 +247,9 @@ class Upload extends Base {
         $config['mode'] = strtolower($config['mode']);
 
         if(!in_array($config['mode'],['local','remote'])){
-            $data['file'] = model('Upload')->api($data['file'],$config);
+            $data['file'] = (new \app\common\model\Upload())->api($data['file'],$config);
             if(!empty($data['thumb'])){
-                $data['thumb'][0]['file'] = model('Upload')->api($data['thumb'][0]['file'],$config);
+                $data['thumb'][0]['file'] = (new \app\common\model\Upload())->api($data['thumb'][0]['file'],$config);
             }
         }
         if(!empty($param['from'])){
@@ -268,21 +268,21 @@ class Upload extends Base {
         if((substr($tmp,0,6) == "upload")){
             $annex = [];
             $annex['annex_file'] = $tmp;
-            $r = model('Annex')->infoData($annex);
+            $r = (new \app\common\model\Annex())->infoData($annex);
             if($r['code']!==1){
                 $annex['annex_type'] = $type;
                 $annex['annex_size'] = $file_size;
-                model('Annex')->saveData($annex);
+                (new \app\common\model\Annex())->saveData($annex);
                 $tmp = $data['thumb'][0]['file'];
                 if(!empty($tmp)){
                     $file_size = filesize($tmp);
                     $annex = [];
                     $annex['annex_file'] = $tmp;
-                    $r = model('Annex')->infoData($annex);
+                    $r = (new \app\common\model\Annex())->infoData($annex);
                     if($r['code']!==1){
                         $annex['annex_type'] = $type;
                         $annex['annex_size'] = $file_size;
-                        model('Annex')->saveData($annex);
+                        (new \app\common\model\Annex())->saveData($annex);
                     }
                 }
             }

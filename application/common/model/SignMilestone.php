@@ -184,7 +184,7 @@ class SignMilestone extends Base {
                 'plog_points' => $points,
                 'plog_remarks' => lang('milestone/reward_log', [$milestone['milestone_days'], $points]),
             ];
-            $plogRes = model('Plog')->saveData($plog);
+            $plogRes = (new \app\common\model\Plog())->saveData($plog);
             if (empty($plogRes['code']) || (int)$plogRes['code'] !== 1) {
                 throw new \Exception('plog');
             }

@@ -60,7 +60,7 @@ class Role extends Base {
             }
             $where2=[];
             $where2['vod_id'] = array_values(array_map('intval', $vod_ids));
-            $tmp_list = model('Vod')->listData($where2,'vod_id desc',1,999,0);
+            $tmp_list = (new \app\common\model\Vod())->listData($where2,'vod_id desc',1,999,0);
             //$tmp_list = Db::name('Vod')->field('vod_id,vod_name,vod_en,type_id,type_id_1')->where($where2)->select();
             foreach($tmp_list['list'] as $k=>$v){
                 $vod_list[$v['vod_id']] = $v;
@@ -325,7 +325,7 @@ class Role extends Base {
             if(!empty($info['role_rid'])){
                 $where2=[];
                 $where2['vod_id'] = $info['role_rid'];
-                $vod_info = model('Vod')->infoData($where2);
+                $vod_info = (new \app\common\model\Vod())->infoData($where2);
                 if($vod_info['code'] == 1){
                     $info['data'] = $vod_info['info'];
                 }

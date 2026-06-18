@@ -212,7 +212,7 @@ class Installer
      */
     public function createAdmin($name, $pass)
     {
-        // 显式使用 common 模块模型:命令行无当前模块,model('Admin') 会误解析为 app\model\Admin
+        // 显式使用 common 模块模型:命令行无当前模块,(new \app\common\model\Admin()) 会误解析为 app\model\Admin
         $admin = new \app\common\model\Admin();
         $exists = $admin->where('admin_name', $name)->find();
         if (!empty($exists)) {

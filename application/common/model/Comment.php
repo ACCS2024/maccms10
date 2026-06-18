@@ -59,43 +59,43 @@ class Comment extends Base {
             if($v['comment_mid'] == 1){
                 $where3=[];
                 $where3['vod_id'] = $v['comment_rid'];
-                $vod = model('Vod')->infoData($where3);
+                $vod = (new \app\common\model\Vod())->infoData($where3);
                 $list[$k]['data'] = $vod['info'];
             }
             elseif($v['comment_mid'] == 2){
                 $where3=[];
                 $where3['art_id'] = $v['comment_rid'];
-                $vod = model('Art')->infoData($where3);
+                $vod = (new \app\common\model\Art())->infoData($where3);
                 $list[$k]['data'] = $vod['info'];
             }
             elseif($v['comment_mid'] == 3){
                 $where3=[];
                 $where3['topic_id'] = $v['comment_rid'];
-                $vod = model('Topic')->infoData($where3);
+                $vod = (new \app\common\model\Topic())->infoData($where3);
                 $list[$k]['data'] = $vod['info'];
             }
             elseif($v['comment_mid'] == 8){
                 $where3=[];
                 $where3['actor_id'] = $v['comment_rid'];
-                $vod = model('Actor')->infoData($where3);
+                $vod = (new \app\common\model\Actor())->infoData($where3);
                 $list[$k]['data'] = $vod['info'];
             }
             elseif($v['comment_mid'] == 9){
                 $where3=[];
                 $where3['role_id'] = $v['comment_rid'];
-                $vod = model('Role')->infoData($where3);
+                $vod = (new \app\common\model\Role())->infoData($where3);
                 $list[$k]['data'] = $vod['info'];
             }
             elseif($v['comment_mid'] == 12){
                 $where3=[];
                 $where3['manga_id'] = $v['comment_rid'];
-                $vod = model('Manga')->infoData($where3);
+                $vod = (new \app\common\model\Manga())->infoData($where3);
                 $list[$k]['data'] = $vod['info'];
             }
             elseif($v['comment_mid'] == 11){
                 $where3=[];
                 $where3['website_id'] = $v['comment_rid'];
-                $vod = model('Website')->infoData($where3);
+                $vod = (new \app\common\model\Website())->infoData($where3);
                 $list[$k]['data'] = $vod['info'];
             }
         }

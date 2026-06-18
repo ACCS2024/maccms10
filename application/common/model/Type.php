@@ -53,7 +53,7 @@ class Type extends Base {
             if($v['type_pid']==0){
                 if(!empty($where)){
                     if(!$rc){
-                        $type_list = model('Type')->getCache('type_list');
+                        $type_list = (new \app\common\model\Type())->getCache('type_list');
                         $rc=true;
                     }
                     $list[$k]['childids'] = $type_list[$v['type_id']]['childids'];

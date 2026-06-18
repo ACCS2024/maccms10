@@ -55,7 +55,7 @@ class VodAiCover
             return ['code' => 0, 'msg' => lang('param_err')];
         }
 
-        $res = model('Vod')->infoData(['vod_id' => $vodId], '*', 0);
+        $res = (new \app\common\model\Vod())->infoData(['vod_id' => $vodId], '*', 0);
         if ($res['code'] !== 1 || empty($res['info'])) {
             return ['code' => 0, 'msg' => lang('obtain_err')];
         }
@@ -194,7 +194,7 @@ class VodAiCover
 
         if (!empty($uploadCfg['watermark']) && (string) $uploadCfg['watermark'] === '1') {
             try {
-                model('Image')->watermark($relativePath, $uploadCfg, 'vod');
+                (new \app\common\model\Image())->watermark($relativePath, $uploadCfg, 'vod');
             } catch (\Throwable $e) {
                 Log::error('VodAiCover watermark: ' . $e->getMessage());
             }
@@ -203,7 +203,7 @@ class VodAiCover
         $thumbPath = '';
         if (!empty($uploadCfg['thumb']) && (string) $uploadCfg['thumb'] === '1') {
             try {
-                $dd = model('Image')->makethumb($relativePath, $uploadCfg, 'vod');
+                $dd = (new \app\common\model\Image())->makethumb($relativePath, $uploadCfg, 'vod');
                 if (!empty($dd['thumb'][0]['file'])) {
                     $thumbPath = (string) $dd['thumb'][0]['file'];
                 }
@@ -214,9 +214,9 @@ class VodAiCover
 
         if (!in_array(strtolower((string) $uploadCfg['mode']), ['local', 'remote'], true)) {
             try {
-                $relativePath = model('Upload')->api($relativePath, $uploadCfg);
+                $relativePath = (new \app\common\model\Upload())->api($relativePath, $uploadCfg);
                 if ($thumbPath !== '') {
-                    $thumbPath = model('Upload')->api($thumbPath, $uploadCfg);
+                    $thumbPath = (new \app\common\model\Upload())->api($thumbPath, $uploadCfg);
                 }
             } catch (\Throwable $e) {
                 Log::error('VodAiCover remote upload: ' . $e->getMessage());

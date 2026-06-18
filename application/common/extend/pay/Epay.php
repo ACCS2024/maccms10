@@ -80,7 +80,7 @@ class Epay {
         else{
             // 安全加固:易支付 money 单位为元,二次核对防改价低付
             $paid = isset($param['money']) ? $param['money'] : null;
-            $res = model('Order')->notify($param['out_trade_no'], 'epay', $paid);
+            $res = (new \app\common\model\Order())->notify($param['out_trade_no'], 'epay', $paid);
             if($res['code'] >1){
                 echo 'fail2';
             }

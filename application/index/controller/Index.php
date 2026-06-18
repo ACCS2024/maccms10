@@ -147,7 +147,7 @@ class Index extends Base
     public function publish_group()
     {
         PublishPage::sendNoStoreHeaders();
-        $id = input('id', '', 'trim');
+        $id = (string)trim(\think\facadeRequest::param('id', ''));
         $gcfg = isset($GLOBALS['config']['site']['site_publish_groups']) ? $GLOBALS['config']['site']['site_publish_groups'] : '';
         $groups = PublishPage::parseGroups($gcfg);
         $group = PublishPage::findGroupById($groups, $id);

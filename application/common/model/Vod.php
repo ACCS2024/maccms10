@@ -69,9 +69,9 @@ class Vod extends Base {
         $list = Db::name('Vod')->field($field)->where($where)->where($where2)->order($order)->limit($limit_str)->select();
 
         //分类
-        $type_list = model('Type')->getCache('type_list');
+        $type_list = (new \app\common\model\Type())->getCache('type_list');
         //用户组
-        $group_list = model('Group')->getCache('group_list');
+        $group_list = (new \app\common\model\Group())->getCache('group_list');
 
         $vip_exclusive = mac_get_vip_exclusive_type_ids();
         foreach($list as $k=>$v){
@@ -115,9 +115,9 @@ class Vod extends Base {
             ->select();
 
         //分类
-        $type_list = model('Type')->getCache('type_list');
+        $type_list = (new \app\common\model\Type())->getCache('type_list');
         //用户组
-        $group_list = model('Group')->getCache('group_list');
+        $group_list = (new \app\common\model\Group())->getCache('group_list');
 
         $vip_exclusive = mac_get_vip_exclusive_type_ids();
         foreach($list as $k=>$v){
@@ -287,7 +287,7 @@ class Vod extends Base {
 
             if($pageurl=='vod/type' || $pageurl=='vod/show'){
                 $type = intval( $GLOBALS['type_id'] );
-                $type_list = model('Type')->getCache('type_list');
+                $type_list = (new \app\common\model\Type())->getCache('type_list');
                 $type_info = $type_list[$type];
                 $flag='type';
                 if($pageurl == 'vod/show'){
@@ -369,7 +369,7 @@ class Vod extends Base {
             }
             if($type!='all') {
                 $tmp_arr = explode(',',$type);
-                $type_list = model('Type')->getCache('type_list');
+                $type_list = (new \app\common\model\Type())->getCache('type_list');
                 $type = [];
                 foreach($type_list as $k2=>$v2){
                     if(in_array($v2['type_id'].'',$tmp_arr) || in_array($v2['type_pid'].'',$tmp_arr)){
@@ -443,7 +443,7 @@ class Vod extends Base {
             $where['vod_isend'] = $isend;
         }
 
-        $vod_search = model('VodSearch');
+        $vod_search = (new \app\common\model\VodSearch());
         // Meilisearch 开启时不再走 mac_vod_search 前台 ID 缓存，避免与 Meili 双写、且 _string 会阻断 applyForVod；采集侧仍可用 VodSearch::isCollectEnabled()
         $vod_search_enabled = $vod_search->isFrontendEnabled() && !MeilisearchService::enabled();
         $max_id_count = $vod_search->maxIdCount;
@@ -691,13 +691,13 @@ class Vod extends Base {
 
             //分类
             if (!empty($info['type_id'])) {
-                $type_list = model('Type')->getCache('type_list');
+                $type_list = (new \app\common\model\Type())->getCache('type_list');
                 $info['type'] = $type_list[$info['type_id']];
                 $info['type_1'] = $type_list[$info['type']['type_pid']];
             }
             //用户组
             if (!empty($info['group_id'])) {
-                $group_list = model('Group')->getCache('group_list');
+                $group_list = (new \app\common\model\Group())->getCache('group_list');
                 $info['group'] = $group_list[$info['group_id']];
             }
             $vip_exclusive = mac_get_vip_exclusive_type_ids();
@@ -722,7 +722,7 @@ class Vod extends Base {
         $key = 'vod_detail_'.$data['vod_id'].'_'.$data['vod_en'];
         Cache::rm($key);
 
-        $type_list = model('Type')->getCache('type_list');
+        $type_list = (new \app\common\model\Type())->getCache('type_list');
         $type_info = $type_list[$data['type_id']];
         $data['type_id_1'] = $type_info['type_pid'];
 
@@ -820,8 +820,8 @@ class Vod extends Base {
             $data['vod_time'] = time();
             $res = $this->allowField(true)->insert($data, false, true);
             $seoObjId = intval($this->getLastInsID());
-            if ($res > 0 && model('VodSearch')->isFrontendEnabled()) {
-                model('VodSearch')->checkAndUpdateTopResults(['vod_id' => $seoObjId] + $data);
+            if ($res > 0 && (new \app\common\model\VodSearch())->isFrontendEnabled()) {
+                (new \app\common\model\VodSearch())->checkAndUpdateTopResults(['vod_id' => $seoObjId] + $data);
             }
             //新增 针对当前name 判断是否重复
             $this->cacheRepeatWithName($data['vod_name']);

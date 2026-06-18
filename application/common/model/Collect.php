@@ -248,7 +248,7 @@ class Collect extends Base {
         $array_page['recordcount'] = (string)$xml->list->attributes()->recordcount;
         $array_page['url'] = $url;
 
-        $type_list = model('Type')->getCache('type_list');
+        $type_list = (new \app\common\model\Type())->getCache('type_list');
         $bind_list = config('bind');
 
 
@@ -381,7 +381,7 @@ class Collect extends Base {
         $array_page['recordcount'] = $json['total'];
         $array_page['url'] = $url;
 
-        $type_list = model('Type')->getCache('type_list');
+        $type_list = (new \app\common\model\Type())->getCache('type_list');
         $bind_list = config('bind');
 
         $key = 0;
@@ -592,7 +592,7 @@ class Collect extends Base {
             // 清理失败标记，获取真实URL
             $clean_url = str_replace('#err', '', $pic_url);
             $config = (array)config('maccms.upload');
-            $img_url_downloaded = model('Image')->down_load($clean_url, $config, $flag);
+            $img_url_downloaded = (new \app\common\model\Image())->down_load($clean_url, $config, $flag);
             if ($img_url_downloaded == $clean_url || strpos($img_url_downloaded, '#err') !== false) {
                 // 下载失败，显示老图信息
                 $des = '<a href="' . $clean_url . '" target="_blank">' . $clean_url . '</a><font color=red>'.lang('download_err').'!</font>';
@@ -622,11 +622,11 @@ class Collect extends Base {
         $filter_year_list = $filter_year ? get_array_unique_id_list(explode(',', $filter_year)) : [];
         $players = config('vodplayer');
         $downers = config('voddowner');
-        $vod_search = model('VodSearch');
+        $vod_search = (new \app\common\model\VodSearch());
         $vod_search_enabled = $vod_search->isCollectEnabled();
         $vs_max_id_count = $vod_search->maxIdCount;
 
-        $type_list = model('Type')->getCache('type_list');
+        $type_list = (new \app\common\model\Type())->getCache('type_list');
         $filter_arr = explode(',',$config['filter']);
         $filter_arr = array_filter($filter_arr);
         $pse_rnd = explode('#',$config['words']);
@@ -905,10 +905,10 @@ class Collect extends Base {
                 $v['vod_down_note'] = (string)join('$$$', (array)$cj_down_note_arr);
 
                 if($blend===false){
-                    $info = model('Vod')->where($where)->find();
+                    $info = (new \app\common\model\Vod())->where($where)->find();
                 }
                 else{
-                    $info = model('Vod')->where($where)
+                    $info = (new \app\common\model\Vod())->where($where)
                         ->where(function($query) {
                             $query->where('vod_director',$GLOBALS['blend']['vod_director']);
                             if (!empty($GLOBALS['blend']['vod_id'])) {
@@ -943,7 +943,7 @@ class Collect extends Base {
                         $v['vod_pic'] = (string)$tmp['pic'];
                         $msg = $tmp['msg'];
                         $v = VodValidate::formatDataBeforeDb($v);
-                        $vod_id = model('Vod')->insert($v, false, true);
+                        $vod_id = (new \app\common\model\Vod())->insert($v, false, true);
                         if ($vod_id > 0) {
                             $vod_search_enabled && $vod_search->checkAndUpdateTopResults(['vod_id' => $vod_id] + $v, true);
                             \app\common\util\MeilisearchSync::afterVodSave((int)$vod_id); // 采集入库:增量同步 Meili(Meili 关闭则空操作)
@@ -1201,7 +1201,7 @@ class Collect extends Base {
                             $where = [];
                             $where['vod_id'] = $info['vod_id'];
                             $update = VodValidate::formatDataBeforeDb($update);
-                            $res = model('Vod')->where($where)->update($update);
+                            $res = (new \app\common\model\Vod())->where($where)->update($update);
                             \app\common\util\MeilisearchSync::afterVodSave((int)$info['vod_id']); // 采集更新:增量同步 Meili
                             $color = 'green';
                             if ($res === false) {
@@ -1321,7 +1321,7 @@ class Collect extends Base {
         $array_page['recordcount'] = $json['total'];
         $array_page['url'] = $url;
 
-        $type_list = model('Type')->getCache('type_list');
+        $type_list = (new \app\common\model\Type())->getCache('type_list');
         $bind_list = config('bind');
 
         $key = 0;
@@ -1396,7 +1396,7 @@ class Collect extends Base {
         $array_page['recordcount'] = $json['total'];
         $array_page['url'] = $url;
 
-        $type_list = model('Type')->getCache('type_list');
+        $type_list = (new \app\common\model\Type())->getCache('type_list');
         $bind_list = config('bind');
 
         $key = 0;
@@ -1437,7 +1437,7 @@ class Collect extends Base {
         $config = $config['art'];
         $config_sync_pic = $param['sync_pic_opt'] > 0 ? $param['sync_pic_opt'] : $config['pic'];
 
-        $type_list = model('Type')->getCache('type_list');
+        $type_list = (new \app\common\model\Type())->getCache('type_list');
         $filter_arr = explode(',',$config['filter']); $filter_arr = array_filter($filter_arr);
         $pse_rnd = explode('#',$config['words']); $pse_rnd = array_filter($pse_rnd);
         $pse_syn = mac_txt_explain($config['thesaurus'], true);
@@ -1549,13 +1549,13 @@ class Collect extends Base {
                 $v['art_content'] = join('$$$', (array)$tmp_content_arr);
 
 
-                $info = model('Art')->where($where)->find();
+                $info = (new \app\common\model\Art())->where($where)->find();
                 if (!$info) {
                     $tmp = $this->syncImages($config_sync_pic, $v['art_pic'],'art');
                     $v['art_pic'] = (string)$tmp['pic'];
 
                     $msg = $tmp['msg'];
-                    $res = model('Art')->insert($v, false, true);
+                    $res = (new \app\common\model\Art())->insert($v, false, true);
                     \app\common\util\MeilisearchSync::afterArtSave((int)$res); // 采集入库:增量同步 Meili(Meili 关闭则空操作)
                     if($res===false){
 
@@ -1615,7 +1615,7 @@ class Collect extends Base {
                                 $update['art_time'] = time();
                                 $where = [];
                                 $where['art_id'] = $info['art_id'];
-                                $res = model('Art')->where($where)->update($update);
+                                $res = (new \app\common\model\Art())->where($where)->update($update);
                                 \app\common\util\MeilisearchSync::afterArtSave((int)$info['art_id']); // 采集更新:增量同步 Meili
                                 $color = 'green';
                                 if($res===false){
@@ -1732,7 +1732,7 @@ class Collect extends Base {
         $array_page['recordcount'] = $json['total'];
         $array_page['url'] = $url;
 
-        $type_list = model('Type')->getCache('type_list');
+        $type_list = (new \app\common\model\Type())->getCache('type_list');
         $bind_list = config('bind');
 
         $key = 0;
@@ -1773,7 +1773,7 @@ class Collect extends Base {
         $config = $config['actor'];
         $config_sync_pic = $param['sync_pic_opt'] > 0 ? $param['sync_pic_opt'] : $config['pic'];
 
-        $type_list = model('Type')->getCache('type_list');
+        $type_list = (new \app\common\model\Type())->getCache('type_list');
         $filter_arr = explode(',',$config['filter']); $filter_arr = array_filter($filter_arr);
         $pse_rnd = explode('#',$config['words']); $pse_rnd = array_filter($pse_rnd);
         $pse_syn = mac_txt_explain($config['thesaurus'], true);
@@ -1864,12 +1864,12 @@ class Collect extends Base {
                     $where['type_id'] = $v['type_id'];
                 }
 
-                $info = model('Actor')->where($where)->find();
+                $info = (new \app\common\model\Actor())->where($where)->find();
                 if (!$info) {
                     $tmp = $this->syncImages($config_sync_pic, $v['actor_pic'],'actor');
                     $v['actor_pic'] = $tmp['pic'];
                     $msg = $tmp['msg'];
-                    $res = model('Actor')->insert($v, false, true);
+                    $res = (new \app\common\model\Actor())->insert($v, false, true);
                     \app\common\util\MeilisearchSync::afterActorSave((int)$res); // 采集入库:增量同步 Meili(Meili 关闭则空操作)
                     if($res===false){
 
@@ -1912,7 +1912,7 @@ class Collect extends Base {
                                 $update['actor_time'] = time();
                                 $where = [];
                                 $where['actor_id'] = $info['actor_id'];
-                                $res = model('Actor')->where($where)->update($update);
+                                $res = (new \app\common\model\Actor())->where($where)->update($update);
                                 \app\common\util\MeilisearchSync::afterActorSave((int)$info['actor_id']); // 采集更新:增量同步 Meili
                                 $color = 'green';
                                 if($res===false){
@@ -2154,11 +2154,11 @@ class Collect extends Base {
                 }
 
                 if($blend===false){
-                    $vod_info = model('Vod')->where($where2)->find();
+                    $vod_info = (new \app\common\model\Vod())->where($where2)->find();
 
                 }
                 else{
-                    $vod_info = model('Vod')->where($where2)
+                    $vod_info = (new \app\common\model\Vod())->where($where2)
                         ->where(function($query){
                             $query->where('vod_director',$GLOBALS['blend']['vod_director'])
                                 ->whereOr('vod_actor',$GLOBALS['blend']['vod_actor']);
@@ -2172,12 +2172,12 @@ class Collect extends Base {
                 else {
                     $v['role_rid'] = $vod_info['vod_id'];
                     $where['role_rid'] = $vod_info['vod_id'];
-                    $info = model('Role')->where($where)->find();
+                    $info = (new \app\common\model\Role())->where($where)->find();
                     if (!$info) {
                         $tmp = $this->syncImages($config_sync_pic,  $v['role_pic'], 'role');
                         $v['role_pic'] = $tmp['pic'];
                         $msg = $tmp['msg'];
-                        $res = model('Role')->insert($v, false, true);
+                        $res = (new \app\common\model\Role())->insert($v, false, true);
                         \app\common\util\MeilisearchSync::afterRoleSave((int)$res); // 采集入库:增量同步 Meili(Meili 关闭则空操作)
                         if ($res === false) {
 
@@ -2214,7 +2214,7 @@ class Collect extends Base {
                                     $update['role_time'] = time();
                                     $where = [];
                                     $where['role_id'] = $info['role_id'];
-                                    $res = model('Role')->where($where)->update($update);
+                                    $res = (new \app\common\model\Role())->where($where)->update($update);
                                     \app\common\util\MeilisearchSync::afterRoleSave((int)$info['role_id']); // 采集更新:增量同步 Meili
                                     $color = 'green';
                                     if ($res === false) {
@@ -2333,7 +2333,7 @@ class Collect extends Base {
         $array_page['recordcount'] = $json['total'];
         $array_page['url'] = $url;
 
-        $type_list = model('Type')->getCache('type_list');
+        $type_list = (new \app\common\model\Type())->getCache('type_list');
         $bind_list = config('bind');
 
         $key = 0;
@@ -2374,7 +2374,7 @@ class Collect extends Base {
         $config = $config['website'];
         $config_sync_pic = $param['sync_pic_opt'] > 0 ? $param['sync_pic_opt'] : $config['pic'];
 
-        $type_list = model('Type')->getCache('type_list');
+        $type_list = (new \app\common\model\Type())->getCache('type_list');
         $filter_arr = explode(',',$config['filter']); $filter_arr = array_filter($filter_arr);
         $pse_rnd = explode('#',$config['words']); $pse_rnd = array_filter($pse_rnd);
         $pse_syn = mac_txt_explain($config['thesaurus'], true);
@@ -2468,12 +2468,12 @@ class Collect extends Base {
                     $where['website_jumpurl'] = $v['website_jumpurl'];
                 }
 
-                $info = model('Website')->where($where)->find();
+                $info = (new \app\common\model\Website())->where($where)->find();
                 if (!$info) {
                     $tmp = $this->syncImages($config_sync_pic, $v['website_pic'],'website');
                     $v['website_pic'] = $tmp['pic'];
                     $msg = $tmp['msg'];
-                    $res = model('Website')->insert($v, false, true);
+                    $res = (new \app\common\model\Website())->insert($v, false, true);
                     \app\common\util\MeilisearchSync::afterWebsiteSave((int)$res); // 采集入库:增量同步 Meili(Meili 关闭则空操作)
                     if($res===false){
 
@@ -2516,7 +2516,7 @@ class Collect extends Base {
                                 $update['website_time'] = time();
                                 $where = [];
                                 $where['website_id'] = $info['website_id'];
-                                $res = model('Website')->where($where)->update($update);
+                                $res = (new \app\common\model\Website())->where($where)->update($update);
                                 \app\common\util\MeilisearchSync::afterWebsiteSave((int)$info['website_id']); // 采集更新:增量同步 Meili
                                 $color = 'green';
                                 if($res===false){
@@ -2720,27 +2720,27 @@ class Collect extends Base {
                         else{
                             $where2['vod_name'] = $v['rel_name'];
                         }
-                        $rel_info = model('Vod')->where($where2)->find();
+                        $rel_info = (new \app\common\model\Vod())->where($where2)->find();
                     }
                     elseif($v['comment_mid']==2){
                         $where2['art_name'] = $v['rel_name'];
-                        $rel_info = model('Art')->where($where2)->find();
+                        $rel_info = (new \app\common\model\Art())->where($where2)->find();
                     }
                     elseif($v['comment_mid']==3){
                         $where2['topic_name'] = $v['rel_name'];
-                        $rel_info = model('Topic')->where($where2)->find();
+                        $rel_info = (new \app\common\model\Topic())->where($where2)->find();
                     }
                     elseif($v['comment_mid']==8){
                         $where2['actor_name'] = $v['rel_name'];
-                        $rel_info = model('Actor')->where($where2)->find();
+                        $rel_info = (new \app\common\model\Actor())->where($where2)->find();
                     }
                     elseif($v['comment_mid']==9){
                         $where2['role_name'] = $v['rel_name'];
-                        $rel_info = model('Role')->where($where2)->find();
+                        $rel_info = (new \app\common\model\Role())->where($where2)->find();
                     }
                     elseif($v['comment_mid']==11){
                         $where2['website_name'] = $v['rel_name'];
-                        $rel_info = model('Website')->where($where2)->find();
+                        $rel_info = (new \app\common\model\Website())->where($where2)->find();
                     }
 
                     $rel_id = $rel_info[mac_get_mid_code($v['comment_mid']).'_id'];
@@ -2759,11 +2759,11 @@ class Collect extends Base {
 
                     if(!empty($where)) {
                         $where['comment_rid'] = $rel_id;
-                        $info = model('Comment')->where($where)->find();
+                        $info = (new \app\common\model\Comment())->where($where)->find();
                     }
                     if (!$info) {
                         $msg = isset($tmp['msg']) ? $tmp['msg'] : '';
-                        $res = model('Comment')->insert($v);
+                        $res = (new \app\common\model\Comment())->insert($v);
                         if ($res === false) {
 
                         }
@@ -2787,7 +2787,7 @@ class Collect extends Base {
                                     $update['comment_time'] = time();
                                     $where = [];
                                     $where['comment_id'] = $info['comment_id'];
-                                    $res = model('Comment')->where($where)->update($update);
+                                    $res = (new \app\common\model\Comment())->where($where)->update($update);
                                     $color = 'green';
                                     if ($res === false) {
 
@@ -2937,7 +2937,7 @@ class Collect extends Base {
         $array_page['recordcount'] = (string)$xml->list->attributes()->recordcount;
         $array_page['url'] = $url;
 
-        $type_list = model('Type')->getCache('type_list');
+        $type_list = (new \app\common\model\Type())->getCache('type_list');
         $bind_list = config('bind');
 
         $key = 0;
@@ -3027,7 +3027,7 @@ class Collect extends Base {
         $config = $config['manga'];
         $config_sync_pic = $param['sync_pic_opt'] > 0 ? $param['sync_pic_opt'] : $config['pic'];
 
-        $type_list = model('Type')->getCache('type_list');
+        $type_list = (new \app\common\model\Type())->getCache('type_list');
         $filter_arr = explode(',',$config['filter']);
         $filter_arr = array_filter($filter_arr);
         
@@ -3065,7 +3065,7 @@ class Collect extends Base {
                     $where['type_id'] = $v['type_id'];
                 }
 
-                $info = model('Manga')->where($where)->find();
+                $info = (new \app\common\model\Manga())->where($where)->find();
                 if (!$info) {
                     $tmp = $this->syncImages($config_sync_pic, $v['manga_pic'],'manga');
                     $v['manga_pic'] = (string)$tmp['pic'];
@@ -3074,7 +3074,7 @@ class Collect extends Base {
                     $v['manga_chapter_from'] = $v['manga_play_from'];
                     $v['manga_chapter_url'] = $v['manga_play_url'];
                     
-                    $res = model('Manga')->insert($v, false, true);
+                    $res = (new \app\common\model\Manga())->insert($v, false, true);
                     \app\common\util\MeilisearchSync::afterMangaSave((int)$res); // 采集入库:增量同步 Meili(Meili 关闭则空操作)
                     if($res===false){
 
@@ -3123,7 +3123,7 @@ class Collect extends Base {
                             $update['manga_time'] = time();
                             $where = [];
                             $where['manga_id'] = $info['manga_id'];
-                            $res = model('Manga')->where($where)->update($update);
+                            $res = (new \app\common\model\Manga())->where($where)->update($update);
                             \app\common\util\MeilisearchSync::afterMangaSave((int)$info['manga_id']); // 采集更新:增量同步 Meili
                             $color = 'green';
                         }

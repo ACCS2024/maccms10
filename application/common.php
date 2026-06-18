@@ -64,7 +64,7 @@ function mac_tpl_vod_type_cover($typeId)
         $pageMap[$id] = ($c === 'h') ? 'h' : 'v';
     }
 
-    $typeList = model('Type')->getCache('type_list');
+    $typeList = (new \app\common\model\Type())->getCache('type_list');
     if (!is_array($typeList)) {
         $typeList = [];
     }
@@ -196,7 +196,7 @@ function mac_theme_index_hotvod_tabs(array $theme)
         return [];
     }
 
-    $typeModel = model('Type');
+    $typeModel = (new \app\common\model\Type());
     $out = [];
 
     for ($i = 0; $i < 4; $i++) {
@@ -1629,7 +1629,7 @@ function mac_interface_type()
         think\Cache::set($key,$data);
     }
 
-    $type_list = model('Type')->getCache('type_list');
+    $type_list = (new \app\common\model\Type())->getCache('type_list');
     $type_names = [];
     foreach($type_list as $k=>$v){
         $type_names[$v['type_name']] = $v['type_id'];
@@ -1984,7 +1984,7 @@ function mac_user_fav_state($userId, $ulogMid, $rid)
     if ($userId < 1 || $rid < 1 || $ulogMid < 1) {
         return ['is_fav' => 0, 'fav_ulog_id' => 0];
     }
-    $row = model('Ulog')->where([
+    $row = (new \app\common\model\Ulog())->where([
         'user_id'   => $userId,
         'ulog_mid'  => $ulogMid,
         'ulog_type' => 2,
@@ -3819,7 +3819,7 @@ function mac_label_website_detail($param)
         $where['website_id'] = $param['id'];
     }
     $where['website_status'] = 1;
-    $res = model('Website')->infoData($where,'*',1);
+    $res = (new \app\common\model\Website())->infoData($where,'*',1);
 
     $GLOBALS['type_id'] = $res['info']['type_id'];
     $GLOBALS['type_pid'] = $res['info']['type']['type_pid'];
@@ -3838,7 +3838,7 @@ function mac_label_actor_detail($param)
         $where['actor_id'] = $param['id'];
     }
     $where['actor_status'] = 1;
-    $res = model('Actor')->infoData($where,'*',1);
+    $res = (new \app\common\model\Actor())->infoData($where,'*',1);
 
     $GLOBALS['type_id'] = $res['info']['type_id'];
     $GLOBALS['type_pid'] = $res['info']['type']['type_pid'];
@@ -3857,7 +3857,7 @@ function mac_label_role_detail($param)
         $where['role_id'] = $param['id'];
     }
     $where['role_status'] = 1;
-    $res = model('Role')->infoData($where,'*',1);
+    $res = (new \app\common\model\Role())->infoData($where,'*',1);
 
     // https://github.com/magicblack/maccms10/issues/960
     $GLOBALS['type_id'] = isset($res['info']['data']['type_id']) ? $res['info']['data']['type_id'] : 0;
@@ -3877,7 +3877,7 @@ function mac_label_topic_detail($param)
         $where['topic_id'] = $param['id'];
     }
     $where['topic_status'] = 1;
-    $res = model('Topic')->infoData($where,'*',1);
+    $res = (new \app\common\model\Topic())->infoData($where,'*',1);
     return $res;
 }
 function mac_label_art_detail($param)
@@ -3893,7 +3893,7 @@ function mac_label_art_detail($param)
         $where['art_id'] = $param['id'];
     }
     $where['art_status'] = 1;
-    $res = model('Art')->infoData($where,'*',1);
+    $res = (new \app\common\model\Art())->infoData($where,'*',1);
     if($res['code'] ==1){
         if($param['page']>$res['info']['art_page_total']){ $param['page'] = $res['info']['art_page_total']; }
     }
@@ -3915,7 +3915,7 @@ function mac_label_manga_detail($param)
         $where['manga_id'] = $param['id'];
     }
     $where['manga_status'] = 1;
-    $res = model('Manga')->infoData($where,'*',1);
+    $res = (new \app\common\model\Manga())->infoData($where,'*',1);
     if($res['code'] != 1){
         return $res;
     }
@@ -3937,7 +3937,7 @@ function mac_label_vod_detail($param)
         $where['vod_id'] = $param['id'];
     }
     $where['vod_status'] = 1;
-    $res = model('Vod')->infoData($where,'*',1);
+    $res = (new \app\common\model\Vod())->infoData($where,'*',1);
 
     $GLOBALS['type_id'] = $res['info']['type_id'];
     $GLOBALS['type_pid'] = $res['info']['type']['type_pid'];
@@ -3950,7 +3950,7 @@ function mac_label_vod_role($param)
     $where['role_rid'] = $param['rid'];
     $where['role_status'] = 1;
     $order='role_sort desc,role_id desc';
-    $res = model('Role')->listData($where,$order,1,999,0,'*',0,0);
+    $res = (new \app\common\model\Role())->listData($where,$order,1,999,0,'*',0,0);
     return $res;
 }
 
@@ -3969,12 +3969,12 @@ function mac_label_type($param, $type_id_specified)
         }
         $type_id = $param['id'];
     }
-    $type_info = model('Type')->getCacheInfo($type_id);
+    $type_info = (new \app\common\model\Type())->getCacheInfo($type_id);
 
     $GLOBALS['type_id'] =$type_info['type_id'];
     $GLOBALS['type_pid'] = $type_info['type_pid'];
 
-    $parent = model('Type')->getCacheInfo($type_info['type_pid']);
+    $parent = (new \app\common\model\Type())->getCacheInfo($type_info['type_pid']);
     $type_info['parent'] = $parent;
     return $type_info;
 }
@@ -3988,7 +3988,7 @@ function mac_data_count($tid=0,$range='all',$flag='vod')
         $range='all';
     }
 
-    $data = model('Extend')->dataCount();
+    $data = (new \app\common\model\Extend())->dataCount();
     $key = 'type_'.$range.'_'.$tid;
     if($tid>0 && in_array($flag,['vod','art']) ){
 
@@ -4002,7 +4002,7 @@ function mac_data_count($tid=0,$range='all',$flag='vod')
 function mac_get_popedom_filter($group_type_list, $type_list = [])
 {
     if (empty($type_list)) {
-        $type_list = model('Type')->getCache('type_list');
+        $type_list = (new \app\common\model\Type())->getCache('type_list');
     }
     $type_keys = array_keys($type_list);
     $group_type_list = array_map('trim', explode(',', trim($group_type_list, ',')));
@@ -4028,8 +4028,8 @@ function mac_get_vip_exclusive_type_ids()
     if (is_array($list)) {
         return $list;
     }
-    $group_list = model('Group')->getCache('group_list');
-    $type_list = model('Type')->getCache('type_list');
+    $group_list = (new \app\common\model\Group())->getCache('group_list');
+    $type_list = (new \app\common\model\Type())->getCache('type_list');
     if (empty($group_list) || empty($type_list)) {
         return [];
     }
@@ -4121,7 +4121,7 @@ function mac_vod_type_filter_ids_for_list($typeId)
     if ($typeId <= 0) {
         return [];
     }
-    $type_list = model('Type')->getCache('type_list');
+    $type_list = (new \app\common\model\Type())->getCache('type_list');
     if (empty($type_list) || !is_array($type_list)) {
         return [$typeId];
     }
@@ -4361,9 +4361,8 @@ function mac_strip_tags($string) {
     return strip_tags($string);
 }
 
-// ========= TP8 过渡 Shim — 待各模块改写完成后（P5）逐步移除 =========
+// ========= TP8 global helpers — model() is permanent for dynamic model loading =========
 if (!function_exists('model')) {
-    /** @deprecated 迁移期 shim，用 new \app\common\model\Xxx() 替代 */
     function model(string $name, string $layer = 'model'): object {
         $class = '\\app\\common\\' . $layer . '\\' . ucfirst($name);
         return new $class();
@@ -4403,6 +4402,6 @@ if (!function_exists('url')) {
         return mac_url($url, $vars);
     }
 }
-// ========= /TP8 过渡 Shim =========
+// ========= /TP8 global helpers =========
 
 

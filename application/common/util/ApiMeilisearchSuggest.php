@@ -392,7 +392,7 @@ class ApiMeilisearchSuggest
         $field = $k . '_id as id,' . $k . '_name as name,' . $k . '_en as en,' . $k . '_pic as pic';
         if ($k === 'topic') {
             $field = 'topic_id as id,topic_name as name,topic_en as en,topic_pic as pic';
-            $res = model('Topic')->listData($where, $order, 1, $limit, 0, $field, 0);
+            $res = (new \app\common\model\Topic())->listData($where, $order, 1, $limit, 0, $field, 0);
         } else {
             $res = model($modelName)->listData($where, $order, 1, $limit, 0, $field, 0, 0);
         }

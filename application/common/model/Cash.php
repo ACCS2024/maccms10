@@ -39,7 +39,7 @@ class Cash extends Base {
             $where2=[];
             $where['user_id'] = $user_ids;
             $order='user_id desc';
-            $user_list = model('User')->listData($where2,$order,1,999);
+            $user_list = (new \app\common\model\User())->listData($where2,$order,1,999);
             $user_list = mac_array_rekey($user_list['list'],'user_id');
 
             foreach($list as $k=>&$v){
@@ -109,7 +109,7 @@ class Cash extends Base {
 
         $where=[];
         $where['user_id'] = $GLOBALS['user']['user_id'];
-        $res = model('user')->where($where)->update($update);
+        $res = (new \app\common\model\User())->where($where)->update($update);
         if(false === $res){
             return ['code'=>1005,'msg'=>'更新用户积分失败：'.$this->getError() ];
         }
@@ -135,12 +135,12 @@ class Cash extends Base {
                 $where=[];
                 $where['user_id'] = $v['user_id'];
 
-                $user = model('User')->where($where)->find();
+                $user = (new \app\common\model\User())->where($where)->find();
                 $update=[];
                 $update['user_points'] = $user['user_points'] + $v['cash_points'];
                 $update['user_points_froze'] = $user['user_points_froze'] - $v['cash_points'];
 
-                $res = model('user')->where($where)->update($update);
+                $res = (new \app\common\model\User())->where($where)->update($update);
                 if(false === $res){
                     return ['code'=>1005,'msg'=>'更新用户积分失败：'.$this->getError() ];
                 }
@@ -175,12 +175,12 @@ class Cash extends Base {
             $update=[];
             $update['cash_status'] = 1;
             $update['cash_time_audit'] = time();
-            $res = model('Cash')->where($where)->update($update);
+            $res = (new \app\common\model\Cash())->where($where)->update($update);
             if($res===false){
                 return ['code'=>1001,'msg'=>lang('del_err').'：'.$this->getError() ];
             }
 
-            $res = model('User')->where($where2)->setDec('user_points_froze', $v['cash_points']);
+            $res = (new \app\common\model\User())->where($where2)->setDec('user_points_froze', $v['cash_points']);
             if(false === $res){
                 return ['code'=>1005,'msg'=>'更新用户积分失败：'.$this->getError() ];
             }
@@ -189,7 +189,7 @@ class Cash extends Base {
             $data['user_id'] = $v['user_id'];
             $data['plog_type'] = 9;
             $data['plog_points'] = $v['cash_points'];
-            $result = model('Plog')->saveData($data);
+            $result = (new \app\common\model\Plog())->saveData($data);
 
         }
         return ['code'=>1,'msg'=>'审核成功'];

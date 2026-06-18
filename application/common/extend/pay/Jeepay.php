@@ -187,7 +187,7 @@ class Jeepay {
         }
 
         // 支付成功，更新订单
-        $res = model('Order')->notify($mch_order_no, 'jeepay');
+        $res = (new \app\common\model\Order())->notify($mch_order_no, 'jeepay');
         if ($res['code'] > 1) {
             echo 'fail';
             exit;

@@ -56,14 +56,14 @@ class SignLog extends Base {
                 'plog_points' => $total_points,
                 'plog_remarks' => lang('task/reward_log', [$taskName, $total_points]),
             ];
-            $plogRes = model('Plog')->saveData($plog);
+            $plogRes = (new \app\common\model\Plog())->saveData($plog);
             if (empty($plogRes['code']) || (int)$plogRes['code'] !== 1) {
                 throw new \Exception('plog');
             }
 
             // 同步每日签到任务进度；若本次已达成且积分已在上方发放，则标记为已领取，避免任务中心重复领
             if ($task) {
-                model('TaskLog')->addProgress($user_id, 'daily_sign', 1);
+                (new \app\common\model\TaskLog())->addProgress($user_id, 'daily_sign', 1);
                 $log = Db::name('TaskLog')->where([
                     'user_id' => $user_id,
                     'task_id' => $task['task_id'],
@@ -85,7 +85,7 @@ class SignLog extends Base {
         }
 
         // 检查是否有新达成的里程碑
-        $milestone_info = model('SignMilestone')->getMilestonesWithStatus($user_id, $serial_days);
+        $milestone_info = (new \app\common\model\SignMilestone())->getMilestonesWithStatus($user_id, $serial_days);
         $claimable_count = 0;
         foreach ($milestone_info['milestones'] as $m) {
             if ($m['status'] == 1) {
@@ -142,7 +142,7 @@ class SignLog extends Base {
         $total_signs = (int)Db::name('SignLog')->where('user_id', $user_id)->count();
 
         // 里程碑信息
-        $milestone_info = model('SignMilestone')->getMilestonesWithStatus($user_id, $serial_days);
+        $milestone_info = (new \app\common\model\SignMilestone())->getMilestonesWithStatus($user_id, $serial_days);
 
         return [
             'is_signed_today' => $is_signed,

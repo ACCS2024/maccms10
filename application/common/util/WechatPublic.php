@@ -115,7 +115,7 @@ class WechatPublic
             }
 
 
-            $res = model('Vod')->listCacheData($param);
+            $res = (new \app\common\model\Vod())->listCacheData($param);
             $data = [];
             if($res['code']>1 || empty($res['list'])){
                 $txt .=  '<a href="'.$this->_conf['wuziyuanlink'].'">'.$this->_conf['wuziyuan'].'</a>' . "\n";

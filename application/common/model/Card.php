@@ -35,7 +35,7 @@ class Card extends Base {
         $list = Db::name('Card')->where($where)->order($order)->page($page)->limit($limit)->select();
         foreach($list as $k=>$v){
             if($v['user_id'] >0){
-                $user = model('User')->infoData(['user_id'=>$v['user_id']]);
+                $user = (new \app\common\model\User())->infoData(['user_id'=>$v['user_id']]);
                 $list[$k]['user'] = $user['info'];
             }
         }
@@ -160,14 +160,14 @@ class Card extends Base {
             }
 
             // 认领成功后再加积分
-            $res = model('User')->where(['user_id' => $user_info['user_id']])->setInc('user_points', $info['card_points']);
+            $res = (new \app\common\model\User())->where(['user_id' => $user_info['user_id']])->setInc('user_points', $info['card_points']);
             if ($res === false) {
                 Db::rollback();
                 return ['code' => 1003, 'msg' => lang('model/card/update_user_points_err')];
             }
 
             //积分日志
-            model('Plog')->saveData([
+            (new \app\common\model\Plog())->saveData([
                 'user_id'     => $user_info['user_id'],
                 'plog_type'   => 1,
                 'plog_points' => $info['card_points'],

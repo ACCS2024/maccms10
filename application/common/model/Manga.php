@@ -74,9 +74,9 @@ class Manga extends Base {
         //dump($where);die;
         //echo $this->getLastSql();die;
         //分类
-        $type_list = model('Type')->getCache('type_list');
+        $type_list = (new \app\common\model\Type())->getCache('type_list');
         //用户组
-        $group_list = model('Group')->getCache('group_list');
+        $group_list = (new \app\common\model\Group())->getCache('group_list');
 
         $vip_exclusive = mac_get_vip_exclusive_type_ids();
         foreach($list as $k=>$v){
@@ -122,9 +122,9 @@ class Manga extends Base {
         //dump($where);die;
         //echo $this->getLastSql();die;
         //分类
-        $type_list = model('Type')->getCache('type_list');
+        $type_list = (new \app\common\model\Type())->getCache('type_list');
         //用户组
-        $group_list = model('Group')->getCache('group_list');
+        $group_list = (new \app\common\model\Group())->getCache('group_list');
 
         $vip_exclusive = mac_get_vip_exclusive_type_ids();
         foreach($list as $k=>$v){
@@ -241,7 +241,7 @@ class Manga extends Base {
 
             if($pageurl=='manga/type' || $pageurl=='manga/show'){
                 $type = intval( $GLOBALS['type_id'] );
-                $type_list = model('Type')->getCache('type_list');
+                $type_list = (new \app\common\model\Type())->getCache('type_list');
                 $type_info = $type_list[$type];
                 $flag='type';
                 if($pageurl == 'manga/show'){
@@ -303,7 +303,7 @@ class Manga extends Base {
             }
             if($type!='all') {
                 $tmp_arr = explode(',', $type);
-                $type_list = model('Type')->getCache('type_list');
+                $type_list = (new \app\common\model\Type())->getCache('type_list');
                 $type = [];
                 foreach ($type_list as $k2 => $v2) {
                     if (in_array($v2['type_id'] . '', $tmp_arr) || in_array($v2['type_pid'] . '', $tmp_arr)) {
@@ -486,14 +486,14 @@ class Manga extends Base {
             }
             //分类
             if (!empty($info['type_id'])) {
-                $type_list = model('Type')->getCache('type_list');
+                $type_list = (new \app\common\model\Type())->getCache('type_list');
                 $info['type'] = $type_list[$info['type_id']];
                 $info['type_1'] = $type_list[$info['type']['type_pid']];
             }
 
             //用户组
             if (!empty($info['group_id'])) {
-                $group_list = model('Group')->getCache('group_list');
+                $group_list = (new \app\common\model\Group())->getCache('group_list');
                 $info['group'] = $group_list[$info['group_id']];
             }
             $vip_exclusive = mac_get_vip_exclusive_type_ids();
@@ -520,7 +520,7 @@ class Manga extends Base {
         Cache::rm($key);
 
 
-        $type_list = model('Type')->getCache('type_list');
+        $type_list = (new \app\common\model\Type())->getCache('type_list');
         $type_info = $type_list[$data['type_id']];
         $data['type_id_1'] = $type_info['type_pid'];
 

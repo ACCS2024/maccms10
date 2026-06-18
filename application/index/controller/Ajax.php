@@ -528,7 +528,7 @@ class Ajax extends Base
         $mid = $this->_param['mid'];
         $id = $this->_param['id'];
         $type = $this->_param['type'];
-        $pwd = input('param.pwd');
+        $pwd = \think\facade\Request::param('pwd');
 
         if( empty($id) || empty($pwd) || !in_array($mid,['1','2']) || !in_array($type,['1','4','5'])){
             return json(['code'=>1001,'msg'=>lang('param_err')]);
@@ -684,7 +684,7 @@ class Ajax extends Base
      */
     public function home_hot_tab()
     {
-        $tab = intval(input('param.tab/d', 0));
+        $tab = (int)\think\facade\Request::param('tab', 0);
         if ($tab <= 0) {
             $tab = intval($this->_param['id'] ?? 0);
         }
