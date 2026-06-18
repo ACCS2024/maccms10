@@ -11,6 +11,7 @@
 |--------|------|----------|------|
 | P0 | [P0.md](P0.md) — 启动层（入口+Shim+Middleware+Addons） | 25/25 | ✅ 完成 |
 | P1 | [P1.md](P1.md) — ORM/DB 层 | 6/7 | 🟡 待冒烟 |
+
 | P2 | [P2.md](P2.md) — API 模块 | 0/5 | 🔴 未开始 |
 | P3 | [P3.md](P3.md) — Admin 模块 | 0/5 | 🔴 未开始 |
 | P4 | [P4.md](P4.md) — 前台 + Console | 0/6 | 🔴 未开始 |
@@ -58,8 +59,8 @@
 | [P1-01](P1.md#p1-01-模型基类-basephp-适配) | Base.php：initialize() → __construct()，追加 getError() 兼容 | [x] |
 | [P1-02](P1.md#p1-02-模型层-use-thinkdb-批量改-facade) | 51 个文件：`use think\Db` → `use think\facade\Db`（model 38 + util 13） | [x] |
 | [P1-03](P1.md#p1-03-模型层-use-thinkcache-批量改-facade) | 20 个文件：`use think\Cache` → `use think\facade\Cache`（model 16 + util 4） | [x] |
-| [P1-04](P1.md#p1-04-修复-cache-false-判断) | 修复 Cache::get 返回值判断（null vs false，2 处） | [ ] |
-| [P1-05](P1.md#p1-05-修复-fetchsqlfalse-调用) | 修复 fetchSql(false) → fetchSql()（3 处） | [ ] |
+| [P1-04](P1.md#p1-04-修复-cache-false-判断) | 修复 Cache::get 返回值判断（null vs false，2 处） | [x] |
+| [P1-05](P1.md#p1-05-修复-fetchsqlfalse-调用) | 修复 fetchSql(false) → fetchSql()（3 处） | [x] |
 | [P1-06](P1.md#p1-06-config-database-键名迁移验证) | 验证 config/database.php 键名与 TP8 ORM 对齐 | [x] |
 | [P1-07](P1.md#p1-07-后台登录冒烟测试) | 后台登录冒烟测试（验证 DB + Session + Model 全链路） | [ ] |
 
