@@ -2,7 +2,6 @@
 
 namespace app\admin\controller;
 
-use think\Hook;
 use think\facade\Db;
 use Exception;
 use ip_limit\IpLocationQuery;
@@ -23,7 +22,7 @@ class Index extends Base
             }
             return $this->success($res['msg']);
         }
-        Hook::listen("admin_login_init", $this->request);
+        event('admin_login_init', $this->request);
         return $this->fetch('admin@index/login');
     }
 

@@ -3,7 +3,7 @@ namespace app\common\behavior;
 
 use app\common\model\AdminAuditLog;
 use app\common\util\SensitiveDataCrypto;
-use think\Request;
+use think\facade\Request;
 use think\Response;
 
 /**
@@ -33,7 +33,7 @@ class AdminAudit
             return;
         }
 
-        $req = Request::instance();
+        $req = request();
         $method = strtoupper($req->method());
         $logGet = !empty($app['admin_audit_get']) && (string)$app['admin_audit_get'] === '1';
         if (!$logGet && !in_array($method, ['POST', 'PUT', 'PATCH', 'DELETE'], true)) {

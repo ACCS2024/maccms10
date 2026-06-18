@@ -1578,7 +1578,7 @@ class System extends Base
         $token = isset($post['__token__']) ? (string)$post['__token__'] : '';
         $sessionToken = (string)session('__token__');
         if ($token === '' || $sessionToken === '' || !$this->safeHashEquals($sessionToken, $token)) {
-            $fresh = \think\Request::instance()->token('__token__');
+            $fresh = token();
             return json(['code' => 1001, 'msg' => lang('token_err'), 'data' => ['__token__' => $fresh]]);
         }
         $provider = isset($post['provider']) ? trim((string)$post['provider']) : '';
@@ -1647,7 +1647,7 @@ class System extends Base
      */
     private function ajaxErrorWithFreshToken($msg)
     {
-        $t = \think\Request::instance()->token('__token__');
+        $t = token();
         return $this->error($msg, null, ['__token__' => $t]);
     }
 

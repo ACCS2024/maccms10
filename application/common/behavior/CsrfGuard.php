@@ -2,7 +2,7 @@
 namespace app\common\behavior;
 
 use think\exception\HttpResponseException;
-use think\Request;
+use think\facade\Request;
 use think\Response;
 use think\Session;
 
@@ -31,7 +31,7 @@ class CsrfGuard
             return;
         }
 
-        $req = Request::instance();
+        $req = request();
 
         list($m, $c, $a) = self::parseDispatch($dispatch);
         $c = strtolower($c);

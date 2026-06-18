@@ -71,7 +71,7 @@ class JwtService
 
     public static function bearerFromRequest(Request $req = null)
     {
-        $req = $req ?: Request::instance();
+        $req = $req ?: request();
         $h = $req->header('Authorization');
         if ($h === null || $h === '') {
             return '';

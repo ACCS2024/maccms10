@@ -3,7 +3,7 @@ namespace app\common\behavior;
 
 use app\common\util\SlidingWindowIpLimiter;
 use think\exception\HttpResponseException;
-use think\Request;
+use think\facade\Request;
 
 /**
  * 防爬虫：开放 API 与前台 Ajax 的 IP 频率限制（验证码仍使用系统原有搜索/筛选验证码配置）。
@@ -18,7 +18,7 @@ class AntiScrape
         $app = isset($GLOBALS['config']['app']) && is_array($GLOBALS['config']['app'])
             ? $GLOBALS['config']['app']
             : [];
-        $req = Request::instance();
+        $req = request();
 
         if (defined('ENTRANCE') && ENTRANCE === 'index') {
             $this->runIndexAjax($req, $app);
