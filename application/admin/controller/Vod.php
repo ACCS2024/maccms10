@@ -665,7 +665,7 @@ class Vod extends Base
         if ($res['code'] > 1) {
             return $this->error($res['msg']);
         }
-        Cache::rm('vod_repeat_table_created_time');
+        Cache::delete('vod_repeat_table_created_time');
         return $this->success($res['msg']);
     }
 
@@ -686,7 +686,7 @@ class Vod extends Base
             if($res['code']>1){
                 return $this->error($res['msg']);
             }
-            Cache::rm('vod_repeat_table_created_time');
+            Cache::delete('vod_repeat_table_created_time');
             return $this->success($res['msg']);
         }
         elseif(!empty($param['repeat'])){
@@ -716,7 +716,7 @@ class Vod extends Base
             if($res===false){
                 return $this->success(lang('del_err'));
             }
-            Cache::rm('vod_repeat_table_created_time');
+            Cache::delete('vod_repeat_table_created_time');
             return $this->success(lang('del_ok'));
         }
         return $this->error(lang('param_err'));

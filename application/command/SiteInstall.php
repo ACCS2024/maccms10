@@ -152,7 +152,7 @@ class SiteInstall extends Command
                 'database' => $dbName, 'prefix' => $prefix, 'charset' => $o('db-charset'),
             ]);
             $installer->writeDbConfig($appCfg);
-            Config::set('database', $appCfg); // ★ 单进程关键:后续 Db/model 走新连接
+            Config::set($appCfg, 'database'); // ★ 单进程关键:后续 Db/model 走新连接
         } catch (\Exception $e) {
             $output->writeln('<error>' . $e->getMessage() . '</error>');
             return 3;

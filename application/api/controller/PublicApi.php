@@ -12,7 +12,7 @@ trait PublicApi
         }
 
         if ($GLOBALS['config']['api']['publicapi']['charge'] == 1) {
-            $h = $_SERVER['REMOTE_ADDR'];
+            $h = $_SERVER['REMOTE_ADDR'] ?? '';
             if (!$h) {
                 echo lang('api/auth_err');
                 exit;

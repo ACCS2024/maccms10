@@ -125,7 +125,7 @@ class Base extends All
     protected function check_browser_jump()
     {
         if (ENTRANCE=='index' && $GLOBALS['config']['app']['browser_junmp'] == 1) {
-            $agent = $_SERVER['HTTP_USER_AGENT'];
+            $agent = $_SERVER['HTTP_USER_AGENT'] ?? '';
             if(strpos($agent, 'QQ/')||strpos($agent, 'MicroMessenger')!==false){
                 echo $this->fetch('public/browser');
                 die;

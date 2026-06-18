@@ -1,5 +1,6 @@
 <?php
 return [
+    \think\app\MultiApp::class,
     \app\middleware\SessionSameSite::class,
     \app\middleware\AppInit::class,
     \app\middleware\RequestSecurity::class,

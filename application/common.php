@@ -2373,12 +2373,12 @@ function mac_play_list($vod_play_from,$vod_play_url,$vod_play_server,$vod_play_n
     $res_list = [];
     $sort=[];
     foreach($vod_play_from_list as $k=>$v){
-        $server = (string)$vod_play_server_list[$k];
-        $urls = mac_play_list_one($vod_play_url_list[$k],$v);
+        $server = (string)($vod_play_server_list[$k] ?? '');
+        $urls = mac_play_list_one($vod_play_url_list[$k] ?? '',$v);
 
-        $player_info = $player_list[$v];
-        $server_info = $server_list[$server];
-        if($player_info['status'] == '1') {
+        $player_info = $player_list[$v] ?? [];
+        $server_info = $server_list[$server] ?? [];
+        if(($player_info['status'] ?? '') == '1') {
             $sort[] = $player_info['sort'];
             $res_list[$k + 1] = [
                 'sid' => $k + 1,
@@ -2436,7 +2436,7 @@ function mac_play_list_one($url_one, $from_one, $server_one=''){
     foreach($array_url as $key=>$val){
         if(empty($val)) continue;
 
-        list($title, $url, $from) = explode('$', $val);
+        [$title, $url, $from] = array_pad(explode('$', $val, 3), 3, '');
         if ( empty($url) ) {
             $url_list[$key+1]['name'] = lang('the').($key+1).lang('episode');
             $url_list[$key+1]['url'] = $server_one.$title;
@@ -2851,16 +2851,16 @@ function mac_url($model,$param=[],$info=[])
         case 'art/show':
         case 'actor/show':
         case 'website/show':
-            switch($config['rewrite']['type_id'])
+            switch($config['rewrite']['type_id'] ?? 0)
             {
                 case 1:
-                    $id = $info['type_en'];
+                    $id = $info['type_en'] ?? '';
                     break;
                 case 2:
-                    $id = mac_alphaID($info['type_id'],false,$config['rewrite']['encode_len'],$config['rewrite']['encode_key']);
+                    $id = mac_alphaID($info['type_id'] ?? 0,false,$config['rewrite']['encode_len'] ?? 6,$config['rewrite']['encode_key'] ?? '');
                     break;
                 default:
-                    $id = $info['type_id'];
+                    $id = $info['type_id'] ?? 0;
                     break;
             }
             if(!empty($id)){

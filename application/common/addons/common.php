@@ -306,7 +306,7 @@ function set_addon_info(string $name, array $array): bool
     if ($handle = fopen($file, 'w')) {
         fwrite($handle, implode("\n", $res) . "\n");
         fclose($handle);
-        \think\facade\Config::set($name . '.addoninfo', null);
+        \think\facade\Config::set(['addoninfo' => null], $name);
         return true;
     }
     throw new \Exception('文件没有写入权限');

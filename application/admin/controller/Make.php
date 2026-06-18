@@ -556,9 +556,9 @@ class Make extends Base
         if(!empty($ids)){
             Db::name('topic')->where(['topic_id'=>$ids])->update(['topic_time_make'=>time()]);
         }
-        if($this->_param['ref'] ==1 && !empty($_SERVER["HTTP_REFERER"])){
+        if($this->_param['ref'] ==1 && !empty($_SERVER["HTTP_REFERER"] ?? '')){
             if(ENTRANCE=='admin'){
-                mac_jump($_SERVER["HTTP_REFERER"],2);
+                mac_jump($_SERVER["HTTP_REFERER"] ?? '',2);
             }
             die;
         }
@@ -868,9 +868,9 @@ class Make extends Base
         if(!empty($update_ids)){
             Db::name($this->_param['tab'])->where([$this->_param['tab'].'_id'=>$update_ids])->update([$this->_param['tab'].'_time_make'=>time()]);
         }
-        if($this->_param['ref'] ==1 && !empty($_SERVER["HTTP_REFERER"])){
+        if($this->_param['ref'] ==1 && !empty($_SERVER["HTTP_REFERER"] ?? '')){
             if(ENTRANCE=='admin'){
-                mac_jump($_SERVER["HTTP_REFERER"],2);
+                mac_jump($_SERVER["HTTP_REFERER"] ?? '',2);
             }
             die;
         }

@@ -245,7 +245,7 @@ class Base extends All
             } else {
                 $ok++;
                 if($table === 'vod'){
-                    Cache::rm('vod_repeat_table_created_time');
+                    Cache::delete('vod_repeat_table_created_time');
                 }
             }
         }

@@ -13,7 +13,7 @@ class User extends Base
     {
         parent::__construct();
 
-        define('THIRD_LOGIN_CALLBACK',  $GLOBALS['http_type'] . $_SERVER['HTTP_HOST'] . '/index.php/user/logincallback/type/');
+        define('THIRD_LOGIN_CALLBACK',  $GLOBALS['http_type'] . $_SERVER['HTTP_HOST'] ?? '' . '/index.php/user/logincallback/type/');
 
         //判断用户登录状态
         $ac = request()->action();
@@ -1004,7 +1004,7 @@ class User extends Base
         $user_id     = $GLOBALS['user']['user_id'];
         $invite_code = $GLOBALS['user']['user_invite_code'];
 
-        $base_url         = $GLOBALS['http_type'] . $_SERVER['HTTP_HOST'];
+        $base_url         = $GLOBALS['http_type'] . $_SERVER['HTTP_HOST'] ?? '';
         $reg_path         = mac_url('user/reg');
         $invite_link_uid  = $base_url . $reg_path . '?uid=' . $user_id;
         $invite_link_code = !empty($invite_code)
@@ -1068,7 +1068,7 @@ class User extends Base
         $url = '/';
         if(!empty($param['url'])){
             $tempu = @parse_url($param['url']);
-            if($_SERVER['HTTP_HOST'] == $tempu['host']){
+            if($_SERVER['HTTP_HOST'] ?? '' == $tempu['host']){
                 $url = $param['url'];
             }
         }

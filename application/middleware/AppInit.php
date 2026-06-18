@@ -84,11 +84,11 @@ class AppInit
               || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https');
         $GLOBALS['http_type'] = $https ? 'https://' : 'http://';
 
-        // view_path
+        // view_path — TP8: Config::set(array $config, string $name)
         $viewPath = 'template/' . $TMP_TEMPLATEDIR . '/' . $TMP_HTMLDIR . '/';
-        \think\facade\Config::set('view.view_path', $viewPath);
+        \think\facade\Config::set(['view_path' => $viewPath], 'view');
         if (ENTRANCE === 'admin' && !file_exists('./' . $viewPath)) {
-            \think\facade\Config::set('view.view_path', '');
+            \think\facade\Config::set(['view_path' => ''], 'view');
         }
 
         if (intval($config['app']['search_len']) < 1) {
@@ -98,45 +98,52 @@ class AppInit
         if (empty($config['app']['pathinfo_depr'])) {
             $config['app']['pathinfo_depr'] = '/';
         }
-        \think\facade\Config::set('route.pathinfo_depr', $config['app']['pathinfo_depr']);
+        \think\facade\Config::set(['pathinfo_depr' => $config['app']['pathinfo_depr']], 'route');
 
         if (intval($config['app']['cache_time']) < 1) {
             $config['app']['cache_time'] = 60;
         }
-        \think\facade\Config::set('cache.stores.file.expire', $config['app']['cache_time']);
-
         if (!in_array($config['app']['cache_type'], ['file', 'memcache', 'memcached', 'redis'])) {
             $config['app']['cache_type'] = 'file';
         }
-        \think\facade\Config::set('cache.default', $config['app']['cache_type']);
 
         $cacheTimeout = (isset($config['app']['cache_timeout']) && (float)$config['app']['cache_timeout'] > 0)
             ? (float)$config['app']['cache_timeout'] : 1.5;
-        \think\facade\Config::set('cache.stores.redis.timeout', $cacheTimeout);
-        \think\facade\Config::set('cache.stores.redis.host',     $config['app']['cache_host']     ?? '127.0.0.1');
-        \think\facade\Config::set('cache.stores.redis.port',     $config['app']['cache_port']     ?? 6379);
-        \think\facade\Config::set('cache.stores.redis.username', $config['app']['cache_username'] ?? '');
-        \think\facade\Config::set('cache.stores.redis.password', $config['app']['cache_password'] ?? '');
+
+        // Batch-update cache config in one call (TP8 array_merges at namespace level)
+        $cacheStores = \think\facade\Config::get('cache.stores') ?: [];
+        $cacheStores['file']['expire'] = (int)$config['app']['cache_time'];
+        $cacheStores['redis']['timeout']  = $cacheTimeout;
+        $cacheStores['redis']['host']     = $config['app']['cache_host']     ?? '127.0.0.1';
+        $cacheStores['redis']['port']     = $config['app']['cache_port']     ?? 6379;
+        $cacheStores['redis']['username'] = $config['app']['cache_username'] ?? '';
+        $cacheStores['redis']['password'] = $config['app']['cache_password'] ?? '';
         if ($config['app']['cache_type'] === 'redis'
             && isset($config['app']['cache_db'])
             && intval($config['app']['cache_db']) > 0) {
-            \think\facade\Config::set('cache.stores.redis.select', intval($config['app']['cache_db']));
+            $cacheStores['redis']['select'] = intval($config['app']['cache_db']);
         }
+        \think\facade\Config::set([
+            'default' => $config['app']['cache_type'],
+            'stores'  => $cacheStores,
+        ], 'cache');
 
         if (!empty($config['app']['lang'])) {
-            \think\facade\Config::set('app.default_lang', $config['app']['lang']);
+            \think\facade\Config::set(['default_lang' => $config['app']['lang']], 'app');
         }
 
         $sessionType = isset($config['app']['session_type'])
             ? strtolower(trim((string)$config['app']['session_type'])) : '';
         if ($sessionType === 'redis') {
-            \think\facade\Config::set('session.type',       'redis');
-            \think\facade\Config::set('session.host',       $config['app']['cache_host']     ?? '127.0.0.1');
-            \think\facade\Config::set('session.port',       $config['app']['cache_port']     ?? 6379);
-            \think\facade\Config::set('session.password',   $config['app']['cache_password'] ?? '');
-            \think\facade\Config::set('session.select',     isset($config['app']['cache_db']) ? intval($config['app']['cache_db']) : 0);
-            \think\facade\Config::set('session.timeout',    $cacheTimeout);
-            \think\facade\Config::set('session.persistent', true);
+            \think\facade\Config::set([
+                'type'       => 'redis',
+                'host'       => $config['app']['cache_host']     ?? '127.0.0.1',
+                'port'       => $config['app']['cache_port']     ?? 6379,
+                'password'   => $config['app']['cache_password'] ?? '',
+                'select'     => isset($config['app']['cache_db']) ? intval($config['app']['cache_db']) : 0,
+                'timeout'    => $cacheTimeout,
+                'persistent' => true,
+            ], 'session');
         }
 
         $GLOBALS['config'] = $config;

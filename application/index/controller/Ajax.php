@@ -266,7 +266,7 @@ class Ajax extends Base
         [{000214A0-0000-0000-C000-000000000046}]
         Prop3=19,2";
         header("Content-type: application/octet-stream");
-        if(strpos($_SERVER['HTTP_USER_AGENT'], "MSIE")){
+        if(strpos($_SERVER['HTTP_USER_AGENT'] ?? '', "MSIE")){
             header("Content-Disposition: attachment; filename=". urlencode($name) .".url;");
         }
         else{
@@ -352,7 +352,7 @@ class Ajax extends Base
             return json(['code'=>1001,'msg'=>lang('param_err')]);
         }
 
-        if(strpos($_SERVER["HTTP_REFERER"],$_SERVER['HTTP_HOST'])===false){
+        if(strpos($_SERVER["HTTP_REFERER"] ?? '',$_SERVER['HTTP_HOST'] ?? '')===false){
             return json(['code'=>1002,'msg'=>lang('param_err')]);
         }
 

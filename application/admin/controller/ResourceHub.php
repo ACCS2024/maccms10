@@ -415,7 +415,7 @@ class ResourceHub extends Base
         }
 
         // 强制从数据库读取，避免缓存导致重复新增
-        Cache::rm('cache_type');
+        Cache::delete('cache_type');
         $local_types_db = Db::name('type')->select();
         $local_type_names = [];
         if (!empty($local_types_db)) {
@@ -475,7 +475,7 @@ class ResourceHub extends Base
         }
 
         // 清除分类缓存
-        Cache::rm('cache_type');
+        Cache::delete('cache_type');
         
         return json([
             'code' => 1,
@@ -525,7 +525,7 @@ class ResourceHub extends Base
         }
 
         // 强制从数据库读取本地分类（不使用缓存，确保最新）
-        Cache::rm('cache_type');
+        Cache::delete('cache_type');
         $local_types_db = Db::name('type')->select();
         $local_type_map = [];
         $local_type_list = [];
@@ -1029,7 +1029,7 @@ MacPlayer.Show();
         if (empty($remote_types)) return;
 
         // 强制从数据库读取，确保最新
-        Cache::rm('cache_type');
+        Cache::delete('cache_type');
         $local_types_db = Db::name('type')->select();
         $local_type_map = [];
         $local_type_list = [];
@@ -1435,7 +1435,7 @@ MacPlayer.Show();
         }
 
         // 清除分类缓存
-        Cache::rm('cache_type');
+        Cache::delete('cache_type');
 
         return json([
             'code' => 1,

@@ -117,7 +117,7 @@ class VodPlayer extends Base
         }
 
         header("Content-type: application/octet-stream");
-        if(strpos($_SERVER['HTTP_USER_AGENT'], "MSIE")) {
+        if(strpos($_SERVER['HTTP_USER_AGENT'] ?? '', "MSIE")) {
             header("Content-Disposition: attachment; filename=mac_" . urlencode($info['from']) . '.txt');
         }
         else{

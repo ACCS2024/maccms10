@@ -1,6 +1,5 @@
 <?php
 return [
-    'app_namespace'           => 'app',
     'app_debug'               => false,
     'app_trace'               => false,
     'default_timezone'        => 'Asia/Shanghai',

@@ -47,6 +47,6 @@ require __DIR__ . '/vendor/autoload.php';
 $app      = new \think\App(ROOT_PATH);
 $app->setAppPath(APP_PATH);
 $http     = $app->http;
-$response = $http->name('api')->run();
+$response = $http->name('api')->path(APP_PATH . 'api/')->run();
 $response->send();
 $http->end($response);

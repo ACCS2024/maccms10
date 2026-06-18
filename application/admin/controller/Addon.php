@@ -233,7 +233,7 @@ class Addon extends Base
             $action = $action == 'enable' ? $action : 'disable';
             //调用启用、禁用的方法
             Service::$action($name, $force);
-            Cache::rm('__menu__');
+            Cache::delete('__menu__');
             return $this->success(lang('opt_ok'));
         } catch (AddonException $e) {
             return $this->result($e->getData(), $e->getCode(), $e->getMessage());
@@ -350,7 +350,7 @@ class Addon extends Base
             ];
             //调用更新的方法
             Service::upgrade($name, $extend);
-            Cache::rm('__menu__');
+            Cache::delete('__menu__');
             return $this->success(lang('update_ok'));
         } catch (AddonException $e) {
             return $this->result($e->getData(), $e->getCode(), $e->getMessage());

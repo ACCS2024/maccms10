@@ -76,7 +76,7 @@ class Type extends Base
             if($res['code']>1){
                 return $this->error($res['msg']);
             }
-            (new \app\common\model\Type())->setCache();
+            (new \app\common\model\Type())->rebuildCache();
             return $this->success($res['msg']);
         }
 

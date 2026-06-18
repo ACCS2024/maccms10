@@ -78,7 +78,7 @@ abstract class Addons
         if (empty($name)) {
             $name = $this->getName();
         }
-        Config::set($name . '.' . $this->configRange, $config);
+        Config::set([$this->configRange => $config], $name);
         return true;
     }
 
@@ -87,7 +87,7 @@ abstract class Addons
         if (empty($name)) {
             $name = $this->getName();
         }
-        Config::set($name . '.' . $this->infoRange, $array);
+        Config::set([$this->infoRange => $array], $name);
         return $array;
     }
 

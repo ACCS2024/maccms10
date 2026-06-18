@@ -52,6 +52,6 @@ require __DIR__ . '/vendor/autoload.php';
 $app      = new \think\App(ROOT_PATH);
 $app->setAppPath(APP_PATH);
 $http     = $app->http;
-$response = $http->name('admin')->run();
+$response = $http->name('admin')->path(APP_PATH . 'admin/')->run();
 $response->send();
 $http->end($response);
