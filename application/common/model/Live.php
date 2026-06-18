@@ -59,10 +59,10 @@ class Live extends Base
         if (!empty($data['live_id'])) {
             $where = [];
             $where['live_id'] = (int)$data['live_id'];
-            $res = $this->allowField(true)->where($where)->update($data);
+            $res = $this->where($where)->update($data);
         } else {
             $data['live_time_add'] = time();
-            $res = $this->allowField(true)->insert($data);
+            $res = $this->insert($data);
         }
         if (false === $res) {
             return ['code' => 1002, 'msg' => lang('save_err') . '：' . $this->getError()];
@@ -86,7 +86,7 @@ class Live extends Base
         }
         $data = [];
         $data[$col] = $val;
-        $res = $this->allowField(true)->where($where)->update($data);
+        $res = $this->where($where)->update($data);
         if ($res === false) {
             return ['code' => 1001, 'msg' => lang('set_err') . '：' . $this->getError()];
         }

@@ -557,12 +557,12 @@ class Website extends Base {
         if(!empty($data['website_id'])){
             $where=[];
             $where['website_id'] = $data['website_id'];
-            $res = $this->allowField(true)->where($where)->update($data);
+            $res = $this->where($where)->update($data);
         }
         else{
             $data['website_time_add'] = time();
             $data['website_time'] = time();
-            $res = $this->allowField(true)->insert($data);
+            $res = $this->insert($data);
         }
         if(false === $res){
             return ['code'=>1002,'msg'=>lang('save_err').'：'.$this->getError() ];
@@ -606,7 +606,7 @@ class Website extends Base {
         if(!is_array($update)){
             return ['code'=>1001,'msg'=>lang('param_err')];
         }
-        $res = $this->allowField(true)->where($where)->update($update);
+        $res = $this->where($where)->update($update);
         if($res===false){
             return ['code'=>1001,'msg'=>lang('set_err').'：'.$this->getError() ];
         }

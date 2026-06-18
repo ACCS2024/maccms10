@@ -17,14 +17,14 @@ class Images extends Base
 
     public function opt()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         $this->assign('tab',$param['tab']);
         return $this->fetch('admin@images/opt');
     }
 
     public function del()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         $fname = $param['ids'];
         if(!empty($fname)){
             foreach($fname as $a){
@@ -44,7 +44,7 @@ class Images extends Base
 
     public function sync()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
 
         $param['page'] = intval($param['page']) < 1 ? 1 : $param['page'];
         $param['limit'] = intval($param['limit']) < 1 ? 10 : $param['limit'];

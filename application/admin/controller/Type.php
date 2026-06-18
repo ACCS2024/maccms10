@@ -80,8 +80,8 @@ class Type extends Base
             return $this->success($res['msg']);
         }
 
-        $id = \think\facadeRequest::param("id");
-        $pid = \think\facadeRequest::param("pid");
+        $id = \think\facade\Request::param("id");
+        $pid = \think\facade\Request::param("pid");
         $where=[];
         $where['type_id'] = $id;
         $res = (new \app\common\model\Type())->infoData($where);
@@ -105,7 +105,7 @@ class Type extends Base
 
     public function del()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         $ids = $param['ids'];
 
         if(!empty($ids)){
@@ -122,7 +122,7 @@ class Type extends Base
 
     public function field()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         $ids = $param['ids'];
         $col = $param['col'];
         $val = $param['val'];
@@ -142,7 +142,7 @@ class Type extends Base
 
     public function batch()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         $ids = $param['ids'];
         foreach ($ids as $k=>$id) {
 
@@ -169,7 +169,7 @@ class Type extends Base
 
     public function extend()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         if(!empty($param['id'])){
             $type_list = (new \app\common\model\Type())->getCache('type_list');
             $type_info = $type_list[$param['id']];
@@ -253,7 +253,7 @@ class Type extends Base
 
     public function move()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         $ids = $param['ids'];
         $val = $param['val'];
         if(!empty($ids) && !empty($val)){

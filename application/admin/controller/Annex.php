@@ -12,7 +12,7 @@ class Annex extends Base
 
     public function data()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         $param['page'] = intval($param['page']) < 1 ? 1 : $param['page'];
         $param['limit'] = intval($param['limit']) < 1 ? $this->_pagesize : $param['limit'];
 
@@ -46,7 +46,7 @@ class Annex extends Base
 
     public function file()
     {
-        $path = \think\facadeRequest::param("path");
+        $path = \think\facade\Request::param("path");
         $path = str_replace('\\','',$path);
         $path = str_replace('/','',$path);
 
@@ -141,7 +141,7 @@ class Annex extends Base
             return $this->success($res['msg']);
         }
 
-        $id = \think\facadeRequest::param("id");
+        $id = \think\facade\Request::param("id");
         $where=[];
         $where['annex_id'] = $id;
         $res = (new \app\common\model\Annex())->infoData($where);
@@ -154,7 +154,7 @@ class Annex extends Base
 
     public function del()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         $ids = $param['ids'];
 
         if(!empty($ids)){
@@ -178,7 +178,7 @@ class Annex extends Base
     {
         mac_echo('<style type="text/css">body{font-size:12px;color: #333333;line-height:21px;}span{font-weight:bold;color:#FF0000}</style>');
 
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         $num = intval($param['num']);
         $start = intval($param['start']);
         $page_count = intval($param['page_count']);
@@ -225,7 +225,7 @@ class Annex extends Base
 
     public function init()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
 
         if($param['ck']){
             mac_echo('<style type="text/css">body{font-size:12px;color: #333333;line-height:21px;}span{font-weight:bold;color:#FF0000}</style>');

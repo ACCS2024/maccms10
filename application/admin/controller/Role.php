@@ -12,7 +12,7 @@ class Role extends Base
 
     public function data()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         $param['page'] = intval($param['page']) < 1 ? 1 : $param['page'];
         $param['limit'] = intval($param['limit']) < 1 ? $this->_pagesize : $param['limit'];
 
@@ -70,9 +70,9 @@ class Role extends Base
             return $this->success($res['msg']);
         }
 
-        $id = \think\facadeRequest::param("id");
-        $tab = \think\facadeRequest::param("tab");
-        $rid = \think\facadeRequest::param("rid");
+        $id = \think\facade\Request::param("id");
+        $tab = \think\facade\Request::param("tab");
+        $rid = \think\facade\Request::param("rid");
 
         $where=[];
         $where['role_id'] = $id;
@@ -96,7 +96,7 @@ class Role extends Base
 
     public function del()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         $ids = $param['ids'];
 
         if(!empty($ids)){
@@ -113,7 +113,7 @@ class Role extends Base
 
     public function field()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         $ids = $param['ids'];
         $col = $param['col'];
         $val = $param['val'];

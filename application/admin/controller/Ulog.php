@@ -11,7 +11,7 @@ class Ulog extends Base
 
     public function index()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         $param['page'] = intval($param['page']) <1 ? 1 : $param['page'];
         $param['limit'] = intval($param['limit']) <1 ? $this->_pagesize : $param['limit'];
         $where=[];
@@ -43,7 +43,7 @@ class Ulog extends Base
 
     public function del()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         $ids = $param['ids'];
         $all = $param['all'];
         if(!empty($ids)){

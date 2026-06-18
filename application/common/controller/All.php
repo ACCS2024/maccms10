@@ -154,7 +154,7 @@ polyfill;
         if(empty($msg)){
             $msg=lang('controller/an_error_occurred');
         }
-        $url = \think\facadeRequest::isAjax() ? '' : 'javascript:history.back(-1);';
+        $url = \think\facade\Request::isAjax() ? '' : 'javascript:history.back(-1);';
         $wait = 3;
         $this->assign('url',$url);
         $this->assign('wait',$wait);

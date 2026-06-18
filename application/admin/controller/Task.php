@@ -12,7 +12,7 @@ class Task extends Base
     // 任务列表
     public function data()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         $param['page'] = intval($param['page']) < 1 ? 1 : $param['page'];
         $param['limit'] = intval($param['limit']) < 1 ? $this->_pagesize : $param['limit'];
 
@@ -46,7 +46,7 @@ class Task extends Base
     public function info()
     {
         if (request()->isPost()) {
-            $param = \think\facadeRequest::param();
+            $param = \think\facade\Request::param();
             $res = (new \app\common\model\Task())->saveData($param);
             if ($res['code'] > 1) {
                 return $this->error($res['msg']);
@@ -54,7 +54,7 @@ class Task extends Base
             return $this->success($res['msg']);
         }
 
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         $info = [];
         if (!empty($param['id'])) {
             $where = [];
@@ -72,7 +72,7 @@ class Task extends Base
     // 删除任务
     public function del()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         $ids = $param['ids'];
         if (!empty($ids)) {
             $where = [];
@@ -89,7 +89,7 @@ class Task extends Base
     // 修改状态
     public function field()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         $ids = $param['ids'];
         $col = $param['col'];
         $val = $param['val'];
@@ -108,7 +108,7 @@ class Task extends Base
     // 任务记录列表
     public function log()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         $param['page'] = intval($param['page']) < 1 ? 1 : $param['page'];
         $param['limit'] = intval($param['limit']) < 1 ? $this->_pagesize : $param['limit'];
 
@@ -140,7 +140,7 @@ class Task extends Base
     // 删除任务记录
     public function log_del()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         $ids = $param['ids'];
         $all = $param['all'];
         if (!empty($ids) || !empty($all)) {

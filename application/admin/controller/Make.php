@@ -10,7 +10,7 @@ class Make extends Base
     public function __construct()
     {
         //header('X-Accel-Buffering: no');
-        $this->_param = \think\facadeRequest::param();
+        $this->_param = \think\facade\Request::param();
         $GLOBALS['ismake'] = '1';
 
         if($this->_param['ac2']=='wap'){

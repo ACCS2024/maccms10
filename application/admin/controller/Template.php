@@ -11,7 +11,7 @@ class Template extends Base
 
     public function index()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         $path = $param['path'];
         $path = str_replace('\\','',$path);
         $path = str_replace('/','',$path);
@@ -148,7 +148,7 @@ class Template extends Base
 
     public function info()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
 
         $fname = $param['fname'];
         $fpath = $param['fpath'];
@@ -213,7 +213,7 @@ class Template extends Base
 
     public function del()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         $fname = $param['fname'];
         if(!empty($fname)){
             if(!is_array($fname)){

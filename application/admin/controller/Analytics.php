@@ -8,7 +8,7 @@ class Analytics extends Base
 {
     public function index()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         $endDate = empty($param['end_date']) ? date('Y-m-d') : $param['end_date'];
         $startDate = empty($param['start_date']) ? date('Y-m-d', strtotime('-6 day')) : $param['start_date'];
         $dimType = empty($param['dim_type']) ? 'device' : trim($param['dim_type']);

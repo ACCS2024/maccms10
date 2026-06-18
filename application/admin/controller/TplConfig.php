@@ -10,7 +10,7 @@ class TplConfig extends Base
     public function theme()
     {
         if (request()->isPost()) {
-            $tplconfig = \think\facadeRequest::param();
+            $tplconfig = \think\facade\Request::param();
             if (empty($tplconfig) || !isset($tplconfig['theme'])) {
                 return $this->error(lang('param_err'));
             }
@@ -144,7 +144,7 @@ class TplConfig extends Base
                 return $this->error(lang('save_err'));
             }
             // 与 ThinkPHP 配置、$GLOBALS 同步，当前请求内模板与 mac_tpl_* 立即生效
-            \think\Config::set($tplconfig_new, 'mctheme');
+            \think\facade\Config::set('mctheme', $tplconfig_new);
             $GLOBALS['mctheme'] = $tplconfig_new;
             return $this->success(lang('save_ok'));
         }

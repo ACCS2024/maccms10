@@ -12,7 +12,7 @@ class Live extends Base
 
     public function index()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         $param['page']  = intval($param['page']) < 1 ? 1 : $param['page'];
         $param['limit'] = intval($param['limit']) < 1 ? $this->_pagesize : $param['limit'];
         $where = [];
@@ -50,7 +50,7 @@ class Live extends Base
     public function info()
     {
         if (Request()->isPost()) {
-            $param = \think\facadeRequest::param();
+            $param = \think\facade\Request::param();
             $res = (new \app\common\model\Live())->saveData($param);
             if ($res['code'] > 1) {
                 return $this->error($res['msg']);
@@ -58,7 +58,7 @@ class Live extends Base
             return $this->success($res['msg']);
         }
 
-        $id = \think\facadeRequest::param("id");
+        $id = \think\facade\Request::param("id");
         $where = [];
         if (!empty($id)) {
             $where['live_id'] = $id;
@@ -75,7 +75,7 @@ class Live extends Base
 
     public function del()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         $ids = $param['ids'];
 
         if (!empty($ids)) {
@@ -92,7 +92,7 @@ class Live extends Base
 
     public function field()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         $ids = $param['ids'];
         $col = $param['col'];
         $val = $param['val'];
@@ -132,7 +132,7 @@ class Live extends Base
     public function category_info()
     {
         if (Request()->isPost()) {
-            $param = \think\facadeRequest::param();
+            $param = \think\facade\Request::param();
             $res = (new \app\common\model\Live())->categorySave($param);
             if ($res['code'] > 1) {
                 return $this->error($res['msg']);
@@ -140,7 +140,7 @@ class Live extends Base
             return $this->success($res['msg']);
         }
 
-        $id = \think\facadeRequest::param("id");
+        $id = \think\facade\Request::param("id");
         $info = [];
         if (!empty($id)) {
             $res = (new \app\common\model\Live())->categoryInfo(['cate_id' => (int)$id]);
@@ -154,7 +154,7 @@ class Live extends Base
 
     public function category_del()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         $ids = $param['ids'];
 
         if (!empty($ids)) {

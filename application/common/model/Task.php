@@ -48,10 +48,10 @@ class Task extends Base {
         if (!empty($data['task_id'])) {
             $where = [];
             $where['task_id'] = $data['task_id'];
-            $res = $this->allowField(true)->where($where)->update($data);
+            $res = $this->where($where)->update($data);
         } else {
             $data['task_time_add'] = time();
-            $res = $this->allowField(true)->insert($data);
+            $res = $this->insert($data);
         }
         if (false === $res) {
             return ['code' => 1002, 'msg' => lang('save_err') . '：' . $this->getError()];
@@ -75,7 +75,7 @@ class Task extends Base {
         }
         $data = [];
         $data[$col] = $val;
-        $res = $this->allowField(true)->where($where)->update($data);
+        $res = $this->where($where)->update($data);
         if ($res === false) {
             return ['code' => 1001, 'msg' => lang('set_err') . '：' . $this->getError()];
         }

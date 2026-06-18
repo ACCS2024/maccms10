@@ -73,10 +73,10 @@ class Group extends Base {
         if(!empty($data['group_id'])){
             $where=[];
             $where['group_id'] = $data['group_id'];
-            $res = $this->allowField(true)->where($where)->update($data);
+            $res = $this->where($where)->update($data);
         }
         else{
-            $res = $this->allowField(true)->insert($data);
+            $res = $this->insert($data);
         }
         if(false === $res){
             return ['code'=>1002,'msg'=>lang('save_err').'：'.$this->getError() ];
@@ -107,7 +107,7 @@ class Group extends Base {
 
         $data = [];
         $data[$col] = $val;
-        $res = $this->allowField(true)->where($where)->update($data);
+        $res = $this->where($where)->update($data);
         if($res===false){
             return ['code'=>1001,'msg'=>lang('set_err').'：'.$this->getError() ];
         }

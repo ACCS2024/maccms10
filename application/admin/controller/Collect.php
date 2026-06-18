@@ -34,7 +34,7 @@ class Collect extends Base
             mac_arr2file(APP_PATH . 'extra/maccms.php', $config);
         }
 
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         $param['page'] = intval($param['page']) < 1 ? 1 : $param['page'];
         $param['limit'] = intval($param['limit']) < 1 ? 100 : $param['limit'];
         $where = [];
@@ -78,7 +78,7 @@ class Collect extends Base
 
     public function test()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         $res = (new \app\common\model\Collect())->vod($param);
         return json($res);
     }
@@ -98,7 +98,7 @@ class Collect extends Base
             return $this->success($res['msg']);
         }
 
-        $id = \think\facadeRequest::param("id");
+        $id = \think\facade\Request::param("id");
         $where = [];
         $where['collect_id'] = $id;
         $res = (new \app\common\model\Collect())->infoData($where);
@@ -109,7 +109,7 @@ class Collect extends Base
 
     public function del()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         $ids = $param['ids'];
 
         if (!empty($ids)) {
@@ -153,7 +153,7 @@ class Collect extends Base
 
     public function load()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         $key = $GLOBALS['config']['app']['cache_flag']. '_'. 'collect_break_' . $param['flag'];
         $collect_break = Cache::get($key);
         $url = $this->_ref;
@@ -166,7 +166,7 @@ class Collect extends Base
 
     public function api($pp = [])
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         if (!empty($pp)) {
             $param = $pp;
         }
@@ -210,7 +210,7 @@ class Collect extends Base
 
     public function clearbind()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         $config = [];
         if(!empty($param['cjflag'])){
             $bind_list = config('bind');
@@ -230,7 +230,7 @@ class Collect extends Base
 
     public function bind()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         $ids = $param['ids'];
         $col = $param['col'];
         $val = $param['val'];

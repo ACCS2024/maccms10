@@ -21,7 +21,7 @@ class VodPlayer extends Base
 
     public function info()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         $list = config($this->_pre);
         if (Request()->isPost()) {
             $validate = \think\Loader::validate('Token');
@@ -71,7 +71,7 @@ class VodPlayer extends Base
 
     public function del()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         $list = config($this->_pre);
         unset($list[$param['ids']]);
         $res = mac_arr2file(APP_PATH. 'extra/'.$this->_pre.'.php', $list);
@@ -84,7 +84,7 @@ class VodPlayer extends Base
 
     public function field()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         $ids = $param['ids'];
         $col = $param['col'];
         $val = $param['val'];
@@ -108,7 +108,7 @@ class VodPlayer extends Base
 
     public function export()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         $list = config($this->_pre);
         $info = $list[$param['id']];
         if(!empty($info)){
@@ -129,7 +129,7 @@ class VodPlayer extends Base
     public function import()
     {
         if (request()->isPost()) {
-            $param = \think\facadeRequest::param();
+            $param = \think\facade\Request::param();
             $validate = \think\Loader::validate('Token');
             if(!$validate->check($param)){
                 return $this->error($validate->getError());

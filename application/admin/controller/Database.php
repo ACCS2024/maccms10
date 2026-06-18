@@ -14,7 +14,7 @@ class Database extends Base
 
     public function index()
     {
-        $group = \think\facadeRequest::param("group");
+        $group = \think\facade\Request::param("group");
         if($group=='import'){
             //列出备份文件列表
             $path = trim( $GLOBALS['config']['db']['backup_path'], '/').DS;
@@ -368,7 +368,7 @@ class Database extends Base
     public function sql()
     {
         if($this->request->isPost()){
-            $param=\think\facadeRequest::param();
+            $param=\think\facade\Request::param();
             $validate = \think\Loader::validate('Token');
             if(!$validate->check($param)){
                 return $this->error($validate->getError());
@@ -411,7 +411,7 @@ class Database extends Base
 
     public function columns()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         $table = $param['table'];
         if (!empty($table) && !$this->isValidTable($table)) {
             return $this->error('Table is invalid.');
@@ -426,7 +426,7 @@ class Database extends Base
     public function rep()
     {
         if($this->request->isPost()){
-            $param = \think\facadeRequest::param();
+            $param = \think\facade\Request::param();
             $table = isset($param['table']) ? $param['table'] : '';
             $field = isset($param['field']) ? $param['field'] : '';
             $findstr = isset($param['findstr']) ? $param['findstr'] : '';

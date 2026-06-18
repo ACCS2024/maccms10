@@ -36,7 +36,7 @@ class Safety extends Base
 
     public function file()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         if($param['ck']){
             $ft = $param['ft'];
             if(empty($ft)){
@@ -78,7 +78,7 @@ class Safety extends Base
 
     public function data()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         if ($param['ck']) {
             $pre = config('database.prefix');
             $schema = Db::query('select * from information_schema.columns where table_schema = ?', [config('database.database')]);

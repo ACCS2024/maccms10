@@ -11,7 +11,7 @@ class Chatroom extends Base
 
     public function data()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         $param['page'] = intval($param['page']) < 1 ? 1 : $param['page'];
         $param['limit'] = intval($param['limit']) < 1 ? $this->_pagesize : $param['limit'];
         // 分页硬上限，防止单次查询返回过多数据
@@ -64,7 +64,7 @@ class Chatroom extends Base
 
     public function del()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         $ids = $param['ids'];
         $all = $param['all'];
 
@@ -85,7 +85,7 @@ class Chatroom extends Base
 
     public function field()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         $ids = $param['ids'];
         $col = $param['col'];
         $val = $param['val'];

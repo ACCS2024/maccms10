@@ -801,7 +801,7 @@ class Vod extends Base {
 
             $where=[];
             $where['vod_id'] = $data['vod_id'];
-            $res = $this->allowField(true)->where($where)->update($data);
+            $res = $this->where($where)->update($data);
             //编辑 先获取到之前的name
             $old_name = $this->where('vod_id',$data['vod_id'])->value('vod_name');
             if($old_name!=$data['vod_name']){
@@ -818,7 +818,7 @@ class Vod extends Base {
             $data['vod_plot_detail']='';
             $data['vod_time_add'] = time();
             $data['vod_time'] = time();
-            $res = $this->allowField(true)->insert($data, false, true);
+            $res = $this->insert($data, false, true);
             $seoObjId = intval($this->getLastInsID());
             if ($res > 0 && (new \app\common\model\VodSearch())->isFrontendEnabled()) {
                 (new \app\common\model\VodSearch())->checkAndUpdateTopResults(['vod_id' => $seoObjId] + $data);
@@ -865,7 +865,7 @@ class Vod extends Base {
         if(!empty($data['vod_id'])){
             $where=[];
             $where['vod_id'] = $data['vod_id'];
-            $res = $this->allowField(true)->where($where)->update($data);
+            $res = $this->where($where)->update($data);
         }
         else{
             $res = false;
@@ -926,7 +926,7 @@ class Vod extends Base {
             return ['code'=>1001,'msg'=>lang('param_err')];
         }
 
-        $res = $this->allowField(true)->where($where)->update($update);
+        $res = $this->where($where)->update($update);
         if($res===false){
             return ['code'=>1001,'msg'=>lang('set_err').'：'.$this->getError() ];
         }

@@ -12,7 +12,7 @@ class SignMilestone extends Base
     // 里程碑列表
     public function data()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         $param['page'] = intval($param['page']) < 1 ? 1 : $param['page'];
         $param['limit'] = intval($param['limit']) < 1 ? $this->_pagesize : $param['limit'];
 
@@ -39,7 +39,7 @@ class SignMilestone extends Base
     public function info()
     {
         if (request()->isPost()) {
-            $param = \think\facadeRequest::param();
+            $param = \think\facade\Request::param();
             $res = (new \app\common\model\SignMilestone())->saveData($param);
             if ($res['code'] > 1) {
                 return $this->error($res['msg']);
@@ -47,7 +47,7 @@ class SignMilestone extends Base
             return $this->success($res['msg']);
         }
 
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         $info = [];
         if (!empty($param['id'])) {
             $where = [];
@@ -65,7 +65,7 @@ class SignMilestone extends Base
     // 删除里程碑
     public function del()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         $ids = $param['ids'];
         if (!empty($ids)) {
             $where = [];
@@ -82,7 +82,7 @@ class SignMilestone extends Base
     // 修改状态
     public function field()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         $ids = $param['ids'];
         $col = $param['col'];
         $val = $param['val'];

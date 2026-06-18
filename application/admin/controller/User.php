@@ -11,7 +11,7 @@ class User extends Base
 
     public function data()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         $param['page'] = intval($param['page']) <1 ? 1 : $param['page'];
         $param['limit'] = intval($param['limit']) <1 ? $this->_pagesize : $param['limit'];
 
@@ -63,7 +63,7 @@ class User extends Base
 
     public function reward()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         $param['page'] = intval($param['page']) <1 ? 1 : $param['page'];
         $param['limit'] = intval($param['limit']) <1 ? $this->_pagesize : $param['limit'];
         $param['uid'] = intval($param['uid']);
@@ -144,7 +144,7 @@ class User extends Base
 
     public function invite()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         $param['page'] = intval($param['page']) <1 ? 1 : $param['page'];
         $param['limit'] = intval($param['limit']) <1 ? $this->_pagesize : $param['limit'];
 
@@ -231,7 +231,7 @@ class User extends Base
             return $this->success($res['msg']);
         }
 
-        $id = (int)\think\facadeRequest::param("id");
+        $id = (int)\think\facade\Request::param("id");
         $where=[];
         $where['user_id'] = $id;
         $res = (new \app\common\model\User())->infoData($where);
@@ -254,7 +254,7 @@ class User extends Base
 
     public function del()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         $ids = $param['ids'];
 
         if(!empty($ids)){
@@ -271,7 +271,7 @@ class User extends Base
 
     public function field()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         $ids = $param['ids'];
         $col = $param['col'];
         $val = $param['val'];

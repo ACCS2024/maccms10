@@ -15,7 +15,7 @@ class Cj extends Base
     //列表
     public function index()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         $param['page'] = intval($param['page']) <1 ? 1 : $param['page'];
         $param['limit'] = intval($param['limit']) <1 ? $this->_pagesize : $param['limit'];
         $where=[];
@@ -40,7 +40,7 @@ class Cj extends Base
     public function info()
     {
         if (Request()->isPost()) {
-            $param = \think\facadeRequest::param();
+            $param = \think\facade\Request::param();
             $data = $param['data'];
             $data['urlpage'] = (string)$param['urlpage'.$data['sourcetype']];
             if(!empty($data['customize_config'])){
@@ -59,7 +59,7 @@ class Cj extends Base
             return $this->success($res['msg']);
         }
 
-        $id = \think\facadeRequest::param("id");
+        $id = \think\facade\Request::param("id");
         $where=[];
         $where['nodeid'] = $id;
         $res = (new \app\common\model\Cj())->infoData('cj_node',$where);
@@ -73,7 +73,7 @@ class Cj extends Base
 
     public function program()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         $where=[];
         $where['nodeid'] = $param['id'];
         $res = (new \app\common\model\Cj())->infoData('cj_node',$where);
@@ -138,7 +138,7 @@ class Cj extends Base
     //采集网址
     public function col_url($param=[]) {
         if(empty($param)){
-            $param = \think\facadeRequest::param();
+            $param = \think\facade\Request::param();
         }
 
         $where=[];
@@ -215,7 +215,7 @@ class Cj extends Base
     //采集文章
     public function col_content($param=[]) {
         if(empty($param)){
-            $param = \think\facadeRequest::param();
+            $param = \think\facade\Request::param();
         }
 
         $collection = new cjOper();
@@ -283,7 +283,7 @@ class Cj extends Base
 
     public function publish()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
 
         $param['page'] = intval($param['page']) <1 ? 1 : $param['page'];
         $param['limit'] = intval($param['limit']) <20 ? $this->_pagesize : $param['limit'];
@@ -311,7 +311,7 @@ class Cj extends Base
 
     public function show()
     {
-        $id = \think\facadeRequest::param("id");
+        $id = \think\facade\Request::param("id");
         $where=[];
         $where['id'] = $id;
         $info = Db::name('cj_content')->where($where)->find();
@@ -326,7 +326,7 @@ class Cj extends Base
 
     public function content_del()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         $ids = $param['ids'];
         $all = $param['all'];
 
@@ -358,7 +358,7 @@ class Cj extends Base
     public function content_into($param=[])
     {
         if(empty($param)){
-            $param = \think\facadeRequest::param();
+            $param = \think\facade\Request::param();
         }
 
         $nodeid = $param['id'];
@@ -461,7 +461,7 @@ class Cj extends Base
     //序列网址测试
     public function show_url()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         $data = $param['data'];
         $data['urlpage'] = (string)$param['urlpage'.$data['sourcetype']];
         $collection = new cjOper();
@@ -474,7 +474,7 @@ class Cj extends Base
 
     public function del()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         $ids = $param['ids'];
 
         if(!empty($ids)){
@@ -491,7 +491,7 @@ class Cj extends Base
 
     public function export()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
 
         $where=[];
         $where['nodeid'] = $param['id'];

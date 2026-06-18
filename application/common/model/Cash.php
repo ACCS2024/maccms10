@@ -97,7 +97,7 @@ class Cash extends Base {
         if($data['user_id']==0 ) {
             return ['code'=>1002,'msg'=>lang('param_err')];
         }
-        $res = $this->allowField(true)->insert($data);
+        $res = $this->insert($data);
         if(false === $res){
             return ['code'=>1004,'msg'=>lang('save_err').'：'.$this->getError() ];
         }
@@ -158,7 +158,7 @@ class Cash extends Base {
 
         $data = [];
         $data[$col] = $val;
-        $res = $this->allowField(true)->where($where)->update($data);
+        $res = $this->where($where)->update($data);
         if($res===false){
             return ['code'=>1001,'msg'=>lang('set_err').'：'.$this->getError() ];
         }

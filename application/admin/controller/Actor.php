@@ -12,7 +12,7 @@ class Actor extends Base
 
     public function data()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         $param['page'] = intval($param['page']) < 1 ? 1 : $param['page'];
         $param['limit'] = intval($param['limit']) < 1 ? $this->_pagesize : $param['limit'];
 
@@ -72,7 +72,7 @@ class Actor extends Base
             return $this->success($res['msg']);
         }
 
-        $id = \think\facadeRequest::param("id");
+        $id = \think\facade\Request::param("id");
         $where=[];
         $where['actor_id'] = $id;
         $res = (new \app\common\model\Actor())->infoData($where);
@@ -88,7 +88,7 @@ class Actor extends Base
 
     public function del()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         $ids = $param['ids'];
 
         if(!empty($ids)){
@@ -105,7 +105,7 @@ class Actor extends Base
 
     public function field()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         $ids = $param['ids'];
         $col = $param['col'];
         $val = $param['val'];

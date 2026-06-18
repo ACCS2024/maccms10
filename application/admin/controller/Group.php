@@ -11,7 +11,7 @@ class Group extends Base
 
     public function index()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         $where=[];
 
         if(in_array($param['status'],['0','1'],true)){
@@ -48,7 +48,7 @@ class Group extends Base
             return $this->success($res['msg']);
         }
 
-        $id = \think\facadeRequest::param("id");
+        $id = \think\facade\Request::param("id");
         $where=[];
         $where['group_id'] = $id;
         $res = (new \app\common\model\Group())->infoData($where);
@@ -65,7 +65,7 @@ class Group extends Base
 
     public function del()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         $ids = $param['ids'];
 
         if(!empty($ids)){
@@ -87,7 +87,7 @@ class Group extends Base
 
     public function field()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         $ids = $param['ids'];
         $col = $param['col'];
         $val = $param['val'];

@@ -1579,7 +1579,7 @@ function mac_parse_sql($sql='',$limit=0,$prefix=[])
 function mac_interface_type()
 {
     $key = $GLOBALS['config']['app']['cache_flag']. '_'. 'interface_type';
-    $data = think\Cache::get($key);
+    $data = think\facade\Cache::get($key);
     if(empty($data)){
         $config = config('maccms.interface');
         $vodtype = str_replace([chr(10),chr(13)],['','#'],$config['vodtype']);
@@ -1626,7 +1626,7 @@ function mac_interface_type()
             $data['mangatype'] = [];
         }
 
-        think\Cache::set($key,$data);
+        think\facade\Cache::set($key,$data);
     }
 
     $type_list = (new \app\common\model\Type())->getCache('type_list');

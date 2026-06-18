@@ -16,7 +16,7 @@ class Upload extends Base
 
     public function index()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         $this->assign('path',$param['path']);
         $this->assign('id',$param['id']);
 

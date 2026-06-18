@@ -82,10 +82,10 @@ class Plog extends Base {
         if(!empty($data['plog_id'])){
             $where=[];
             $where['plog_id'] = $data['plog_id'];
-            $res = $this->allowField(true)->where($where)->update($data);
+            $res = $this->where($where)->update($data);
         }
         else{
-            $res = $this->allowField(true)->insert($data);
+            $res = $this->insert($data);
         }
         if(false === $res){
             return ['code'=>1004,'msg'=>lang('save_err').'：'.$this->getError() ];
@@ -110,7 +110,7 @@ class Plog extends Base {
 
         $data = [];
         $data[$col] = $val;
-        $res = $this->allowField(true)->where($where)->update($data);
+        $res = $this->where($where)->update($data);
         if($res===false){
             return ['code'=>1001,'msg'=>lang('set_err').'：'.$this->getError() ];
         }

@@ -380,12 +380,12 @@ class Role extends Base {
         if(!empty($data['role_id'])){
             $where=[];
             $where['role_id'] = $data['role_id'];
-            $res = $this->allowField(true)->where($where)->update($data);
+            $res = $this->where($where)->update($data);
         }
         else{
             $data['role_time_add'] = time();
             $data['role_time'] = time();
-            $res = $this->allowField(true)->insert($data);
+            $res = $this->insert($data);
         }
         if(false === $res){
             return ['code'=>1002,'msg'=>lang('save_err').'：'.$this->getError() ];
@@ -427,7 +427,7 @@ class Role extends Base {
 
         $data = [];
         $data[$col] = $val;
-        $res = $this->allowField(true)->where($where)->update($data);
+        $res = $this->where($where)->update($data);
         if($res===false){
             return ['code'=>1001,'msg'=>lang('set_err').'：'.$this->getError() ];
         }

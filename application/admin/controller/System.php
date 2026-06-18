@@ -14,7 +14,7 @@ class System extends Base
 
     public function test_email()
     {
-        $post = \think\facadeRequest::param();
+        $post = \think\facade\Request::param();
         $conf = [
             'nick' => $post['nick'],
         ];
@@ -43,7 +43,7 @@ class System extends Base
 
     public function test_cache()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
 
         if (!isset($param['type']) || empty($param['host']) || empty($param['port'])) {
             return $this->error(lang('param_err'));
@@ -303,7 +303,7 @@ class System extends Base
     public function configurl()
     {
         if (Request()->isPost()) {
-            $config = \think\facadeRequest::param();
+            $config = \think\facade\Request::param();
 
             $validate = \think\Loader::validate('Token');
             if(!$validate->check($config)){
@@ -1612,7 +1612,7 @@ class System extends Base
     }
 
     public function configlang(){
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         $config = config('maccms');
         if (!isset($config['app'])) {
             $config['app'] = [];
@@ -1626,7 +1626,7 @@ class System extends Base
     }
 
     public function configVersion(){
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         $config = config('maccms');
         if (!isset($config['site'])) {
             $config['site'] = [];

@@ -480,12 +480,12 @@ class Actor extends Base {
         if(!empty($data['actor_id'])){
             $where=[];
             $where['actor_id'] = $data['actor_id'];
-            $res = $this->allowField(true)->where($where)->update($data);
+            $res = $this->where($where)->update($data);
         }
         else{
             $data['actor_time_add'] = time();
             $data['actor_time'] = time();
-            $res = $this->allowField(true)->insert($data);
+            $res = $this->insert($data);
         }
         if(false === $res){
             return ['code'=>1002,'msg'=>lang('save_err').'：'.$this->getError() ];
@@ -530,7 +530,7 @@ class Actor extends Base {
             return ['code'=>1001,'msg'=>lang('param_err')];
         }
 
-        $res = $this->allowField(true)->where($where)->update($update);
+        $res = $this->where($where)->update($update);
         if($res===false){
             return ['code'=>1001,'msg'=>lang('set_err').'：'.$this->getError() ];
         }

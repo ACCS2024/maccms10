@@ -462,7 +462,7 @@ class User extends Base
     {
         $param = \think\facade\Request::param();
         if (Request()->isPost()) {
-            $flag = \think\facadeRequest::param('flag');
+            $flag = \think\facade\Request::param('flag');
             if ($flag == 'card') {
                 $card_no = htmlspecialchars(urldecode(trim($param['card_no'])));
                 $card_pwd = htmlspecialchars(urldecode(trim($param['card_pwd'])));
@@ -470,7 +470,7 @@ class User extends Base
                 $res = (new \app\common\model\Card())->useData($card_no, $card_pwd, $GLOBALS['user']);
                 return json($res);
             } else {
-                $price = \think\facadeRequest::param('price');
+                $price = \think\facade\Request::param('price');
                 if (empty($price)) {
                     return json(['code' => 1001, 'msg' => lang('param_err')]);
                 }

@@ -142,7 +142,7 @@ class Index extends Base
     public function quickmenu()
     {
         if (Request()->isPost()) {
-            $param = \think\facadeRequest::param();
+            $param = \think\facade\Request::param();
             $validate = \think\Loader::validate('Token');
             if (!$validate->check($param)) {
                 return $this->error($validate->getError());
@@ -207,7 +207,7 @@ class Index extends Base
 
     public function unlocked()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         $password = $param['password'];
 
         // 安全加固(V4):兼容 bcrypt/旧md5 的解锁校验
@@ -220,14 +220,14 @@ class Index extends Base
 
     public function check_back_link()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         $res = mac_check_back_link($param['url']);
         return json($res);
     }
 
     public function select()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         $tpl = $param['tpl'];
         $tab = $param['tab'];
         $col = $param['col'];
@@ -986,7 +986,7 @@ class Index extends Base
 
     public function botlog()
     {
-        $parm = \think\facadeRequest::param();
+        $parm = \think\facade\Request::param();
         $data = (string)($parm['data'] ?? '');
         // 安全加固(V5):仅允许安全文件名,杜绝 ../ 路径穿越读取任意 .txt
         if ($data === '' || !preg_match('/^[A-Za-z0-9_\-]{1,64}$/', $data)) {

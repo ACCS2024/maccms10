@@ -307,7 +307,7 @@ class ResourceHub extends Base
      */
     public function check()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         $url = $param['url'];
         if (empty($url)) {
             return json(['code' => 0, 'msg' => lang('param_err')]);
@@ -339,7 +339,7 @@ class ResourceHub extends Base
      */
     public function getTypes()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         $url = $param['url'];
         $type = $param['type'] ?? '2';
 
@@ -1194,7 +1194,7 @@ MacPlayer.Show();
      */
     public function multiCollect()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         $this->assign('param', $param);
         $this->assign('title', lang('admin/resourcehub/multi_collect'));
         return $this->fetch('resourcehub/multi_collect');
@@ -1205,7 +1205,7 @@ MacPlayer.Show();
      */
     public function poster()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         $param['page'] = intval($param['page'] ?? 1) < 1 ? 1 : intval($param['page']);
         $limit = intval($param['limit'] ?? 40);
         if ($limit < 1) $limit = 40;

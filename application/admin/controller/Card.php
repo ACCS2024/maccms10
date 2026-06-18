@@ -11,7 +11,7 @@ class Card extends Base
 
     public function index()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         $param['page'] = intval($param['page']) <1 ? 1 : $param['page'];
         $param['limit'] = intval($param['limit']) <1 ? $this->_pagesize : $param['limit'];
 
@@ -92,7 +92,7 @@ class Card extends Base
         }
 
 
-        $id = \think\facadeRequest::param("id");
+        $id = \think\facade\Request::param("id");
         $where=[];
         $where['card_id'] = $id;
         $res = (new \app\common\model\Card())->infoData($where);
@@ -104,7 +104,7 @@ class Card extends Base
 
     public function del()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         $ids = $param['ids'];
         $all = $param['all'];
 

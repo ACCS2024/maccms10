@@ -12,7 +12,7 @@ class Manga extends Base
 
     public function data()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         $param['page'] = intval($param['page']) < 1 ? 1 : $param['page'];
         $param['limit'] = intval($param['limit']) < 1 ? $this->_pagesize : $param['limit'];
 
@@ -99,7 +99,7 @@ class Manga extends Base
 
     public function batch()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         if (!empty($param)) {
 
             mac_echo('<style type="text/css">body{font-size:12px;color: #333333;line-height:21px;}span{font-weight:bold;color:#FF0000}</style>');
@@ -227,7 +227,7 @@ class Manga extends Base
 
     public function exportData()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         $where = $this->mangaBatchFilterWhere($param);
         $this->base_export($param,'manga',$where);
     }
@@ -248,7 +248,7 @@ class Manga extends Base
             return $this->success($res['msg']);
         }
 
-        $id = \think\facadeRequest::param("id");
+        $id = \think\facade\Request::param("id");
         $where=[];
         $where['manga_id'] = $id;
         $where['_recycle'] = 'all';
@@ -270,7 +270,7 @@ class Manga extends Base
 
     public function restore()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         $ids = $param['ids'];
         if (empty($ids)) {
             return $this->error(lang('param_err'));
@@ -285,7 +285,7 @@ class Manga extends Base
 
     public function del()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         $ids = $param['ids'];
         $purge = !empty($param['purge']);
 
@@ -319,7 +319,7 @@ class Manga extends Base
 
     public function field()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         $ids = $param['ids'];
         $col = $param['col'];
         $val = $param['val'];
@@ -362,7 +362,7 @@ class Manga extends Base
 
     public function updateToday()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         $flag = $param['flag'];
         $res = (new \app\common\model\Manga())->updateToday($flag);
         return json($res);

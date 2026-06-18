@@ -9,13 +9,13 @@ class Urlsend extends Base
     public function __construct()
     {
         parent::__construct();
-        $this->_param = \think\facadeRequest::param();
+        $this->_param = \think\facade\Request::param();
     }
 
     public function index()
     {
         if (Request()->isPost()) {
-            $config = \think\facadeRequest::param();
+            $config = \think\facade\Request::param();
             $config_new['urlsend'] = $config['urlsend'];
 
             $config_old = config('maccms');

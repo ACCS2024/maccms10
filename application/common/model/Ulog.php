@@ -167,10 +167,10 @@ class Ulog extends Base {
         if(!empty($data['ulog_id'])){
             $where=[];
             $where['ulog_id'] = $data['ulog_id'];
-            $res = $this->allowField(true)->where($where)->update($data);
+            $res = $this->where($where)->update($data);
         }
         else{
-            $res = $this->allowField(true)->insert($data);
+            $res = $this->insert($data);
         }
         if(false === $res){
             return ['code'=>1004,'msg'=>lang('save_err').'：'.$this->getError() ];
@@ -195,7 +195,7 @@ class Ulog extends Base {
 
         $data = [];
         $data[$col] = $val;
-        $res = $this->allowField(true)->where($where)->update($data);
+        $res = $this->where($where)->update($data);
         if($res===false){
             return ['code'=>1001,'msg'=>lang('set_err').'：'.$this->getError() ];
         }

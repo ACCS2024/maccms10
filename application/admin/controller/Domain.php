@@ -10,7 +10,7 @@ class Domain extends Base
     public function index()
     {
         if (Request()->isPost()) {
-            $config = \think\facadeRequest::param();
+            $config = \think\facade\Request::param();
 
             $tmp = $config['domain'];
             $domain=[];
@@ -55,7 +55,7 @@ class Domain extends Base
 
     public function del()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         if(!empty($param['ids'])){
             $list = config('domain');
             unset($list[$param['ids']]);

@@ -10,7 +10,7 @@ class Link extends Base
 
     public function index()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         $param['page'] = intval($param['page']) <1 ? 1 : $param['page'];
         $param['limit'] = intval($param['limit']) <1 ? $this->_pagesize : $param['limit'];
         $where=[];
@@ -38,7 +38,7 @@ class Link extends Base
     public function info()
     {
         if (Request()->isPost()) {
-            $param = \think\facadeRequest::param();
+            $param = \think\facade\Request::param();
             $res = (new \app\common\model\Link())->saveData($param);
             if($res['code']>1){
                 return $this->error($res['msg']);
@@ -46,7 +46,7 @@ class Link extends Base
             return $this->success($res['msg']);
         }
 
-        $id = \think\facadeRequest::param("id");
+        $id = \think\facade\Request::param("id");
         $where=[];
         $where['link_id'] = $id;
         $res = (new \app\common\model\Link())->infoData($where);
@@ -59,7 +59,7 @@ class Link extends Base
 
     public function del()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         $ids = $param['ids'];
 
         if(!empty($ids)){
@@ -76,7 +76,7 @@ class Link extends Base
 
     public function batch()
     {
-        $param = \think\facadeRequest::param();
+        $param = \think\facade\Request::param();
         $ids = $param['ids'];
         foreach ($ids as $k=>$id) {
             $data = [];

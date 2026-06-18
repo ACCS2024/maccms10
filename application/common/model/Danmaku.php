@@ -156,13 +156,13 @@ class Danmaku extends Base {
         if (!empty($data['danmaku_id'])) {
             $where = [];
             $where['danmaku_id'] = $data['danmaku_id'];
-            $res = $this->allowField(true)->where($where)->update($data);
+            $res = $this->where($where)->update($data);
             // 更新时也清除缓存（编辑弹幕内容后前台立即生效）
             $this->_clearEpisodeCache($where);
         } else {
             $data['danmaku_send_time'] = time();
             $data['danmaku_ip'] = mac_get_ip_long();
-            $res = $this->allowField(true)->insert($data);
+            $res = $this->insert($data);
 
             // 清除该集弹幕缓存
             $cache_key = $GLOBALS['config']['app']['cache_flag'] . '_danmaku_' . $data['vod_id'] . '_' . $data['vod_sid'] . '_' . $data['vod_nid'];
@@ -193,7 +193,7 @@ class Danmaku extends Base {
         }
         $data = [];
         $data[$col] = $val;
-        $res = $this->allowField(true)->where($where)->update($data);
+        $res = $this->where($where)->update($data);
         if ($res === false) {
             return ['code' => 1001, 'msg' => lang('set_err') . '：' . $this->getError()];
         }

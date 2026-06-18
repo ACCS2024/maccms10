@@ -89,7 +89,7 @@ class DataReplace extends Base
      */
     public function getFields()
     {
-        $table = \think\facadeRequest::param("table");
+        $table = \think\facade\Request::param("table");
         if (empty($table)) {
             return json(['code' => 0, 'msg' => lang('param_err')]);
         }
