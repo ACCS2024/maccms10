@@ -10,7 +10,7 @@ class Cj extends Base {
         $page = $page > 0 ? (int)$page : 1;
         $limit = $limit ? (int)$limit : 20;
         $total = Db::name($tab)->where($where)->count();
-        $list = Db::name($tab)->where($where)->order($order)->page($page)->limit($limit)->select();
+        $list = Db::name($tab)->where($where)->order($order)->page($page)->limit($limit)->select()->toArray();
         return ['code'=>1,'msg'=>lang('data_list'),'page'=>$page,'pagecount'=>ceil($total/$limit),'limit'=>$limit,'total'=>$total,'list'=>$list];
     }
 
@@ -55,7 +55,7 @@ class Cj extends Base {
         //删除node
         $res = Db::name('cj_node')->where($where)->delete();
         //删除history
-        $list = Db::name('cj_content')->field('url')->where($where)->select();
+        $list = Db::name('cj_content')->field('url')->where($where)->select()->toArray();
         foreach ($list as $k => $v) {
             $md5 = md5($v['url']);
             Db::name('cj_history')->where('md5',$md5)->delete();

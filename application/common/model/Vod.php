@@ -60,13 +60,13 @@ class Vod extends Base {
             unset($where['_string']);
         }
 
-        $limit_str = ($limit * ($page-1) + $start) .",".$limit;
+        $offset = ($limit * ($page-1) + $start);
         $total = 0;
         if($totalshow==1) {
             $total = $this->where($where)->where($where2)->count();
         }
 
-        $list = Db::name('Vod')->field($field)->where($where)->where($where2)->order($order)->limit($limit_str)->select();
+        $list = Db::name('Vod')->field($field)->where($where)->where($where2)->order($order)->limit($offset, $limit)->select()->toArray();
 
         //分类
         $type_list = (new \app\common\model\Type())->getCache('type_list');
@@ -99,7 +99,7 @@ class Vod extends Base {
             $where = json_decode($where,true);
         }
         $where = $this->mergeRecycleWhere($where);
-        $limit_str = ($limit * ($page-1) + $start) .",".$limit;
+        $offset = ($limit * ($page-1) + $start);
 
         $total = $this
             ->join('vod_repeat t','t.name1 = vod_name')
@@ -111,8 +111,8 @@ class Vod extends Base {
             ->field($field)
             ->where($where)
             ->order($order)
-            ->limit($limit_str)
-            ->select();
+            ->limit($offset, $limit)
+            ->select()->toArray();
 
         //分类
         $type_list = (new \app\common\model\Type())->getCache('type_list');
@@ -140,44 +140,45 @@ class Vod extends Base {
         if(!is_array($lp)){
             $lp = json_decode($lp,true);
         }
+        $lp = $lp ?? [];
 
-        $order = $lp['order'];
-        $by = $lp['by'];
-        $type = $lp['type'];
-        $ids = $lp['ids'];
-        $rel = $lp['rel'];
-        $paging = $lp['paging'];
-        $pageurl = $lp['pageurl'];
-        $level = $lp['level'];
-        $area = $lp['area'];
-        $lang = $lp['lang'];
-        $state = $lp['state'];
-        $wd = $lp['wd'];
-        $tag = $lp['tag'];
-        $class = $lp['class'];
-        $letter = $lp['letter'];
-        $actor = $lp['actor'];
-        $director = $lp['director'];
-        $version = $lp['version'];
-        $year = $lp['year'];
-        $start = abs(intval($lp['start']));
-        $num = abs(intval($lp['num']));
-        $half = abs(intval($lp['half']));
-        $weekday = $lp['weekday'];
-        $tv = $lp['tv'];
-        $timeadd = $lp['timeadd'];
-        $timehits = $lp['timehits'];
-        $time = $lp['time'];
-        $hitsmonth = $lp['hitsmonth'];
-        $hitsweek = $lp['hitsweek'];
-        $hitsday = $lp['hitsday'];
-        $hits = $lp['hits'];
-        $not = $lp['not'];
-        $cachetime = $lp['cachetime'];
-        $isend = $lp['isend'];
-        $plot = $lp['plot'];
-        $typenot = $lp['typenot'];
-        $name = $lp['name'];
+        $order = ($lp['order'] ?? null);
+        $by = ($lp['by'] ?? null);
+        $type = ($lp['type'] ?? null);
+        $ids = ($lp['ids'] ?? null);
+        $rel = ($lp['rel'] ?? null);
+        $paging = ($lp['paging'] ?? null);
+        $pageurl = ($lp['pageurl'] ?? null);
+        $level = ($lp['level'] ?? null);
+        $area = ($lp['area'] ?? null);
+        $lang = ($lp['lang'] ?? null);
+        $state = ($lp['state'] ?? null);
+        $wd = ($lp['wd'] ?? null);
+        $tag = ($lp['tag'] ?? null);
+        $class = ($lp['class'] ?? null);
+        $letter = ($lp['letter'] ?? null);
+        $actor = ($lp['actor'] ?? null);
+        $director = ($lp['director'] ?? null);
+        $version = ($lp['version'] ?? null);
+        $year = ($lp['year'] ?? null);
+        $start = abs(intval(($lp['start'] ?? null)));
+        $num = abs(intval(($lp['num'] ?? null)));
+        $half = abs(intval(($lp['half'] ?? null)));
+        $weekday = ($lp['weekday'] ?? null);
+        $tv = ($lp['tv'] ?? null);
+        $timeadd = ($lp['timeadd'] ?? null);
+        $timehits = ($lp['timehits'] ?? null);
+        $time = ($lp['time'] ?? null);
+        $hitsmonth = ($lp['hitsmonth'] ?? null);
+        $hitsweek = ($lp['hitsweek'] ?? null);
+        $hitsday = ($lp['hitsday'] ?? null);
+        $hits = ($lp['hits'] ?? null);
+        $not = ($lp['not'] ?? null);
+        $cachetime = (int)($lp['cachetime'] ?? 0);
+        $isend = ($lp['isend'] ?? null);
+        $plot = ($lp['plot'] ?? null);
+        $typenot = ($lp['typenot'] ?? null);
+        $name = ($lp['name'] ?? null);
 
         $page = 1;
         $where=[];
@@ -617,7 +618,7 @@ class Vod extends Base {
         $cach_name = $GLOBALS['config']['app']['cache_flag']. '_' .md5('vod_listcache_'.http_build_query($where_cache).'_'.$order_cache_key.'_'.$page.'_'.$num.'_'.$start.'_'.$pageurl);
         $res = $use_rand ? null : Cache::get($cach_name);
         if(empty($cachetime)){
-            $cachetime = $GLOBALS['config']['app']['cache_time'];
+            $cachetime = (int)$GLOBALS['config']['app']['cache_time'];
         }
         // 防击穿:可缓存且未命中时,单飞收敛并发回源(抢锁失败者短等他人结果,超时再自行回源)
         $sf_lock = false;
@@ -716,11 +717,11 @@ class Vod extends Base {
             return ['code'=>1001,'msg'=>lang('param_err').'：'.$validate->getError() ];
         }
         $key = 'vod_detail_'.$data['vod_id'];
-        Cache::rm($key);
+        Cache::delete($key);
         $key = 'vod_detail_'.$data['vod_en'];
-        Cache::rm($key);
+        Cache::delete($key);
         $key = 'vod_detail_'.$data['vod_id'].'_'.$data['vod_en'];
-        Cache::rm($key);
+        Cache::delete($key);
 
         $type_list = (new \app\common\model\Type())->getCache('type_list');
         $type_info = $type_list[$data['type_id']];
@@ -846,11 +847,11 @@ class Vod extends Base {
             return ['code'=>1001,'msg'=>lang('param_err').'：'.$validate->getError() ];
         }
         $key = 'vod_detail_'.$data['vod_id'];
-        Cache::rm($key);
+        Cache::delete($key);
         $key = 'vod_detail_'.$data['vod_en'];
-        Cache::rm($key);
+        Cache::delete($key);
         $key = 'vod_detail_'.$data['vod_id'].'_'.$data['vod_en'];
-        Cache::rm($key);
+        Cache::delete($key);
 
         if(!empty($data['vod_plot_name'])) {
             $data['vod_plot'] = 1;
@@ -931,12 +932,12 @@ class Vod extends Base {
             return ['code'=>1001,'msg'=>lang('set_err').'：'.$this->getError() ];
         }
 
-        $list = $this->field('vod_id,vod_name,vod_en')->where($where)->select();
+        $list = $this->field('vod_id,vod_name,vod_en')->where($where)->select()->toArray();
         foreach($list as $k=>$v){
             $key = 'vod_detail_'.$v['vod_id'];
-            Cache::rm($key);
+            Cache::delete($key);
             $key = 'vod_detail_'.$v['vod_en'];
-            Cache::rm($key);
+            Cache::delete($key);
         }
 
         return ['code'=>1,'msg'=>lang('set_ok')];

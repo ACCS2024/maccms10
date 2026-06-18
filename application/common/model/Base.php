@@ -83,7 +83,7 @@ class Base extends Model
         if ($this->readFromMaster === true) {
             $query_object = $query_object->master();
         }
-        $list = $query_object->where($cond)->field($fields)->order($orderby)->limit($offset, $limit)->select();
+        $list = $query_object->where($cond)->field($fields)->order($orderby)->limit($offset, $limit)->select()->toArray();
         if (!$list) {
             return [];
         }

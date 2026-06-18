@@ -46,12 +46,12 @@ class Actor extends Base {
             unset($where['_string']);
         }
 
-        $limit_str = ($limit * ($page-1) + $start) .",".$limit;
+        $offset = ($limit * ($page-1) + $start);
         $total = 0;
         if($totalshow==1) {
             $total = $this->where($where)->count();
         }
-        $list = Db::name('Actor')->field($field)->where($where)->where($where2)->orderRaw($order)->limit($limit_str)->select();
+        $list = Db::name('Actor')->field($field)->where($where)->where($where2)->orderRaw($order)->limit($offset, $limit)->select()->toArray();
         //分类
         $type_list = (new \app\common\model\Type())->getCache('type_list');
 
@@ -71,34 +71,35 @@ class Actor extends Base {
         if (!is_array($lp)) {
             $lp = json_decode($lp, true);
         }
+        $lp = $lp ?? [];
 
-        $order = $lp['order'];
-        $by = $lp['by'];
-        $type = $lp['type'];
-        $ids = $lp['ids'];
-        $paging = $lp['paging'];
-        $pageurl = $lp['pageurl'];
-        $level = $lp['level'];
-        $wd = $lp['wd'];
-        $name = $lp['name'];
-        $area = $lp['area'];
-        $letter = $lp['letter'];
-        $sex = $lp['sex'];
-        $starsign = $lp['starsign'];
-        $blood = $lp['blood'];
-        $start = abs(intval($lp['start']));
-        $num = abs(intval($lp['num']));
-        $half = abs(intval($lp['half']));
-        $timeadd = $lp['timeadd'];
-        $timehits = $lp['timehits'];
-        $time = $lp['time'];
-        $hitsmonth = $lp['hitsmonth'];
-        $hitsweek = $lp['hitsweek'];
-        $hitsday = $lp['hitsday'];
-        $hits = $lp['hits'];
-        $not = $lp['not'];
-        $cachetime = $lp['cachetime'];
-        $typenot = $lp['typenot'];
+        $order = ($lp['order'] ?? null);
+        $by = ($lp['by'] ?? null);
+        $type = ($lp['type'] ?? null);
+        $ids = ($lp['ids'] ?? null);
+        $paging = ($lp['paging'] ?? null);
+        $pageurl = ($lp['pageurl'] ?? null);
+        $level = ($lp['level'] ?? null);
+        $wd = ($lp['wd'] ?? null);
+        $name = ($lp['name'] ?? null);
+        $area = ($lp['area'] ?? null);
+        $letter = ($lp['letter'] ?? null);
+        $sex = ($lp['sex'] ?? null);
+        $starsign = ($lp['starsign'] ?? null);
+        $blood = ($lp['blood'] ?? null);
+        $start = abs(intval(($lp['start'] ?? null)));
+        $num = abs(intval(($lp['num'] ?? null)));
+        $half = abs(intval(($lp['half'] ?? null)));
+        $timeadd = ($lp['timeadd'] ?? null);
+        $timehits = ($lp['timehits'] ?? null);
+        $time = ($lp['time'] ?? null);
+        $hitsmonth = ($lp['hitsmonth'] ?? null);
+        $hitsweek = ($lp['hitsweek'] ?? null);
+        $hitsday = ($lp['hitsday'] ?? null);
+        $hits = ($lp['hits'] ?? null);
+        $not = ($lp['not'] ?? null);
+        $cachetime = (int)($lp['cachetime'] ?? 0);
+        $typenot = ($lp['typenot'] ?? null);
         $page = 1;
         $where = [];
         $totalshow=0;
@@ -343,7 +344,7 @@ class Actor extends Base {
         $cach_name = $GLOBALS['config']['app']['cache_flag']. '_' .md5('actor_listcache_'.http_build_query($where_cache).'_'.$order_cache_key.'_'.$page.'_'.$num.'_'.$start.'_'.$pageurl);
         $res = $use_rnd_order ? null : Cache::get($cach_name);
         if(empty($cachetime)){
-            $cachetime = $GLOBALS['config']['app']['cache_time'];
+            $cachetime = (int)$GLOBALS['config']['app']['cache_time'];
         }
         if($GLOBALS['config']['app']['cache_core']==0 || empty($res)) {
             if ($meili !== null) {
@@ -404,11 +405,11 @@ class Actor extends Base {
         }
 
         $key = 'actor_detail_'.$data['actor_id'];
-        Cache::rm($key);
+        Cache::delete($key);
         $key = 'actor_detail_'.$data['actor_en'];
-        Cache::rm($key);
+        Cache::delete($key);
         $key = 'actor_detail_'.$data['actor_id'].'_'.$data['actor_en'];
-        Cache::rm($key);
+        Cache::delete($key);
 
         $type_list = (new \app\common\model\Type())->getCache('type_list');
         $type_info = $type_list[$data['type_id']];
@@ -535,12 +536,12 @@ class Actor extends Base {
             return ['code'=>1001,'msg'=>lang('set_err').'：'.$this->getError() ];
         }
 
-        $list = $this->field('actor_id,actor_name,actor_en')->where($where)->select();
+        $list = $this->field('actor_id,actor_name,actor_en')->where($where)->select()->toArray();
         foreach($list as $k=>$v){
             $key = 'actor_detail_'.$v['actor_id'];
-            Cache::rm($key);
+            Cache::delete($key);
             $key = 'actor_detail_'.$v['actor_en'];
-            Cache::rm($key);
+            Cache::delete($key);
         }
 
         return ['code'=>1,'msg'=>lang('set_ok')];

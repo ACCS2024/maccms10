@@ -26,7 +26,7 @@ class Provide extends Base
         }
 
         if($GLOBALS['config']['api']['vod']['charge'] == 1) {
-            $h = $_SERVER['REMOTE_ADDR'];
+            $h = $_SERVER['REMOTE_ADDR'] ?? '';
             if (!$h) {
                 echo lang('api/auth_err');
                 exit;
@@ -42,25 +42,25 @@ class Provide extends Base
         $html = Cache::get($cach_name);
         if(empty($html) || $cache_time==0) {
             $where = [];
-            if (!empty($this->_param['ids'])) {
-                $where['vod_id'] = $this->_param['ids'];
+            if (!empty(($this->_param['ids'] ?? null))) {
+                $where['vod_id'] = ($this->_param['ids'] ?? null);
             }
             if (!empty($GLOBALS['config']['api']['vod']['typefilter'])) {
                 $where['type_id'] = $GLOBALS['config']['api']['vod']['typefilter'];
             }
 
-            if (!empty($this->_param['t'])) {
-                if (empty($GLOBALS['config']['api']['vod']['typefilter']) || strpos($GLOBALS['config']['api']['vod']['typefilter'], $this->_param['t']) !== false) {
-                    $where['type_id'] = $this->_param['t'];
+            if (!empty(($this->_param['t'] ?? null))) {
+                if (empty($GLOBALS['config']['api']['vod']['typefilter']) || strpos($GLOBALS['config']['api']['vod']['typefilter'], ($this->_param['t'] ?? null)) !== false) {
+                    $where['type_id'] = ($this->_param['t'] ?? null);
                 }
             }
             // 支持isend参数，是否完结
             if (isset($this->_param['isend'])) {
-                $where['vod_isend'] = $this->_param['isend'] == 1 ? 1 : 0;
+                $where['vod_isend'] = ($this->_param['isend'] ?? null) == 1 ? 1 : 0;
             }
-            if (!empty($this->_param['h'])) {
+            if (!empty(($this->_param['h'] ?? null))) {
                 $todaydate = date('Y-m-d', strtotime('+1 days'));
-                $tommdate = date('Y-m-d H:i:s', strtotime('-' . $this->_param['h'] . ' hours'));
+                $tommdate = date('Y-m-d H:i:s', strtotime('-' . ($this->_param['h'] ?? null) . ' hours'));
 
                 $todayunix = strtotime($todaydate);
                 $tommunix = strtotime($tommdate);
@@ -68,12 +68,12 @@ class Provide extends Base
                 $where[] = ['vod_time', '>', $tommunix];
 				$where[] = ['vod_time', '<', $todayunix];
             }
-            if (!empty($this->_param['wd'])) {
-                $where[] = ['vod_name', 'like', '%' . $this->_param['wd'] . '%'];
+            if (!empty(($this->_param['wd'] ?? null))) {
+                $where[] = ['vod_name', 'like', '%' . ($this->_param['wd'] ?? null) . '%'];
             }
             // 增加年份筛选 https://github.com/magicblack/maccms10/issues/815
-            if (!empty($this->_param['year'])) {
-                $param_year = trim($this->_param['year']);
+            if (!empty(($this->_param['year'] ?? null))) {
+                $param_year = trim(($this->_param['year'] ?? null));
                 if (strlen($param_year) == 4) {
                     $year = intval($param_year);
                 } elseif (strlen($param_year) == 9) {
@@ -94,8 +94,8 @@ class Provide extends Base
                 }
                 $where['vod_year'] = explode(',', $year);
             }
-            if (empty($GLOBALS['config']['api']['vod']['from']) && !empty($this->_param['from']) && strlen($this->_param['from']) >= 2) {
-                $GLOBALS['config']['api']['vod']['from'] = $this->_param['from'];
+            if (empty($GLOBALS['config']['api']['vod']['from']) && !empty(($this->_param['from'] ?? null)) && strlen(($this->_param['from'] ?? null)) >= 2) {
+                $GLOBALS['config']['api']['vod']['from'] = ($this->_param['from'] ?? null);
             }
             // 采集播放组支持多个播放器
             // https://github.com/magicblack/maccms10/issues/888
@@ -113,39 +113,39 @@ class Provide extends Base
                 }
             }
             if (!empty($GLOBALS['config']['api']['vod']['datafilter'])) {
-                $where['_string'] .= ' ' . $GLOBALS['config']['api']['vod']['datafilter'];
+                $where['_string'] = ($where['_string'] ?? '') . ' ' . $GLOBALS['config']['api']['vod']['datafilter'];
             }
-            if (empty($this->_param['pg'])) {
+            if (empty(($this->_param['pg'] ?? null))) {
                 $this->_param['pg'] = 1;
             }
             $pagesize = $GLOBALS['config']['api']['vod']['pagesize'];
-            if (!empty($this->_param['pagesize']) && $this->_param['pagesize'] > 0) {
-                $pagesize = min((int)$this->_param['pagesize'], 100);
+            if (!empty(($this->_param['pagesize'] ?? null)) && ($this->_param['pagesize'] ?? null) > 0) {
+                $pagesize = min((int)($this->_param['pagesize'] ?? null), 100);
             }
 
-            $sort_direction = !empty($this->_param['sort_direction']) && $this->_param['sort_direction'] == 'asc' ? 'asc' : 'desc';
+            $sort_direction = !empty(($this->_param['sort_direction'] ?? null)) && ($this->_param['sort_direction'] ?? null) == 'asc' ? 'asc' : 'desc';
             $order = 'vod_time ' . $sort_direction;
-            $field = 'vod_id,vod_name,type_id,"" as type_name,vod_en,vod_time,vod_remarks,vod_play_from,vod_time';
+            $field = 'vod_id,vod_name,type_id,"" as type_name,vod_en,vod_time,vod_remarks,vod_play_from,vod_time,vod_pic,vod_area,vod_lang,vod_year,vod_letter,vod_actor,vod_director,vod_class,vod_score,vod_state,vod_serial';
 
-            if ($this->_param['ac'] == 'videolist' || $this->_param['ac'] == 'detail') {
+            if (($this->_param['ac'] ?? null) == 'videolist' || ($this->_param['ac'] ?? null) == 'detail') {
                 $field = '*';
             }
             // 关键词搜索接 Meilisearch(vod_name);命中→vod_id IN(本页命中,Meili 已分页);未启用/无命中/异常/含 _string→回退原 LIKE
-            $meili = !empty($this->_param['wd']) ? mac_meili_api_apply('vod', $where, $this->_param['wd'], $this->_param['pg'], $pagesize, $order, 0) : false;
+            $meili = !empty(($this->_param['wd'] ?? null)) ? mac_meili_api_apply('vod', $where, ($this->_param['wd'] ?? null), ($this->_param['pg'] ?? null), $pagesize, $order, 0) : false;
             if ($meili !== false) {
                 // Meili 已分页;listData 以 page=1/start=0 取本页命中,避免二次分页,再用 Meili 总数覆盖
-                $res = (new \app\common\model\vod())->listData($meili[0], $meili[1], 1, $pagesize, 0, $field, 0, 0);
-                $res['page'] = $this->_param['pg'];
+                $res = (new \app\common\model\Vod())->listData($meili[0], $meili[1], 1, $pagesize, 0, $field, 0, 0);
+                $res['page'] = ($this->_param['pg'] ?? null);
                 if ($meili[2] !== null) {
                     $res['total'] = (int)$meili[2];
                     $res['pagecount'] = $pagesize > 0 ? (int)ceil($meili[2] / $pagesize) : 0;
                 }
             } else {
-                $res = (new \app\common\model\vod())->listData($where, $order, $this->_param['pg'], $pagesize, 0, $field, 0);
+                $res = (new \app\common\model\Vod())->listData($where, $order, ($this->_param['pg'] ?? null), $pagesize, 0, $field, 0);
             }
 
 
-            if ($this->_param['at'] == 'xml') {
+            if (($this->_param['at'] ?? null) == 'xml') {
                 $html = $this->vod_xml($res);
             } else {
                 $html = json_encode($this->vod_json($res),JSON_UNESCAPED_UNICODE);
@@ -157,11 +157,11 @@ class Provide extends Base
         }
         // https://github.com/magicblack/maccms10/issues/818 影片的播放量+1
         if (
-            isset($this->_param['ac']) && $this->_param['ac'] == 'detail' && 
-            !empty($this->_param['ids']) && (int)$this->_param['ids'] == $this->_param['ids'] && 
+            isset($this->_param['ac']) && ($this->_param['ac'] ?? null) == 'detail' && 
+            !empty(($this->_param['ids'] ?? null)) && (int)($this->_param['ids'] ?? null) == ($this->_param['ids'] ?? null) && 
             !empty($GLOBALS['config']['api']['vod']['detail_inc_hits'])
         ) {
-            (new \app\common\model\Vod())->fieldData(['vod_id' => (int)$this->_param['ids']], ['vod_hits' => ['inc', 1]]);
+            (new \app\common\model\Vod())->fieldData(['vod_id' => (int)($this->_param['ids'] ?? null)], ['vod_hits' => ['inc', 1]]);
         }
         echo $html;
         exit;
@@ -207,7 +207,7 @@ class Provide extends Base
                 $v["vod_pic"] = $GLOBALS['config']['api']['vod']['imgurl'] . $v["vod_pic"];
             }
 
-            if ($this->_param['ac']=='videolist' || $this->_param['ac']=='detail') {
+            if (($this->_param['ac'] ?? null)=='videolist' || ($this->_param['ac'] ?? null)=='detail') {
                 // 如果指定返回播放组，则只返回对应播放组的播放数据
                 // https://github.com/magicblack/maccms10/issues/957
                 if (!empty($GLOBALS['config']['api']['vod']['from'])) {
@@ -259,7 +259,7 @@ class Provide extends Base
         }
 
 
-        if($this->_param['ac']!='videolist' && $this->_param['ac']!='detail') {
+        if(($this->_param['ac'] ?? null)!='videolist' && ($this->_param['ac'] ?? null)!='detail') {
             $class = [];
             $typefilter  = explode(',',$GLOBALS['config']['api']['vod']['typefilter']);
 
@@ -302,7 +302,7 @@ class Provide extends Base
                 $v["vod_pic"] = $GLOBALS['config']['api']['vod']['imgurl'] . $v["vod_pic"];
             }
 
-            if($this->_param['ac']=='videolist' || $this->_param['ac']=='detail'){
+            if(($this->_param['ac'] ?? null)=='videolist' || ($this->_param['ac'] ?? null)=='detail'){
                 $tempurl = $this->vod_url_deal($v["vod_play_url"],$v["vod_play_from"],$GLOBALS['config']['api']['vod']['from'],'xml');
 
                 $xml .= '<pic>'.$v["vod_pic"].'</pic>';
@@ -331,7 +331,7 @@ class Provide extends Base
 
         //视频列表结束
 
-        if($this->_param['ac'] != 'videolist' && $this->_param['ac']!='detail') {
+        if(($this->_param['ac'] ?? null) != 'videolist' && ($this->_param['ac'] ?? null)!='detail') {
             //分类列表开始
             $xml .= "<class>";
             $typefilter  = explode(',',$GLOBALS['config']['api']['vod']['typefilter']);
@@ -363,7 +363,7 @@ class Provide extends Base
         }
 
         if($GLOBALS['config']['api']['art']['charge'] == 1) {
-            $h = $_SERVER['REMOTE_ADDR'];
+            $h = $_SERVER['REMOTE_ADDR'] ?? '';
             if (!$h) {
                 echo lang('api/auth_err');
                 exit;
@@ -379,18 +379,18 @@ class Provide extends Base
         $html = Cache::get($cach_name);
         if(empty($html) || $cache_time==0) {
             $where = [];
-            if (!empty($this->_param['ids'])) {
-                $where['art_id'] = $this->_param['ids'];
+            if (!empty(($this->_param['ids'] ?? null))) {
+                $where['art_id'] = ($this->_param['ids'] ?? null);
             }
-            if (!empty($this->_param['t'])) {
-                if (empty($GLOBALS['config']['api']['art']['typefilter']) || strpos($GLOBALS['config']['api']['art']['typefilter'], $this->_param['t']) !== false) {
-                    $where['type_id'] = $this->_param['t'];
+            if (!empty(($this->_param['t'] ?? null))) {
+                if (empty($GLOBALS['config']['api']['art']['typefilter']) || strpos($GLOBALS['config']['api']['art']['typefilter'], ($this->_param['t'] ?? null)) !== false) {
+                    $where['type_id'] = ($this->_param['t'] ?? null);
                 }
             }
 
-            if (!empty(intval($this->_param['h']))) {
+            if (!empty(intval(($this->_param['h'] ?? null)))) {
                 $todaydate = date('Y-m-d', strtotime('+1 days'));
-                $tommdate = date('Y-m-d', strtotime('-' . $this->_param['h'] . ' hours'));
+                $tommdate = date('Y-m-d', strtotime('-' . ($this->_param['h'] ?? null) . ' hours'));
 
                 $todayunix = strtotime($todaydate);
                 $tommunix = strtotime($tommdate);
@@ -398,36 +398,36 @@ class Provide extends Base
                 $where[] = ['art_time', '>', $tommunix];
 				$where[] = ['art_time', '<', $todayunix];
             }
-            if (!empty($this->_param['wd'])) {
-                $where[] = ['art_name', 'like', '%' . $this->_param['wd'] . '%'];
+            if (!empty(($this->_param['wd'] ?? null))) {
+                $where[] = ['art_name', 'like', '%' . ($this->_param['wd'] ?? null) . '%'];
             }
             if (!empty($GLOBALS['config']['api']['art']['datafilter'])) {
                 $where['_string'] = $GLOBALS['config']['api']['art']['datafilter'];
             }
-            if (empty(intval($this->_param['pg']))) {
+            if (empty(intval(($this->_param['pg'] ?? null)))) {
                 $this->_param['pg'] = 1;
             }
 
             $order = 'art_time desc';
             $field = 'art_id,art_name,type_id,"" as type_name,art_en,art_time,art_author,art_from,art_remarks,art_pic,art_time';
 
-            if ($this->_param['ac'] == 'detail') {
+            if (($this->_param['ac'] ?? null) == 'detail') {
                 $field = '*';
             }
 
             // 关键词搜索接 Meilisearch(art_name);命中→art_id IN(本页命中,Meili 已分页);未启用/无命中/异常/含 _string→回退原 LIKE
             $art_pagesize = $GLOBALS['config']['api']['art']['pagesize'];
-            $meili = !empty($this->_param['wd']) ? mac_meili_api_apply('art', $where, $this->_param['wd'], $this->_param['pg'], $art_pagesize, $order, 0) : false;
+            $meili = !empty(($this->_param['wd'] ?? null)) ? mac_meili_api_apply('art', $where, ($this->_param['wd'] ?? null), ($this->_param['pg'] ?? null), $art_pagesize, $order, 0) : false;
             if ($meili !== false) {
                 // Meili 已分页;listData 以 page=1/start=0 取本页命中,避免二次分页,再用 Meili 总数覆盖
-                $res = (new \app\common\model\art())->listData($meili[0], $meili[1], 1, $art_pagesize, 0, $field, 0, 0);
-                $res['page'] = $this->_param['pg'];
+                $res = (new \app\common\model\Art())->listData($meili[0], $meili[1], 1, $art_pagesize, 0, $field, 0, 0);
+                $res['page'] = ($this->_param['pg'] ?? null);
                 if ($meili[2] !== null) {
                     $res['total'] = (int)$meili[2];
                     $res['pagecount'] = $art_pagesize > 0 ? (int)ceil($meili[2] / $art_pagesize) : 0;
                 }
             } else {
-                $res = (new \app\common\model\art())->listData($where, $order, $this->_param['pg'], $art_pagesize, 0, $field, 0);
+                $res = (new \app\common\model\Art())->listData($where, $order, ($this->_param['pg'] ?? null), $art_pagesize, 0, $field, 0);
             }
 
             if ($res['code'] > 1) {
@@ -447,14 +447,14 @@ class Provide extends Base
                     $v["art_pic"] = $GLOBALS['config']['api']['art']['imgurl'] . $v["art_pic"];
                 }
 
-                if ($this->_param['ac'] == 'detail') {
+                if (($this->_param['ac'] ?? null) == 'detail') {
 
                 } else {
 
                 }
             }
 
-            if ($this->_param['ac'] != 'detail') {
+            if (($this->_param['ac'] ?? null) != 'detail') {
                 $class = [];
                 $typefilter = explode(',', $GLOBALS['config']['api']['art']['typefilter']);
 
@@ -489,7 +489,7 @@ class Provide extends Base
         }
 
         if($GLOBALS['config']['api']['actor']['charge'] == 1) {
-            $h = $_SERVER['REMOTE_ADDR'];
+            $h = $_SERVER['REMOTE_ADDR'] ?? '';
             if (!$h) {
                 echo lang('api/auth_err');
                 exit;
@@ -505,17 +505,17 @@ class Provide extends Base
         $html = Cache::get($cach_name);
         if(empty($html) || $cache_time==0) {
             $where = [];
-            if (!empty($this->_param['ids'])) {
-                $where['actor_id'] = $this->_param['ids'];
+            if (!empty(($this->_param['ids'] ?? null))) {
+                $where['actor_id'] = ($this->_param['ids'] ?? null);
             }
-            if (!empty($this->_param['t'])) {
-                if (empty($GLOBALS['config']['api']['actor']['typefilter']) || strpos($GLOBALS['config']['api']['actor']['typefilter'], $this->_param['t']) !== false) {
-                    $where['type_id'] = $this->_param['t'];
+            if (!empty(($this->_param['t'] ?? null))) {
+                if (empty($GLOBALS['config']['api']['actor']['typefilter']) || strpos($GLOBALS['config']['api']['actor']['typefilter'], ($this->_param['t'] ?? null)) !== false) {
+                    $where['type_id'] = ($this->_param['t'] ?? null);
                 }
             }
-            if (!empty(intval($this->_param['h']))) {
+            if (!empty(intval(($this->_param['h'] ?? null)))) {
                 $todaydate = date('Y-m-d', strtotime('+1 days'));
-                $tommdate = date('Y-m-d', strtotime('-' . $this->_param['h'] . ' hours'));
+                $tommdate = date('Y-m-d', strtotime('-' . ($this->_param['h'] ?? null) . ' hours'));
 
                 $todayunix = strtotime($todaydate);
                 $tommunix = strtotime($tommdate);
@@ -523,24 +523,24 @@ class Provide extends Base
                 $where[] = ['actor_time', '>', $tommunix];
 				$where[] = ['actor_time', '<', $todayunix];
             }
-            if (!empty($this->_param['wd'])) {
-                $where[] = ['actor_name', 'like', '%' . $this->_param['wd'] . '%'];
+            if (!empty(($this->_param['wd'] ?? null))) {
+                $where[] = ['actor_name', 'like', '%' . ($this->_param['wd'] ?? null) . '%'];
             }
             if (!empty($GLOBALS['config']['api']['actor']['datafilter'])) {
                 $where['_string'] = $GLOBALS['config']['api']['actor']['datafilter'];
             }
-            if (empty(intval($this->_param['pg']))) {
+            if (empty(intval(($this->_param['pg'] ?? null)))) {
                 $this->_param['pg'] = 1;
             }
 
             $order = 'actor_time desc';
             $field = 'actor_id,actor_name,type_id,"" as type_name,actor_en,actor_area,actor_time,actor_alias,actor_sex,actor_pic';
 
-            if ($this->_param['ac'] == 'detail') {
+            if (($this->_param['ac'] ?? null) == 'detail') {
                 $field = '*';
             }
 
-            $res = (new \app\common\model\actor())->listData($where, $order, $this->_param['pg'], $GLOBALS['config']['api']['actor']['pagesize'], 0, $field, 0);
+            $res = (new \app\common\model\Actor())->listData($where, $order, ($this->_param['pg'] ?? null), $GLOBALS['config']['api']['actor']['pagesize'], 0, $field, 0);
 
             if ($res['code'] > 1) {
                 echo $res['msg'];
@@ -559,14 +559,14 @@ class Provide extends Base
                     $v["actor_pic"] = $GLOBALS['config']['api']['actor']['imgurl'] . $v["actor_pic"];
                 }
 
-                if ($this->_param['ac'] == 'detail') {
+                if (($this->_param['ac'] ?? null) == 'detail') {
 
                 } else {
 
                 }
             }
 
-            if ($this->_param['ac'] != 'detail') {
+            if (($this->_param['ac'] ?? null) != 'detail') {
                 $class = [];
                 $typefilter = explode(',', $GLOBALS['config']['api']['actor']['typefilter']);
 
@@ -602,7 +602,7 @@ class Provide extends Base
         }
 
         if($GLOBALS['config']['api']['role']['charge'] == 1) {
-            $h = $_SERVER['REMOTE_ADDR'];
+            $h = $_SERVER['REMOTE_ADDR'] ?? '';
             if (!$h) {
                 echo lang('api/auth_err');
                 exit;
@@ -618,17 +618,17 @@ class Provide extends Base
         $html = Cache::get($cach_name);
         if(empty($html) || $cache_time==0) {
             $where = [];
-            if (!empty($this->_param['ids'])) {
-                $where['role_id'] = $this->_param['ids'];
+            if (!empty(($this->_param['ids'] ?? null))) {
+                $where['role_id'] = ($this->_param['ids'] ?? null);
             }
-            if (!empty($this->_param['t'])) {
-                if (empty($GLOBALS['config']['api']['role']['typefilter']) || strpos($GLOBALS['config']['api']['role']['typefilter'], $this->_param['t']) !== false) {
-                    $where['type_id'] = $this->_param['t'];
+            if (!empty(($this->_param['t'] ?? null))) {
+                if (empty($GLOBALS['config']['api']['role']['typefilter']) || strpos($GLOBALS['config']['api']['role']['typefilter'], ($this->_param['t'] ?? null)) !== false) {
+                    $where['type_id'] = ($this->_param['t'] ?? null);
                 }
             }
-            if (!empty(intval($this->_param['h']))) {
+            if (!empty(intval(($this->_param['h'] ?? null)))) {
                 $todaydate = date('Y-m-d', strtotime('+1 days'));
-                $tommdate = date('Y-m-d', strtotime('-' . $this->_param['h'] . ' hours'));
+                $tommdate = date('Y-m-d', strtotime('-' . ($this->_param['h'] ?? null) . ' hours'));
 
                 $todayunix = strtotime($todaydate);
                 $tommunix = strtotime($tommdate);
@@ -636,24 +636,24 @@ class Provide extends Base
                 $where[] = ['role_time', '>', $tommunix];
 				$where[] = ['role_time', '<', $todayunix];
             }
-            if (!empty($this->_param['wd'])) {
-                $where[] = ['role_name', 'like', '%' . $this->_param['wd'] . '%'];
+            if (!empty(($this->_param['wd'] ?? null))) {
+                $where[] = ['role_name', 'like', '%' . ($this->_param['wd'] ?? null) . '%'];
             }
             if (!empty($GLOBALS['config']['api']['role']['datafilter'])) {
                 $where['_string'] = $GLOBALS['config']['api']['role']['datafilter'];
             }
-            if (empty(intval($this->_param['pg']))) {
+            if (empty(intval(($this->_param['pg'] ?? null)))) {
                 $this->_param['pg'] = 1;
             }
 
             $order = 'role_time desc';
             $field = 'role_id,role_name,role_rid,role_en,role_actor,role_time,role_pic';
 
-            if ($this->_param['ac'] == 'detail') {
+            if (($this->_param['ac'] ?? null) == 'detail') {
                 $field = '*';
             }
 
-            $res = (new \app\common\model\role())->listData($where, $order, $this->_param['pg'], $GLOBALS['config']['api']['role']['pagesize'], 0, $field, 1);
+            $res = (new \app\common\model\Role())->listData($where, $order, ($this->_param['pg'] ?? null), $GLOBALS['config']['api']['role']['pagesize'], 0, $field, 1);
 
             if ($res['code'] > 1) {
                 echo $res['msg'];
@@ -672,14 +672,14 @@ class Provide extends Base
                     $v["role_pic"] = $GLOBALS['config']['api']['role']['imgurl'] . $v["role_pic"];
                 }
 
-                if ($this->_param['ac'] == 'detail') {
+                if (($this->_param['ac'] ?? null) == 'detail') {
 
                 } else {
 
                 }
             }
 
-            if ($this->_param['ac'] != 'detail') {
+            if (($this->_param['ac'] ?? null) != 'detail') {
                 $class = [];
                 $typefilter = explode(',', $GLOBALS['config']['api']['role']['typefilter']);
 
@@ -704,7 +704,7 @@ class Provide extends Base
         }
 
         if($GLOBALS['config']['api']['manga']['charge'] == 1) {
-            $h = $_SERVER['REMOTE_ADDR'];
+            $h = $_SERVER['REMOTE_ADDR'] ?? '';
             if (!$h) {
                 echo lang('api/auth_err');
                 exit;
@@ -720,21 +720,21 @@ class Provide extends Base
         $html = Cache::get($cach_name);
         if(empty($html) || $cache_time==0) {
             $where = [];
-            if (!empty($this->_param['ids'])) {
-                $where['manga_id'] = $this->_param['ids'];
+            if (!empty(($this->_param['ids'] ?? null))) {
+                $where['manga_id'] = ($this->_param['ids'] ?? null);
             }
             if (!empty($GLOBALS['config']['api']['manga']['typefilter'])) {
                 $where['type_id'] = $GLOBALS['config']['api']['manga']['typefilter'];
             }
 
-            if (!empty($this->_param['t'])) {
-                if (empty($GLOBALS['config']['api']['manga']['typefilter']) || strpos($GLOBALS['config']['api']['manga']['typefilter'], $this->_param['t']) !== false) {
-                    $where['type_id'] = $this->_param['t'];
+            if (!empty(($this->_param['t'] ?? null))) {
+                if (empty($GLOBALS['config']['api']['manga']['typefilter']) || strpos($GLOBALS['config']['api']['manga']['typefilter'], ($this->_param['t'] ?? null)) !== false) {
+                    $where['type_id'] = ($this->_param['t'] ?? null);
                 }
             }
-            if (!empty($this->_param['h'])) {
+            if (!empty(($this->_param['h'] ?? null))) {
                 $todaydate = date('Y-m-d', strtotime('+1 days'));
-                $tommdate = date('Y-m-d H:i:s', strtotime('-' . $this->_param['h'] . ' hours'));
+                $tommdate = date('Y-m-d H:i:s', strtotime('-' . ($this->_param['h'] ?? null) . ' hours'));
 
                 $todayunix = strtotime($todaydate);
                 $tommunix = strtotime($tommdate);
@@ -742,41 +742,41 @@ class Provide extends Base
                 $where[] = ['manga_time', '>', $tommunix];
 				$where[] = ['manga_time', '<', $todayunix];
             }
-            if (!empty($this->_param['wd'])) {
-                $where[] = ['manga_name', 'like', '%' . $this->_param['wd'] . '%'];
+            if (!empty(($this->_param['wd'] ?? null))) {
+                $where[] = ['manga_name', 'like', '%' . ($this->_param['wd'] ?? null) . '%'];
             }
             if (!empty($GLOBALS['config']['api']['manga']['datafilter'])) {
                 $where['_string'] .= ' ' . $GLOBALS['config']['api']['manga']['datafilter'];
             }
-            if (empty($this->_param['pg'])) {
+            if (empty(($this->_param['pg'] ?? null))) {
                 $this->_param['pg'] = 1;
             }
             $pagesize = $GLOBALS['config']['api']['manga']['pagesize'];
-            if (!empty($this->_param['pagesize']) && $this->_param['pagesize'] > 0) {
-                $pagesize = min((int)$this->_param['pagesize'], 100);
+            if (!empty(($this->_param['pagesize'] ?? null)) && ($this->_param['pagesize'] ?? null) > 0) {
+                $pagesize = min((int)($this->_param['pagesize'] ?? null), 100);
             }
 
             $order = 'manga_time desc';
             $field = 'manga_id,manga_name,type_id,"" as type_name,manga_en,manga_time,manga_remarks,manga_chapter_from,manga_time';
 
-            if ($this->_param['ac'] == 'detail') {
+            if (($this->_param['ac'] ?? null) == 'detail') {
                 $field = '*';
             }
             // 关键词搜索接 Meilisearch；未启用/无命中/含不可翻译条件→回退 MySQL LIKE
-            $meili = !empty($this->_param['wd']) ? mac_meili_api_apply('manga', $where, $this->_param['wd'], $this->_param['pg'], $pagesize, $order, 0) : false;
+            $meili = !empty(($this->_param['wd'] ?? null)) ? mac_meili_api_apply('manga', $where, ($this->_param['wd'] ?? null), ($this->_param['pg'] ?? null), $pagesize, $order, 0) : false;
             if ($meili !== false) {
-                $res = (new \app\common\model\manga())->listData($meili[0], $meili[1], 1, $pagesize, 0, $field, 0);
-                $res['page'] = $this->_param['pg'];
+                $res = (new \app\common\model\Manga())->listData($meili[0], $meili[1], 1, $pagesize, 0, $field, 0);
+                $res['page'] = ($this->_param['pg'] ?? null);
                 if ($meili[2] !== null) {
                     $res['total'] = (int)$meili[2];
                     $res['pagecount'] = $pagesize > 0 ? (int)ceil($meili[2] / $pagesize) : 0;
                 }
             } else {
-                $res = (new \app\common\model\manga())->listData($where, $order, $this->_param['pg'], $pagesize, 0, $field, 0);
+                $res = (new \app\common\model\Manga())->listData($where, $order, ($this->_param['pg'] ?? null), $pagesize, 0, $field, 0);
             }
 
 
-            if ($this->_param['at'] == 'xml') {
+            if (($this->_param['at'] ?? null) == 'xml') {
                 $html = $this->manga_xml($res);
             } else {
                 $html = json_encode($this->manga_json($res),JSON_UNESCAPED_UNICODE);
@@ -807,7 +807,7 @@ class Provide extends Base
             }
         }
 
-        if($this->_param['ac']!='detail') {
+        if(($this->_param['ac'] ?? null)!='detail') {
             $class = [];
             $typefilter  = explode(',',$GLOBALS['config']['api']['manga']['typefilter']);
 
@@ -849,7 +849,7 @@ class Provide extends Base
                 $v["manga_pic"] = $GLOBALS['config']['api']['manga']['imgurl'] . $v["manga_pic"];
             }
 
-            if($this->_param['ac']=='detail'){
+            if(($this->_param['ac'] ?? null)=='detail'){
                 $xml .= '<pic>'.$v["manga_pic"].'</pic>';
                 $xml .= '<lang>'.$v['manga_lang'].'</lang>';
                 $xml .= '<area>'.$v['manga_area'].'</area>';
@@ -868,7 +868,7 @@ class Provide extends Base
         }
         $xml .= '</list>';
 
-        if($this->_param['ac']!='detail') {
+        if(($this->_param['ac'] ?? null)!='detail') {
             $xml .= "<class>";
             $typefilter  = explode(',',$GLOBALS['config']['api']['manga']['typefilter']);
             foreach ($type_list as $k=>&$v) {
@@ -897,7 +897,7 @@ class Provide extends Base
         }
 
         if($GLOBALS['config']['api']['website']['charge'] == 1) {
-            $h = $_SERVER['REMOTE_ADDR'];
+            $h = $_SERVER['REMOTE_ADDR'] ?? '';
             if (!$h) {
                 echo lang('api/auth_err');
                 exit;
@@ -913,17 +913,17 @@ class Provide extends Base
         $html = Cache::get($cach_name);
         if(empty($html) || $cache_time==0) {
             $where = [];
-            if (!empty($this->_param['ids'])) {
-                $where['website_id'] = $this->_param['ids'];
+            if (!empty(($this->_param['ids'] ?? null))) {
+                $where['website_id'] = ($this->_param['ids'] ?? null);
             }
-            if (!empty($this->_param['t'])) {
-                if (empty($GLOBALS['config']['api']['website']['typefilter']) || strpos($GLOBALS['config']['api']['website']['typefilter'], $this->_param['t']) !== false) {
-                    $where['type_id'] = $this->_param['t'];
+            if (!empty(($this->_param['t'] ?? null))) {
+                if (empty($GLOBALS['config']['api']['website']['typefilter']) || strpos($GLOBALS['config']['api']['website']['typefilter'], ($this->_param['t'] ?? null)) !== false) {
+                    $where['type_id'] = ($this->_param['t'] ?? null);
                 }
             }
-            if (!empty(intval($this->_param['h']))) {
+            if (!empty(intval(($this->_param['h'] ?? null)))) {
                 $todaydate = date('Y-m-d', strtotime('+1 days'));
-                $tommdate = date('Y-m-d', strtotime('-' . $this->_param['h'] . ' hours'));
+                $tommdate = date('Y-m-d', strtotime('-' . ($this->_param['h'] ?? null) . ' hours'));
 
                 $todayunix = strtotime($todaydate);
                 $tommunix = strtotime($tommdate);
@@ -931,24 +931,24 @@ class Provide extends Base
                 $where[] = ['website_time', '>', $tommunix];
 				$where[] = ['website_time', '<', $todayunix];
             }
-            if (!empty($this->_param['wd'])) {
-                $where[] = ['website_name', 'like', '%' . $this->_param['wd'] . '%'];
+            if (!empty(($this->_param['wd'] ?? null))) {
+                $where[] = ['website_name', 'like', '%' . ($this->_param['wd'] ?? null) . '%'];
             }
             if (!empty($GLOBALS['config']['api']['website']['datafilter'])) {
                 $where['_string'] = $GLOBALS['config']['api']['website']['datafilter'];
             }
-            if (empty(intval($this->_param['pg']))) {
+            if (empty(intval(($this->_param['pg'] ?? null)))) {
                 $this->_param['pg'] = 1;
             }
 
             $order = 'website_time desc';
             $field = 'website_id,website_name,type_id,"" as type_name,website_en,website_time,website_area,website_lang,website_pic';
 
-            if ($this->_param['ac'] == 'detail') {
+            if (($this->_param['ac'] ?? null) == 'detail') {
                 $field = '*';
             }
 
-            $res = (new \app\common\model\website())->listData($where, $order, $this->_param['pg'], $GLOBALS['config']['api']['website']['pagesize'], 0, $field, 0);
+            $res = (new \app\common\model\Website())->listData($where, $order, ($this->_param['pg'] ?? null), $GLOBALS['config']['api']['website']['pagesize'], 0, $field, 0);
 
             if ($res['code'] > 1) {
                 echo $res['msg'];
@@ -967,14 +967,14 @@ class Provide extends Base
                     $v["website_pic"] = $GLOBALS['config']['api']['website']['imgurl'] . $v["website_pic"];
                 }
 
-                if ($this->_param['ac'] == 'detail') {
+                if (($this->_param['ac'] ?? null) == 'detail') {
 
                 } else {
 
                 }
             }
 
-            if ($this->_param['ac'] != 'detail') {
+            if (($this->_param['ac'] ?? null) != 'detail') {
                 $class = [];
                 $typefilter = explode(',', $GLOBALS['config']['api']['website']['typefilter']);
 

@@ -1,5 +1,5 @@
 <div class="head_box show-mobile mobile-head ">
-    {if condition="$isSingleRow eq 1"}
+    {if condition="isset($isSingleRow) and $isSingleRow eq 1"}
     <div class="head_inner_mobile_toolbar">
         {include file="widget/head_inner_mobile_toolbar" /}
     </div>

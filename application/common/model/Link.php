@@ -24,9 +24,9 @@ class Link extends Base {
         if(!is_array($where)){
             $where = json_decode($where,true);
         }
-        $limit_str = ($limit * ($page-1) + $start) .",".$limit;
+        $offset = ($limit * ($page-1) + $start);
         $total = $this->where($where)->count();
-        $list = Db::name('Link')->where($where)->order($order)->limit($limit_str)->select();
+        $list = Db::name('Link')->where($where)->order($order)->limit($offset, $limit)->select()->toArray();
 
         return ['code'=>1,'msg'=>lang('data_list'),'page'=>$page,'pagecount'=>ceil($total/$limit),'limit'=>$limit,'total'=>$total,'list'=>$list];
     }
@@ -36,14 +36,15 @@ class Link extends Base {
         if (!is_array($lp)) {
             $lp = json_decode($lp, true);
         }
+        $lp = $lp ?? [];
 
-        $order = $lp['order'];
-        $by = $lp['by'];
-        $type = $lp['type'];
-        $start = abs(intval($lp['start']));
-        $num = abs(intval($lp['num']));
-        $cachetime = $lp['cachetime'];
-        $not = $lp['not'];
+        $order = ($lp['order'] ?? null);
+        $by = ($lp['by'] ?? null);
+        $type = ($lp['type'] ?? null);
+        $start = abs(intval(($lp['start'] ?? null)));
+        $num = abs(intval(($lp['num'] ?? null)));
+        $cachetime = (int)($lp['cachetime'] ?? 0);
+        $not = ($lp['not'] ?? null);
         $page = 1;
         $where = [];
 
@@ -73,7 +74,7 @@ class Link extends Base {
         $cach_name = $GLOBALS['config']['app']['cache_flag']. '_' . md5('link_listcache_'.join('&',$where).'_'.$order.'_'.$page.'_'.$num.'_'.$start);
         $res = Cache::get($cach_name);
         if(empty($cachetime)){
-            $cachetime = $GLOBALS['config']['app']['cache_time'];
+            $cachetime = (int)$GLOBALS['config']['app']['cache_time'];
         }
         if($GLOBALS['config']['app']['cache_core']==0 || empty($res)) {
             $res = $this->listData($where, $order, $page, $num, $start);

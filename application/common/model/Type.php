@@ -31,14 +31,12 @@ class Type extends Base {
         if(!is_array($where)){
             $where = json_decode($where,true);
         }
-        $limit_str = ($limit * (1-1) + $start) .",".$limit;
+        $offset = ($limit * (1-1) + $start);
+        $total = 0;
         if($totalshow==1) {
             $total = $this->where($where)->count();
         }
-        else{
-
-        }
-        $tmp = Db::name('Type')->where($where)->order($order)->limit($limit_str)->select();
+        $tmp = Db::name('Type')->where($where)->order($order)->limit($offset, $limit)->select();
 
         $list = [];
         $childs=[];
@@ -56,10 +54,10 @@ class Type extends Base {
                         $type_list = (new \app\common\model\Type())->getCache('type_list');
                         $rc=true;
                     }
-                    $list[$k]['childids'] = $type_list[$v['type_id']]['childids'];
+                    $list[$k]['childids'] = $type_list[$v['type_id']]['childids'] ?? '';
                 }
                 else {
-                    $list[$k]['childids'] = join(',', (array)$childs[$v['type_id']]);
+                    $list[$k]['childids'] = join(',', (array)($childs[$v['type_id']] ?? []));
                 }
             }
             else {
@@ -86,19 +84,20 @@ class Type extends Base {
         if (!is_array($lp)) {
             $lp = json_decode($lp, true);
         }
+        $lp = $lp ?? [];
 
-        $order = $lp['order'];
-        $by = $lp['by'];
-        $mid = $lp['mid'];
-        $ids = $lp['ids'];
-        $names = $lp['names'];
-        $parent = $lp['parent'];
-        $format = $lp['format'];
-        $flag = $lp['flag'];
-        $start = abs(intval($lp['start']));
-        $num = abs(intval($lp['num']));
-        $cachetime = $lp['cachetime'];
-        $not = $lp['not'];
+        $order = ($lp['order'] ?? null);
+        $by = ($lp['by'] ?? null);
+        $mid = ($lp['mid'] ?? null);
+        $ids = ($lp['ids'] ?? null);
+        $names = ($lp['names'] ?? null);
+        $parent = ($lp['parent'] ?? null);
+        $format = ($lp['format'] ?? null);
+        $flag = ($lp['flag'] ?? null);
+        $start = abs(intval(($lp['start'] ?? null)));
+        $num = abs(intval(($lp['num'] ?? null)));
+        $cachetime = (int)($lp['cachetime'] ?? 0);
+        $not = ($lp['not'] ?? null);
         $page=1;
         $where = [];
 
@@ -197,7 +196,7 @@ class Type extends Base {
         $cach_name = $GLOBALS['config']['app']['cache_flag']. '_' .md5('type_listcache_'.http_build_query($where).'_'.$order.'_'.$num.'_'.$start);
         $res = Cache::get($cach_name);
         if(empty($cachetime)){
-            $cachetime = $GLOBALS['config']['app']['cache_time'];
+            $cachetime = (int)$GLOBALS['config']['app']['cache_time'];
         }
         if($GLOBALS['config']['app']['cache_core']==0 || empty($res)) {
             $res = $this->listData($where,$order,$format,$mid,$num,$start,0);
@@ -283,13 +282,13 @@ class Type extends Base {
             return ['code'=>1002,'msg'=>lang('save_err').'：'.$this->getError() ];
         }
 
-        $this->setCache();
+        $this->rebuildCache();
         return ['code'=>1,'msg'=>lang('save_ok')];
     }
 
     public function delData($where)
     {
-        $list = $this->where($where)->select();
+        $list = $this->where($where)->select()->toArray();
         foreach($list as $k=>$v){
             $where2=[];
             $where2['type_id|type_id_1'] = $v['type_id'];
@@ -305,7 +304,7 @@ class Type extends Base {
             return ['code'=>1001,'msg'=>lang('del_err').'：'.$this->getError() ];
         }
 
-        $this->setCache();
+        $this->rebuildCache();
         return ['code'=>1,'msg'=>lang('del_ok')];
     }
 
@@ -324,13 +323,13 @@ class Type extends Base {
             return ['code'=>1002,'msg'=>lang('set_err').'：'.$this->getError() ];
         }
 
-        $this->setCache();
+        $this->rebuildCache();
         return ['code'=>1,'msg'=>lang('set_ok')];
     }
 
     public function moveData($where,$val)
     {
-        $list = $this->where($where)->select();
+        $list = $this->where($where)->select()->toArray();
         $type_info = $this->getCacheInfo($val);
         if(empty($type_info)){
             return ['code'=>1011,'msg'=>lang('model/type/to_info_err')];
@@ -350,7 +349,7 @@ class Type extends Base {
         return ['code'=>1,'msg'=>lang('model/type/move_ok')];
     }
 
-    public function setCache()
+    public function rebuildCache()
     {
         $res = $this->listData([],'type_id asc');
         $list = $res['list'];
@@ -367,7 +366,7 @@ class Type extends Base {
         $key = $GLOBALS['config']['app']['cache_flag']. '_'.$flag;
         $cache = Cache::get($key);
         if(empty($cache)){
-            $this->setCache();
+            $this->rebuildCache();
             $cache = Cache::get($key);
         }
         return $cache;
@@ -377,7 +376,7 @@ class Type extends Base {
     {
         $type_list = $this->getCache('type_list');
         if(is_numeric($id)) {
-            return $type_list[$id];
+            return $type_list[$id] ?? null;
         }
         else{
 

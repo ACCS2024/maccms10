@@ -29,11 +29,11 @@ class Visit extends Base {
         if(!is_array($where)){
             $where = json_decode($where,true);
         }
-        $limit_str = ($limit * ($page-1) + $start) .",".$limit;
+        $offset = ($limit * ($page-1) + $start);
         if($totalshow==1) {
             $total = $this->where($where)->count();
         }
-        $list = Db::name('Visit')->field($field)->where($where)->order($order)->limit($limit_str)->select();
+        $list = Db::name('Visit')->field($field)->where($where)->order($order)->limit($offset, $limit)->select()->toArray();
         foreach($list as $k=>$v){
             $visit_mid = 6;
             if($v['user_id']==0){

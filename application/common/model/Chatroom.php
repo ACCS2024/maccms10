@@ -32,9 +32,9 @@ class Chatroom extends Base {
             $where = json_decode($where, true);
         }
 
-        $limit_str = ($limit * ($page - 1) + $start) . "," . $limit;
+        $offset = ($limit * ($page - 1) + $start);
         $total = $this->where($where)->count();
-        $list = Db::name('Chatroom')->field($field)->where($where)->order($order)->limit($limit_str)->select();
+        $list = Db::name('Chatroom')->field($field)->where($where)->order($order)->limit($offset, $limit)->select()->toArray();
 
         return ['code' => 1, 'msg' => lang('data_list'), 'page' => $page, 'pagecount' => ceil($total / $limit), 'limit' => $limit, 'total' => $total, 'list' => $list];
     }
@@ -77,7 +77,7 @@ class Chatroom extends Base {
                 ->where($where)
                 ->order('chat_id ASC')
                 ->limit($limit)
-                ->select();
+                ->select()->toArray();
         } else {
             // 首次加载：获取最近 N 条，按 DESC 取再反转，确保看到最新消息
             $list = Db::name('Chatroom')
@@ -85,7 +85,7 @@ class Chatroom extends Base {
                 ->where($where)
                 ->order('chat_id DESC')
                 ->limit($limit)
-                ->select();
+                ->select()->toArray();
             // 反转为时间正序，前端按从旧到新显示
             if (!empty($list)) {
                 $list = array_reverse($list);

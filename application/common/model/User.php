@@ -78,7 +78,7 @@ class User extends Base
         $limit = $limit ? (int)$limit : 20;
         $start = $start ? (int)$start : 0;
         $total = $this->where($where)->count();
-        $list = Db::name('User')->where($where)->order($order)->page($page)->limit($limit)->select();
+        $list = Db::name('User')->where($where)->order($order)->page($page)->limit($limit)->select()->toArray();
         return ['code' => 1, 'msg' => lang('data_list'), 'page' => $page, 'pagecount' => ceil($total / $limit), 'limit' => $limit, 'total' => $total, 'list' => $list];
     }
 

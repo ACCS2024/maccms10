@@ -32,7 +32,7 @@ class AdminAuditLog extends Base
             $where = [];
         }
         $total = Db::name('AdminAuditLog')->where($where)->count();
-        $list = Db::name('AdminAuditLog')->where($where)->order($order)->page($page)->limit($limit)->select();
+        $list = Db::name('AdminAuditLog')->where($where)->order($order)->page($page)->limit($limit)->select()->toArray();
 
         return [
             'code'      => 1,

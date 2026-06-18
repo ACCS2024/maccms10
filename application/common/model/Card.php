@@ -32,7 +32,7 @@ class Card extends Base {
         $page = $page > 0 ? (int)$page : 1;
         $limit = $limit ? (int)$limit : 20;
         $total = $this->where($where)->count();
-        $list = Db::name('Card')->where($where)->order($order)->page($page)->limit($limit)->select();
+        $list = Db::name('Card')->where($where)->order($order)->page($page)->limit($limit)->select()->toArray();
         foreach($list as $k=>$v){
             if($v['user_id'] >0){
                 $user = (new \app\common\model\User())->infoData(['user_id'=>$v['user_id']]);

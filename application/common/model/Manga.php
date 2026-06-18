@@ -66,11 +66,11 @@ class Manga extends Base {
             unset($where['_string']);
         }
 
-        $limit_str = ($limit * ($page-1) + $start) .",". $limit;
+        $offset = ($limit * ($page-1) + $start);
         if($totalshow==1) {
             $total = $this->where($where)->count();
         }
-        $list = Db::name('Manga')->field($field)->where($where)->where($where2)->order($order)->limit($limit_str)->select();
+        $list = Db::name('Manga')->field($field)->where($where)->where($where2)->order($order)->limit($offset, $limit)->select()->toArray();
         //dump($where);die;
         //echo $this->getLastSql();die;
         //分类
@@ -104,7 +104,7 @@ class Manga extends Base {
             $where = json_decode($where,true);
         }
         $where = $this->mergeRecycleWhere($where);
-        $limit_str = ($limit * ($page-1) + $start) .",". $limit;
+        $offset = ($limit * ($page-1) + $start);
 
         $total = $this
             ->join('tmpmanga t','t.name1 = manga_name')
@@ -116,8 +116,8 @@ class Manga extends Base {
             ->field($field)
             ->where($where)
             ->order($order)
-            ->limit($limit_str)
-            ->select();
+            ->limit($offset, $limit)
+            ->select()->toArray();
 
         //dump($where);die;
         //echo $this->getLastSql();die;
@@ -149,33 +149,34 @@ class Manga extends Base {
         if (!is_array($lp)) {
             $lp = json_decode($lp, true);
         }
+        $lp = $lp ?? [];
 
-        $order = $lp['order'];
-        $by = $lp['by'];
-        $type = $lp['type'];
-        $ids = $lp['ids'];
-        $rel = $lp['rel'];
-        $paging = $lp['paging'];
-        $pageurl = $lp['pageurl'];
-        $level = $lp['level'];
-        $wd = $lp['wd'];
-        $tag = $lp['tag'];
-        $class = $lp['class'];
-        $letter = $lp['letter'];
-        $start = abs(intval($lp['start']));
-        $num = abs(intval($lp['num']));
-        $half = abs(intval($lp['half']));
-        $timeadd = $lp['timeadd'];
-        $timehits = $lp['timehits'];
-        $time = $lp['time'];
-        $hitsmonth = $lp['hitsmonth'];
-        $hitsweek = $lp['hitsweek'];
-        $hitsday = $lp['hitsday'];
-        $hits = $lp['hits'];
-        $not = $lp['not'];
-        $cachetime = $lp['cachetime'];
-        $typenot = $lp['typenot'];
-        $name = $lp['name'];
+        $order = ($lp['order'] ?? null);
+        $by = ($lp['by'] ?? null);
+        $type = ($lp['type'] ?? null);
+        $ids = ($lp['ids'] ?? null);
+        $rel = ($lp['rel'] ?? null);
+        $paging = ($lp['paging'] ?? null);
+        $pageurl = ($lp['pageurl'] ?? null);
+        $level = ($lp['level'] ?? null);
+        $wd = ($lp['wd'] ?? null);
+        $tag = ($lp['tag'] ?? null);
+        $class = ($lp['class'] ?? null);
+        $letter = ($lp['letter'] ?? null);
+        $start = abs(intval(($lp['start'] ?? null)));
+        $num = abs(intval(($lp['num'] ?? null)));
+        $half = abs(intval(($lp['half'] ?? null)));
+        $timeadd = ($lp['timeadd'] ?? null);
+        $timehits = ($lp['timehits'] ?? null);
+        $time = ($lp['time'] ?? null);
+        $hitsmonth = ($lp['hitsmonth'] ?? null);
+        $hitsweek = ($lp['hitsweek'] ?? null);
+        $hitsday = ($lp['hitsday'] ?? null);
+        $hits = ($lp['hits'] ?? null);
+        $not = ($lp['not'] ?? null);
+        $cachetime = (int)($lp['cachetime'] ?? 0);
+        $typenot = ($lp['typenot'] ?? null);
+        $name = ($lp['name'] ?? null);
         $page = 1;
         $where = [];
         $totalshow=0;
@@ -425,7 +426,7 @@ class Manga extends Base {
         $cach_name = $GLOBALS['config']['app']['cache_flag']. '_' .md5('manga_listcache_'.http_build_query($where_cache).'_'.$order_cache_key.'_'.$page.'_'.$num.'_'.$start.'_'.$pageurl);
         $res = $use_rnd_order ? null : Cache::get($cach_name);
         if(empty($cachetime)){
-            $cachetime = $GLOBALS['config']['app']['cache_time'];
+            $cachetime = (int)$GLOBALS['config']['app']['cache_time'];
         }
         // 防击穿:可缓存且未命中时,单飞收敛并发回源(抢锁失败者短等他人结果,超时再自行回源)
         $sf_lock = false;
@@ -513,11 +514,11 @@ class Manga extends Base {
         }
 
         $key = 'manga_detail_'.$data['manga_id'];
-        Cache::rm($key);
+        Cache::delete($key);
         $key = 'manga_detail_'.$data['manga_en'];
-        Cache::rm($key);
+        Cache::delete($key);
         $key = 'manga_detail_'.$data['manga_id'].'_'.$data['manga_en'];
-        Cache::rm($key);
+        Cache::delete($key);
 
 
         $type_list = (new \app\common\model\Type())->getCache('type_list');
@@ -674,12 +675,12 @@ class Manga extends Base {
             return ['code'=>1001,'msg'=>lang('set_err').'：'.$this->getError() ];
         }
 
-        $list = $this->field('manga_id,manga_name,manga_en')->where($where)->select();
+        $list = $this->field('manga_id,manga_name,manga_en')->where($where)->select()->toArray();
         foreach($list as $k=>$v){
             $key = 'manga_detail_'.$v['manga_id'];
-            Cache::rm($key);
+            Cache::delete($key);
             $key = 'manga_detail_'.$v['manga_en'];
-            Cache::rm($key);
+            Cache::delete($key);
         }
 
         return ['code'=>1,'msg'=>lang('set_ok')];

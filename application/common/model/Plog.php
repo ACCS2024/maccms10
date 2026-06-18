@@ -24,9 +24,9 @@ class Plog extends Base {
         if(!is_array($where)){
             $where = json_decode($where,true);
         }
-        $limit_str = ($limit * ($page-1) + $start) .",".$limit;
+        $offset = ($limit * ($page-1) + $start);
         $total = $this->where($where)->count();
-        $list = Db::name('Plog')->where($where)->order($order)->limit($limit_str)->select();
+        $list = Db::name('Plog')->where($where)->order($order)->limit($offset, $limit)->select()->toArray();
 
         $user_ids=[];
         foreach($list as $k=>&$v){

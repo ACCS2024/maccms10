@@ -35,11 +35,11 @@ class Comment extends Base {
         if(!is_array($where)){
             $where = json_decode($where,true);
         }
-        $limit_str = ($limit * ($page-1) + $start) .",".$limit;
+        $offset = ($limit * ($page-1) + $start);
         if($totalshow==1) {
             $total = $this->where($where)->count();
         }
-        $list = Db::name('Comment')->field($field)->where($where)->order($order)->limit($limit_str)->select();
+        $list = Db::name('Comment')->field($field)->where($where)->order($order)->limit($offset, $limit)->select()->toArray();
 
         $user_ids=[];
         foreach($list as $k=>$v){
@@ -108,18 +108,19 @@ class Comment extends Base {
         if (!is_array($lp)) {
             $lp = json_decode($lp, true);
         }
+        $lp = $lp ?? [];
 
-        $order = $lp['order'];
-        $by = $lp['by'];
-        $paging = $lp['paging'];
-        $start = abs(intval($lp['start']));
-        $num = abs(intval($lp['num']));
-        $rid = abs(intval($lp['rid']));
-        $pid = abs(intval($lp['pid']));
-        $mid = abs(intval($lp['mid']));
-        $uid = abs(intval($lp['uid']));
-        $half = abs(intval($lp['half']));
-        $pageurl = $lp['pageurl'];
+        $order = ($lp['order'] ?? null);
+        $by = ($lp['by'] ?? null);
+        $paging = ($lp['paging'] ?? null);
+        $start = abs(intval(($lp['start'] ?? null)));
+        $num = abs(intval(($lp['num'] ?? null)));
+        $rid = abs(intval(($lp['rid'] ?? null)));
+        $pid = abs(intval(($lp['pid'] ?? null)));
+        $mid = abs(intval(($lp['mid'] ?? null)));
+        $uid = abs(intval(($lp['uid'] ?? null)));
+        $half = abs(intval(($lp['half'] ?? null)));
+        $pageurl = ($lp['pageurl'] ?? null);
         $page = 1;
         $where = [];
 

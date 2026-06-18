@@ -68,7 +68,7 @@ class All extends Controller
      */
     protected function page_cache_key($tpl)
     {
-        return $_SERVER['HTTP_HOST']. '_'. MAC_MOB . '_'. $GLOBALS['config']['app']['cache_flag']. '_' .$tpl .'_'. http_build_query(mac_param_url());
+        return ($_SERVER['HTTP_HOST'] ?? '') . '_'. MAC_MOB . '_'. $GLOBALS['config']['app']['cache_flag']. '_' .$tpl .'_'. http_build_query(mac_param_url());
     }
 
     protected function label_fetch($tpl,$loadcache=1,$type='html')
@@ -127,8 +127,13 @@ polyfill;
         $maccms['actor_extend_area'] = $GLOBALS['config']['app']['actor_extend_area'];
 
         $maccms['http_type'] = $GLOBALS['http_type'];
-        $maccms['http_url'] = $GLOBALS['http_type']. ''.$_SERVER['SERVER_NAME'].($_SERVER["SERVER_PORT"]==80 ? '' : ':'.$_SERVER["SERVER_PORT"]).$_SERVER["REQUEST_URI"];
+        $maccms['http_url'] = $GLOBALS['http_type'] . ($_SERVER['SERVER_NAME'] ?? '') . ((($_SERVER['SERVER_PORT'] ?? 80) == 80) ? '' : ':' . ($_SERVER['SERVER_PORT'] ?? 80)) . ($_SERVER['REQUEST_URI'] ?? '');
         $maccms['seo'] = $GLOBALS['config']['seo'];
+        $GLOBALS['type_id'] = $GLOBALS['type_id'] ?? 0;
+        $GLOBALS['type_pid'] = $GLOBALS['type_pid'] ?? 0;
+        $GLOBALS['aid'] = $GLOBALS['aid'] ?? 0;
+        $GLOBALS['mid'] = $GLOBALS['mid'] ?? 0;
+        $this->assign('param', mac_param_url());
         $maccms['controller_action'] = $this->_cl .'/'.$this->_ac;
 
         if(!empty($GLOBALS['mid'])) {

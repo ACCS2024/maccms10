@@ -46,12 +46,12 @@ class Website extends Base {
             unset($where['_string']);
         }
 
-        $limit_str = ($limit * ($page-1) + $start) .",".$limit;
+        $offset = ($limit * ($page-1) + $start);
         $total = 0;
         if($totalshow==1) {
             $total = $this->where($where)->count();
         }
-        $list = Db::name('Website')->field($field)->where($where)->where($where2)->orderRaw($order)->limit($limit_str)->select();
+        $list = Db::name('Website')->field($field)->where($where)->where($where2)->orderRaw($order)->limit($offset, $limit)->select()->toArray();
         //分类
         $type_list = (new \app\common\model\Type())->getCache('type_list');
         //用户组
@@ -79,7 +79,7 @@ class Website extends Base {
         if(!is_array($where)){
             $where = json_decode($where,true);
         }
-        $limit_str = ($limit * ($page-1) + $start) .",".$limit;
+        $offset = ($limit * ($page-1) + $start);
 
         $total = $this
             ->join('tmpwebsite t','t.name1 = website_name')
@@ -91,8 +91,8 @@ class Website extends Base {
             ->field($field)
             ->where($where)
             ->order($order)
-            ->limit($limit_str)
-            ->select();
+            ->limit($offset, $limit)
+            ->select()->toArray();
 
         //dump($where);die;
         //echo $this->getLastSql();die;
@@ -122,38 +122,39 @@ class Website extends Base {
         if (!is_array($lp)) {
             $lp = json_decode($lp, true);
         }
+        $lp = $lp ?? [];
 
-        $order = $lp['order'];
-        $by = $lp['by'];
-        $type = $lp['type'];
-        $ids = $lp['ids'];
-        $paging = $lp['paging'];
-        $pageurl = $lp['pageurl'];
-        $level = $lp['level'];
-        $wd = $lp['wd'];
-        $tag = $lp['tag'];
-        $class = $lp['class'];
-        $name = $lp['name'];
-        $area = $lp['area'];
-        $lang = $lp['lang'];
-        $letter = $lp['letter'];
-        $start = abs(intval($lp['start']));
-        $num = abs(intval($lp['num']));
-        $half = abs(intval($lp['half']));
-        $timeadd = $lp['timeadd'];
-        $timehits = $lp['timehits'];
-        $time = $lp['time'];
-        $hitsmonth = $lp['hitsmonth'];
-        $hitsweek = $lp['hitsweek'];
-        $hitsday = $lp['hitsday'];
-        $hits = $lp['hits'];
-        $not = $lp['not'];
-        $cachetime = $lp['cachetime'];
-        $typenot = $lp['typenot'];
-        $refermonth = $lp['refermonth'];
-        $referweek = $lp['referweek'];
-        $referday = $lp['referday'];
-        $refer = $lp['refer'];
+        $order = ($lp['order'] ?? null);
+        $by = ($lp['by'] ?? null);
+        $type = ($lp['type'] ?? null);
+        $ids = ($lp['ids'] ?? null);
+        $paging = ($lp['paging'] ?? null);
+        $pageurl = ($lp['pageurl'] ?? null);
+        $level = ($lp['level'] ?? null);
+        $wd = ($lp['wd'] ?? null);
+        $tag = ($lp['tag'] ?? null);
+        $class = ($lp['class'] ?? null);
+        $name = ($lp['name'] ?? null);
+        $area = ($lp['area'] ?? null);
+        $lang = ($lp['lang'] ?? null);
+        $letter = ($lp['letter'] ?? null);
+        $start = abs(intval(($lp['start'] ?? null)));
+        $num = abs(intval(($lp['num'] ?? null)));
+        $half = abs(intval(($lp['half'] ?? null)));
+        $timeadd = ($lp['timeadd'] ?? null);
+        $timehits = ($lp['timehits'] ?? null);
+        $time = ($lp['time'] ?? null);
+        $hitsmonth = ($lp['hitsmonth'] ?? null);
+        $hitsweek = ($lp['hitsweek'] ?? null);
+        $hitsday = ($lp['hitsday'] ?? null);
+        $hits = ($lp['hits'] ?? null);
+        $not = ($lp['not'] ?? null);
+        $cachetime = (int)($lp['cachetime'] ?? 0);
+        $typenot = ($lp['typenot'] ?? null);
+        $refermonth = ($lp['refermonth'] ?? null);
+        $referweek = ($lp['referweek'] ?? null);
+        $referday = ($lp['referday'] ?? null);
+        $refer = ($lp['refer'] ?? null);
 
         $page = 1;
         $where = [];
@@ -437,7 +438,7 @@ class Website extends Base {
         $cach_name = $GLOBALS['config']['app']['cache_flag']. '_' .md5('website_listcache_'.http_build_query($where_cache).'_'.$order_cache_key.'_'.$page.'_'.$num.'_'.$start.'_'.$pageurl);
         $res = $use_rnd_order ? null : Cache::get($cach_name);
         if(empty($cachetime)){
-            $cachetime = $GLOBALS['config']['app']['cache_time'];
+            $cachetime = (int)$GLOBALS['config']['app']['cache_time'];
         }
         if($GLOBALS['config']['app']['cache_core']==0 || empty($res)) {
             if ($meili !== null) {
@@ -501,11 +502,11 @@ class Website extends Base {
         }
 
         $key = 'website_detail_'.$data['website_id'];
-        Cache::rm($key);
+        Cache::delete($key);
         $key = 'website_detail_'.$data['website_en'];
-        Cache::rm($key);
+        Cache::delete($key);
         $key = 'website_detail_'.$data['website_id'].'_'.$data['website_en'];
-        Cache::rm($key);
+        Cache::delete($key);
 
         $type_list = (new \app\common\model\Type())->getCache('type_list');
         $type_info = $type_list[$data['type_id']];
@@ -611,12 +612,12 @@ class Website extends Base {
             return ['code'=>1001,'msg'=>lang('set_err').'：'.$this->getError() ];
         }
 
-        $list = $this->field('website_id,website_name,website_en')->where($where)->select();
+        $list = $this->field('website_id,website_name,website_en')->where($where)->select()->toArray();
         foreach($list as $k=>$v){
             $key = 'website_detail_'.$v['website_id'];
-            Cache::rm($key);
+            Cache::delete($key);
             $key = 'website_detail_'.$v['website_en'];
-            Cache::rm($key);
+            Cache::delete($key);
         }
 
         return ['code'=>1,'msg'=>lang('set_ok')];

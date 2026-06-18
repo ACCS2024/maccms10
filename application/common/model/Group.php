@@ -81,7 +81,7 @@ class Group extends Base {
         if(false === $res){
             return ['code'=>1002,'msg'=>lang('save_err').'：'.$this->getError() ];
         }
-        $this->setCache();
+        $this->rebuildCache();
         return ['code'=>1,'msg'=>lang('save_ok')];
     }
 
@@ -95,7 +95,7 @@ class Group extends Base {
         if($res===false){
             return ['code'=>1001,'msg'=>lang('del_err').'：'.$this->getError() ];
         }
-        $this->setCache();
+        $this->rebuildCache();
         return ['code'=>1,'msg'=>lang('del_ok')];
     }
 
@@ -111,11 +111,11 @@ class Group extends Base {
         if($res===false){
             return ['code'=>1001,'msg'=>lang('set_err').'：'.$this->getError() ];
         }
-        $this->setCache();
+        $this->rebuildCache();
         return ['code'=>1,'msg'=>lang('set_ok')];
     }
 
-    public function setCache()
+    public function rebuildCache()
     {
         $res = $this->listData([],'group_id asc');
         $list = $res['list'];
@@ -123,7 +123,7 @@ class Group extends Base {
         Cache::set($key,$list);
 
         $vip_key = ($GLOBALS['config']['app']['cache_flag'] ?? 'maccms') . '_vip_exclusive_type_ids';
-        Cache::rm($vip_key);
+        Cache::delete($vip_key);
     }
 
     public function getCache($flag='group_list')
@@ -131,7 +131,7 @@ class Group extends Base {
         $key = $GLOBALS['config']['app']['cache_flag']. '_'.$flag;
         $cache = Cache::get($key);
         if(empty($cache)){
-            $this->setCache();
+            $this->rebuildCache();
             $cache = Cache::get($key);
         }
         return $cache;

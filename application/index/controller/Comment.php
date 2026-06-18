@@ -168,7 +168,7 @@ class Comment extends Base
         }
         $where = [];
         $where['comment_id'] = $id;
-        (new \app\common\model\comment())->where($where)->setInc('comment_report');
+        (new \app\common\model\Comment())->where($where)->setInc('comment_report');
         cookie($cookie, 't', $GLOBALS['config']['comment']['timespan']);
 
         return json(['code'=>1,'msg'=>lang('opt_ok')]);

@@ -132,7 +132,7 @@ class VodSearch extends Base {
             $cach_name = 'vod_search_top_result_v2_' . $this->updateTopCount;
             $list = $force ? [] : Cache::get($cach_name);
             if (empty($list)) {
-                $list = $this->field("search_key, search_word, search_field")->order("search_hit_count DESC, search_last_hit_time DESC")->limit("0," . $this->updateTopCount)->select();
+                $list = $this->field("search_key, search_word, search_field")->order("search_hit_count DESC, search_last_hit_time DESC")->limit("0," . $this->updateTopCount)->select()->toArray();
                 $force === false && Cache::set($cach_name, $list, count($list) < ($this->updateTopCount / 10) ? 3600 : 86400);
                 $this->clearOldResult();
             }

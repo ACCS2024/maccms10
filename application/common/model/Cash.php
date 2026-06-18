@@ -24,9 +24,9 @@ class Cash extends Base {
         if(!is_array($where)){
             $where = json_decode($where,true);
         }
-        $limit_str = ($limit * ($page-1) + $start) .",".$limit;
+        $offset = ($limit * ($page-1) + $start);
         $total = $this->where($where)->count();
-        $list = Db::name('Cash')->where($where)->order($order)->limit($limit_str)->select();
+        $list = Db::name('Cash')->where($where)->order($order)->limit($offset, $limit)->select()->toArray();
 
         $user_ids=[];
         foreach($list as $k=>&$v){
@@ -119,7 +119,7 @@ class Cash extends Base {
 
     public function delData($where)
     {
-        $list = $this->where($where)->select();
+        $list = $this->where($where)->select()->toArray();
 
         foreach($list as $k=>$v){
             $where=[];
@@ -167,7 +167,7 @@ class Cash extends Base {
 
     public function auditData($where)
     {
-        $list = $this->where($where)->select();
+        $list = $this->where($where)->select()->toArray();
         foreach($list as $k=>$v){
             $where2=[];
             $where2['user_id'] = $v['user_id'];

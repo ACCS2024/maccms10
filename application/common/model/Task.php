@@ -23,9 +23,9 @@ class Task extends Base {
         if (!is_array($where)) {
             $where = json_decode($where, true);
         }
-        $limit_str = ($limit * ($page - 1) + $start) . "," . $limit;
+        $offset = ($limit * ($page - 1) + $start);
         $total = $this->where($where)->count();
-        $list = Db::name('Task')->field($field)->where($where)->order($order)->limit($limit_str)->select();
+        $list = Db::name('Task')->field($field)->where($where)->order($order)->limit($offset, $limit)->select()->toArray();
         return ['code' => 1, 'msg' => lang('data_list'), 'page' => $page, 'pagecount' => ceil($total / $limit), 'limit' => $limit, 'total' => $total, 'list' => $list];
     }
 
@@ -88,7 +88,7 @@ class Task extends Base {
     public function getActiveTasks()
     {
         $where = ['task_status' => 1];
-        $list = Db::name('Task')->where($where)->order('task_type asc, task_sort asc')->select();
+        $list = Db::name('Task')->where($where)->order('task_type asc, task_sort asc')->select()->toArray();
         $daily = [];
         $newbie = [];
         foreach ($list as $v) {

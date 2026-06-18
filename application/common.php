@@ -564,7 +564,7 @@ function mac_convert_encoding($str,$nfate,$ofate){
 
 function mac_get_refer()
 {
-    return trim(urldecode($_SERVER["HTTP_REFERER"]));
+    return trim(urldecode($_SERVER["HTTP_REFERER"] ?? ''));
 }
 
 function mac_extends_list($flag)
@@ -1753,24 +1753,24 @@ function mac_get_client_ip()
         return $final;
     }
     $ips = [];
-    if (!empty($_SERVER['HTTP_CF_CONNECTING_IP'])) {
-        $ips[] = $_SERVER['HTTP_CF_CONNECTING_IP'];
+    if (!empty($_SERVER['HTTP_CF_CONNECTING_IP'] ?? '')) {
+        $ips[] = $_SERVER['HTTP_CF_CONNECTING_IP'] ?? '';
     }
-    if (!empty($_SERVER['HTTP_ALI_CDN_REAL_IP'])) {
-        $ips[] = $_SERVER['HTTP_ALI_CDN_REAL_IP'];
+    if (!empty($_SERVER['HTTP_ALI_CDN_REAL_IP'] ?? '')) {
+        $ips[] = $_SERVER['HTTP_ALI_CDN_REAL_IP'] ?? '';
     }
-    if (!empty($_SERVER['HTTP_CLIENT_IP'])) {
-        $ips[] = $_SERVER['HTTP_CLIENT_IP'];
+    if (!empty($_SERVER['HTTP_CLIENT_IP'] ?? '')) {
+        $ips[] = $_SERVER['HTTP_CLIENT_IP'] ?? '';
     }
-    if (!empty($_SERVER['HTTP_PROXY_USER'])) {
-        $ips[] = $_SERVER['HTTP_PROXY_USER'];
+    if (!empty($_SERVER['HTTP_PROXY_USER'] ?? '')) {
+        $ips[] = $_SERVER['HTTP_PROXY_USER'] ?? '';
     }
     $real_ip = getenv('HTTP_X_REAL_IP');
     if (!empty($real_ip)) {
         $ips[] = $real_ip;
     }
-    if (!empty($_SERVER['REMOTE_ADDR'])) {
-        $ips[] = $_SERVER['REMOTE_ADDR'];
+    if (!empty($_SERVER['REMOTE_ADDR'] ?? '')) {
+        $ips[] = $_SERVER['REMOTE_ADDR'] ?? '';
     }
     // 选第一个最合法的，或最后一个正常的IP
     foreach ($ips as $ip) {
@@ -1912,7 +1912,7 @@ function mac_get_mid_code($data)
         11 => 'website',
         12 => 'manga',
     ];
-    return $arr[$data];
+    return $arr[$data] ?? '';
 }
 function mac_get_mid_text($data)
 {
@@ -1930,7 +1930,7 @@ function mac_get_mid_text($data)
         11 => lang('website'),
         12 => lang('manga'),
     ];
-    return $arr[$data];
+    return $arr[$data] ?? '';
 }
 function mac_get_mid($controller)
 {
@@ -1949,7 +1949,7 @@ function mac_get_mid($controller)
         'website' => 11,
         'manga'   => 12,
     ];
-    return $arr[$controller];
+    return $arr[$controller] ?? 0;
 }
 
 /**
@@ -2599,45 +2599,45 @@ function mac_param_url(){
     $param = [];
     $tmp = $_REQUEST;
     
-    $input = array_merge($input,$tmp);
-    //$param['id'] = intval($input['id']);
-    $param['page'] = intval($input['page']) <1 ? 1 : intval($input['page']);
-    $param['ajax'] = intval($input['ajax']);
-    $param['tid'] = intval($input['tid']);
-    $param['mid'] = intval($input['mid']);
-    $param['rid'] = intval($input['rid']);
-    $param['pid'] = intval($input['pid']);
-    $param['sid'] = intval($input['sid']);
-    $param['nid'] = intval($input['nid']);
-    $param['uid'] = intval($input['uid']);
-    $param['level'] = intval($input['level']);
-    $param['score'] = intval($input['score']);
-    $param['limit'] = intval($input['limit']);
+    $input = array_merge($input, $tmp);
+    //$param['id'] = intval($input['id'] ?? 0);
+    $param['page'] = intval($input['page'] ?? 0) < 1 ? 1 : intval($input['page'] ?? 0);
+    $param['ajax'] = intval($input['ajax'] ?? 0);
+    $param['tid'] = intval($input['tid'] ?? 0);
+    $param['mid'] = intval($input['mid'] ?? 0);
+    $param['rid'] = intval($input['rid'] ?? 0);
+    $param['pid'] = intval($input['pid'] ?? 0);
+    $param['sid'] = intval($input['sid'] ?? 0);
+    $param['nid'] = intval($input['nid'] ?? 0);
+    $param['uid'] = intval($input['uid'] ?? 0);
+    $param['level'] = intval($input['level'] ?? 0);
+    $param['score'] = intval($input['score'] ?? 0);
+    $param['limit'] = intval($input['limit'] ?? 0);
 
-    $param['id'] = htmlspecialchars(urldecode(trim($input['id'])));
-    $param['ids'] = htmlspecialchars(urldecode(trim($input['ids'])));
-    $param['wd'] = htmlspecialchars(urldecode(trim($input['wd'])));
-    $param['en'] = htmlspecialchars(urldecode(trim($input['en'])));
-    $param['state'] = htmlspecialchars(urldecode(trim($input['state'])));
-    $param['area'] = htmlspecialchars(urldecode(trim($input['area'])));
-    $param['year'] = htmlspecialchars(urldecode(trim($input['year'])));
-    $param['lang'] = htmlspecialchars(urldecode(trim($input['lang'])));
-    $param['letter'] = htmlspecialchars(trim($input['letter']));
-    $param['actor'] = htmlspecialchars(urldecode(trim($input['actor'])));
-    $param['director'] = htmlspecialchars(urldecode(trim($input['director'])));
-    $param['tag'] = htmlspecialchars(urldecode(trim($input['tag'])));
-    $param['class'] = htmlspecialchars(urldecode(trim($input['class'])));
-    $param['order'] = htmlspecialchars(urldecode(trim($input['order'])));
-    $param['by'] = htmlspecialchars(urldecode(trim($input['by'])));
-    $param['file'] = htmlspecialchars(urldecode(trim($input['file'])));
-    $param['name'] = htmlspecialchars(urldecode(trim($input['name'])));
-    $param['url'] = htmlspecialchars(urldecode(trim($input['url'])));
-    $param['type'] = htmlspecialchars(urldecode(trim($input['type'])));
-    $param['sex'] = htmlspecialchars(urldecode(trim($input['sex'])));
-    $param['version'] = htmlspecialchars(urldecode(trim($input['version'])));
-    $param['blood'] = htmlspecialchars(urldecode(trim($input['blood'])));
-    $param['starsign'] = htmlspecialchars(urldecode(trim($input['starsign'])));
-    $param['domain'] = htmlspecialchars(urldecode(trim($input['domain'])));
+    $param['id'] = htmlspecialchars(urldecode(trim($input['id'] ?? '')));
+    $param['ids'] = htmlspecialchars(urldecode(trim($input['ids'] ?? '')));
+    $param['wd'] = htmlspecialchars(urldecode(trim($input['wd'] ?? '')));
+    $param['en'] = htmlspecialchars(urldecode(trim($input['en'] ?? '')));
+    $param['state'] = htmlspecialchars(urldecode(trim($input['state'] ?? '')));
+    $param['area'] = htmlspecialchars(urldecode(trim($input['area'] ?? '')));
+    $param['year'] = htmlspecialchars(urldecode(trim($input['year'] ?? '')));
+    $param['lang'] = htmlspecialchars(urldecode(trim($input['lang'] ?? '')));
+    $param['letter'] = htmlspecialchars(trim($input['letter'] ?? ''));
+    $param['actor'] = htmlspecialchars(urldecode(trim($input['actor'] ?? '')));
+    $param['director'] = htmlspecialchars(urldecode(trim($input['director'] ?? '')));
+    $param['tag'] = htmlspecialchars(urldecode(trim($input['tag'] ?? '')));
+    $param['class'] = htmlspecialchars(urldecode(trim($input['class'] ?? '')));
+    $param['order'] = htmlspecialchars(urldecode(trim($input['order'] ?? '')));
+    $param['by'] = htmlspecialchars(urldecode(trim($input['by'] ?? '')));
+    $param['file'] = htmlspecialchars(urldecode(trim($input['file'] ?? '')));
+    $param['name'] = htmlspecialchars(urldecode(trim($input['name'] ?? '')));
+    $param['url'] = htmlspecialchars(urldecode(trim($input['url'] ?? '')));
+    $param['type'] = htmlspecialchars(urldecode(trim($input['type'] ?? '')));
+    $param['sex'] = htmlspecialchars(urldecode(trim($input['sex'] ?? '')));
+    $param['version'] = htmlspecialchars(urldecode(trim($input['version'] ?? '')));
+    $param['blood'] = htmlspecialchars(urldecode(trim($input['blood'] ?? '')));
+    $param['starsign'] = htmlspecialchars(urldecode(trim($input['starsign'] ?? '')));
+    $param['domain'] = htmlspecialchars(urldecode(trim($input['domain'] ?? '')));
 
     return $param;
 }
@@ -2795,14 +2795,14 @@ function mac_url($model,$param=[],$info=[])
     // 静态生成模式标记（用于后续URL处理）
     $replace_from = ['{id}','{en}','{page}','{type_id}','{type_en}','{type_pid}','{type_pen}','{md5}','{year}','{month}','{day}','{sid}','{nid}'];
     $replace_to = [];
-    $page_sp = $config['path']['page_sp'];
+    $page_sp = ($config['path']['page_sp'] ?? '');
     $path = '';
 
 
     switch ($model)
     {
         case 'index/index':
-            if($config['view']['index'] == 2){
+            if(($config['view']['index'] ?? 0) == 2){
                 $path = 'index';
                 if(substr($path,strlen($path)-1,1)=='/'){
                     $path .= 'index';
@@ -2816,7 +2816,7 @@ function mac_url($model,$param=[],$info=[])
             }
             break;
         case 'map/index':
-            if($config['view']['map'] == 2){
+            if(($config['view']['map'] ?? 0) == 2){
                 $path = 'map';
                 if(substr($path,strlen($path)-1,1)=='/'){
                     $path .= 'index';
@@ -2827,7 +2827,7 @@ function mac_url($model,$param=[],$info=[])
             }
             break;
         case strpos($model,'rss/')!==false:
-            if($config['view']['rss'] == 2){
+            if(($config['view']['rss'] ?? 0) == 2){
                 $path = $model;
                 if($param['page'] !=''){
                     $path .= $page_sp . $param['page'];
@@ -2840,7 +2840,7 @@ function mac_url($model,$param=[],$info=[])
             }
             break;
         case strpos($model,'label/')!==false:
-            if($config['view']['label'] == 2){
+            if(($config['view']['label'] ?? 0) == 2){
                 $path = $model;
             }
             else{
@@ -2870,10 +2870,10 @@ function mac_url($model,$param=[],$info=[])
             break;
         case 'vod/type':
             $replace_to = [$info['type_id'],$info['type_en'],$param['page'],
-                $info['type_id'],$info['type']['type_en'],$info['type_1']['type_id'],$info['type_1']['type_en'],
+                $info['type_id'],($info['type']['type_en'] ?? ''),($info['type_1']['type_id'] ?? ''),($info['type_1']['type_en'] ?? ''),
             ];
-            if($config['view']['vod_type'] == 2){
-                $path = $config['path']['vod_type'];
+            if(($config['view']['vod_type'] ?? 0) == 2){
+                $path = ($config['path']['vod_type'] ?? '');
                 if(substr($path,strlen($path)-1,1)=='/'){
                     $path .= 'index';
                 }
@@ -2900,9 +2900,9 @@ function mac_url($model,$param=[],$info=[])
             break;
         case 'vod/detail':
             $replace_to = [$info['vod_id'],$info['vod_en'],'',
-                $info['type_id'],$info['type']['type_en'],$info['type_1']['type_id'],$info['type_1']['type_en']
+                $info['type_id'],($info['type']['type_en'] ?? ''),($info['type_1']['type_id'] ?? ''),($info['type_1']['type_en'] ?? '')
             ];
-            if($config['view']['vod_detail'] == 2){
+            if(($config['view']['vod_detail'] ?? 0) == 2){
                 $path = $config['path' ]['vod_detail'];
                 if(substr($path,strlen($path)-1,1)=='/'){
                     $path .= 'index';
@@ -2929,9 +2929,9 @@ function mac_url($model,$param=[],$info=[])
             break;
         case 'manga/detail':
             $replace_to = [$info['manga_id'],$info['manga_en'],'',
-                $info['type_id'],$info['type']['type_en'],$info['type_1']['type_id'],$info['type_1']['type_en']
+                $info['type_id'],($info['type']['type_en'] ?? ''),($info['type_1']['type_id'] ?? ''),($info['type_1']['type_en'] ?? '')
             ];
-            if($config['view']['manga_detail'] == 2){
+            if(($config['view']['manga_detail'] ?? 0) == 2){
                 $path = $config['path' ]['manga_detail'];
                 if(substr($path,strlen($path)-1,1)=='/'){
                     $path .= 'index';
@@ -2959,25 +2959,25 @@ function mac_url($model,$param=[],$info=[])
         case 'vod/play':
             $replace_to = [
                 $info['vod_id'],$info['vod_en'],'',
-                $info['type_id'],$info['type']['type_en'],$info['type_1']['type_id'],$info['type_1']['type_en'],
+                $info['type_id'],($info['type']['type_en'] ?? ''),($info['type_1']['type_id'] ?? ''),($info['type_1']['type_en'] ?? ''),
 
             ];
-            if($config['view']['vod_play'] >=2){
+            if(($config['view']['vod_play'] ?? 0) >=2){
                 $path = $config['path' ]['vod_play'];
                 if(substr($path,strlen($path)-1,1)=='/'){
                     $path .= 'index';
                 }
                 $replace_to[] = md5($info['vod_id']);
-                if($config['view']['vod_play'] ==2){
-                    $path.= '.'. $config['path']['suffix'];
+                if(($config['view']['vod_play'] ?? 0) ==2){
+                    $path.= '.'. ($config['path']['suffix'] ?? '');
                     $path .= '?'.$info['vod_id'] . '-' . $param['sid'] . '-' . $param['nid'] ;
                 }
-                elseif($config['view']['vod_play'] ==3){
-                    $path .= $config['path']['page_sp'] . $param['sid'] . $config['path']['page_sp'] . $param['nid'] ;
+                elseif(($config['view']['vod_play'] ?? 0) ==3){
+                    $path .= ($config['path']['page_sp'] ?? '') . $param['sid'] . ($config['path']['page_sp'] ?? '') . $param['nid'] ;
                 }
-                elseif($config['view']['vod_play'] ==4){
-                    $path .= $config['path']['page_sp'] .''. $param['sid'] . $config['path']['page_sp'] . '1';
-                    $path.= '.'. $config['path']['suffix'];
+                elseif(($config['view']['vod_play'] ?? 0) ==4){
+                    $path .= ($config['path']['page_sp'] ?? '') .''. $param['sid'] . ($config['path']['page_sp'] ?? '') . '1';
+                    $path.= '.'. ($config['path']['suffix'] ?? '');
                     $path .= '?'.$info['vod_id'] . '-' . $param['sid'] . '-' . $param['nid'] ;
                 }
             }
@@ -3001,20 +3001,20 @@ function mac_url($model,$param=[],$info=[])
         case 'manga/play':
             $replace_to = [
                 $info['manga_id'],$info['manga_en'],'',
-                $info['type_id'],$info['type']['type_en'],$info['type_1']['type_id'],$info['type_1']['type_en'],
+                $info['type_id'],($info['type']['type_en'] ?? ''),($info['type_1']['type_id'] ?? ''),($info['type_1']['type_en'] ?? ''),
             ];
-            if(isset($config['view']['manga_play']) && $config['view']['manga_play'] >= 2){
-                $path = $config['path']['manga_play'];
+            if(($config['view']['manga_play'] ?? 0) >= 2){
+                $path = ($config['path']['manga_play'] ?? '');
                 if(substr($path,strlen($path)-1,1)=='/'){
                     $path .= 'index';
                 }
                 $replace_to[] = md5($info['manga_id']);
-                if($config['view']['manga_play'] == 2){
-                    $path.= '.'.$config['path']['suffix'];
+                if(($config['view']['manga_play'] ?? 0) == 2){
+                    $path.= '.'.($config['path']['suffix'] ?? '');
                     $path .= '?'.$info['manga_id'].'-'.$param['sid'].'-'.$param['nid'];
                 }
-                elseif($config['view']['manga_play'] == 3){
-                    $path .= $config['path']['page_sp'].$param['sid'].$config['path']['page_sp'].$param['nid'];
+                elseif(($config['view']['manga_play'] ?? 0) == 3){
+                    $path .= ($config['path']['page_sp'] ?? '').$param['sid'].($config['path']['page_sp'] ?? '').$param['nid'];
                 }
             }else{
                 switch($config['rewrite']['manga_id'])
@@ -3036,24 +3036,24 @@ function mac_url($model,$param=[],$info=[])
         case 'vod/down':
             $replace_to = [
                 $info['vod_id'],$info['vod_en'],'',
-                $info['type_id'],$info['type']['type_en'],$info['type_1']['type_id'],$info['type_1']['type_en']
+                $info['type_id'],($info['type']['type_en'] ?? ''),($info['type_1']['type_id'] ?? ''),($info['type_1']['type_en'] ?? '')
             ];
-            if($config['view']['vod_down'] >= 2){
+            if(($config['view']['vod_down'] ?? 0) >= 2){
                 $path = $config['path' ]['vod_down'];
                 if(substr($path,strlen($path)-1,1)=='/'){
                     $path .= 'index';
                 }
                 $replace_to[] = md5($info['vod_id']);
-                if($config['view']['vod_down'] ==2){
-                    $path.= '.'. $config['path']['suffix'];
+                if(($config['view']['vod_down'] ?? 0) ==2){
+                    $path.= '.'. ($config['path']['suffix'] ?? '');
                     $path .= '?'.$info['vod_id'] . '-' . $param['sid'] . '-' . $param['nid'] ;
                 }
-                elseif($config['view']['vod_down'] ==3){
-                    $path .= $config['path']['page_sp'] . $param['sid'] . $config['path']['page_sp'] . $param['nid'] ;
+                elseif(($config['view']['vod_down'] ?? 0) ==3){
+                    $path .= ($config['path']['page_sp'] ?? '') . $param['sid'] . ($config['path']['page_sp'] ?? '') . $param['nid'] ;
                 }
-                elseif($config['view']['vod_down'] ==4){
-                    $path .= $config['path']['page_sp'] .''. $param['sid'] . $config['path']['page_sp'] . '1';
-                    $path.= '.'. $config['path']['suffix'];
+                elseif(($config['view']['vod_down'] ?? 0) ==4){
+                    $path .= ($config['path']['page_sp'] ?? '') .''. $param['sid'] . ($config['path']['page_sp'] ?? '') . '1';
+                    $path.= '.'. ($config['path']['suffix'] ?? '');
                     $path .= '?'.$info['vod_id'] . '-' . $param['sid'] . '-' . $param['nid'] ;
                 }
             }
@@ -3076,9 +3076,9 @@ function mac_url($model,$param=[],$info=[])
             break;
         case 'vod/role':
             $replace_to = [$info['vod_id'],$info['vod_en'],'',
-                $info['type_id'],$info['type']['type_en'],$info['type_1']['type_id'],$info['type_1']['type_en']
+                $info['type_id'],($info['type']['type_en'] ?? ''),($info['type_1']['type_id'] ?? ''),($info['type_1']['type_en'] ?? '')
             ];
-            if($config['view']['vod_role'] == 2){
+            if(($config['view']['vod_role'] ?? 0) == 2){
                 $path = $config['path' ]['vod_role'];
                 if(substr($path,strlen($path)-1,1)=='/'){
                     $path .= 'index';
@@ -3105,9 +3105,9 @@ function mac_url($model,$param=[],$info=[])
         case 'vod/plot':
             $replace_to = [
                 $info['vod_id'],$info['vod_en'],$param['page'],
-                $info['type_id'],$info['type']['type_en'],$info['type_1']['type_id'],$info['type_1']['type_en']
+                $info['type_id'],($info['type']['type_en'] ?? ''),($info['type_1']['type_id'] ?? ''),($info['type_1']['type_en'] ?? '')
             ];
-            if($config['view']['vod_plot'] == 2){
+            if(($config['view']['vod_plot'] ?? 0) == 2){
                 $path = $config['path' ]['vod_plot'];
                 if(substr($path,strlen($path)-1,1)=='/'){
                     $path .= 'index';
@@ -3136,10 +3136,10 @@ function mac_url($model,$param=[],$info=[])
             break;
         case 'art/type':
             $replace_to = [$info['type_id'],$info['type_en'],$param['page'],
-                $info['type_id'],$info['type']['type_en'],$info['type_1']['type_id'],$info['type_1']['type_en'],
+                $info['type_id'],($info['type']['type_en'] ?? ''),($info['type_1']['type_id'] ?? ''),($info['type_1']['type_en'] ?? ''),
             ];
-            if($config['view']['art_type'] == 2){
-                $path = $config['path']['art_type'];
+            if(($config['view']['art_type'] ?? 0) == 2){
+                $path = ($config['path']['art_type'] ?? '');
                 if(substr($path,strlen($path)-1,1)=='/'){
                     $path .= 'index';
                 }
@@ -3169,9 +3169,9 @@ function mac_url($model,$param=[],$info=[])
         case 'art/detail':
             $replace_to = [
                 $info['art_id'],$info['art_en'],'',
-                $info['type_id'],$info['type']['type_en'],$info['type_1']['type_id'],$info['type_1']['type_en']
+                $info['type_id'],($info['type']['type_en'] ?? ''),($info['type_1']['type_id'] ?? ''),($info['type_1']['type_en'] ?? '')
             ];
-            if($config['view']['art_detail'] == 2){
+            if(($config['view']['art_detail'] ?? 0) == 2){
                 $path = $config['path' ]['art_detail'];
                 if(substr($path,strlen($path)-1,1)=='/'){
                     $path .= 'index';
@@ -3199,7 +3199,7 @@ function mac_url($model,$param=[],$info=[])
             $replace_to = array_merge($replace_to,[date('Y',$info['art_time']),date('m',$info['art_time']),date('d',$info['art_time'])]);
             break;
         case 'topic/index':
-            if($config['view']['topic_index'] == 2){
+            if(($config['view']['topic_index'] ?? 0) == 2){
                 $path = $config['path' ]['topic_index'];
                 if(substr($path,strlen($path)-1,1)=='/'){
                     $path .= 'index';
@@ -3214,7 +3214,7 @@ function mac_url($model,$param=[],$info=[])
             break;
         case 'topic/detail':
             $replace_to = [$info['topic_id'],$info['topic_en'],'','','','',''];
-            if($config['view']['topic_detail'] == 2){
+            if(($config['view']['topic_detail'] ?? 0) == 2){
                 $path = $config['path' ]['topic_detail'];
                 if(substr($path,strlen($path)-1,1)=='/'){
                     $path .= 'index';
@@ -3240,7 +3240,7 @@ function mac_url($model,$param=[],$info=[])
             }
             break;
         case 'actor/index':
-            if($config['view']['actor_index'] == 2){
+            if(($config['view']['actor_index'] ?? 0) == 2){
                 $path = $config['path' ]['actor_index'];
                 if(substr($path,strlen($path)-1,1)=='/'){
                     $path .= 'index';
@@ -3255,10 +3255,10 @@ function mac_url($model,$param=[],$info=[])
             break;
         case 'actor/type':
             $replace_to = [$info['type_id'],$info['type_en'],$param['page'],
-                $info['type_id'],$info['type']['type_en'],$info['type_1']['type_id'],$info['type_1']['type_en'],
+                $info['type_id'],($info['type']['type_en'] ?? ''),($info['type_1']['type_id'] ?? ''),($info['type_1']['type_en'] ?? ''),
             ];
-            if($config['view']['actor_type'] == 2){
-                $path = $config['path']['actor_type'];
+            if(($config['view']['actor_type'] ?? 0) == 2){
+                $path = ($config['path']['actor_type'] ?? '');
                 if(substr($path,strlen($path)-1,1)=='/'){
                     $path .= 'index';
                 }
@@ -3287,7 +3287,7 @@ function mac_url($model,$param=[],$info=[])
             break;
         case 'actor/detail':
             $replace_to = [$info['actor_id'],$info['actor_en'],'','','','',''];
-            if($config['view']['actor_detail'] == 2){
+            if(($config['view']['actor_detail'] ?? 0) == 2){
                 $path = $config['path' ]['actor_detail'];
                 if(substr($path,strlen($path)-1,1)=='/'){
                     $path .= 'index';
@@ -3313,7 +3313,7 @@ function mac_url($model,$param=[],$info=[])
             }
             break;
         case 'role/index':
-            if($config['view']['role_index'] == 2){
+            if(($config['view']['role_index'] ?? 0) == 2){
                 $path = $config['path' ]['role_index'];
                 if(substr($path,strlen($path)-1,1)=='/'){
                     $path .= 'index';
@@ -3328,7 +3328,7 @@ function mac_url($model,$param=[],$info=[])
             break;
         case 'role/detail':
             $replace_to = [$info['role_id'],$info['actor_en'],'','','','',''];
-            if($config['view']['role_detail'] == 2){
+            if(($config['view']['role_detail'] ?? 0) == 2){
                 $path = $config['path' ]['role_detail'];
                 if(substr($path,strlen($path)-1,1)=='/'){
                     $path .= 'index';
@@ -3354,7 +3354,7 @@ function mac_url($model,$param=[],$info=[])
             }
             break;
         case 'plot/index':
-            if($config['view']['plot_index'] == 2){
+            if(($config['view']['plot_index'] ?? 0) == 2){
                 $path = $config['path' ]['plot_index'];
                 if(substr($path,strlen($path)-1,1)=='/'){
                     $path .= 'index';
@@ -3370,9 +3370,9 @@ function mac_url($model,$param=[],$info=[])
         case 'plot/detail':
             $replace_to = [
                 $info['vod_id'],$info['vod_en'],'',
-                $info['type_id'],$info['type']['type_en'],$info['type_1']['type_id'],$info['type_1']['type_en']
+                $info['type_id'],($info['type']['type_en'] ?? ''),($info['type_1']['type_id'] ?? ''),($info['type_1']['type_en'] ?? '')
             ];
-            if($config['view']['plot_detail'] == 2){
+            if(($config['view']['plot_detail'] ?? 0) == 2){
                 $path = $config['path' ]['plot_detail'];
                 if(substr($path,strlen($path)-1,1)=='/'){
                     $path .= 'index';
@@ -3402,7 +3402,7 @@ function mac_url($model,$param=[],$info=[])
             $replace_to = array_merge($replace_to,[date('Y',$info['vod_time']),date('m',$info['vod_time']),date('d',$info['vod_time'])]);
             break;
         case 'website/index':
-            if($config['view']['website_index'] == 2){
+            if(($config['view']['website_index'] ?? 0) == 2){
                 $path = $config['path' ]['website_index'];
                 if(substr($path,strlen($path)-1,1)=='/'){
                     $path .= 'index';
@@ -3417,10 +3417,10 @@ function mac_url($model,$param=[],$info=[])
             break;
         case 'website/type':
             $replace_to = [$info['type_id'],$info['type_en'],$param['page'],
-                $info['type_id'],$info['type']['type_en'],$info['type_1']['type_id'],$info['type_1']['type_en'],
+                $info['type_id'],($info['type']['type_en'] ?? ''),($info['type_1']['type_id'] ?? ''),($info['type_1']['type_en'] ?? ''),
             ];
-            if($config['view']['website_type'] == 2){
-                $path = $config['path']['website_type'];
+            if(($config['view']['website_type'] ?? 0) == 2){
+                $path = ($config['path']['website_type'] ?? '');
                 if(substr($path,strlen($path)-1,1)=='/'){
                     $path .= 'index';
                 }
@@ -3449,7 +3449,7 @@ function mac_url($model,$param=[],$info=[])
             break;
         case 'website/detail':
             $replace_to = [$info['website_id'],$info['website_en'],'','','','',''];
-            if($config['view']['website_detail'] == 2){
+            if(($config['view']['website_detail'] ?? 0) == 2){
                 $path = $config['path' ]['website_detail'];
                 if(substr($path,strlen($path)-1,1)=='/'){
                     $path .= 'index';
@@ -3494,7 +3494,7 @@ function mac_url($model,$param=[],$info=[])
         }
 
         if($delimiter==false && strpos($path,'.')===false){
-            $path.= '.'. $config['path']['suffix'];
+            $path.= '.'. ($config['path']['suffix'] ?? '');
         }
         $url = $path;
         if(substr($path,0,1)!='/') {
@@ -4399,7 +4399,7 @@ if (!function_exists('input')) {
 }
 if (!function_exists('url')) {
     function url(string $url = '', array $vars = [], bool $suffix = true, bool $domain = false): string {
-        return mac_url($url, $vars);
+        return (string) \think\facade\Route::buildUrl($url, $vars)->suffix($suffix)->domain($domain);
     }
 }
 // ========= /TP8 global helpers =========

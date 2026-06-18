@@ -27,7 +27,7 @@ class Collect extends Base {
         $limit = $limit ? (int)$limit : 20;
         $start = $start ? (int)$start : 0;
         $total = $this->where($where)->count();
-        $list = Db::name('Collect')->where($where)->order($order)->page($page)->limit($limit)->select();
+        $list = Db::name('Collect')->where($where)->order($order)->page($page)->limit($limit)->select()->toArray();
         return ['code'=>1,'msg'=>lang('data_list'),'page'=>$page,'pagecount'=>ceil($total/$limit),'limit'=>$limit,'total'=>$total,'list'=>$list];
     }
 
@@ -1215,7 +1215,7 @@ class Collect extends Base {
                     }
                 }
                 if(Cache::has('vod_repeat_table_created_time')){
-                    Cache::rm('vod_repeat_table_created_time');
+                    Cache::delete('vod_repeat_table_created_time');
                 }
             }
             if($show==1) {
@@ -1228,7 +1228,7 @@ class Collect extends Base {
 
         $key = $GLOBALS['config']['app']['cache_flag']. '_'.'collect_break_vod';
         if(ENTRANCE=='api'){
-            Cache::rm($key);
+            Cache::delete($key);
             if ($data['page']['page'] < $data['page']['pagecount']) {
                 $param['page'] = intval($data['page']['page']) + 1;
                 $res = $this->vod($param);
@@ -1247,7 +1247,7 @@ class Collect extends Base {
         }
         if($show==1) {
             if ($param['ac'] == 'cjsel') {
-                Cache::rm($key);
+                Cache::delete($key);
                 $this->collectCacheClear();
                 mac_echo(lang('model/collect/is_over'));
                 unset($param['ids']);
@@ -1261,7 +1261,7 @@ class Collect extends Base {
                 mac_jump($url, $GLOBALS['config']['app']['collect_timespan']);
             } else {
                 if ($data['page']['page'] >= $data['page']['pagecount']) {
-                    Cache::rm($key);
+                    Cache::delete($key);
                     $this->collectCacheClear();
                     mac_echo(lang('model/collect/is_over'));
                     unset($param['page'],$param['ids']);
@@ -1640,7 +1640,7 @@ class Collect extends Base {
 
         $key = $GLOBALS['config']['app']['cache_flag']. '_'.'collect_break_art';
         if(ENTRANCE=='api'){
-            Cache::rm($key);
+            Cache::delete($key);
             if ($data['page']['page'] < $data['page']['pagecount']) {
                 $param['page'] = intval($data['page']['page']) + 1;
                 $res = $this->art($param);
@@ -1660,7 +1660,7 @@ class Collect extends Base {
 
         if($show==1) {
             if ($param['ac'] == 'cjsel') {
-                Cache::rm($key);
+                Cache::delete($key);
                 $this->collectCacheClear();
                 mac_echo(lang('model/collect/is_over'));
                 unset($param['ids']);
@@ -1673,7 +1673,7 @@ class Collect extends Base {
                 mac_jump($url, $GLOBALS['config']['app']['collect_timespan']);
             } else {
                 if ($data['page']['page'] >= $data['page']['pagecount']) {
-                    Cache::rm($key);
+                    Cache::delete($key);
                     $this->collectCacheClear();
                     mac_echo(lang('model/collect/is_over'));
                     unset($param['page']);
@@ -1937,7 +1937,7 @@ class Collect extends Base {
 
         $key = $GLOBALS['config']['app']['cache_flag']. '_'.'collect_break_actor';
         if(ENTRANCE=='api'){
-            Cache::rm($key);
+            Cache::delete($key);
             if ($data['page']['page'] < $data['page']['pagecount']) {
                 $param['page'] = intval($data['page']['page']) + 1;
                 $res = $this->actor($param);
@@ -1957,7 +1957,7 @@ class Collect extends Base {
 
         if($show==1) {
             if ($param['ac'] == 'cjsel') {
-                Cache::rm($key);
+                Cache::delete($key);
                 $this->collectCacheClear();
                 mac_echo(lang('model/collect/is_over'));
                 unset($param['ids']);
@@ -1970,7 +1970,7 @@ class Collect extends Base {
                 mac_jump($url, $GLOBALS['config']['app']['collect_timespan']);
             } else {
                 if ($data['page']['page'] >= $data['page']['pagecount']) {
-                    Cache::rm($key);
+                    Cache::delete($key);
                     $this->collectCacheClear();
                     mac_echo(lang('model/collect/is_over'));
                     unset($param['page']);
@@ -2241,7 +2241,7 @@ class Collect extends Base {
 
         $key = $GLOBALS['config']['app']['cache_flag']. '_'.'collect_break_role';
         if(ENTRANCE=='api'){
-            Cache::rm($key);
+            Cache::delete($key);
             if ($data['page']['page'] < $data['page']['pagecount']) {
                 $param['page'] = intval($data['page']['page']) + 1;
                 $res = $this->role($param);
@@ -2261,7 +2261,7 @@ class Collect extends Base {
 
         if($show==1) {
             if ($param['ac'] == 'cjsel') {
-                Cache::rm($key);
+                Cache::delete($key);
                 $this->collectCacheClear();
                 mac_echo(lang('model/collect/is_over'));
                 unset($param['ids']);
@@ -2274,7 +2274,7 @@ class Collect extends Base {
                 mac_jump($url, $GLOBALS['config']['app']['collect_timespan']);
             } else {
                 if ($data['page']['page'] >= $data['page']['pagecount']) {
-                    Cache::rm($key);
+                    Cache::delete($key);
                     $this->collectCacheClear();
                     mac_echo(lang('model/collect/is_over'));
                     unset($param['page']);
@@ -2541,7 +2541,7 @@ class Collect extends Base {
 
         $key = $GLOBALS['config']['app']['cache_flag']. '_'.'collect_break_website';
         if(ENTRANCE=='api'){
-            Cache::rm($key);
+            Cache::delete($key);
             if ($data['page']['page'] < $data['page']['pagecount']) {
                 $param['page'] = intval($data['page']['page']) + 1;
                 $res = $this->actor($param);
@@ -2561,7 +2561,7 @@ class Collect extends Base {
 
         if($show==1) {
             if ($param['ac'] == 'cjsel') {
-                Cache::rm($key);
+                Cache::delete($key);
                 $this->collectCacheClear();
                 mac_echo(lang('model/collect/is_over'));
                 unset($param['ids']);
@@ -2574,7 +2574,7 @@ class Collect extends Base {
                 mac_jump($url, $GLOBALS['config']['app']['collect_timespan']);
             } else {
                 if ($data['page']['page'] >= $data['page']['pagecount']) {
-                    Cache::rm($key);
+                    Cache::delete($key);
                     $this->collectCacheClear();
                     mac_echo(lang('model/collect/is_over'));
                     unset($param['page']);
@@ -2813,7 +2813,7 @@ class Collect extends Base {
 
         $key = $GLOBALS['config']['app']['cache_flag']. '_'.'collect_break_comment';
         if(ENTRANCE=='api'){
-            Cache::rm($key);
+            Cache::delete($key);
             if ($data['page']['page'] < $data['page']['pagecount']) {
                 $param['page'] = intval($data['page']['page']) + 1;
                 $res = $this->comment_json($param);
@@ -2833,7 +2833,7 @@ class Collect extends Base {
 
         if($show==1) {
             if ($param['ac'] == 'cjsel') {
-                Cache::rm($key);
+                Cache::delete($key);
                 $this->collectCacheClear();
                 mac_echo(lang('model/collect/is_over'));
                 unset($param['ids']);
@@ -2846,7 +2846,7 @@ class Collect extends Base {
                 mac_jump($url, $GLOBALS['config']['app']['collect_timespan']);
             } else {
                 if ($data['page']['page'] >= $data['page']['pagecount']) {
-                    Cache::rm($key);
+                    Cache::delete($key);
                     $this->collectCacheClear();
                     mac_echo(lang('model/collect/is_over'));
                     unset($param['page']);
@@ -3143,7 +3143,7 @@ class Collect extends Base {
 
         $key = $GLOBALS['config']['app']['cache_flag']. '_'.'collect_break_manga';
         if(ENTRANCE=='api'){
-            Cache::rm($key);
+            Cache::delete($key);
             if ($data['page']['page'] < $data['page']['pagecount']) {
                 $param['page'] = intval($data['page']['page']) + 1;
                 $res = $this->manga($param);
@@ -3162,7 +3162,7 @@ class Collect extends Base {
         }
         if($show==1) {
             if ($param['ac'] == 'cjsel') {
-                Cache::rm($key);
+                Cache::delete($key);
                 $this->collectCacheClear();
                 mac_echo(lang('model/collect/is_over'));
                 unset($param['ids']);
@@ -3176,7 +3176,7 @@ class Collect extends Base {
                 mac_jump($url, $GLOBALS['config']['app']['collect_timespan']);
             } else {
                 if ($data['page']['page'] >= $data['page']['pagecount']) {
-                    Cache::rm($key);
+                    Cache::delete($key);
                     $this->collectCacheClear();
                     mac_echo(lang('model/collect/is_over'));
                     unset($param['page'],$param['ids']);

@@ -41,12 +41,12 @@ class Topic extends Base {
         if(!is_array($where)){
             $where = json_decode($where,true);
         }
-        $limit_str = ($limit * ($page-1) + $start) .",".$limit;
+        $offset = ($limit * ($page-1) + $start);
         $total = 0;
         if($totalshow==1) {
             $total = $this->where($where)->count();
         }
-        $tmp = Db::name('Topic')->where($where)->order($order)->limit($limit_str)->select();
+        $tmp = Db::name('Topic')->where($where)->order($order)->limit($offset, $limit)->select();
 
         $list = [];
         foreach($tmp as $k=>$v){
@@ -62,29 +62,30 @@ class Topic extends Base {
         if (!is_array($lp)) {
             $lp = json_decode($lp, true);
         }
+        $lp = $lp ?? [];
 
-        $order = $lp['order'];
-        $by = $lp['by'];
-        $ids = $lp['ids'];
-        $paging = $lp['paging'];
-        $pageurl = $lp['pageurl'];
-        $level = $lp['level'];
-        $wd = isset($lp['wd']) ? $lp['wd'] : '';
-        $letter = $lp['letter'];
-        $tag = $lp['tag'];
-        $class = $lp['class'];
-        $start = abs(intval($lp['start']));
-        $num = abs(intval($lp['num']));
-        $half = abs(intval($lp['half']));
-        $timeadd = $lp['timeadd'];
-        $timehits = $lp['timehits'];
-        $time = $lp['time'];
-        $hitsmonth = $lp['hitsmonth'];
-        $hitsweek = $lp['hitsweek'];
-        $hitsday = $lp['hitsday'];
-        $hits = $lp['hits'];
-        $not = $lp['not'];
-        $cachetime = $lp['cachetime'];
+        $order = ($lp['order'] ?? null);
+        $by = ($lp['by'] ?? null);
+        $ids = ($lp['ids'] ?? null);
+        $paging = ($lp['paging'] ?? null);
+        $pageurl = ($lp['pageurl'] ?? null);
+        $level = ($lp['level'] ?? null);
+        $wd = isset(($lp['wd'] ?? null)) ? ($lp['wd'] ?? null) : '';
+        $letter = ($lp['letter'] ?? null);
+        $tag = ($lp['tag'] ?? null);
+        $class = ($lp['class'] ?? null);
+        $start = abs(intval(($lp['start'] ?? null)));
+        $num = abs(intval(($lp['num'] ?? null)));
+        $half = abs(intval(($lp['half'] ?? null)));
+        $timeadd = ($lp['timeadd'] ?? null);
+        $timehits = ($lp['timehits'] ?? null);
+        $time = ($lp['time'] ?? null);
+        $hitsmonth = ($lp['hitsmonth'] ?? null);
+        $hitsweek = ($lp['hitsweek'] ?? null);
+        $hitsday = ($lp['hitsday'] ?? null);
+        $hits = ($lp['hits'] ?? null);
+        $not = ($lp['not'] ?? null);
+        $cachetime = (int)($lp['cachetime'] ?? 0);
 
         $page = 1;
         $where = [];
@@ -269,7 +270,7 @@ class Topic extends Base {
         $cach_name = $GLOBALS['config']['app']['cache_flag']. '_' .md5('topic_listcache_'.http_build_query($where_cache).'_'.$order_cache_key.'_'.$page.'_'.$num.'_'.$start.'_'.$pageurl);
         $res = $use_rnd_order ? null : Cache::get($cach_name);
         if(empty($cachetime)){
-            $cachetime = $GLOBALS['config']['app']['cache_time'];
+            $cachetime = (int)$GLOBALS['config']['app']['cache_time'];
         }
         if($GLOBALS['config']['app']['cache_core']==0 || empty($res)) {
             if ($meili !== null) {
@@ -375,11 +376,11 @@ class Topic extends Base {
             return ['code'=>1001,'msg'=>lang('param_err').'：'.$validate->getError() ];
         }
         $key = 'topic_detail_'.$data['topic_id'];
-        Cache::rm($key);
+        Cache::delete($key);
         $key = 'topic_detail_'.$data['topic_en'];
-        Cache::rm($key);
+        Cache::delete($key);
         $key = 'topic_detail_'.$data['topic_id'].'_'.$data['topic_en'];
-        Cache::rm($key);
+        Cache::delete($key);
 
 
         if(empty($data['topic_extend'])){
@@ -507,12 +508,12 @@ class Topic extends Base {
             return ['code'=>1002,'msg'=>lang('set_err').'：'.$this->getError() ];
         }
 
-        $list = $this->field('topic_id,topic_name,topic_en')->where($where)->select();
+        $list = $this->field('topic_id,topic_name,topic_en')->where($where)->select()->toArray();
         foreach($list as $k=>$v){
             $key = 'topic_detail_'.$v['topic_id'];
-            Cache::rm($key);
+            Cache::delete($key);
             $key = 'topic_detail_'.$v['topic_en'];
-            Cache::rm($key);
+            Cache::delete($key);
         }
 
         return ['code'=>1,'msg'=>lang('set_ok')];

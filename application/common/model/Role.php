@@ -46,12 +46,12 @@ class Role extends Base {
             unset($where['_string']);
         }
 
-        $limit_str = ($limit * ($page-1) + $start) .",".$limit;
+        $offset = ($limit * ($page-1) + $start);
         $total = 0;
         if($totalshow==1) {
             $total = $this->where($where)->count();
         }
-        $list = Db::name('Role')->field($field)->where($where)->order($order)->limit($limit_str)->select();
+        $list = Db::name('Role')->field($field)->where($where)->order($order)->limit($offset, $limit)->select()->toArray();
         $vod_list=[];
         if($addition==1){
             $vod_ids=[];
@@ -79,30 +79,31 @@ class Role extends Base {
         if (!is_array($lp)) {
             $lp = json_decode($lp, true);
         }
+        $lp = $lp ?? [];
 
-        $order = $lp['order'];
-        $by = $lp['by'];
-        $ids = $lp['ids'];
-        $paging = $lp['paging'];
-        $pageurl = $lp['pageurl'];
-        $level = $lp['level'];
-        $wd = $lp['wd'];
-        $actor = $lp['actor'];
-        $name = $lp['name'];
-        $rid = $lp['rid'];
-        $letter = $lp['letter'];
-        $start = abs(intval($lp['start']));
-        $num = abs(intval($lp['num']));
-        $half = abs(intval($lp['half']));
-        $timeadd = $lp['timeadd'];
-        $timehits = $lp['timehits'];
-        $time = $lp['time'];
-        $hitsmonth = $lp['hitsmonth'];
-        $hitsweek = $lp['hitsweek'];
-        $hitsday = $lp['hitsday'];
-        $hits = $lp['hits'];
-        $not = $lp['not'];
-        $cachetime = $lp['cachetime'];
+        $order = ($lp['order'] ?? null);
+        $by = ($lp['by'] ?? null);
+        $ids = ($lp['ids'] ?? null);
+        $paging = ($lp['paging'] ?? null);
+        $pageurl = ($lp['pageurl'] ?? null);
+        $level = ($lp['level'] ?? null);
+        $wd = ($lp['wd'] ?? null);
+        $actor = ($lp['actor'] ?? null);
+        $name = ($lp['name'] ?? null);
+        $rid = ($lp['rid'] ?? null);
+        $letter = ($lp['letter'] ?? null);
+        $start = abs(intval(($lp['start'] ?? null)));
+        $num = abs(intval(($lp['num'] ?? null)));
+        $half = abs(intval(($lp['half'] ?? null)));
+        $timeadd = ($lp['timeadd'] ?? null);
+        $timehits = ($lp['timehits'] ?? null);
+        $time = ($lp['time'] ?? null);
+        $hitsmonth = ($lp['hitsmonth'] ?? null);
+        $hitsweek = ($lp['hitsweek'] ?? null);
+        $hitsday = ($lp['hitsday'] ?? null);
+        $hits = ($lp['hits'] ?? null);
+        $not = ($lp['not'] ?? null);
+        $cachetime = (int)($lp['cachetime'] ?? 0);
         $page = 1;
         $where = [];
         $totalshow=0;
@@ -281,7 +282,7 @@ class Role extends Base {
         $cach_name = $GLOBALS['config']['app']['cache_flag']. '_' . md5('role_listcache_'.http_build_query($where_cache).'_'.$order_cache_key.'_'.$page.'_'.$num.'_'.$start.'_'.$pageurl);
         $res = $use_rnd_order ? null : Cache::get($cach_name);
         if(empty($cachetime)){
-            $cachetime = $GLOBALS['config']['app']['cache_time'];
+            $cachetime = (int)$GLOBALS['config']['app']['cache_time'];
         }
         if($GLOBALS['config']['app']['cache_core']==0 || empty($res)) {
             if ($meili !== null) {
@@ -345,11 +346,11 @@ class Role extends Base {
         }
 
         $key = 'role_detail_'.$data['role_id'];
-        Cache::rm($key);
+        Cache::delete($key);
         $key = 'role_detail_'.$data['role_en'];
-        Cache::rm($key);
+        Cache::delete($key);
         $key = 'role_detail_'.$data['role_id'].'_'.$data['role_en'];
-        Cache::rm($key);
+        Cache::delete($key);
 
 
         if(empty($data['role_en'])){
@@ -398,7 +399,7 @@ class Role extends Base {
 
     public function delData($where)
     {
-        $list = $this->field('role_id,role_pic')->where($where)->select();
+        $list = $this->field('role_id,role_pic')->where($where)->select()->toArray();
         if (!is_array($list)) {
             $list = [];
         }
@@ -432,12 +433,12 @@ class Role extends Base {
             return ['code'=>1001,'msg'=>lang('set_err').'：'.$this->getError() ];
         }
 
-        $list = $this->field('role_id,role_name,role_en')->where($where)->select();
+        $list = $this->field('role_id,role_name,role_en')->where($where)->select()->toArray();
         foreach($list as $k=>$v){
             $key = 'role_detail_'.$v['role_id'];
-            Cache::rm($key);
+            Cache::delete($key);
             $key = 'role_detail_'.$v['role_en'];
-            Cache::rm($key);
+            Cache::delete($key);
         }
 
         return ['code'=>1,'msg'=>lang('set_ok')];

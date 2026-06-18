@@ -32,9 +32,9 @@ class Danmaku extends Base {
             $where = json_decode($where, true);
         }
 
-        $limit_str = ($limit * ($page - 1) + $start) . "," . $limit;
+        $offset = ($limit * ($page - 1) + $start);
         $total = $this->where($where)->count();
-        $list = Db::name('Danmaku')->field($field)->where($where)->order($order)->limit($limit_str)->select();
+        $list = Db::name('Danmaku')->field($field)->where($where)->order($order)->limit($offset, $limit)->select()->toArray();
 
         return ['code' => 1, 'msg' => lang('data_list'), 'page' => $page, 'pagecount' => ceil($total / $limit), 'limit' => $limit, 'total' => $total, 'list' => $list];
     }
@@ -66,7 +66,7 @@ class Danmaku extends Base {
             ->where($where)
             ->order('danmaku_time ASC')
             ->limit($limit)
-            ->select();
+            ->select()->toArray();
 
         $result = ['code' => 1, 'msg' => 'ok', 'info' => [
             'total' => count($list),

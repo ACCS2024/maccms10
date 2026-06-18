@@ -24,15 +24,15 @@ class Order extends Base {
         if(!is_array($where)){
             $where = json_decode($where,true);
         }
-        $limit_str = ($limit * ($page-1) + $start) .",".$limit;
+        $offset = ($limit * ($page-1) + $start);
         $total = $this->alias('o')->where($where)->count();
         $list = Db::name('Order')->alias('o')
             ->field('o.*,u.user_name')
             ->join('__USER__ u','o.user_id = u.user_id','left')
             ->where($where)
             ->order($order)
-            ->limit($limit_str)
-            ->select();
+            ->limit($offset, $limit)
+            ->select()->toArray();
 
 
         return ['code'=>1,'msg'=>lang('data_list'),'page'=>$page,'pagecount'=>ceil($total/$limit),'limit'=>$limit,'total'=>$total,'list'=>$list];

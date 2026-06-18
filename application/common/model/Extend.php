@@ -99,7 +99,7 @@ class Extend extends Base {
             $data['website_today'] = $tmp;
             $data['website_min'] = (new \app\common\model\Website())->min('website_id');
 
-            Cache::set($key,$data,$GLOBALS['config']['app']['cache_time']);
+            Cache::set($key,$data, (int)$GLOBALS['config']['app']['cache_time']);
         }
         return $data;
     }
