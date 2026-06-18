@@ -2,30 +2,39 @@
 
 namespace app\common\model;
 
-use think\Config as ThinkConfig;
+use think\facade\Config as ThinkConfig;
 use think\Model;
-use think\Db;
-use think\Cache;
+use think\facade\Db;
+use think\facade\Cache;
 
 class Base extends Model
 {
     protected $tablePrefix;
     protected $primaryId;
     protected $readFromMaster;
+    protected string $_error = '';
 
-    //自定义初始化
-    protected function initialize()
+    public function __construct(array $data = [])
     {
-        //需要调用`Model`的`initialize`方法
-        parent::initialize();
-        // 自定义的初始化
-        $this->tablePrefix = isset($this->tablePrefix) ? $this->tablePrefix : ThinkConfig::get('database.prefix');
-        $this->primaryId = isset($this->primaryId) ? $this->primaryId : $this->name . '_id';
-        $this->readFromMaster = isset($this->readFromMaster) ? $this->readFromMaster : false;
-        // 表创建或修改
+        parent::__construct($data);
+        // $this->name is set by parent::__construct() — safe to use here
+        $conn = ThinkConfig::get('database.default', 'mysql');
+        $this->tablePrefix    = $this->tablePrefix    ?: ThinkConfig::get("database.connections.{$conn}.prefix", '');
+        $this->primaryId      = $this->primaryId      ?: ($this->name . '_id');
+        $this->readFromMaster = $this->readFromMaster ?: false;
         if (method_exists($this, 'createTableIfNotExists')) {
             $this->createTableIfNotExists();
         }
+    }
+
+    public function getError(): string
+    {
+        return $this->_error;
+    }
+
+    protected function setError(string $msg): void
+    {
+        $this->_error = $msg;
     }
 
     public function getCountByCond($cond)
@@ -41,12 +50,12 @@ class Base extends Model
             try {
                 $flag = isset($GLOBALS['config']['app']['cache_flag']) ? $GLOBALS['config']['app']['cache_flag'] : 'mac';
                 $key = $flag . '_cnt_' . md5(get_class($this) . '|' . serialize($cond));
-                $c = \think\Cache::get($key);
+                $c = \think\facade\Cache::get($key);
                 if (is_int($c) || (is_string($c) && ctype_digit($c))) {
                     return (int)$c;
                 }
                 $n = (int)$query_object->where($cond)->count();
-                \think\Cache::set($key, $n, $ttl);
+                \think\facade\Cache::set($key, $n, $ttl);
                 return $n;
             } catch (\Throwable $e) {
                 // 缓存层异常 → 回退直查

@@ -55,7 +55,7 @@
 
 | ID | 任务 | 状态 |
 |----|------|------|
-| [P1-01](P1.md#p1-01-模型基类-basephp-适配) | Base.php：initialize() → init()，追加 getError() 兼容 | [ ] |
+| [P1-01](P1.md#p1-01-模型基类-basephp-适配) | Base.php：initialize() → init()，追加 getError() 兼容 | [x] |
 | [P1-02](P1.md#p1-02-模型层-use-thinkdb-批量改-facade) | 41 个 Model：`use think\Db` → `use think\facade\Db`（38 文件） | [ ] |
 | [P1-03](P1.md#p1-03-模型层-use-thinkcache-批量改-facade) | 41 个 Model：`use think\Cache` → `use think\facade\Cache`（16 文件） | [ ] |
 | [P1-04](P1.md#p1-04-修复-cache-false-判断) | 修复 Cache::get 返回值判断（null vs false，3 处） | [ ] |

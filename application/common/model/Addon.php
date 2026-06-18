@@ -1,7 +1,6 @@
 <?php
 namespace app\common\model;
-use think\Db;
-use think\Config;
+use think\facade\Db;
 
 class Addon extends Base {
 
@@ -31,7 +30,7 @@ class Addon extends Base {
             if (!is_file($info_file))
                 continue;
             $name = str_replace(ADDON_PATH,'',$addonDir);
-            $info = Config::parse($info_file, '', "addon-info-{$name}");
+            $info = parse_ini_file($info_file, true) ?: [];
             $info['url'] = mac_url($name);
             $info['install'] = 1;
             $list[$name] = $info;
