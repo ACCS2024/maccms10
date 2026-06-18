@@ -246,12 +246,12 @@ class Danmaku extends Base
 
         // 同一用户同一弹幕 24 小时内只能举报一次（Cache 去重）
         $cache_key = 'danmaku_report_' . $user['user_id'] . '_' . $danmaku_id;
-        if (\think\Cache::get($cache_key)) {
+        if (\think\facade\Cache::get($cache_key)) {
             return json(['code' => 1, 'msg' => lang('danmaku/already_reported')]);
         }
-        \think\Cache::set($cache_key, 1, 86400);
+        \think\facade\Cache::set($cache_key, 1, 86400);
 
-        \think\Db::name('danmaku')->where('danmaku_id', $danmaku_id)->setInc('danmaku_report', 1);
+        \think\facade\Db::name('danmaku')->where('danmaku_id', $danmaku_id)->setInc('danmaku_report', 1);
 
         return json(['code' => 1, 'msg' => lang('danmaku/report_ok')]);
     }
@@ -289,7 +289,7 @@ class Danmaku extends Base
      */
     private function _checkVodAvailable($vod_id)
     {
-        $vod = \think\Db::name('vod')->field('vod_id,vod_status')->where('vod_id', (int)$vod_id)->find();
+        $vod = \think\facade\Db::name('vod')->field('vod_id,vod_status')->where('vod_id', (int)$vod_id)->find();
         if (empty($vod)) {
             return ['code' => 1004, 'msg' => lang('danmaku/vod_not_found')];
         }

@@ -2,6 +2,8 @@
 
 namespace app\common\util;
 
+use think\facade\Cache;
+
 /**
  * OpenCC 转换封装：优先 PHP 扩展 ext-opencc，其次系统 opencc 命令，均不可用时返回原文。
  * 进程内与跨请求（think\Cache）缓存转换结果。
@@ -112,7 +114,7 @@ class OpenccConverter
         $persistKey = 'opencc:' . $config . ':' . md5($text);
         if (class_exists('\think\Cache', false)) {
             try {
-                $cached = \think\Cache::get($persistKey);
+                $cached = Cache::get($persistKey);
                 if (is_string($cached)) {
                     self::$cache[$key] = $cached;
 
@@ -130,7 +132,7 @@ class OpenccConverter
         self::$cache[$key] = $out;
         if (class_exists('\think\Cache', false)) {
             try {
-                \think\Cache::set($persistKey, $out, self::$persistTtl);
+                Cache::set($persistKey, $out, self::$persistTtl);
             } catch (\Throwable $e) {
             }
         }
@@ -272,7 +274,7 @@ class OpenccConverter
         $persistKey = 'opencc:conversion_works';
         if (class_exists('\think\Cache', false)) {
             try {
-                $cached = \think\Cache::get($persistKey);
+                $cached = Cache::get($persistKey);
                 if ($cached === 1 || $cached === '1' || $cached === true) {
                     self::$conversionWorks = true;
 
@@ -303,7 +305,7 @@ class OpenccConverter
         self::$conversionWorks = $works;
         if (class_exists('\think\Cache', false)) {
             try {
-                \think\Cache::set(
+                Cache::set(
                     $persistKey,
                     $works ? 1 : 0,
                     $works ? self::$shellAvailableTtl : self::$shellUnavailableTtl
@@ -324,7 +326,7 @@ class OpenccConverter
         $persistKey = 'opencc:shell_available';
         if (class_exists('\think\Cache', false)) {
             try {
-                $cached = \think\Cache::get($persistKey);
+                $cached = Cache::get($persistKey);
                 if ($cached === 1 || $cached === '1' || $cached === true) {
                     self::$shellAvailable = true;
                     return true;
@@ -342,7 +344,7 @@ class OpenccConverter
             self::$shellAvailable = false;
             if (class_exists('\think\Cache', false)) {
                 try {
-                    \think\Cache::set($persistKey, 0, self::$shellUnavailableTtl);
+                    Cache::set($persistKey, 0, self::$shellUnavailableTtl);
                 } catch (\Throwable $e) {
                 }
             }
@@ -360,7 +362,7 @@ class OpenccConverter
         }
         if (class_exists('\think\Cache', false)) {
             try {
-                \think\Cache::set(
+                Cache::set(
                     $persistKey,
                     self::$shellAvailable ? 1 : 0,
                     self::$shellAvailable ? self::$shellAvailableTtl : self::$shellUnavailableTtl

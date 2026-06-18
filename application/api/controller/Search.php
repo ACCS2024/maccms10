@@ -101,7 +101,7 @@ class Search extends Base
 
         // 优先走 Redis 原子 INCR（用法与 application/common/model/Chatroom.php::_atomicRateCheck 对齐）
         try {
-            $handler = \think\Cache::init()->handler();
+            $handler = app('cache')->store()->handler();
             if (class_exists('\Redis', false) && $handler instanceof \Redis) {
                 $cnt = (int)$handler->incr($key);
                 if ($cnt === 1) {

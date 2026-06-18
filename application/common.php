@@ -678,12 +678,12 @@ function mac_security_auto_migrate()
         $cols = ['admin' => 'admin_pwd', 'user' => 'user_pwd'];
         foreach ($cols as $t => $c) {
             $table = $prefix . $t;
-            $info = \think\Db::query(
+            $info = \think\facade\Db::query(
                 "SELECT CHARACTER_MAXIMUM_LENGTH AS len FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=? AND COLUMN_NAME=?",
                 [$table, $c]
             );
             if (!empty($info) && isset($info[0]['len']) && (int)$info[0]['len'] < 255) {
-                \think\Db::execute("ALTER TABLE `" . str_replace('`', '', $table) . "` MODIFY `" . $c . "` VARCHAR(255) NOT NULL DEFAULT ''");
+                \think\facade\Db::execute("ALTER TABLE `" . str_replace('`', '', $table) . "` MODIFY `" . $c . "` VARCHAR(255) NOT NULL DEFAULT ''");
             }
         }
 
@@ -799,7 +799,7 @@ function mac_perf_env_checks()
     if ($ct === 'redis') {
         $reach = false;
         try {
-            $h = \think\Cache::init()->handler();
+            $h = app('cache')->store()->handler();
             if (class_exists('\\Redis', false) && $h instanceof \Redis) { $h->ping(); $reach = true; }
         } catch (\Throwable $e) {}
         $push('缓存后端', $reach, $reach ? 'Redis(连通正常)' : 'Redis(连接失败)',
@@ -820,7 +820,7 @@ function mac_perf_env_checks()
     try {
         $prefix = (string)config('database.prefix');
         $like = str_replace('_', '\\_', $prefix) . '%';
-        $rows = \think\Db::query(
+        $rows = \think\facade\Db::query(
             "SELECT COUNT(*) AS c FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND ENGINE = 'MyISAM' AND TABLE_NAME LIKE ?",
             [$like]
         );
@@ -866,7 +866,7 @@ function mac_perf_env_checks()
 
     // 10) InnoDB 缓冲池(热数据常驻内存)
     try {
-        $rows = \think\Db::query("SHOW VARIABLES LIKE 'innodb_buffer_pool_size'");
+        $rows = \think\facade\Db::query("SHOW VARIABLES LIKE 'innodb_buffer_pool_size'");
         $bpMb = (int)round((int)($rows[0]['Value'] ?? 0) / 1048576);
         if ($bpMb > 0) {
             $push('InnoDB 缓冲池', $bpMb >= 256, $bpMb . ' MB',
@@ -895,7 +895,7 @@ function mac_cache_lock_acquire($key, $ttl = 10)
 {
     $ttl = max(1, (int)$ttl);
     try {
-        $h = \think\Cache::init()->handler();
+        $h = app('cache')->store()->handler();
         if (class_exists('\\Redis', false) && $h instanceof \Redis) {
             return (bool)$h->set('mac_sf:' . md5((string)$key), 1, ['nx', 'ex' => $ttl]);
         }
@@ -905,10 +905,10 @@ function mac_cache_lock_acquire($key, $ttl = 10)
     // 非 Redis:尽力而为
     try {
         $lk = 'mac_sf_' . md5((string)$key);
-        if (\think\Cache::has($lk)) {
+        if (\think\facade\Cache::has($lk)) {
             return false;
         }
-        \think\Cache::set($lk, 1, $ttl);
+        \think\facade\Cache::set($lk, 1, $ttl);
         return true;
     } catch (\Throwable $e) {
         return true;
@@ -918,7 +918,7 @@ function mac_cache_lock_acquire($key, $ttl = 10)
 function mac_cache_lock_release($key)
 {
     try {
-        $h = \think\Cache::init()->handler();
+        $h = app('cache')->store()->handler();
         if (class_exists('\\Redis', false) && $h instanceof \Redis) {
             $h->del('mac_sf:' . md5((string)$key));
             return;
@@ -926,7 +926,7 @@ function mac_cache_lock_release($key)
     } catch (\Throwable $e) {
     }
     try {
-        \think\Cache::rm('mac_sf_' . md5((string)$key));
+        \think\facade\Cache::delete('mac_sf_' . md5((string)$key));
     } catch (\Throwable $e) {
     }
 }
@@ -981,7 +981,7 @@ function mac_cache_singleflight_wait($cacheKey, $maxMs = 1000, $stepMs = 50)
     for ($i = 0; $i < $steps; $i++) {
         usleep($stepMs * 1000);
         try {
-            $v = \think\Cache::get($cacheKey);
+            $v = \think\facade\Cache::get($cacheKey);
         } catch (\Throwable $e) {
             $v = null;
         }
@@ -999,19 +999,19 @@ function mac_db_add_index_if_absent($table, $indexName, array $cols)
 {
     $table = str_replace('`', '', $table);
     foreach ($cols as $c) {
-        $r = \think\Db::query("SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=? AND COLUMN_NAME=? LIMIT 1", [$table, $c]);
+        $r = \think\facade\Db::query("SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=? AND COLUMN_NAME=? LIMIT 1", [$table, $c]);
         if (empty($r)) {
             return; // 缺列,跳过(兼容旧版库)
         }
     }
-    $r = \think\Db::query("SELECT 1 FROM information_schema.STATISTICS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=? AND INDEX_NAME=? LIMIT 1", [$table, $indexName]);
+    $r = \think\facade\Db::query("SELECT 1 FROM information_schema.STATISTICS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=? AND INDEX_NAME=? LIMIT 1", [$table, $indexName]);
     if (!empty($r)) {
         return; // 索引已存在
     }
     $colSql = implode(',', array_map(function ($c) {
         return '`' . str_replace('`', '', $c) . '`';
     }, $cols));
-    \think\Db::execute("ALTER TABLE `{$table}` ADD INDEX `{$indexName}` ({$colSql})");
+    \think\facade\Db::execute("ALTER TABLE `{$table}` ADD INDEX `{$indexName}` ({$colSql})");
 }
 
 /**
@@ -3995,7 +3995,7 @@ function mac_get_vip_exclusive_type_ids()
 {
     $cache_flag = $GLOBALS['config']['app']['cache_flag'] ?? 'maccms';
     $key = $cache_flag . '_vip_exclusive_type_ids';
-    $list = \think\Cache::get($key);
+    $list = \think\facade\Cache::get($key);
     if (is_array($list)) {
         return $list;
     }
@@ -4031,7 +4031,7 @@ function mac_get_vip_exclusive_type_ids()
     $ab = $guest_ids + $member_ids;
     $exclusive = array_diff_key($vip_ids, $ab);
     $list = array_keys($exclusive);
-    \think\Cache::set($key, $list);
+    \think\facade\Cache::set($key, $list);
     return $list;
 }
 

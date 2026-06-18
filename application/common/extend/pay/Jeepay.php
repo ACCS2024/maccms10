@@ -168,7 +168,7 @@ class Jeepay {
 
         // 金额复核：防止改价攻击
         $callback_amount = intval($param['amount'] ?? 0);
-        $order = \think\Db::name('order')->where('order_code', $mch_order_no)->find();
+        $order = \think\facade\Db::name('order')->where('order_code', $mch_order_no)->find();
         if (empty($order)) {
             echo 'order not found';
             exit;

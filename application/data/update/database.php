@@ -370,7 +370,7 @@ if(empty($col_list[$pre.'user']['user_invite_reward_level'])){
 }
 // 邀请码索引 - 避免全表扫描（使用 SHOW INDEX 检查索引是否已存在）
 if(!empty($col_list[$pre.'user'])){
-    $index_exists = \think\Db::query("SHOW INDEX FROM `{$pre}user` WHERE Key_name = 'idx_user_invite_code'");
+    $index_exists = \think\facade\Db::query("SHOW INDEX FROM `{$pre}user` WHERE Key_name = 'idx_user_invite_code'");
     if(empty($index_exists)){
         $sql .= "ALTER TABLE `{$pre}user` ADD INDEX `idx_user_invite_code` (`user_invite_code`);";
         $sql .= "\r";
@@ -475,7 +475,7 @@ if(empty($col_list[$pre.'sign_milestone'])){
     // 本次升级新建该表，必空，需插预设
     $milestoneNeedInsert = true;
 }else{
-    $milestone_count = \think\Db::name('sign_milestone')->count();
+    $milestone_count = \think\facade\Db::name('sign_milestone')->count();
     if (empty($milestone_count)) {
         $milestoneNeedInsert = true;
     }
@@ -498,7 +498,7 @@ if(empty($col_list[$pre.'task'])){
     // 本次升级新建该表，必空，需插预设
     $taskNeedInsert = true;
 }else{
-    $task_count = \think\Db::name('task')->count();
+    $task_count = \think\facade\Db::name('task')->count();
     if (empty($task_count)) {
         $taskNeedInsert = true;
     }
@@ -611,7 +611,7 @@ if(empty($col_list[$pre.'live'])){
     $sql .= "\r";
 }
 // 插入预设直播分类数据
-$live_cate_count = \think\Db::name('live_category')->count();
+$live_cate_count = \think\facade\Db::name('live_category')->count();
 if(empty($live_cate_count)){
     $sql .= "INSERT INTO `{$pre}live_category` (`cate_name`,`cate_en`,`cate_sort`,`cate_status`,`cate_time_add`,`cate_time`) VALUES ";
     $sql .= "('央视频道','cctv',0,1,0,0),";
@@ -621,7 +621,7 @@ if(empty($live_cate_count)){
     $sql .= "\r";
 }
 // 插入预设直播数据(CCTV)
-$live_count = \think\Db::name('live')->count();
+$live_count = \think\facade\Db::name('live')->count();
 if(empty($live_count)){
     $sql .= "INSERT INTO `{$pre}live` (`cate_id`,`live_name`,`live_en`,`live_url`,`live_play_from`,`live_status`,`live_sort`,`live_time_add`,`live_time`,`live_blurb`) VALUES ";
     $sql .= "(1,'CCTV-1 综合','cctv1','HD\$https://pili-live-hls.cntv.myqcloud.com/live/cctv1hd.m3u8','hls',1,120,0,0,'CCTV-1 综合频道 中央电视台官方直播'),";

@@ -1,5 +1,6 @@
 <?php
 namespace app\common\model;
+use think\facade\Cache;
 use think\facade\Db;
 
 class Danmaku extends Base {
@@ -49,7 +50,7 @@ class Danmaku extends Base {
     public function getEpisodeDanmaku($vod_id, $sid, $nid, $limit = 1000)
     {
         $cache_key = $GLOBALS['config']['app']['cache_flag'] . '_danmaku_' . $vod_id . '_' . $sid . '_' . $nid;
-        $cached = \think\Cache::get($cache_key);
+        $cached = Cache::get($cache_key);
         if ($cached) {
             return $cached;
         }
@@ -73,7 +74,7 @@ class Danmaku extends Base {
         ]];
 
         // 缓存5分钟
-        \think\Cache::set($cache_key, $result, 300);
+        Cache::set($cache_key, $result, 300);
 
         return $result;
     }
@@ -165,7 +166,7 @@ class Danmaku extends Base {
 
             // 清除该集弹幕缓存
             $cache_key = $GLOBALS['config']['app']['cache_flag'] . '_danmaku_' . $data['vod_id'] . '_' . $data['vod_sid'] . '_' . $data['vod_nid'];
-            \think\Cache::rm($cache_key);
+            Cache::delete($cache_key);
         }
 
         if (false === $res) {
@@ -215,7 +216,7 @@ class Danmaku extends Base {
         if (!empty($rows)) {
             foreach ($rows as $r) {
                 $cache_key = $flag . '_danmaku_' . $r['vod_id'] . '_' . $r['vod_sid'] . '_' . $r['vod_nid'];
-                \think\Cache::rm($cache_key);
+                Cache::delete($cache_key);
             }
         }
     }
@@ -232,7 +233,7 @@ class Danmaku extends Base {
         $cache_key = 'danmaku_rate_' . $user_id;
         // 尝试原子 SETNX（仅 Redis 后端）
         try {
-            $handler = \think\Cache::init()->handler();
+            $handler = app('cache')->store()->handler();
             if ($handler instanceof \Redis) {
                 // SET key 1 EX interval NX — 仅当 key 不存在时才设置，原子操作
                 $ok = $handler->set($cache_key, 1, ['NX', 'EX' => $interval]);
@@ -242,10 +243,10 @@ class Danmaku extends Base {
             // handler 不可用，回退到通用方案
         }
         // 通用方案：has+set（窗口比 get+compare+set 更小）
-        if (\think\Cache::has($cache_key)) {
+        if (Cache::has($cache_key)) {
             return false;
         }
-        \think\Cache::set($cache_key, 1, $interval);
+        Cache::set($cache_key, 1, $interval);
         return true;
     }
 }

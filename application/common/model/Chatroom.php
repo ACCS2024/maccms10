@@ -1,5 +1,6 @@
 <?php
 namespace app\common\model;
+use think\facade\Cache;
 use think\facade\Db;
 
 class Chatroom extends Base {
@@ -58,7 +59,7 @@ class Chatroom extends Base {
         // 短缓存 key：同房间 + 同 after_id + 同 limit 共享缓存，减少 DB 压力
         $cache_flag = isset($GLOBALS['config']['app']['cache_flag']) ? $GLOBALS['config']['app']['cache_flag'] : 'mac';
         $cache_key = $cache_flag . '_chatroom_msg_' . $vod_id . '_' . $after_id . '_' . $limit;
-        $cached = \think\Cache::get($cache_key);
+        $cached = Cache::get($cache_key);
         if ($cached !== false && $cached !== null) {
             return $cached;
         }
@@ -108,7 +109,7 @@ class Chatroom extends Base {
         ]];
 
         // 缓存 5 秒，同房间内多用户同时轮询共用结果
-        \think\Cache::set($cache_key, $result, 5);
+        Cache::set($cache_key, $result, 5);
 
         return $result;
     }
@@ -210,7 +211,7 @@ class Chatroom extends Base {
                 // 清除该房间首次加载缓存（after_id=0 是最常用场景）
                 // 其余增量缓存 TTL 仅 5 秒，自然过期即可
                 $cache_key = $flag . '_chatroom_msg_' . $r['vod_id'] . '_0_50';
-                \think\Cache::rm($cache_key);
+                Cache::delete($cache_key);
             }
         }
     }
@@ -255,7 +256,7 @@ class Chatroom extends Base {
     {
         // 尝试原子 SETNX（仅 Redis 后端）
         try {
-            $handler = \think\Cache::init()->handler();
+            $handler = app('cache')->store()->handler();
             if ($handler instanceof \Redis) {
                 $ok = $handler->set($cache_key, 1, ['NX', 'EX' => $interval]);
                 return (bool)$ok;
@@ -264,10 +265,10 @@ class Chatroom extends Base {
             // handler 不可用，回退到通用方案
         }
         // 通用方案：has+set
-        if (\think\Cache::has($cache_key)) {
+        if (Cache::has($cache_key)) {
             return false;
         }
-        \think\Cache::set($cache_key, 1, $interval);
+        Cache::set($cache_key, 1, $interval);
         return true;
     }
 }

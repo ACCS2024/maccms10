@@ -161,12 +161,12 @@ class Chatroom extends Base
 
         // 同一用户同一消息 24 小时内只能举报一次（Cache 去重）
         $cache_key = 'chatroom_report_' . $user['user_id'] . '_' . $chat_id;
-        if (\think\Cache::get($cache_key)) {
+        if (\think\facade\Cache::get($cache_key)) {
             return json(['code' => 1, 'msg' => lang('chatroom/already_reported')]);
         }
-        \think\Cache::set($cache_key, 1, 86400);
+        \think\facade\Cache::set($cache_key, 1, 86400);
 
-        \think\Db::name('chatroom')->where('chat_id', $chat_id)->setInc('chat_report', 1);
+        \think\facade\Db::name('chatroom')->where('chat_id', $chat_id)->setInc('chat_report', 1);
 
         return json(['code' => 1, 'msg' => lang('chatroom/report_ok')]);
     }

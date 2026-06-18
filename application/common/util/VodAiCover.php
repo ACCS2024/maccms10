@@ -481,14 +481,14 @@ class VodAiCover
     {
         $vodId = intval($vodId);
         $vodEn = (string) $vodEn;
-        \think\Cache::rm('vod_detail_' . $vodId);
+        Cache::delete('vod_detail_' . $vodId);
         if ($vodEn !== '') {
-            \think\Cache::rm('vod_detail_' . $vodEn);
-            \think\Cache::rm('vod_detail_' . $vodId . '_' . $vodEn);
+            Cache::delete('vod_detail_' . $vodEn);
+            Cache::delete('vod_detail_' . $vodId . '_' . $vodEn);
         }
         $flag = isset($GLOBALS['config']['app']['cache_flag']) ? (string) $GLOBALS['config']['app']['cache_flag'] : '';
         if ($flag !== '' && $vodEn !== '') {
-            \think\Cache::rm($flag . '_vod_detail_' . $vodId . '_' . $vodEn);
+            Cache::delete($flag . '_vod_detail_' . $vodId . '_' . $vodEn);
         }
     }
 
