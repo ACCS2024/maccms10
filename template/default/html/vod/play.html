@@ -437,13 +437,13 @@
             data-pic="{$obj.vod_pic|mac_url_img}"
             data-part="{$obj['vod_play_list'][$param['sid']]['urls'][$param['nid']]['name']}"></span>
         <span style="display: none" class="mac_hits hits" data-mid="{$maccms.mid}"
-            data-id="{$obj.vod_id}{$obj.art_id}{$obj.topic_id}" data-type="hits"></span>
+            data-id="{$obj.vod_id|default=''}{$obj.art_id|default=''}{$obj.topic_id|default=''}" data-type="hits"></span>
         <span style="display: none" class="mac_hits hits_day" data-mid="{$maccms.mid}"
-            data-id="{$obj.vod_id}{$obj.art_id}{$obj.topic_id}" data-type="hits_day"></span>
+            data-id="{$obj.vod_id|default=''}{$obj.art_id|default=''}{$obj.topic_id|default=''}" data-type="hits_day"></span>
         <span style="display: none" class="mac_hits hits_week" data-mid="{$maccms.mid}"
-            data-id="{$obj.vod_id}{$obj.art_id}{$obj.topic_id}" data-type="hits_week"></span>
+            data-id="{$obj.vod_id|default=''}{$obj.art_id|default=''}{$obj.topic_id|default=''}" data-type="hits_week"></span>
         <span style="display: none" class="mac_hits hits_month" data-mid="{$maccms.mid}"
-            data-id="{$obj.vod_id}{$obj.art_id}{$obj.topic_id}" data-type="hits_month"></span>
+            data-id="{$obj.vod_id|default=''}{$obj.art_id|default=''}{$obj.topic_id|default=''}" data-type="hits_month"></span>
         <span style="display:none" class="mac_ulog_set" data-type="4" data-mid="{$maccms.mid}" data-id="{$obj.vod_id}"
             data-sid="{$param.sid}" data-nid="{$param.nid}"></span>
         <div style="width:30rem;margin: 2rem auto;">

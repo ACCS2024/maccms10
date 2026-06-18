@@ -134,6 +134,7 @@ polyfill;
         $GLOBALS['aid'] = $GLOBALS['aid'] ?? 0;
         $GLOBALS['mid'] = $GLOBALS['mid'] ?? 0;
         $this->assign('param', mac_param_url());
+        $this->assign('popedom', ['code' => 1, 'msg' => '', 'trysee' => 0, 'confirm' => 0]);
         $maccms['controller_action'] = $this->_cl .'/'.$this->_ac;
 
         if(!empty($GLOBALS['mid'])) {
@@ -789,7 +790,7 @@ polyfill;
 
         $pwd_key = '1-'.($flag=='play' ?'4':'5').'-'.$info['vod_id'];
 
-        if( $pe==0 && $flag=='play' && ($popedom['trysee']>0 ) || ($info['vod_pwd_'.$flag]!='' && session($pwd_key)!='1') || ($info['vod_copyright']==1 && $GLOBALS['config']['app']['copyright_status']==4) ) {
+        if( $pe==0 && $flag=='play' && (($popedom['trysee'] ?? 0)>0 ) || ($info['vod_pwd_'.$flag]!='' && session($pwd_key)!='1') || ($info['vod_copyright']==1 && $GLOBALS['config']['app']['copyright_status']==4) ) {
             $id = $info['vod_id'];
             if($GLOBALS['config']['rewrite']['vod_id']==2){
                 $id = mac_alphaID($info['vod_id'],false,$GLOBALS['config']['rewrite']['encode_len'],$GLOBALS['config']['rewrite']['encode_key']);

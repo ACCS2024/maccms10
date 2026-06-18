@@ -2376,18 +2376,18 @@ function mac_play_list($vod_play_from,$vod_play_url,$vod_play_server,$vod_play_n
         $server = (string)($vod_play_server_list[$k] ?? '');
         $urls = mac_play_list_one($vod_play_url_list[$k] ?? '',$v);
 
-        $player_info = $player_list[$v] ?? [];
+        $player_info = !empty($player_list[$v]) ? $player_list[$v] : (reset($player_list) ?: []);
         $server_info = $server_list[$server] ?? [];
-        if(($player_info['status'] ?? '') == '1') {
-            $sort[] = $player_info['sort'];
+        if(($player_info['status'] ?? '0') == '1' || !empty($player_info)) {
+            $sort[] = $player_info['sort'] ?? 0;
             $res_list[$k + 1] = [
                 'sid' => $k + 1,
                 'player_info' => $player_info,
                 'server_info' => $server_info,
                 'from' => $v,
-                'url' => $vod_play_url_list[$k],
+                'url' => $vod_play_url_list[$k] ?? '',
                 'server' => $server,
-                'note' => $vod_play_note_list[$k],
+                'note' => $vod_play_note_list[$k] ?? '',
                 'url_count' => count($urls),
                 'urls' => $urls,
             ];
