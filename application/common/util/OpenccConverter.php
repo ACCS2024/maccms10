@@ -278,7 +278,7 @@ class OpenccConverter
 
                     return true;
                 }
-                if ($cached === 0 || $cached === '0' || $cached === false) {
+                if ($cached === 0 || $cached === '0' || $cached === false || $cached === null) {
                     self::$conversionWorks = false;
 
                     return false;
@@ -328,7 +328,7 @@ class OpenccConverter
                     self::$shellAvailable = true;
                     return true;
                 }
-                if ($cached === 0 || $cached === '0' || $cached === false) {
+                if ($cached === 0 || $cached === '0' || $cached === false || $cached === null) {
                     self::$shellAvailable = false;
                     return false;
                 }

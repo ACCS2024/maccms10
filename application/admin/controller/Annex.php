@@ -208,7 +208,7 @@ class Annex extends Base
         mac_echo(lang('admin/annex/info_tip',[$param['data_count'],$param['page_count'],$param['page_size'],$start]));
         $limit_str = ($page_size * ($page_count-$start)) .",".$page_size;
 
-        $list = Db::name('Annex')->field('*')->where($where)->limit($limit_str)->fetchSql(false)->orderRaw('annex_time desc')->select();
+        $list = Db::name('Annex')->field('*')->where($where)->limit($limit_str)->orderRaw('annex_time desc')->select();
         foreach ($list as $k3 => $v3) {
             $tmp = $v3['annex_file'];
             if(!file_exists('./'.$tmp)){
@@ -272,7 +272,7 @@ class Annex extends Base
                     continue;
                 }
                 $limit_str = ($page_size * ($page_count-$start)) .",".$page_size;
-                $list = Db::name($pre_tb)->field('*')->limit($limit_str)->fetchSql(false)->select();
+                $list = Db::name($pre_tb)->field('*')->limit($limit_str)->select();
 
                 $adds = [];
                 foreach ($list as $k3 => $v3) {

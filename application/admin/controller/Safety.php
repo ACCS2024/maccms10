@@ -130,7 +130,7 @@ class Safety extends Base
                 if (!empty($where)) {
                     $field = array_keys($where);
                     $field[] = $tables[$si] . '_id';
-                    $list = Db::name($pre_tb)->field($field)->whereOr($where)->fetchSql(false)->select();
+                    $list = Db::name($pre_tb)->field($field)->whereOr($where)->select();
 
                     mac_echo(lang('admin/safety/data_check_tip2',[count($list)]));
                     foreach ($list as $k3 => $v3) {
