@@ -11,4 +11,12 @@
 
 return [
     'app\\command\\SeoAiGenerate',
+    'app\\command\\SiteInstall',
+    'app\\command\\SiteDestroy',
+    'app\\command\\Info',
+    'app\\command\\CacheFlush',
+    'app\\command\\AdminResetPassword',
+    'app\\command\\DbExport',
+    'app\\command\\DbImport',
+    'app\\command\\DbSearchReplace',
 ];
