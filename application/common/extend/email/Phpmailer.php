@@ -12,7 +12,7 @@ class Phpmailer {
             $config = $GLOBALS['config']['email']['phpmailer'];
             $config['nick'] =  $GLOBALS['config']['email']['nick'];
         }
-        $mail = new \phpmailer\src\PHPMailer();
+        $mail = new \PHPMailer\PHPMailer\PHPMailer();
         //$mail->SMTPDebug = 2;
         $mail->isSMTP();
         $mail->SMTPAuth = true;
