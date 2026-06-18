@@ -18,5 +18,19 @@ return [
             'expire'   => 0,
             'prefix'   => '',
         ],
+        'memcache' => [
+            'type'   => 'memcache',
+            'host'   => '127.0.0.1',
+            'port'   => 11211,
+            'expire' => 0,
+            'prefix' => '',
+        ],
+        'memcached' => [
+            'type'   => 'memcached',
+            'host'   => '127.0.0.1',
+            'port'   => 11211,
+            'expire' => 0,
+            'prefix' => '',
+        ],
     ],
 ];

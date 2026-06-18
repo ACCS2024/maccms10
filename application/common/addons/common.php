@@ -46,11 +46,8 @@ function addons_boot(): void
             \think\facade\Cache::set('hooks', $hooks);
         }
 
-        // 注册 addon 路由
+        // 注册 addon 路由（TP8: 用 append() 传参，不用 ?k=v 查询串）
         $routeArr = (array)config('addons.route');
-        $execute  = "\\think\\addons\\Route@execute?addon=%s&controller=%s&action=%s";
-        $rules    = [];
-        $domains  = [];
         foreach ($routeArr as $k => $v) {
             if (is_array($v)) {
                 $addon   = $v['addon'];
@@ -58,32 +55,28 @@ function addons_boot(): void
                 $drules  = [];
                 foreach ($v['rule'] as $m => $n) {
                     [$addonN, $ctrlN, $actN] = explode('/', $n);
-                    $drules[$m] = sprintf($execute . '&indomain=1', $addonN, $ctrlN, $actN);
+                    $drules[$m] = function () use ($addonN, $ctrlN, $actN) {
+                        return (new \think\addons\Route())->execute($addonN, $ctrlN, $actN, true);
+                    };
                 }
-                $domains[$domain] = $drules ?: [];
-                $domains[$domain]['<controller>/[<action>]'] = sprintf($execute . '&indomain=1', $addon, '<controller>', '<action>');
+                \think\facade\Route::domain($domain, function () use ($drules, $addon) {
+                    foreach ($drules as $pattern => $closure) {
+                        \think\facade\Route::any($pattern, $closure);
+                    }
+                    \think\facade\Route::any('<controller?>/<action?>', '\\think\\addons\\Route@execute')
+                        ->append(['addon' => $addon, 'indomain' => 1]);
+                });
             } else {
                 if (!$v) {
                     continue;
                 }
                 [$addonN, $ctrlN, $actN] = explode('/', $v);
-                $rules[$k] = sprintf($execute, $addonN, $ctrlN, $actN);
+                \think\facade\Route::any($k, '\\think\\addons\\Route@execute')
+                    ->append(['addon' => $addonN, 'controller' => $ctrlN, 'action' => $actN]);
             }
-        }
-        if ($rules) {
-            \think\facade\Route::rule($rules);
-        }
-        if ($domains) {
-            \think\facade\Route::domain($domains);
         }
 
-        // 执行 addon 的 app_init 事件
-        if (isset($hooks['app_init'])) {
-            foreach ($hooks['app_init'] as $v) {
-                \think\facade\Event::trigger('app_init', $v);
-            }
-        }
-        // 批量注册事件监听器
+        // 先注册监听器，再触发 app_init（顺序颠倒会导致 app_init 无人接收）
         foreach ($hooks as $hookName => $listeners) {
             foreach ((array)$listeners as $listener) {
                 if ($listener) {
@@ -91,10 +84,15 @@ function addons_boot(): void
                 }
             }
         }
+        if (isset($hooks['app_init'])) {
+            foreach ($hooks['app_init'] as $listener) {
+                \think\facade\Event::trigger('app_init', $listener);
+            }
+        }
     }
 
-    // 注册 addons 默认路由
-    \think\facade\Route::any('addons/<addon>/[<controller>/[<action>]]', "\\think\\addons\\Route@execute");
+    // 注册 addons 默认路由（TP8 可选参数用 <param?> 语法）
+    \think\facade\Route::any('addons/<addon>/<controller?>/<action?>', "\\think\\addons\\Route@execute");
 }
 
 /**
@@ -182,7 +180,7 @@ function get_addon_autoload_config(bool $truncate = false): array
         $methods = (array)get_class_methods('\\addons\\' . $name . '\\' . ucfirst($name));
         $hooks   = array_diff($methods, $base);
         foreach ($hooks as $hook) {
-            $hook = lcfirst(str_replace('_', '', ucwords($hook, '_')));
+            // 保持原始方法名（snake_case），与 Event::trigger() 保持一致
             if (!isset($config['hooks'][$hook])) {
                 $config['hooks'][$hook] = [];
             }

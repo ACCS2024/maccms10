@@ -3,7 +3,6 @@ namespace think;
 
 use think\facade\Cache;
 use think\facade\Config;
-use think\facade\View;
 
 /**
  * 插件基类（内化自 fastadmin-addons，保持 think\Addons 命名空间以兼容现有插件）
@@ -17,12 +16,13 @@ abstract class Addons
 
     public function __construct()
     {
-        $name             = $this->getName();
-        $this->addons_path = ADDON_PATH . $name . DS;
+        $name              = $this->getName();
+        // 路径使用小写目录名（Linux 文件系统大小写敏感）
+        $this->addons_path = ADDON_PATH . strtolower($name) . DS;
 
-        $config = ['view_path' => $this->addons_path];
-        $config = array_merge(config('view') ?: [], $config);
-        View::config($config);
+        // 不在构造函数中调用 View::config()：
+        // 其会改写单例驱动的全局 view_path，污染主应用后续所有模板渲染。
+        // 需要自定义视图路径的插件控制器请在 render 时单独配置。
 
         if (method_exists($this, '_initialize')) {
             $this->_initialize();

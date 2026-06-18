@@ -61,18 +61,19 @@ class AppInit
             }
         }
 
-        define('MAC_URL',  'http://www.maccms.la/');
-        define('MAC_NAME', '苹果CMS');
-        define('MAC_PATH', $config['site']['install_dir'] . '');
-        define('MAC_MOB',  $TMP_ISWAP);
-        define('MAC_ROOT_TEMPLATE', ROOT_PATH . 'template/' . $TMP_TEMPLATEDIR . '/' . $TMP_HTMLDIR . '/');
-        define('MAC_PATH_TEMPLATE', MAC_PATH . 'template/' . $TMP_TEMPLATEDIR . '/');
-        define('MAC_PATH_TPL',      MAC_PATH_TEMPLATE . $TMP_HTMLDIR . '/');
-        define('MAC_PATH_ADS',      MAC_PATH_TEMPLATE . $TMP_ADSDIR  . '/');
-        define('MAC_PAGE_SP',       $config['path']['page_sp'] . '');
-        define('MAC_PLAYER_SORT',   $config['app']['player_sort']);
-        define('MAC_ADDON_PATH',        ROOT_PATH . 'addons/');
-        define('MAC_ADDON_PATH_STATIC', ROOT_PATH . 'static/addons/');
+        // defined() guard: 在 Swoole/RoadRunner 等持久进程中防止重复 define()
+        defined('MAC_URL')               || define('MAC_URL',               'http://www.maccms.la/');
+        defined('MAC_NAME')              || define('MAC_NAME',              '苹果CMS');
+        defined('MAC_PATH')              || define('MAC_PATH',              $config['site']['install_dir'] . '');
+        defined('MAC_MOB')               || define('MAC_MOB',               $TMP_ISWAP);
+        defined('MAC_ROOT_TEMPLATE')     || define('MAC_ROOT_TEMPLATE',     ROOT_PATH . 'template/' . $TMP_TEMPLATEDIR . '/' . $TMP_HTMLDIR . '/');
+        defined('MAC_PATH_TEMPLATE')     || define('MAC_PATH_TEMPLATE',     MAC_PATH  . 'template/' . $TMP_TEMPLATEDIR . '/');
+        defined('MAC_PATH_TPL')          || define('MAC_PATH_TPL',          MAC_PATH_TEMPLATE . $TMP_HTMLDIR . '/');
+        defined('MAC_PATH_ADS')          || define('MAC_PATH_ADS',          MAC_PATH_TEMPLATE . $TMP_ADSDIR  . '/');
+        defined('MAC_PAGE_SP')           || define('MAC_PAGE_SP',           $config['path']['page_sp'] . '');
+        defined('MAC_PLAYER_SORT')       || define('MAC_PLAYER_SORT',       $config['app']['player_sort']);
+        defined('MAC_ADDON_PATH')        || define('MAC_ADDON_PATH',        ROOT_PATH . 'addons/');
+        defined('MAC_ADDON_PATH_STATIC') || define('MAC_ADDON_PATH_STATIC', ROOT_PATH . 'static/addons/');
 
         $GLOBALS['MAC_ROOT_TEMPLATE'] = ROOT_PATH . 'template/' . $TMP_TEMPLATEDIR . '/' . $TMP_HTMLDIR . '/';
         $GLOBALS['MAC_PATH_TEMPLATE'] = MAC_PATH . 'template/' . $TMP_TEMPLATEDIR . '/';

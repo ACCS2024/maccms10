@@ -4343,7 +4343,30 @@ if (!function_exists('model')) {
 if (!function_exists('input')) {
     /** @deprecated 迁移期 shim，用 request()->param/post/get() 替代 */
     function input(string $key = '', $default = null, string $filter = '') {
-        return \think\facade\Request::input($key, $default, $filter);
+        $filter = $filter ?: null;
+        if ($key === '') {
+            return request()->param('', $default, $filter);
+        }
+        $dot = strpos($key, '.');
+        if ($dot !== false) {
+            $type = substr($key, 0, $dot);
+            $name = substr($key, $dot + 1);
+            switch ($type) {
+                case 'post':    return request()->post($name, $default, $filter);
+                case 'get':     return request()->get($name, $default, $filter);
+                case 'put':     return request()->put($name, $default, $filter);
+                case 'delete':  return request()->delete($name, $default, $filter);
+                case 'param':   return request()->param($name, $default, $filter);
+                case 'request': return request()->param($name, $default, $filter);
+                case 'server':  return request()->server($name, $default);
+                case 'session': return session($name);
+                case 'cookie':  return request()->cookie($name, $default, $filter);
+                case 'file':    return request()->file($name);
+                case 'route':   return request()->route($name, $default);
+                case 'env':     return env($name, $default);
+            }
+        }
+        return request()->param($key, $default, $filter);
     }
 }
 if (!function_exists('url')) {

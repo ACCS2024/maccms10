@@ -26,11 +26,13 @@ define('ENTRANCE',        'admin');
 define('DS',              DIRECTORY_SEPARATOR);
 define('EXT',             '.php');
 
-$in_file = rtrim($_SERVER['SCRIPT_NAME'], '/');
-if (substr($in_file, strlen($in_file) - 4) !== '.php') {
-    $in_file = substr($in_file, 0, strpos($in_file, '.php')) . '.php';
+$in_file = rtrim($_SERVER['SCRIPT_NAME'] ?? '', '/');
+$_php_pos = strpos($in_file, '.php');
+if ($_php_pos !== false && substr($in_file, $_php_pos) !== '.php') {
+    $in_file = substr($in_file, 0, $_php_pos) . '.php';
 }
-define('IN_FILE', $in_file);
+unset($_php_pos);
+define('IN_FILE', $in_file ?: '/');
 
 if (strpos($_SERVER['SCRIPT_NAME'], '/admin.php') !== false) {
     echo '请将后台入口文件admin.php改名，避免被黑客入侵攻击【Please rename the background entry file admin.php to avoid being hacked】';
