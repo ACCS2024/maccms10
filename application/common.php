@@ -2261,6 +2261,35 @@ function mac_search_wd_like($wd)
     return ['like', $patterns, 'OR'];
 }
 
+/**
+ * TP8 compatible: append LIKE condition(s) to a TP8 $where array.
+ * Replaces the TP5 dict-format `$where[$field] = mac_search_wd_like($wd)` pattern.
+ */
+function mac_apply_like_where(array &$where, string $field, string $wd): void
+{
+    $wd = trim($wd);
+    if ($wd === '') {
+        return;
+    }
+    $patterns = \app\common\util\OpenccConverter::likePatterns($wd);
+    if (count($patterns) > 4) {
+        $patterns = array_slice($patterns, 0, 4);
+    }
+    if (empty($patterns)) {
+        $where[] = [$field, 'like', '%' . $wd . '%'];
+        return;
+    }
+    if (count($patterns) === 1) {
+        $where[] = [$field, 'like', $patterns[0]];
+        return;
+    }
+    $where[] = function ($q) use ($field, $patterns) {
+        foreach ($patterns as $i => $p) {
+            $i === 0 ? $q->whereLike($field, $p) : $q->whereLike($field, $p, 'OR');
+        }
+    };
+}
+
 function mac_art_list($art_title,$art_note,$art_content)
 {
     $art_title_list = [];

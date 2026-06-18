@@ -18,7 +18,7 @@ class Vod extends Base
 
         $where = [];
         if(!empty($param['type'])){
-            $where['type_id|type_id_1'] = $param['type']; // TODO:TP8-pipe-or
+            $where['type_id|type_id_1'] = $param['type'];
         }
         if(!empty($param['level'])){
             $where['vod_level'] = $param['level'];
@@ -93,10 +93,7 @@ class Vod extends Base
             @set_time_limit(120);
             $param['wd'] = urldecode($param['wd']);
             $param['wd'] = mac_filter_xss($param['wd']);
-            $like = mac_search_wd_like($param['wd']);
-            if ($like) {
-                $where['vod_name|vod_actor|vod_sub'] = $like; // TODO:TP8-pipe-or
-            }
+            mac_apply_like_where($where, 'vod_name|vod_actor|vod_sub', $param['wd']);
         }
         if(!empty($param['player'])){
             if($param['player']=='no'){
@@ -115,7 +112,7 @@ class Vod extends Base
             }
         }
         if(!empty($param['server'])){
-            $where[] = ['vod_play_server|vod_down_server', 'like', '%'.$param['server'].'%']; // TODO:TP8-pipe-or
+            $where[] = ['vod_play_server|vod_down_server', 'like', '%'.$param['server'].'%'];
         }
         if (!empty($param['recycle'])) {
             $where['vod_recycle_time'] = ['>', 0];
@@ -460,10 +457,7 @@ class Vod extends Base
         }
         if (!empty($param['wd'])) {
             $param['wd'] = htmlspecialchars(urldecode($param['wd']));
-            $like = mac_search_wd_like($param['wd']);
-            if ($like) {
-                $where['vod_name'] = $like;
-            }
+            mac_apply_like_where($where, 'vod_name', $param['wd']);
         }
         if (!empty($param['weekday'])) {
             $where[] = ['vod_weekday', 'like', '%' . $param['weekday'] . '%'];
@@ -483,7 +477,7 @@ class Vod extends Base
             }
         }
         if (!empty($param['server'])) {
-            $where[] = ['vod_play_server|vod_down_server', 'like', '%' . $param['server'] . '%']; // TODO:TP8-pipe-or
+            $where[] = ['vod_play_server|vod_down_server', 'like', '%' . $param['server'] . '%'];
         }
         if (!empty($param['recycle'])) {
             $where['vod_recycle_time'] = ['>', 0];

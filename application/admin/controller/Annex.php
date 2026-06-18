@@ -164,7 +164,7 @@ class Annex extends Base
                 }
             }
             $where=[];
-            $where['annex_id|annex_file'] = $ids; // TODO:TP8-pipe-or
+            $where['annex_id|annex_file'] = $ids;
             $res = (new \app\common\model\Annex())->delData($where);
             if($res['code']>1){
                 return $this->error($res['msg']);

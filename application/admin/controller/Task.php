@@ -25,7 +25,7 @@ class Task extends Base
         }
         if (!empty($param['wd'])) {
             $param['wd'] = htmlspecialchars(urldecode($param['wd']));
-            $where[] = ['task_name|task_action', 'like', '%' . $param['wd'] . '%']; // TODO:TP8-pipe-or
+            $where[] = ['task_name|task_action', 'like', '%' . $param['wd'] . '%'];
         }
 
         $order = 'task_type asc, task_sort asc, task_id asc';

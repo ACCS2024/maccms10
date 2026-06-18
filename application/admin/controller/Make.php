@@ -303,7 +303,7 @@ class Make extends Base
 
         if(empty($data_count)){
             $where = [];
-            $where['type_id|type_id_1'] = $id; // TODO:TP8-pipe-or
+            $where['type_id|type_id_1'] = $id;
 
             if($this->_param['tab'] =='art') {
                 $where['art_status'] = 1;

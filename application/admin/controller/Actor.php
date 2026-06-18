@@ -18,7 +18,7 @@ class Actor extends Base
 
         $where = [];
         if (!empty($param['type'])) {
-            $where['type_id|type_id_1'] = $param['type']; // TODO:TP8-pipe-or
+            $where['type_id|type_id_1'] = $param['type'];
         }
         if (!empty($param['level'])) {
             $where['actor_level'] = $param['level'];
@@ -39,10 +39,7 @@ class Actor extends Base
         }
         if(!empty($param['wd'])){
             $param['wd'] = htmlspecialchars(urldecode($param['wd']));
-            $like = mac_search_wd_like($param['wd']);
-            if ($like) {
-                $where['actor_name'] = $like;
-            }
+            mac_apply_like_where($where, 'actor_name', $param['wd']);
         }
 
         $order='actor_time desc';

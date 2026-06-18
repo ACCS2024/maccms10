@@ -220,7 +220,7 @@ class Topic extends Base {
         }
 
         if(!empty($wd)) {
-            $where[] = ['topic_name|topic_en|topic_sub', 'like', '%' . $wd . '%']; // TODO:TP8-pipe-or
+            $where[] = ['topic_name|topic_en|topic_sub', 'like', '%' . $wd . '%'];
         }
         if(!empty($tag)) {
             $where[] = ['topic_tag', 'like', mac_like_arr($tag),'OR'];

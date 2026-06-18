@@ -69,7 +69,7 @@ class Role extends Base
         }
 
         if (isset($param['name']) && strlen($param['name']) > 0) {
-            $where[] = ['role_name|role_en', 'like', '%' . $this->format_sql_string($param['name']) . '%']; // TODO:TP8-pipe-or
+            $where[] = ['role_name|role_en', 'like', '%' . $this->format_sql_string($param['name']) . '%'];
         }
 
         if (isset($param['letter']) && strlen($param['letter']) > 0) {

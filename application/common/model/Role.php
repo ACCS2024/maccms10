@@ -237,7 +237,7 @@ class Role extends Base {
         }
 
         if(!empty($wd)) {
-            $where[] = ['role_name|role_en', 'like', '%' . $wd . '%']; // TODO:TP8-pipe-or
+            $where[] = ['role_name|role_en', 'like', '%' . $wd . '%'];
         }
         $use_rnd_order = ($by == 'rnd');
         // https://github.com/magicblack/maccms10/issues/1050

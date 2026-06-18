@@ -49,7 +49,7 @@ class VodSearch extends Base {
         $search_row = $this->where($where)->field("search_result_ids, search_hit_count")->find();
         if (empty($search_row)) {
             $where_vod = [];
-            $where_vod[$search_field] = ['LIKE', '%' . $search_word . '%'];
+            $where_vod[] = [$search_field, 'like', '%' . $search_word . '%'];
             // 仅已发布；回收站过滤在 listData 中由 Vod 模型处理，此处不重复 merge 以免依赖 protected API
             try {
                 $id_list = Db::name('Vod')

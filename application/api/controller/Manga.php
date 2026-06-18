@@ -33,7 +33,7 @@ class Manga extends Base
         if (!empty($param['t'])) {
             $tid = (int)$param['t'];
             if ($tid > 0) {
-                $where['type_id|type_id_1'] = $tid; // TODO:TP8-pipe-or
+                $where['type_id|type_id_1'] = $tid;
             }
         }
         if (!empty($param['ids'])) {

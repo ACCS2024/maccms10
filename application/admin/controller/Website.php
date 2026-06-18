@@ -18,7 +18,7 @@ class Website extends Base
 
         $where = [];
         if (!empty($param['type'])) {
-            $where['type_id|type_id_1'] = $param['type']; // TODO:TP8-pipe-or
+            $where['type_id|type_id_1'] = $param['type'];
         }
         if (!empty($param['level'])) {
             $where['website_level'] = $param['level'];
@@ -42,10 +42,7 @@ class Website extends Base
         }
         if(!empty($param['wd'])){
             $param['wd'] = htmlspecialchars(urldecode($param['wd']));
-            $like = mac_search_wd_like($param['wd']);
-            if ($like) {
-                $where['website_name'] = $like;
-            }
+            mac_apply_like_where($where, 'website_name', $param['wd']);
         }
 
         if(!empty($param['repeat'])){
@@ -121,10 +118,7 @@ class Website extends Base
             }
             if(!empty($param['wd'])){
                 $param['wd'] = htmlspecialchars(urldecode($param['wd']));
-                $like = mac_search_wd_like($param['wd']);
-                if ($like) {
-                    $where['website_name'] = $like;
-                }
+                mac_apply_like_where($where, 'website_name', $param['wd']);
             }
 
 

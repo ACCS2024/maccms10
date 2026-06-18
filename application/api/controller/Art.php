@@ -45,7 +45,7 @@ class Art extends Base
         $limit = mac_api_norm_limit($param['limit'] ?? 0);
 
         if (isset($param['type_id']) && (int)$param['type_id'] > 0) {
-            $where['type_id|type_id_1'] = (int)$param['type_id']; // TODO:TP8-pipe-or
+            $where['type_id|type_id_1'] = (int)$param['type_id'];
         }
 
         if (isset($param['time_end']) && isset($param['time_start'])) {
@@ -412,7 +412,7 @@ class Art extends Base
         $where = [];
         $where['art_status'] = 1;
         if ($typeId > 0) {
-            $where['type_id|type_id_1'] = $typeId; // TODO:TP8-pipe-or
+            $where['type_id|type_id_1'] = $typeId;
         }
 
         $list = Db::table('mac_art')
@@ -460,7 +460,7 @@ class Art extends Base
         $where = [];
         $where['art_status'] = 1;
         if ($typeId > 0) {
-            $where['type_id|type_id_1'] = $typeId; // TODO:TP8-pipe-or
+            $where['type_id|type_id_1'] = $typeId;
         }
 
         $list = Db::table('mac_art')

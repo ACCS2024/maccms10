@@ -241,7 +241,7 @@ class Actor extends Base {
             $where['type_id'] = ['not in', array_map('intval', explode(',', $typenot))];
         }
         if(!empty($tid)) {
-            $where['type_id|type_id_1'] = $tid; // TODO:TP8-pipe-or
+            $where['type_id|type_id_1'] = $tid;
         }
         if(!empty($hitsmonth)){
             $tmp = explode(' ',$hitsmonth);
@@ -294,7 +294,7 @@ class Actor extends Base {
             $where['actor_name'] = explode(',',$name) ;
         }
         if(!empty($wd)) {
-            $where[] = ['actor_name|actor_en', 'like', '%' . $wd . '%']; // TODO:TP8-pipe-or
+            $where[] = ['actor_name|actor_en', 'like', '%' . $wd . '%'];
         }
         $use_rnd_order = ($by == 'rnd');
         if (!$use_rnd_order) {

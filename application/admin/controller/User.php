@@ -80,7 +80,7 @@ class User extends Base
             }
         }
         else{
-            $where['user_pid|user_pid_2|user_pid_3'] = intval($param['uid']) ; // TODO:TP8-pipe-or
+            $where['user_pid|user_pid_2|user_pid_3'] = intval($param['uid']) ;
         }
 
         if(!empty($param['wd'])){

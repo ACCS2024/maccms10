@@ -292,7 +292,7 @@ class Type extends Base {
         $list = $this->where($where)->select();
         foreach($list as $k=>$v){
             $where2=[];
-            $where2['type_id|type_id_1'] = $v['type_id']; // TODO:TP8-pipe-or
+            $where2['type_id|type_id_1'] = $v['type_id'];
             $flag = $v['type_mid'] == 1 ? 'Vod' : 'Art';
             $cc = model($flag)->where($where2)->count();
             if($cc > 0){
@@ -337,7 +337,7 @@ class Type extends Base {
         }
         foreach($list as $k=>$v){
             $where2=[];
-            $where2['type_id|type_id_1'] = $v['type_id']; // TODO:TP8-pipe-or
+            $where2['type_id|type_id_1'] = $v['type_id'];
             $update=[];
             $update['type_id'] = $val;
             $update['type_id_1'] = $type_info['type_pid'];

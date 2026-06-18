@@ -18,7 +18,7 @@ class Manga extends Base
 
         $where = [];
         if (!empty($param['type'])) {
-            $where['type_id|type_id_1'] = $param['type']; // TODO:TP8-pipe-or
+            $where['type_id|type_id_1'] = $param['type'];
         }
         if (!empty($param['level'])) {
             $where['manga_level'] = $param['level'];
@@ -43,10 +43,7 @@ class Manga extends Base
         if(!empty($param['wd'])){
             $param['wd'] = urldecode($param['wd']);
             $param['wd'] = mac_filter_xss($param['wd']);
-            $like = mac_search_wd_like($param['wd']);
-            if ($like) {
-                $where['manga_name'] = $like;
-            }
+            mac_apply_like_where($where, 'manga_name', $param['wd']);
         }
         if (!empty($param['recycle'])) {
             $where['manga_recycle_time'] = ['>', 0];
@@ -220,10 +217,7 @@ class Manga extends Base
         }
         if (!empty($param['wd'])) {
             $param['wd'] = htmlspecialchars(urldecode($param['wd']));
-            $like = mac_search_wd_like($param['wd']);
-            if ($like) {
-                $where['manga_name'] = $like;
-            }
+            mac_apply_like_where($where, 'manga_name', $param['wd']);
         }
         if (!empty($param['recycle'])) {
             $where['manga_recycle_time'] = ['>', 0];

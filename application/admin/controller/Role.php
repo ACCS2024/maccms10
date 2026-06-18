@@ -39,10 +39,7 @@ class Role extends Base
         }
         if(!empty($param['wd'])){
             $param['wd'] = htmlspecialchars(urldecode($param['wd']));
-            $like = mac_search_wd_like($param['wd']);
-            if ($like) {
-                $where['role_name'] = $like;
-            }
+            mac_apply_like_where($where, 'role_name', $param['wd']);
         }
 
 

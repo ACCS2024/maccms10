@@ -43,7 +43,7 @@ class Chatroom extends Base
                 // 无前置过滤时仅搜索 chat_content（单字段减轻负担）
                 $where[] = ['chat_content', 'like', '%' . $param['wd'] . '%'];
             } else {
-                $where[] = ['user_name|chat_content', 'like', '%' . $param['wd'] . '%']; // TODO:TP8-pipe-or
+                $where[] = ['user_name|chat_content', 'like', '%' . $param['wd'] . '%'];
             }
         }
 

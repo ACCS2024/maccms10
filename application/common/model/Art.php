@@ -319,7 +319,7 @@ class Art extends Base {
             $where['type_id'] = ['not in', array_map('intval', explode(',', $typenot))];
         }
         if(!empty($tid)) {
-            $where['type_id|type_id_1'] = $tid; // TODO:TP8-pipe-or
+            $where['type_id|type_id_1'] = $tid;
         }
         if(!empty($hitsmonth)){
             $tmp = explode(' ',$hitsmonth);

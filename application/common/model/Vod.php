@@ -396,7 +396,7 @@ class Vod extends Base {
             }
         }
         if(!empty($tid)) {
-            $where['type_id|type_id_1'] = $tid; // TODO:TP8-pipe-or
+            $where['type_id|type_id_1'] = $tid;
         }
         if(!in_array($GLOBALS['aid'],[13,14,15]) && !empty($param['id'])){
             //$where['vod_id'] = ['not in',$param['id']];

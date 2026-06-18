@@ -14,10 +14,10 @@
 | P0 | [P0.md](P0.md) — 启动层（入口+Shim+Middleware+Addons） | 25/25 | ✅ 完成 |
 | P1 | [P1.md](P1.md) — ORM/DB 层 | 7/8 | 🟡 P1-07 烟雾测试待做 |
 | P2 | [P2.md](P2.md) — API 模块 | 5/6 | 🟡 P2-05 回归测试待做 |
-| P3 | [P3.md](P3.md) — Admin 模块 | 4/6 | 🟡 P3-05/06 待做 |
-| P4 | [P4.md](P4.md) — 前台 + Console | 0/6 | 🔴 未开始 |
+| P3 | [P3.md](P3.md) — Admin 模块 | 5/6 | 🟡 P3-05 回归测试待做 |
+| P4 | [P4.md](P4.md) — 前台 + Console | 4/6 | 🟡 P4-05/06 待做 |
 | P5 | [P5.md](P5.md) — 清理 + 回归 | 0/9 | 🔴 未开始 |
-| **合计** | | **41/63** | |
+| **合计** | | **46/63** | |
 
 ---
 
@@ -90,7 +90,7 @@
 | [P3-03](P3.md#p3-03-admin-控制器-input-替换) | admin/controller/：input() 280 处 → request()->方法 | [x] |
 | [P3-04](P3.md#p3-04-addonphp-适配内化-addons) | admin/controller/Addon.php 适配内化后的 AddonsLoader | [x] |
 | [P3-05](P3.md#p3-05-后台功能回归测试) | 后台功能回归测试（增删改查/上传/设置） | [ ] |
-| [P3-06](P3.md#p3-06-修复-admincontroller-tp5-数组条件语法新增) | **NEW** admin/controller TP5 数组条件 → TP8（~346 处，依赖 P1-08） | [ ] |
+| [P3-06](P3.md#p3-06-修复-admincontroller-tp5-数组条件语法新增) | **NEW** admin/controller TP5 数组条件 → TP8（~346 处，依赖 P1-08） | [x] |
 
 ---
 
@@ -98,10 +98,10 @@
 
 | ID | 任务 | 状态 |
 |----|------|------|
-| [P4-01](P4.md#p4-01-index-控制器适配) | index/controller/：use 改 facade，model() 91 处替换 | [ ] |
-| [P4-02](P4.md#p4-02-taglib-适配) | Maccms.php / Macdiy.php：use think\Db → facade | [ ] |
-| [P4-03](P4.md#p4-03-创建-routeindexphp) | 创建 route/index.php（前台路由，从 route.php 提取） | [ ] |
-| [P4-04](P4.md#p4-04-console-commands-配置迁移) | 创建 config/console.php，注册 10 个 Command | [ ] |
+| [P4-01](P4.md#p4-01-index-控制器适配) | index/controller/：use 改 facade，model() 91 处替换 | [x] |
+| [P4-02](P4.md#p4-02-taglib-适配) | Maccms.php / Macdiy.php：use think\Db → facade | [x] |
+| [P4-03](P4.md#p4-03-创建-routeindexphp) | 创建 route/index.php（前台路由，从 route.php 提取） | [x] |
+| [P4-04](P4.md#p4-04-console-commands-配置迁移) | 创建 config/console.php，注册 10 个 Command | [x] |
 | [P4-05](P4.md#p4-05-前台功能回归测试) | 前台回归测试（首页/分类/详情/搜索） | [ ] |
 | [P4-06](P4.md#p4-06-console-commands-验证) | Console 验证：`php think list` 完整，`php think info` 成功 | [ ] |
 
