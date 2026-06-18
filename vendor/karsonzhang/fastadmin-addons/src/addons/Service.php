@@ -215,7 +215,7 @@ class Service
                 $bootstrapArr[] = file_get_contents($bootstrapFile);
             }
         }
-        $addonsFile = ROOT_PATH . str_replace("/", DS, "static/js/addons.js");
+        $addonsFile = ROOT_PATH . str_replace("/", DS, "public/assets/js/addons.js");
         if ($handle = fopen($addonsFile, 'w')) {
             $tpl = <<<EOD
 define([], function () {
@@ -398,24 +398,6 @@ EOD;
         // 复制文件
         $sourceAssetsDir = self::getSourceAssetsDir($name);
         $destAssetsDir = self::getDestAssetsDir($name);
-        
-        $staticSource = $addonDir . 'static/';
-        $staticDest = ROOT_PATH . 'static_new/' . $name . '/';
-        if (is_dir($staticSource)) {
-            copydirs($staticSource, $staticDest);
-        }
-
-        $staticSourceAsset = $addonDir . 'assets/';
-        $staticAssetDest = ROOT_PATH . 'static_new/addons/' . $name . '/';
-        if (is_dir($staticSourceAsset)) {
-            copydirs($staticSourceAsset, $staticAssetDest);
-        }
-
-        $viewSource = $addonDir . 'view/';
-        $viewDest = APP_PATH . 'admin/view/' . $name . '/';
-        if (is_dir($viewSource)) {
-            copydirs($viewSource, $viewDest);
-        }
         if (is_dir($sourceAssetsDir)) {
             copydirs($sourceAssetsDir, $destAssetsDir);
         }
@@ -484,21 +466,6 @@ EOD;
         $dirs = array_filter(array_unique($dirs));
         foreach ($dirs as $k => $v) {
             remove_empty_folder($v);
-        }
-
-        $staticDest = ROOT_PATH . 'static_new/' . $name . '/';
-        if (is_dir($staticDest)) {
-            rmdirs($staticDest);
-        }
-
-        $staticAssetDest = ROOT_PATH . 'static_new/addons/' . $name . '/';
-        if (is_dir($staticAssetDest)) {
-            rmdirs($staticAssetDest);
-        }
-
-        $viewDest = APP_PATH . 'admin/view/' . $name . '/';
-        if (is_dir($viewDest)) {
-            rmdirs($viewDest);
         }
 
         $info = get_addon_info($name);
@@ -644,7 +611,7 @@ EOD;
      */
     protected static function getDestAssetsDir($name)
     {
-        $assetsDir = ROOT_PATH . str_replace("/", DS, "static/addons/{$name}/");
+        $assetsDir = ROOT_PATH . str_replace("/", DS, "public/assets/addons/{$name}/");
         if (!is_dir($assetsDir)) {
             mkdir($assetsDir, 0755, true);
         }
@@ -668,7 +635,7 @@ EOD;
     {
         return [
             'application',
-            'static'
+            'public'
         ];
     }
 
