@@ -91,7 +91,7 @@ function addons_boot(): void
         }
     }
 
-    // 注册 addons 默认路由（TP8 可选参数用 <param?> 语法）
+    // 注册 addons 默认路由（TP8 可选参数语法：param? 表示可选）
     \think\facade\Route::any('addons/<addon>/<controller?>/<action?>', "\\think\\addons\\Route@execute");
 }
 
