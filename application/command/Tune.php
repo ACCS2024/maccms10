@@ -1,12 +1,12 @@
 <?php
 namespace app\command;
 
-use think\Config;
+use think\facade\Config;
 use think\console\Command;
 use think\console\Input;
 use think\console\input\Option;
 use think\console\Output;
-use think\Db;
+use think\facade\Db;
 
 /**
  * 主机并发调优:检测 PHP / PHP-FPM / Nginx / MySQL / ulimit / sysctl,按本机 内存·核数 计算建议值,

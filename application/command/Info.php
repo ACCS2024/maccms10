@@ -1,12 +1,12 @@
 <?php
 namespace app\command;
 
-use think\Config;
+use think\facade\Config;
 use think\console\Command;
 use think\console\Input;
 use think\console\input\Option;
 use think\console\Output;
-use think\Db;
+use think\facade\Db;
 
 /**
  * 站点 / 环境自检信息(扩展版 doctor)。

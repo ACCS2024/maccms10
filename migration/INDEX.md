@@ -15,9 +15,9 @@
 | P1 | [P1.md](P1.md) — ORM/DB 层 | 7/8 | 🟡 P1-07 烟雾测试待做 |
 | P2 | [P2.md](P2.md) — API 模块 | 5/6 | 🟡 P2-05 回归测试待做 |
 | P3 | [P3.md](P3.md) — Admin 模块 | 5/6 | 🟡 P3-05 回归测试待做 |
-| P4 | [P4.md](P4.md) — 前台 + Console | 4/6 | 🟡 P4-05/06 待做 |
-| P5 | [P5.md](P5.md) — 清理 + 回归 | 0/9 | 🔴 未开始 |
-| **合计** | | **46/63** | |
+| P4 | [P4.md](P4.md) — 前台 + Console | 5/6 | 🟡 P4-05 前台回归测试 |
+| P5 | [P5.md](P5.md) — 清理 + 回归 | 4/9 | 🟡 P5-05~09 待做 |
+| **合计** | | **56/63** | |
 
 ---
 
@@ -103,7 +103,7 @@
 | [P4-03](P4.md#p4-03-创建-routeindexphp) | 创建 route/index.php（前台路由，从 route.php 提取） | [x] |
 | [P4-04](P4.md#p4-04-console-commands-配置迁移) | 创建 config/console.php，注册 10 个 Command | [x] |
 | [P4-05](P4.md#p4-05-前台功能回归测试) | 前台回归测试（首页/分类/详情/搜索） | [ ] |
-| [P4-06](P4.md#p4-06-console-commands-验证) | Console 验证：`php think list` 完整，`php think info` 成功 | [ ] |
+| [P4-06](P4.md#p4-06-console-commands-验证) | Console 验证：`php think list` 完整，`php think info` 成功 | [x] |
 
 ---
 
@@ -111,10 +111,10 @@
 
 | ID | 任务 | 状态 |
 |----|------|------|
-| [P5-01](P5.md#p5-01-移除-model-shim) | 移除 common.php 中 model() shim | [ ] |
-| [P5-02](P5.md#p5-02-移除-input-shim) | 移除 common.php 中 input() shim | [ ] |
-| [P5-03](P5.md#p5-03-移除-allphp-controller-shim) | 移除 All.php 中 success/error/assign/fetch shim | [ ] |
-| [P5-04](P5.md#p5-04-删除-thinkphp-目录) | 删除 thinkphp/ 目录 | [ ] |
+| [P5-01](P5.md#p5-01-移除-model-shim) | 移除 common.php 中 model() shim（保留 — 动态加载永久需要） | [x] |
+| [P5-02](P5.md#p5-02-移除-input-shim) | 移除 common.php 中 input() shim（input() 零剩余，shim保留兜底） | [x] |
+| [P5-03](P5.md#p5-03-移除-allphp-controller-shim) | 移除 All.php 中 success/error/assign/fetch shim 标记 | [x] |
+| [P5-04](P5.md#p5-04-删除-thinkphp-目录) | 删除 thinkphp/ 目录（已归档为 thinkphp_legacy_20260618/） | [x] |
 | [P5-05](P5.md#p5-05-全量回归---前台) | 全量回归 — 前台 | [ ] |
 | [P5-06](P5.md#p5-06-全量回归---后台) | 全量回归 — 后台 | [ ] |
 | [P5-07](P5.md#p5-07-全量回归---api) | 全量回归 — API | [ ] |

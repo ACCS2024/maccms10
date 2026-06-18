@@ -2,7 +2,7 @@
 namespace app\command;
 
 use app\common\util\Installer;
-use think\Config;
+use think\facade\Config;
 use think\console\Command;
 use think\console\Input;
 use think\console\input\Option;

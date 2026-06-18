@@ -1,52 +1,32 @@
 #!/usr/bin/env php
 <?php
 // +----------------------------------------------------------------------
-// | maccms10 命令行入口(ThinkPHP 5.0 console)
-// +----------------------------------------------------------------------
-// | 用于 `php think <command>`,例如站点安装:php think site:install
-// | 与网页入口 index.php 对齐关键目录常量,保证 common.php / helper 正常工作。
+// | maccms10 命令行入口 (ThinkPHP 8)
 // +----------------------------------------------------------------------
 
-// 应用目录常量(必须在引导前定义,否则 console 会按入口脚本目录推断,导致 application 路径错误)
-define('ROOT_PATH', __DIR__ . '/');
-define('APP_PATH', __DIR__ . '/application/');
+define('ROOT_PATH',    __DIR__ . '/');
+define('APP_PATH',     __DIR__ . '/application/');
+define('RUNTIME_PATH', __DIR__ . '/runtime/');
+define('ADDON_PATH',   __DIR__ . '/addons/');
 define('MAC_COMM', __DIR__ . '/application/common/common/');
 define('MAC_HOME_COMM', __DIR__ . '/application/index/common/');
 define('MAC_ADMIN_COMM', __DIR__ . '/application/admin/common/');
 define('MAC_START_TIME', microtime(true));
-// 对齐"安装"上下文:令 app_init 行为(Init/RequestSecurity/SessionSameSite)按网页安装器
-// 同样的方式运行(均只读配置文件、不触库,适用于未安装的全新环境)。ENTRANCE 供这些
-// 行为判定运行场景,未定义会触发 Init.php 中 `ENTRANCE==...` 的未定义常量致命。
-define('BIND_MODULE', 'install');
 define('ENTRANCE', 'install');
 define('IN_FILE', 'think');
 
-// 取消超时/内存限制(安装导入大 SQL 时需要),与 index.php 一致
 ini_set('max_execution_time', '0');
 ini_set('memory_limit', '-1');
 
-// 安全:本入口仅限命令行。即便被 Web 服务器误当作 PHP 解析(本项目 docroot=项目根,
-// think 位于 docroot 内),也立刻拒绝,杜绝 console 被 HTTP 触达。
 if (PHP_SAPI !== 'cli') {
     http_response_code(403);
     exit('maccms console entry: CLI only');
 }
 
-// 框架基础引导(内部会注册 \think\Error 的错误/异常处理器并置 error_reporting(E_ALL))
-require __DIR__ . '/thinkphp/base.php';
+require __DIR__ . '/vendor/autoload.php';
 
-// 兼容 PHP 8.x:用自有错误处理器"吞掉"弃用告警,其余错误原样交回框架处理。
-// 原因:ThinkPHP 5.0(EOL,非 PHP8-clean)的处理器对 E_DEPRECATED 既不能安全抛出
-//   (会把"隐式可空参数已弃用"升级为致命),也不能安全 report()(此时被引用的 App 类
-//   可能尚在编译中,触发 "Class think\App not found")。这里在 base.php 之后覆盖处理器,
-//   仅对弃用返回 true(吞掉),保证 console 在 8.x 正常工作;真实错误仍委回框架。
-// 生产运行 PHP 7.4 时不会产生这些弃用,本回调等价于无操作。根治见 docs/tp8-migration/。
-set_error_handler(function ($errno, $errstr, $errfile = '', $errline = 0) {
-    if (E_DEPRECATED === $errno || E_USER_DEPRECATED === $errno) {
-        return true;
-    }
-    return \think\Error::appError($errno, $errstr, $errfile, $errline);
-});
+$app = new \think\App(__DIR__ . '/');
+$app->setAppPath(__DIR__ . '/application/');
 
-\think\App::initCommon();
-\think\Console::init();
+$console = new \think\Console($app);
+$console->run();

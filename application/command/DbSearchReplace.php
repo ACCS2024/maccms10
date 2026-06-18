@@ -1,13 +1,13 @@
 <?php
 namespace app\command;
 
-use think\Config;
+use think\facade\Config;
 use think\console\Command;
 use think\console\Input;
 use think\console\input\Argument;
 use think\console\input\Option;
 use think\console\Output;
-use think\Db;
+use think\facade\Db;
 
 /**
  * 跨表/字段搜索替换(换域名、改路径、批量改文案),WP-CLI `search-replace` 的对应物。
