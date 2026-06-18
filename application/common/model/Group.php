@@ -1,7 +1,7 @@
 <?php
 namespace app\common\model;
-use think\Cache;
-use think\Db;
+use think\facade\Cache;
+use think\facade\Db;
 
 class Group extends Base {
     // 设置数据表（不含前缀）

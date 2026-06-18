@@ -1,8 +1,8 @@
 <?php
 namespace app\common\model;
 
-use think\Db;
-use think\Cache;
+use think\facade\Db;
+use think\facade\Cache;
 
 class VodSearch extends Base {
     // 设置数据表（不含前缀）

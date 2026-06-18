@@ -2,7 +2,7 @@
 namespace app\common\model;
 
 use app\common\util\JwtService;
-use think\Db;
+use think\facade\Db;
 use think\View;
 use app\common\validate\User as UserValidate;
 

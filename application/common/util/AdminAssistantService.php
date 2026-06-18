@@ -1,7 +1,7 @@
 <?php
 namespace app\common\util;
 
-use think\Cache;
+use think\facade\Cache;
 
 /**
  * Admin-only help bot: retrieves local markdown knowledge, optional env snapshot, calls OpenAI-compatible chat.

@@ -2,7 +2,7 @@
 
 namespace app\common\util;
 
-use think\Db;
+use think\facade\Db;
 
 /**
  * 在 listCacheData 中用 Meilisearch 替换关键词 LIKE（保守条件，不满足则回退 MySQL）。

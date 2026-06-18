@@ -1,6 +1,6 @@
 <?php
 namespace app\common\model;
-use think\Db;
+use think\facade\Db;
 use app\common\util\Pinyin;
 
 class Cj extends Base {

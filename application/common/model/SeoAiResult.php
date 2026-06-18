@@ -1,7 +1,7 @@
 <?php
 namespace app\common\model;
 
-use think\Db;
+use think\facade\Db;
 
 class SeoAiResult extends Base
 {

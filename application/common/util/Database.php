@@ -1,6 +1,6 @@
 <?php
 namespace app\common\util;
-use think\Db;
+use think\facade\Db;
 
 //数据库操作模型
 class Database {

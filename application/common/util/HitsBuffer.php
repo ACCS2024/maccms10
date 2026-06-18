@@ -2,8 +2,8 @@
 
 namespace app\common\util;
 
-use think\Cache;
-use think\Db;
+use think\facade\Cache;
+use think\facade\Db;
 
 /**
  * 播放/阅读量 Redis 计数缓冲(可选,默认关闭)。

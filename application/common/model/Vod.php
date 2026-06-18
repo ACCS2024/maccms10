@@ -1,7 +1,7 @@
 <?php
 namespace app\common\model;
-use think\Db;
-use think\Cache;
+use think\facade\Db;
+use think\facade\Cache;
 use app\common\util\Pinyin;
 use app\common\util\MeilisearchService;
 use app\common\util\MeilisearchListBridge;

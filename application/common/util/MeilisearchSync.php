@@ -2,7 +2,7 @@
 
 namespace app\common\util;
 
-use think\Db;
+use think\facade\Db;
 
 /**
  * 写入 / 删除 Meilisearch 文档及全量同步。

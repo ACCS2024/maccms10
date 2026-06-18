@@ -2,8 +2,8 @@
 
 namespace app\common\util;
 
-use think\Cache;
-use think\Db;
+use think\facade\Cache;
+use think\facade\Db;
 
 /**
  * 搜索统计、联想排序、热门词等（不依赖外部检索引擎）。

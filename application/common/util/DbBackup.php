@@ -1,7 +1,7 @@
 <?php
 namespace app\common\util;
 
-use think\Db;
+use think\facade\Db;
 
 /**
  * 轻量数据库备份/恢复服务(PDO 实现,不依赖 mysqldump,供 CLI db:export / db:import 复用)。

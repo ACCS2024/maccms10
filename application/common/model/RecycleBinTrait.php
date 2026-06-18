@@ -1,7 +1,7 @@
 <?php
 namespace app\common\model;
 
-use think\Db;
+use think\facade\Db;
 
 /**
  * 软删除回收站：{prefix}_recycle_time 为 0 表示正常，>0 为移入回收站的时间戳

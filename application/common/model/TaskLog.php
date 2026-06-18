@@ -1,6 +1,6 @@
 <?php
 namespace app\common\model;
-use think\Db;
+use think\facade\Db;
 
 class TaskLog extends Base {
     protected $name = 'task_log';

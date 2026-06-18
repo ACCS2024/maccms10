@@ -1,7 +1,7 @@
 <?php
 namespace app\common\util;
 
-use think\Db;
+use think\facade\Db;
 
 /**
  * 站点安装核心服务(单一事实源)

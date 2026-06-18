@@ -1,6 +1,6 @@
 <?php
 namespace app\common\model;
-use think\Db;
+use think\facade\Db;
 
 class SignMilestone extends Base {
     protected $name = 'sign_milestone';

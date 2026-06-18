@@ -1,8 +1,8 @@
 <?php
 namespace app\common\util;
 
-use think\Cache;
-use think\Db;
+use think\facade\Cache;
+use think\facade\Db;
 use think\Log;
 
 /**

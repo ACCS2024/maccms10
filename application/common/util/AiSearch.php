@@ -1,7 +1,7 @@
 <?php
 namespace app\common\util;
 
-use think\Db;
+use think\facade\Db;
 use think\Log;
 
 class AiSearch

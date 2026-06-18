@@ -2,7 +2,7 @@
 
 namespace app\common\util;
 
-use think\Db;
+use think\facade\Db;
 
 /**
  * API 搜索建议：Meilisearch + filterPublishedKind + refinePrimaryIdsForPublished，
