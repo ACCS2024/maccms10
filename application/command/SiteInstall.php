@@ -233,6 +233,7 @@ class SiteInstall extends Command
         }
         $output->writeln("  管理员   : <comment>{$adminUser} / {$adminPass}</comment>");
         $output->writeln('  下一步   : 浏览器打开  <站点地址>/admin.php  登录');
+        $output->writeln('  调优(可选): 以 root 运行  php think tune --apply  优化并发(PHP/MySQL/Nginx/ulimit)');
         return 0;
     }
 

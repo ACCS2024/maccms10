@@ -19,4 +19,5 @@ return [
     'app\\command\\DbExport',
     'app\\command\\DbImport',
     'app\\command\\DbSearchReplace',
+    'app\\command\\Tune',
 ];

@@ -80,6 +80,11 @@ maccms-cli —— 一键建站 / 快速部署
   db:search-replace OLD NEW [--dry-run] [--tables=a,b]
         跨表文本字段搜索替换(换域名/改路径);先 --dry-run 演练再执行。
 
+  tune [--apply] [--dry-run]
+        检测主机(内存/核数)并优化并发:PHP/FPM/Nginx/MySQL/ulimit/sysctl。
+        默认只检测+生成配置片段+教程;--apply 才写入安全 drop-in(自动备份),
+        Nginx 主配置/FPM 池/MySQL 重启项始终走教程。需 root 才能写系统目录。
+
 多站编排(maccms-cli.yml,见 maccms-cli.yml.example):
   - defaults 段:为 new/install/reinstall 提供默认参数(免重复敲 db-host/root-user 等)。
   - aliases/groups:运维命令首参用 @别名/@分组 对多个站点批量执行,例:

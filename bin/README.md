@@ -47,6 +47,7 @@ bin/maccms doctor
 | `db:export [--file=xx.sql] [--tables=a,b]` | 导出数据库到 .sql(PDO 实现,无需 mysqldump) |
 | `db:import --file=xx.sql [--src-prefix=mac_ --dst-prefix=site1_]` | 从 .sql 恢复(可选表前缀替换) |
 | `db:search-replace OLD NEW [--dry-run] [--tables=a,b]` | 跨表文本字段搜索替换(换域名/改路径);先 `--dry-run` 演练 |
+| `tune [--apply] [--dry-run]` | 检测主机并优化并发(PHP/FPM/Nginx/MySQL/ulimit/sysctl);找不到/失败则输出教程 |
 
 ```bash
 # 例:对另一个站点目录做运维
@@ -85,8 +86,22 @@ bin/maccms db:export @all            # 备份所有站点
 
 ## 安全网
 
-- `reinstall` 默认在**删库重装前自动备份**到 `runtime/backup/pre-reinstall-*.sql`,加 `--no-backup` 跳过。
+- `reinstall` 默认在**删库重装前自动备份**到 `application/data/backup/pre-reinstall-*.sql`(受 `application/.htaccess` 保护,不会被 HTTP 下载),加 `--no-backup` 跳过。
 - `db:search-replace` / `destroy` 等破坏性操作:先 `--dry-run` / 二次确认(`destroy` 需 `--yes` 或 `MACCMS_YES=1`)。
+
+## 主机并发调优(tune)
+
+```bash
+bin/maccms tune                 # 只检测 + 生成配置片段 + 教程(不动系统)
+sudo bin/maccms tune --apply    # 额外写入安全 drop-in(PHP conf.d / limits.d / sysctl.d / mysql conf.d),自动备份
+bin/maccms tune --apply --dry-run   # 演练:打印将写哪些,不真正写
+```
+
+- 按本机**内存/核数**算出 PHP-FPM `pm.max_children`、opcache、MySQL `innodb_buffer_pool_size`/`max_connections`、Nginx `worker_connections`、`nofile`、sysctl 等建议值。
+- **只新增 `*.d` drop-in 文件**(非破坏性)并自动备份;**绝不就地改写** `php.ini`/`nginx.conf`/`my.cnf`,**不自动重启服务**(给出 reload 指令)。
+- **Nginx 主配置 / PHP-FPM 池 `pm.*` / MySQL 重启项**风险较高,**始终走教程**(不自动改)。
+- 找不到服务/无权限/失败 → 该项自动转为教程。配置片段与教程默认输出到受保护的 `application/data/optimize/`(含 `README.md`)。
+- ⚠️ `innodb_buffer_pool_size` 默认按"DB 独占本机"估算;与 Web 同机请按教程下调,避免 OOM。
 
 ## root 口令传递(三选一,按优先级)
 
