@@ -5,6 +5,11 @@
 > 商业级要求:**非交互可脚本化、口令零泄漏、最小权限、与 Web 安装器行为/安全等价、幂等、可秒级销毁重建**。
 >
 > 状态:**设计交付**(含可直接落地的代码骨架),未改业务代码。落地后置于 §3 的文件位置。
+>
+> 📌 本文为**建站(install)**部分的设计与实现记录。工具其后已扩展为完整的 WP-CLI 式命令集
+> (`info`/`cache:flush`/`admin:reset-password`/`db:export`/`db:import`/`db:search-replace` +
+> 多站 `@别名`/`maccms-cli.yml` + `--porcelain`)。**完整命令与用法见 [`bin/README.md`](../bin/README.md)**;
+> 与 WP-CLI 的对标与演进见 [`docs/MACCMS_CLI_GAP_ANALYSIS.md`](MACCMS_CLI_GAP_ANALYSIS.md)。
 
 ---
 
