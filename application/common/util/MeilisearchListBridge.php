@@ -56,13 +56,6 @@ class MeilisearchListBridge
             }
         }
         $total = max(0, (int)(isset($sr['estimatedTotalHits']) ? $sr['estimatedTotalHits'] : 0));
-        if (self::shouldAbortMeiliForStaleHits($hitRows, $ids)) {
-            return null;
-        }
-        $ids = self::refineMeiliPrimaryIds($ids, 'vod');
-        if (self::shouldAbortMeiliForStaleHits($hitRows, $ids)) {
-            return null;
-        }
 
         $nw = $w;
         foreach (array_keys($nw) as $k) {
@@ -72,6 +65,19 @@ class MeilisearchListBridge
                 }
             }
         }
+
+        // 索引滞后（Meilisearch 有命中但 ID 解析失败）：返回空集，不回退 MySQL LIKE
+        if (self::shouldAbortMeiliForStaleHits($hitRows, $ids)) {
+            $nw['vod_id'] = ['eq', -1];
+            return ['where' => $nw, 'order' => $currentOrder, 'total' => 0];
+        }
+        $ids = self::refineMeiliPrimaryIds($ids, 'vod');
+        // 索引滞后（Meilisearch 有命中但 MySQL 中已全部下架/删除）：返回空集，不回退 MySQL LIKE
+        if (self::shouldAbortMeiliForStaleHits($hitRows, $ids)) {
+            $nw['vod_id'] = ['eq', -1];
+            return ['where' => $nw, 'order' => $currentOrder, 'total' => 0];
+        }
+
         if (empty($ids)) {
             $nw['vod_id'] = ['eq', -1];
             $order = $currentOrder;
@@ -129,13 +135,6 @@ class MeilisearchListBridge
             }
         }
         $total = max(0, (int)(isset($sr['estimatedTotalHits']) ? $sr['estimatedTotalHits'] : 0));
-        if (self::shouldAbortMeiliForStaleHits($hitRows, $ids)) {
-            return null;
-        }
-        $ids = self::refineMeiliPrimaryIds($ids, 'art');
-        if (self::shouldAbortMeiliForStaleHits($hitRows, $ids)) {
-            return null;
-        }
 
         $nw = $w;
         foreach (array_keys($nw) as $k) {
@@ -145,6 +144,17 @@ class MeilisearchListBridge
                 }
             }
         }
+
+        if (self::shouldAbortMeiliForStaleHits($hitRows, $ids)) {
+            $nw['art_id'] = ['eq', -1];
+            return ['where' => $nw, 'order' => $currentOrder, 'total' => 0];
+        }
+        $ids = self::refineMeiliPrimaryIds($ids, 'art');
+        if (self::shouldAbortMeiliForStaleHits($hitRows, $ids)) {
+            $nw['art_id'] = ['eq', -1];
+            return ['where' => $nw, 'order' => $currentOrder, 'total' => 0];
+        }
+
         if (empty($ids)) {
             $nw['art_id'] = ['eq', -1];
             $order = $currentOrder;
@@ -202,13 +212,6 @@ class MeilisearchListBridge
             }
         }
         $total = max(0, (int)(isset($sr['estimatedTotalHits']) ? $sr['estimatedTotalHits'] : 0));
-        if (self::shouldAbortMeiliForStaleHits($hitRows, $ids)) {
-            return null;
-        }
-        $ids = self::refineMeiliPrimaryIds($ids, 'manga');
-        if (self::shouldAbortMeiliForStaleHits($hitRows, $ids)) {
-            return null;
-        }
 
         $nw = $w;
         foreach (array_keys($nw) as $k) {
@@ -218,6 +221,17 @@ class MeilisearchListBridge
                 }
             }
         }
+
+        if (self::shouldAbortMeiliForStaleHits($hitRows, $ids)) {
+            $nw['manga_id'] = ['eq', -1];
+            return ['where' => $nw, 'order' => $currentOrder, 'total' => 0];
+        }
+        $ids = self::refineMeiliPrimaryIds($ids, 'manga');
+        if (self::shouldAbortMeiliForStaleHits($hitRows, $ids)) {
+            $nw['manga_id'] = ['eq', -1];
+            return ['where' => $nw, 'order' => $currentOrder, 'total' => 0];
+        }
+
         if (empty($ids)) {
             $nw['manga_id'] = ['eq', -1];
             $order = $currentOrder;
