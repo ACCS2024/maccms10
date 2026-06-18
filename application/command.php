@@ -18,4 +18,5 @@ return [
     'app\\command\\AdminResetPassword',
     'app\\command\\DbExport',
     'app\\command\\DbImport',
+    'app\\command\\DbSearchReplace',
 ];

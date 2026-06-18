@@ -1,0 +1,19 @@
+# maccms-cli 项目配置(复制为 maccms-cli.yml 后生效)
+# 作用:① defaults 免去每次重复敲 db-host/root-user 等;② aliases/groups 让运维命令一条打多站。
+# 说明:这是"简化 YAML 子集"(由 bin/_config.php 解析,无需 yaml 扩展);仅支持下面三段。
+
+# 安装类命令(new/install/reinstall)的默认参数;命令行显式参数会覆盖这里。
+defaults:
+  db-host: 127.0.0.1
+  db-port: "3306"
+  root-user: root
+  db-prefix: mac_
+
+# 站点别名 → 站点根目录(供运维命令用:info/cache:flush/admin:*/db:* 等)
+aliases:
+  site1: /srv/site1
+  site2: /srv/site2
+
+# 分组(别名集合);@all 是约定的"全部"
+groups:
+  all: site1 site2

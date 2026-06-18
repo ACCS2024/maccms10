@@ -46,6 +46,7 @@ bin/maccms doctor
 | `admin:reset-password --user=admin [--password=xxx]` | 重置后台管理员口令(进不去后台时自救;缺省随机) |
 | `db:export [--file=xx.sql] [--tables=a,b]` | 导出数据库到 .sql(PDO 实现,无需 mysqldump) |
 | `db:import --file=xx.sql [--src-prefix=mac_ --dst-prefix=site1_]` | 从 .sql 恢复(可选表前缀替换) |
+| `db:search-replace OLD NEW [--dry-run] [--tables=a,b]` | 跨表文本字段搜索替换(换域名/改路径);先 `--dry-run` 演练 |
 
 ```bash
 # 例:对另一个站点目录做运维
@@ -53,7 +54,39 @@ bin/maccms info --path=/srv/site1
 bin/maccms cache:flush --path=/srv/site1
 bin/maccms admin:reset-password --path=/srv/site1 --user=admin
 bin/maccms db:export --path=/srv/site1 --file=/backup/site1.sql
+# 换域名(先演练再执行)
+bin/maccms db:search-replace http://old.com http://new.com --dry-run --path=/srv/site1
+bin/maccms db:search-replace http://old.com http://new.com --path=/srv/site1
 ```
+
+## 多站编排(maccms-cli.yml)
+
+复制 `maccms-cli.yml.example` 为 `maccms-cli.yml`(或用 `MACCMS_CLI_CONFIG=路径` 指定):
+
+```yaml
+defaults: { db-host: 127.0.0.1, db-port: "3306", root-user: root, db-prefix: mac_ }
+aliases:  { site1: /srv/site1, site2: /srv/site2 }
+groups:   { all: site1 site2 }
+```
+
+- **defaults**:为 `new`/`install`/`reinstall` 提供默认参数(免重复敲;命令行显式参数覆盖之)。
+- **aliases / groups**:运维命令首参用 `@别名` / `@分组` 对多个站点**批量执行**:
+
+```bash
+bin/maccms info @all                 # 对所有站点跑 info
+bin/maccms cache:flush @site1        # 对 site1 清缓存
+bin/maccms db:export @all            # 备份所有站点
+```
+
+## 脚本化输出
+
+- `--porcelain`:`site:install` 输出一行 JSON(含库名/账号/口令);`db:export` 仅输出文件路径;`admin:reset-password` 仅输出新口令。
+- `info --format=json`:结构化自检结果。
+
+## 安全网
+
+- `reinstall` 默认在**删库重装前自动备份**到 `runtime/backup/pre-reinstall-*.sql`,加 `--no-backup` 跳过。
+- `db:search-replace` / `destroy` 等破坏性操作:先 `--dry-run` / 二次确认(`destroy` 需 `--yes` 或 `MACCMS_YES=1`)。
 
 ## root 口令传递(三选一,按优先级)
 

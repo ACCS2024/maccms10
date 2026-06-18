@@ -40,6 +40,7 @@ class SiteInstall extends Command
             ->addOption('cover', null, Option::VALUE_NONE, '库已存在时复用(不删旧表)')
             ->addOption('fresh', null, Option::VALUE_NONE, '先删除同名库再重建(干净重装,reinstall 使用)')
             ->addOption('force', null, Option::VALUE_NONE, '已安装(存在 install.lock)仍继续')
+            ->addOption('porcelain', null, Option::VALUE_NONE, '仅输出一行 JSON 安装结果(便于脚本/CI)')
             ->setHelp(
                 "示例:\n" .
                 "  echo \"\$ROOT_PASS\" | php think site:install --db-name=demo --site-name=Demo\n" .
@@ -174,12 +175,17 @@ class SiteInstall extends Command
         }
 
         // 8) 导入 SQL(结构 + 可选演示数据)
+        $quiet = (bool)$o('porcelain');
         try {
             $n1 = $installer->importSqlFile(APP_PATH . 'install/sql/install.sql', $prefix);
-            $output->writeln("  导入结构:{$n1} 条语句");
+            if (!$quiet) {
+                $output->writeln("  导入结构:{$n1} 条语句");
+            }
             if ((string)$o('with-initdata') === '1') {
                 $n2 = $installer->importSqlFile(APP_PATH . 'install/sql/initdata.sql', $prefix);
-                $output->writeln("  导入演示数据:{$n2} 条语句");
+                if (!$quiet) {
+                    $output->writeln("  导入演示数据:{$n2} 条语句");
+                }
             }
         } catch (\Exception $e) {
             $output->writeln('<error>' . $e->getMessage() . '</error>');
@@ -203,6 +209,18 @@ class SiteInstall extends Command
         }
 
         // 11) 汇总(口令一次性打印)
+        if ($o('porcelain')) {
+            $output->writeln(json_encode([
+                'site_name'  => $siteName,
+                'database'   => $dbName,
+                'prefix'     => $prefix,
+                'app_user'   => $usingRoot ? $o('root-user') : $appUser,
+                'app_pass'   => $usingRoot ? null : $appPass,
+                'admin_user' => $adminUser,
+                'admin_pass' => $adminPass,
+            ], JSON_UNESCAPED_UNICODE));
+            return 0;
+        }
         $output->writeln('');
         $output->writeln('<info>✔ 安装完成</info>');
         $output->writeln("  站点名称 : {$siteName}");

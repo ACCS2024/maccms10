@@ -19,6 +19,7 @@ class AdminResetPassword extends Command
             ->setDescription('重置管理员口令(bcrypt;不给则随机生成并打印)')
             ->addOption('user', null, Option::VALUE_REQUIRED, '【必填】管理员账号')
             ->addOption('password', null, Option::VALUE_OPTIONAL, '新口令(6~20;缺省随机)', '')
+            ->addOption('porcelain', null, Option::VALUE_NONE, '仅输出新口令(便于脚本)')
             ->setHelp("示例:php think admin:reset-password --user=admin --password=newpass123");
     }
 
@@ -59,6 +60,10 @@ class AdminResetPassword extends Command
             return 6;
         }
 
+        if ($input->getOption('porcelain')) {
+            $output->writeln($pass);
+            return 0;
+        }
         $output->writeln('<info>✔ 口令已重置</info>');
         $output->writeln("  管理员 : <comment>{$user} / {$pass}</comment>");
         return 0;
