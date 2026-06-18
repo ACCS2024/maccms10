@@ -28,13 +28,20 @@ class Tune extends Command
             ->setDescription('检测并优化主机并发(PHP/FPM/Nginx/MySQL/ulimit/sysctl);找不到则输出教程')
             ->addOption('apply', null, Option::VALUE_NONE, '尝试写入安全 drop-in(conf.d/limits.d/sysctl.d),自动备份')
             ->addOption('dry-run', null, Option::VALUE_NONE, '配合 --apply:只打印将写入的目标,不实际写')
-            ->addOption('out', null, Option::VALUE_OPTIONAL, '配置片段/教程输出目录', '');
+            ->addOption('out', null, Option::VALUE_OPTIONAL, '配置片段/教程输出目录', '')
+            ->addOption('revert', null, Option::VALUE_NONE, '撤销 --apply 写入的系统 drop-in(按账本恢复备份/删除并清理)');
     }
 
     protected function execute(Input $input, Output $output)
     {
         $apply = (bool)$input->getOption('apply');
         $dry   = (bool)$input->getOption('dry-run');
+        $outDir = rtrim(trim((string)$input->getOption('out')) ?: (APP_PATH . 'data/optimize/'), '/') . '/';
+
+        // 撤销:不需检测,直接按账本回滚 --apply 写入的系统改动
+        if ($input->getOption('revert')) {
+            return $this->doRevert($output, $outDir);
+        }
 
         $d = $this->detect();
         $r = $this->recommend($d);
@@ -52,8 +59,6 @@ class Tune extends Command
         $output->writeln("  Nginx worker_connections={$r['nginx_conn']} worker_processes=auto / nofile={$r['nofile']}");
 
         // 生成配置片段 + 教程(始终,安全)
-        $outDir = trim((string)$input->getOption('out')) ?: (APP_PATH . 'data/optimize/');
-        $outDir = rtrim($outDir, '/') . '/';
         if (!is_dir($outDir)) {
             @mkdir($outDir, 0755, true);
         }
@@ -67,6 +72,7 @@ class Tune extends Command
             $output->writeln('── 应用 drop-in' . ($dry ? '(--dry-run 演练)' : '') . ' ──');
             $applied = [];
             $manual = [];
+            $ledger = [];
             foreach ($this->dropinTargets($d, $r) as $t) {
                 $dir = $t['dir'];
                 if ($dir === null) {
@@ -82,11 +88,15 @@ class Tune extends Command
                     $applied[] = '[演练] 将写 ' . $dst;
                     continue;
                 }
+                $ts = date('YmdHis');
+                $backup = null;
                 if (is_file($dst)) {
-                    @copy($dst, $dst . '.bak-' . date('YmdHis'));
+                    $backup = $dst . '.bak-' . $ts;
+                    @copy($dst, $backup);
                 }
                 if (false !== @file_put_contents($dst, $t['content'])) {
                     $applied[] = '✔ ' . $dst;
+                    $ledger[] = ['ts' => $ts, 'path' => $dst, 'backup' => $backup];
                 } else {
                     $manual[] = $t['label'] . ":写入失败 {$dst} → 见教程";
                 }
@@ -96,6 +106,12 @@ class Tune extends Command
             }
             foreach ($manual as $m) {
                 $output->writeln('  <comment>手动:' . $m . '</comment>');
+            }
+            if (!$dry && !empty($ledger)) {
+                $lf = $outDir . 'tune-ledger.json';
+                $prev = is_file($lf) ? (json_decode((string)file_get_contents($lf), true) ?: []) : [];
+                @file_put_contents($lf, json_encode(array_merge($prev, $ledger), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+                $output->writeln('  <info>撤销:运行  php think tune --revert</info>(账本 ' . $lf . ')');
             }
             if (!$dry) {
                 $output->writeln('  生效需 reload:php-fpm reload · sysctl --system · 重新登录(ulimit) · 重启 MySQL(谨慎)');
@@ -299,5 +315,101 @@ class Tune extends Command
                 return "[mysqld]\ninnodb_buffer_pool_size = {$r['innodb_bp_mb']}M\ninnodb_log_file_size = 256M\ninnodb_flush_log_at_trx_commit = 2\ninnodb_flush_method = O_DIRECT\nmax_connections = {$r['mysql_maxconn']}\ntable_open_cache = 4000\n";
         }
         return '';
+    }
+
+    // ---------------- 撤销 ----------------
+
+    /**
+     * 按账本回滚 --apply 的系统改动:有备份则恢复原文件(并删备份),否则删除我们新建的文件。
+     * 账本丢失时回退到"按已知文件名清理"。绝不触碰非 maccms 命名的文件。
+     */
+    private function doRevert(Output $o, $outDir)
+    {
+        $o->writeln('── 撤销 tune --apply 的系统改动 ──');
+        $lf = $outDir . 'tune-ledger.json';
+        $entries = is_file($lf) ? (json_decode((string)file_get_contents($lf), true) ?: []) : [];
+
+        if (empty($entries)) {
+            $o->writeln('  无账本(' . $lf . '),改用"按已知文件名"清理…');
+            return $this->revertByName($o);
+        }
+
+        $done = 0;
+        $fail = [];
+        foreach (array_reverse($entries) as $e) {       // LIFO:后写的先撤
+            $path = $e['path'] ?? '';
+            $bak  = $e['backup'] ?? null;
+            if ($path === '') {
+                continue;
+            }
+            if (!empty($bak) && is_file($bak)) {
+                if (@copy($bak, $path) && @unlink($bak)) {
+                    $o->writeln('  ↩ 恢复原文件 ' . $path);
+                    $done++;
+                } else {
+                    $fail[] = $path . '(恢复失败,需 root?)';
+                }
+            } else {
+                if (!is_file($path) || @unlink($path)) {
+                    $o->writeln('  ✗ 删除 ' . $path);
+                    $done++;
+                } else {
+                    $fail[] = $path . '(删除失败,需 root?)';
+                }
+            }
+        }
+        foreach ($fail as $f) {
+            $o->writeln('  <comment>手动:' . $f . '</comment>');
+        }
+        if (empty($fail)) {
+            @unlink($lf);                                 // 全部成功才清账本
+        }
+        $o->writeln('  生效需 reload:php-fpm reload · sysctl --system · 重新登录(ulimit) · 重启 MySQL');
+        $o->writeln('  <comment>注意:你按教程手改的 Nginx 主配置 / FPM 池 / MySQL 不在账本内,需手动还原</comment>');
+        $o->writeln('<info>✔ 撤销完成(' . $done . ' 项' . (empty($fail) ? '' : ',' . count($fail) . ' 项需手动') . ')</info>');
+        return empty($fail) ? 0 : 6;
+    }
+
+    /** 账本丢失时的兜底:按 maccms 专用文件名在已知目录里恢复/删除(只动 *maccms* 命名文件) */
+    private function revertByName(Output $o)
+    {
+        $d = $this->detect();
+        $cands = [];
+        foreach ($d['confd'] as $cd) {
+            $cands[] = $cd . '/99-maccms-perf.ini';
+        }
+        if ($d['limitsd']) {
+            $cands[] = $d['limitsd'] . '/99-maccms-nofile.conf';
+        }
+        if ($d['sysctld']) {
+            $cands[] = $d['sysctld'] . '/99-maccms.conf';
+        }
+        if ($d['mysql_confd']) {
+            $cands[] = $d['mysql_confd'] . '/z-maccms.cnf';
+        }
+        $done = 0;
+        foreach ($cands as $p) {
+            if (!is_file($p)) {
+                continue;
+            }
+            $baks = glob($p . '.bak-*') ?: [];
+            if ($baks) {
+                rsort($baks);
+                if (@copy($baks[0], $p)) {
+                    $o->writeln('  ↩ 恢复 ' . $p . '(来自 ' . basename($baks[0]) . ')');
+                    @unlink($baks[0]);
+                    $done++;
+                    continue;
+                }
+            }
+            if (@unlink($p)) {
+                $o->writeln('  ✗ 删除 ' . $p);
+                $done++;
+            } else {
+                $o->writeln('  <comment>手动:无法处理 ' . $p . '(需 root?)</comment>');
+            }
+        }
+        $o->writeln($done ? ('<info>✔ 按名撤销完成(' . $done . ' 项)</info>') : '<comment>未发现 maccms drop-in,无需撤销</comment>');
+        return 0;
     }
 }

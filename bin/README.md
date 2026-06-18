@@ -95,12 +95,14 @@ bin/maccms db:export @all            # 备份所有站点
 bin/maccms tune                 # 只检测 + 生成配置片段 + 教程(不动系统)
 sudo bin/maccms tune --apply    # 额外写入安全 drop-in(PHP conf.d / limits.d / sysctl.d / mysql conf.d),自动备份
 bin/maccms tune --apply --dry-run   # 演练:打印将写哪些,不真正写
+sudo bin/maccms tune --revert   # 撤销:按账本恢复被覆盖的原文件 / 删除新建的 drop-in,并清理
 ```
 
 - 按本机**内存/核数**算出 PHP-FPM `pm.max_children`、opcache、MySQL `innodb_buffer_pool_size`/`max_connections`、Nginx `worker_connections`、`nofile`、sysctl 等建议值。
 - **只新增 `*.d` drop-in 文件**(非破坏性)并自动备份;**绝不就地改写** `php.ini`/`nginx.conf`/`my.cnf`,**不自动重启服务**(给出 reload 指令)。
 - **Nginx 主配置 / PHP-FPM 池 `pm.*` / MySQL 重启项**风险较高,**始终走教程**(不自动改)。
 - 找不到服务/无权限/失败 → 该项自动转为教程。配置片段与教程默认输出到受保护的 `application/data/optimize/`(含 `README.md`)。
+- **可撤销**:`--apply` 会把每次写入记进账本(`application/data/optimize/tune-ledger.json`);`--revert` 据此**恢复被覆盖的原文件、删除新建的 drop-in 并清理备份**。账本丢失时回退到"按 maccms 专用文件名清理"(只动 `*maccms*` 命名文件)。撤销不自动重启服务,且你按教程**手改**的 Nginx/FPM/MySQL 不在账本内、需手动还原。
 - ⚠️ `innodb_buffer_pool_size` 默认按"DB 独占本机"估算;与 Web 同机请按教程下调,避免 OOM。
 
 ## root 口令传递(三选一,按优先级)
