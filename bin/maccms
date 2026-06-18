@@ -134,7 +134,8 @@ case "$cmd" in
     nobackup=0; passargs=()
     for a in "$@"; do case "$a" in --no-backup) nobackup=1 ;; *) passargs+=("$a") ;; esac; done
     if [ "$nobackup" = 0 ] && [ -f "$SRC_ROOT/application/data/install/install.lock" ]; then
-      bk="$SRC_ROOT/runtime/backup/pre-reinstall-$(date +%Y%m%d-%H%M%S).sql"
+      # 写到受 application/.htaccess 保护的目录,避免备份 .sql 被 HTTP 下载
+      bk="$SRC_ROOT/application/data/backup/pre-reinstall-$(date +%Y%m%d-%H%M%S).sql"
       log "重装前自动备份 → $bk(加 --no-backup 跳过)"
       "$(php_bin)" "$SRC_ROOT/think" db:export --file="$bk" </dev/null || warn "备份失败(仍继续重装)"
     fi

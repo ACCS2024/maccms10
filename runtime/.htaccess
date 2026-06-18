@@ -1,0 +1,10 @@
+# runtime/ 含缓存/日志/备份等敏感产物:禁止任何 HTTP 访问。
+# (修复:db:export / reinstall 备份曾默认写此处;现已改写到受保护的 application/data/backup/,
+#  此处再加纵深防御,顺带保护日志/缓存不被下载。)
+<IfModule mod_authz_core.c>
+    Require all denied
+</IfModule>
+<IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+</IfModule>

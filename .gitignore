@@ -14,3 +14,5 @@ nohup*
 .well-known
 /upload
 node_modules/
+# maccms-cli 本地配置(可能含 db-host/root-user 等基础设施信息;.example 仍跟踪)
+/maccms-cli.yml
