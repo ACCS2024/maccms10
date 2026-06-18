@@ -3970,8 +3970,11 @@ function mac_label_type($param, $type_id_specified)
         $type_id = $param['id'];
     }
     $type_info = (new \app\common\model\Type())->getCacheInfo($type_id);
+    if (empty($type_info)) {
+        return null;
+    }
 
-    $GLOBALS['type_id'] =$type_info['type_id'];
+    $GLOBALS['type_id'] = $type_info['type_id'];
     $GLOBALS['type_pid'] = $type_info['type_pid'];
 
     $parent = (new \app\common\model\Type())->getCacheInfo($type_info['type_pid']);

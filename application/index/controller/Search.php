@@ -11,7 +11,7 @@ class Search extends Base
 
     public function index()
     {
-        return $this->label_fetch('search/index');
+        return $this->label_fetch('vod/search');
     }
 
 }
