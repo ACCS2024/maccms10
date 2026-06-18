@@ -9,13 +9,13 @@
 
 | 优先级 | 文件 | 完成/总计 | 状态 |
 |--------|------|----------|------|
-| P0 | [P0.md](P0.md) — 启动层（入口+Shim+Middleware+Addons） | 0/25 | 🔴 未开始 |
+| P0 | [P0.md](P0.md) — 启动层（入口+Shim+Middleware+Addons） | 25/25 | ✅ 完成 |
 | P1 | [P1.md](P1.md) — ORM/DB 层 | 0/7 | 🔴 未开始 |
 | P2 | [P2.md](P2.md) — API 模块 | 0/5 | 🔴 未开始 |
 | P3 | [P3.md](P3.md) — Admin 模块 | 0/5 | 🔴 未开始 |
 | P4 | [P4.md](P4.md) — 前台 + Console | 0/6 | 🔴 未开始 |
 | P5 | [P5.md](P5.md) — 清理 + 回归 | 0/9 | 🔴 未开始 |
-| **合计** | | **0/57** | |
+| **合计** | | **25/57** | |
 
 ---
 
@@ -23,31 +23,31 @@
 
 | ID | 任务 | 状态 |
 |----|------|------|
-| [P0-01](P0.md#p0-01-更新-composerjson) | 更新 composer.json（添加 TP8 依赖，移除 thinkphp\ autoload） | [ ] |
-| [P0-02](P0.md#p0-02-运行-composer-update) | 运行 composer update，确认 TP8 进入 vendor | [ ] |
-| [P0-03](P0.md#p0-03-创建-configappphp) | 创建 config/app.php（app_path 指向 application/，多应用开启） | [ ] |
-| [P0-04](P0.md#p0-04-创建-configdatabasephp) | 创建 config/database.php（从 application/database.php 迁移，修正键名） | [ ] |
-| [P0-05](P0.md#p0-05-创建-configcachephp) | 创建 config/cache.php | [ ] |
-| [P0-06](P0.md#p0-06-创建-configsessionphp) | 创建 config/session.php | [ ] |
-| [P0-07](P0.md#p0-07-创建-configviewphp) | 创建 config/view.php（保留 taglib_pre_load） | [ ] |
-| [P0-08](P0.md#p0-08-创建-configlogphp) | 创建 config/log.php | [ ] |
-| [P0-09](P0.md#p0-09-改造-indexphp) | 改造 index.php（require thinkphp → TP8 App 启动） | [ ] |
-| [P0-10](P0.md#p0-10-改造-adminphp) | 改造 admin.php | [ ] |
-| [P0-11](P0.md#p0-11-改造-apiphp) | 改造 api.php | [ ] |
-| [P0-12](P0.md#p0-12-shim-函数写入-applicationcommonphp) | Shim 函数写入 application/common.php（model/input/url） | [ ] |
-| [P0-13](P0.md#p0-13-改造-allphp-controller-shim) | 改造 All.php（use 改 facade，追加 success/error/assign/fetch） | [ ] |
-| [P0-14](P0.md#p0-14-sessionsamesite-→-middleware) | SessionSameSite → app/middleware/SessionSameSite.php | [ ] |
-| [P0-15](P0.md#p0-15-init-→-middleware) | Init → app/middleware/AppInit.php（27 处 config() 写 → Config::set） | [ ] |
-| [P0-16](P0.md#p0-16-requestsecurity-→-middleware) | RequestSecurity → app/middleware/RequestSecurity.php | [ ] |
-| [P0-17](P0.md#p0-17-begin-→-middleware) | Begin → app/middleware/Begin.php（dispatch() → currentUrl() 适配） | [ ] |
-| [P0-18](P0.md#p0-18-csrfguard-→-middleware) | CsrfGuard → app/middleware/CsrfGuard.php（think\Session 改 facade） | [ ] |
-| [P0-19](P0.md#p0-19-antiscrape-→-middleware) | AntiScrape → app/middleware/AntiScrape.php | [ ] |
-| [P0-20](P0.md#p0-20-securityheaders-→-middleware) | SecurityHeaders → app/middleware/SecurityHeaders.php（Response 传参改造） | [ ] |
-| [P0-21](P0.md#p0-21-adminaudit-→-middleware) | AdminAudit → app/middleware/AdminAudit.php | [ ] |
-| [P0-22](P0.md#p0-22-创建-applicationmiddlewarephp) | 创建 application/middleware.php，注册 8 个 middleware | [ ] |
-| [P0-23](P0.md#p0-23-内化-fastadmin-addons) | 内化 fastadmin-addons（Hook/Loader/Route → TP8 Event/PSR-4/Route facade） | [ ] |
-| [P0-24](P0.md#p0-24-创建-applicationprovidephp) | 创建 application/provider.php（服务绑定） | [ ] |
-| [P0-25](P0.md#p0-25-冒烟测试-3-个入口) | 冒烟测试 3 个入口，均返回 HTTP 200 | [ ] |
+| [P0-01](P0.md#p0-01-更新-composerjson) | 更新 composer.json（添加 TP8 依赖，移除 thinkphp\ autoload） | [x] |
+| [P0-02](P0.md#p0-02-运行-composer-update) | 运行 composer update，确认 TP8 进入 vendor | [x] |
+| [P0-03](P0.md#p0-03-创建-configappphp) | 创建 config/app.php（app_path 指向 application/，多应用开启） | [x] |
+| [P0-04](P0.md#p0-04-创建-configdatabasephp) | 创建 config/database.php（从 application/database.php 迁移，修正键名） | [x] |
+| [P0-05](P0.md#p0-05-创建-configcachephp) | 创建 config/cache.php | [x] |
+| [P0-06](P0.md#p0-06-创建-configsessionphp) | 创建 config/session.php | [x] |
+| [P0-07](P0.md#p0-07-创建-configviewphp) | 创建 config/view.php（保留 taglib_pre_load） | [x] |
+| [P0-08](P0.md#p0-08-创建-configlogphp) | 创建 config/log.php | [x] |
+| [P0-09](P0.md#p0-09-改造-indexphp) | 改造 index.php（require thinkphp → TP8 App 启动） | [x] |
+| [P0-10](P0.md#p0-10-改造-adminphp) | 改造 admin.php | [x] |
+| [P0-11](P0.md#p0-11-改造-apiphp) | 改造 api.php | [x] |
+| [P0-12](P0.md#p0-12-shim-函数写入-applicationcommonphp) | Shim 函数写入 application/common.php（model/input/url） | [x] |
+| [P0-13](P0.md#p0-13-改造-allphp-controller-shim) | 改造 All.php（use 改 facade，追加 success/error/assign/fetch） | [x] |
+| [P0-14](P0.md#p0-14-sessionsamesite-→-middleware) | SessionSameSite → app/middleware/SessionSameSite.php | [x] |
+| [P0-15](P0.md#p0-15-init-→-middleware) | Init → app/middleware/AppInit.php（27 处 config() 写 → Config::set） | [x] |
+| [P0-16](P0.md#p0-16-requestsecurity-→-middleware) | RequestSecurity → app/middleware/RequestSecurity.php | [x] |
+| [P0-17](P0.md#p0-17-begin-→-middleware) | Begin → app/middleware/Begin.php（dispatch() → currentUrl() 适配） | [x] |
+| [P0-18](P0.md#p0-18-csrfguard-→-middleware) | CsrfGuard → app/middleware/CsrfGuard.php（think\Session 改 facade） | [x] |
+| [P0-19](P0.md#p0-19-antiscrape-→-middleware) | AntiScrape → app/middleware/AntiScrape.php | [x] |
+| [P0-20](P0.md#p0-20-securityheaders-→-middleware) | SecurityHeaders → app/middleware/SecurityHeaders.php（Response 传参改造） | [x] |
+| [P0-21](P0.md#p0-21-adminaudit-→-middleware) | AdminAudit → app/middleware/AdminAudit.php | [x] |
+| [P0-22](P0.md#p0-22-创建-applicationmiddlewarephp) | 创建 application/middleware.php，注册 8 个 middleware | [x] |
+| [P0-23](P0.md#p0-23-内化-fastadmin-addons) | 内化 fastadmin-addons（Hook/Loader/Route → TP8 Event/PSR-4/Route facade） | [x] |
+| [P0-24](P0.md#p0-24-创建-applicationprovidephp) | 创建 application/provider.php（服务绑定） | [x] |
+| [P0-25](P0.md#p0-25-冒烟测试-3-个入口) | 冒烟测试 3 个入口，均返回 HTTP 200 | [x] |
 
 ---
 

@@ -1,0 +1,20 @@
+<?php
+return [
+    'type'               => 'Think',
+    'view_path'          => '',
+    'view_suffix'        => 'html',
+    'view_depr'          => DIRECTORY_SEPARATOR,
+    'tpl_begin'          => '{',
+    'tpl_end'            => '}',
+    'taglib_begin'       => '{',
+    'taglib_end'         => '}',
+    'taglib_pre_load'    => 'app\\common\\taglib\\Maccms',
+    'tpl_cache'          => true,
+    'cache_path'         => '',
+    'cache_suffix'       => 'php',
+    'cache_prefix'       => '',
+    'display_cache'      => false,
+    'cache_id'           => '',
+    'tpl_deny_func_list' => 'echo,exit,die',
+    'tpl_deny_php'       => false,
+];

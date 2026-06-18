@@ -6,11 +6,16 @@ $vendorDir = dirname(__DIR__);
 $baseDir = dirname($vendorDir);
 
 return array(
-    'think\\helper\\' => array($vendorDir . '/topthink/think-helper/src'),
     'think\\captcha\\' => array($vendorDir . '/topthink/think-captcha/src'),
-    'think\\' => array($baseDir . '/thinkphp/library/think', $vendorDir . '/topthink/think-image/src', $vendorDir . '/karsonzhang/fastadmin-addons/src'),
+    'think\\app\\' => array($vendorDir . '/topthink/think-multi-app/src'),
+    'think\\' => array($baseDir . '/application/common/addons', $vendorDir . '/topthink/think-image/src', $vendorDir . '/topthink/framework/src/think', $vendorDir . '/topthink/think-orm/src', $vendorDir . '/topthink/think-validate/src', $vendorDir . '/topthink/think-container/src', $vendorDir . '/topthink/think-helper/src'),
     'app\\' => array($baseDir . '/application'),
+    'addons\\' => array($baseDir . '/addons'),
     'Upyun\\' => array($baseDir . '/extend/upyun/src/Upyun'),
     'Qiniu\\' => array($baseDir . '/extend/qiniu/src/Qiniu'),
+    'Psr\\SimpleCache\\' => array($vendorDir . '/psr/simple-cache/src'),
+    'Psr\\Log\\' => array($vendorDir . '/psr/log/src'),
+    'Psr\\Http\\Message\\' => array($vendorDir . '/psr/http-message/src'),
+    'Psr\\Container\\' => array($vendorDir . '/psr/container/src'),
     'PHPMailer\\PHPMailer\\' => array($vendorDir . '/phpmailer/phpmailer/src'),
 );

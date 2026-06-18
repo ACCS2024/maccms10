@@ -1,8 +1,8 @@
 <?php
 namespace app\common\controller;
 use think\Controller;
-use think\Cache;
-use think\Request;
+use think\facade\Cache;
+use think\facade\Request;
 
 class All extends Controller
 {
@@ -1045,4 +1045,37 @@ polyfill;
 
         return ['code' => 1, 'msg' => lang('controller/popedom_ok')];
     }
+
+    // ===== TP8 Controller Shim（P5 阶段移除）=====
+    protected function success($msg = '', $url = null, $data = '', $wait = 3)
+    {
+        if (\think\facade\Request::isAjax()) {
+            return json(['code' => 1, 'msg' => $msg, 'data' => $data]);
+        }
+        $this->assign(['msg' => $msg, 'url' => $url ?? 'javascript:history.back();', 'wait' => $wait, 'type' => 'success']);
+        throw new \think\exception\HttpResponseException(\think\facade\View::fetch('public/jump'));
+    }
+
+    protected function error($msg = '', $url = null, $data = '', $wait = 3)
+    {
+        if (\think\facade\Request::isAjax()) {
+            return json(['code' => 0, 'msg' => $msg, 'data' => $data]);
+        }
+        $this->assign(['msg' => $msg, 'url' => $url ?? 'javascript:history.back();', 'wait' => $wait, 'type' => 'error']);
+        throw new \think\exception\HttpResponseException(\think\facade\View::fetch('public/jump'));
+    }
+
+    protected function assign($name, $value = ''): void
+    {
+        \think\facade\View::assign(is_array($name) ? $name : [$name => $value]);
+    }
+
+    protected function fetch(string $template = '', array $vars = []): string
+    {
+        if ($vars) {
+            \think\facade\View::assign($vars);
+        }
+        return \think\facade\View::fetch($template);
+    }
+    // ===== /TP8 Controller Shim =====
 }

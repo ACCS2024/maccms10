@@ -1,27 +1,30 @@
 {
     "name": "maccms/maccms10",
-    "description": "苹果CMS v10 — ThinkPHP 5.0.25",
+    "description": "苹果CMS v10 — ThinkPHP 8.x",
     "type": "project",
     "license": "proprietary",
     "require": {
-        "php": ">=8.2",
-        "ext-gd": "*",
+        "php": ">=8.0",
         "ext-json": "*",
-        "ext-mbstring": "*",
         "ext-pdo": "*",
-        "topthink/think-captcha": "^1.0",
-        "topthink/think-helper": "^1.0",
+        "topthink/framework": "^8.1",
+        "topthink/think-multi-app": "^1.0",
+        "topthink/think-captcha": "^3.0",
+        "topthink/think-helper": "^3.0",
         "topthink/think-image": "^1.0",
-        "karsonzhang/fastadmin-addons": "1.1.11",
         "phpmailer/phpmailer": "^6.9"
     },
     "autoload": {
         "psr-4": {
-            "think\\": "thinkphp/library/think/",
             "app\\": "application/",
+            "addons\\": "addons/",
+            "think\\": "application/common/addons/",
             "Qiniu\\": "extend/qiniu/src/Qiniu/",
             "Upyun\\": "extend/upyun/src/Upyun/"
-        }
+        },
+        "files": [
+            "application/common/addons/common.php"
+        ]
     },
     "config": {
         "optimize-autoloader": true,

@@ -1,0 +1,150 @@
+<?php
+namespace app\middleware;
+
+use think\facade\Cache;
+
+class AppInit
+{
+    public function handle($request, \Closure $next)
+    {
+        if (PHP_VERSION_ID < 80000 && function_exists('libxml_disable_entity_loader')) {
+            libxml_disable_entity_loader(true);
+        }
+
+        $GLOBALS['mctheme'] = config('mctheme') ?: ['theme' => []];
+
+        $config = config('maccms');
+        if (!isset($config['meilisearch']) || !is_array($config['meilisearch'])) {
+            $config['meilisearch'] = [
+                'enabled'       => '0',
+                'host'          => 'http://127.0.0.1:7700',
+                'api_key'       => '',
+                'index_uid'     => 'maccms_contents',
+                'timeout'       => '8',
+                'sync_on_save'  => '1',
+                'search_only_wd' => '1',
+            ];
+        }
+        $domain = config('domain');
+
+        $isMobile = 0;
+        $ua       = strtolower($_SERVER['HTTP_USER_AGENT'] ?? '');
+        if (preg_match('/(nokia|sony|ericsson|mot|samsung|sgh|lg|philips|panasonic|alcatel|lenovo|meizu|cldc|midp|iphone|wap|mobile|android)/i', $ua)) {
+            $isMobile = 1;
+        }
+
+        $isDomain = 0;
+        if (is_array($domain) && !empty($domain[$_SERVER['HTTP_HOST'] ?? ''])) {
+            $config['site'] = array_merge($config['site'], $domain[$_SERVER['HTTP_HOST']]);
+            $isDomain       = 1;
+            if (empty($config['site']['mob_template_dir']) || $config['site']['mob_template_dir'] === 'no') {
+                $config['site']['mob_template_dir'] = $config['site']['template_dir'];
+            }
+            $config['site']['site_wapurl']  = $config['site']['site_url'];
+            $config['site']['mob_html_dir'] = $config['site']['html_dir'];
+            $config['site']['mob_ads_dir']  = $config['site']['ads_dir'];
+        }
+
+        $TMP_ISWAP       = 0;
+        $TMP_TEMPLATEDIR = $config['site']['template_dir'];
+        $TMP_HTMLDIR     = $config['site']['html_dir'];
+        $TMP_ADSDIR      = $config['site']['ads_dir'];
+
+        if ($isMobile && $isDomain === 0) {
+            if (($config['site']['mob_status'] == 2)
+                || ($config['site']['mob_status'] == 1 && ($_SERVER['HTTP_HOST'] ?? '') == $config['site']['site_wapurl'])
+                || ($config['site']['mob_status'] == 1 && $isDomain)) {
+                $TMP_ISWAP       = 1;
+                $TMP_TEMPLATEDIR = $config['site']['mob_template_dir'];
+                $TMP_HTMLDIR     = $config['site']['mob_html_dir'];
+                $TMP_ADSDIR      = $config['site']['mob_ads_dir'];
+            }
+        }
+
+        define('MAC_URL',  'http://www.maccms.la/');
+        define('MAC_NAME', '苹果CMS');
+        define('MAC_PATH', $config['site']['install_dir'] . '');
+        define('MAC_MOB',  $TMP_ISWAP);
+        define('MAC_ROOT_TEMPLATE', ROOT_PATH . 'template/' . $TMP_TEMPLATEDIR . '/' . $TMP_HTMLDIR . '/');
+        define('MAC_PATH_TEMPLATE', MAC_PATH . 'template/' . $TMP_TEMPLATEDIR . '/');
+        define('MAC_PATH_TPL',      MAC_PATH_TEMPLATE . $TMP_HTMLDIR . '/');
+        define('MAC_PATH_ADS',      MAC_PATH_TEMPLATE . $TMP_ADSDIR  . '/');
+        define('MAC_PAGE_SP',       $config['path']['page_sp'] . '');
+        define('MAC_PLAYER_SORT',   $config['app']['player_sort']);
+        define('MAC_ADDON_PATH',        ROOT_PATH . 'addons/');
+        define('MAC_ADDON_PATH_STATIC', ROOT_PATH . 'static/addons/');
+
+        $GLOBALS['MAC_ROOT_TEMPLATE'] = ROOT_PATH . 'template/' . $TMP_TEMPLATEDIR . '/' . $TMP_HTMLDIR . '/';
+        $GLOBALS['MAC_PATH_TEMPLATE'] = MAC_PATH . 'template/' . $TMP_TEMPLATEDIR . '/';
+        $GLOBALS['MAC_PATH_TPL']      = $GLOBALS['MAC_PATH_TEMPLATE'] . $TMP_HTMLDIR . '/';
+        $GLOBALS['MAC_PATH_ADS']      = $GLOBALS['MAC_PATH_TEMPLATE'] . $TMP_ADSDIR  . '/';
+
+        $https = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on')
+              || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https');
+        $GLOBALS['http_type'] = $https ? 'https://' : 'http://';
+
+        // view_path
+        $viewPath = 'template/' . $TMP_TEMPLATEDIR . '/' . $TMP_HTMLDIR . '/';
+        \think\facade\Config::set('view.view_path', $viewPath);
+        if (ENTRANCE === 'admin' && !file_exists('./' . $viewPath)) {
+            \think\facade\Config::set('view.view_path', '');
+        }
+
+        if (intval($config['app']['search_len']) < 1) {
+            $config['app']['search_len'] = 50;
+        }
+
+        if (empty($config['app']['pathinfo_depr'])) {
+            $config['app']['pathinfo_depr'] = '/';
+        }
+        \think\facade\Config::set('route.pathinfo_depr', $config['app']['pathinfo_depr']);
+
+        if (intval($config['app']['cache_time']) < 1) {
+            $config['app']['cache_time'] = 60;
+        }
+        \think\facade\Config::set('cache.stores.file.expire', $config['app']['cache_time']);
+
+        if (!in_array($config['app']['cache_type'], ['file', 'memcache', 'memcached', 'redis'])) {
+            $config['app']['cache_type'] = 'file';
+        }
+        \think\facade\Config::set('cache.default', $config['app']['cache_type']);
+
+        $cacheTimeout = (isset($config['app']['cache_timeout']) && (float)$config['app']['cache_timeout'] > 0)
+            ? (float)$config['app']['cache_timeout'] : 1.5;
+        \think\facade\Config::set('cache.stores.redis.timeout', $cacheTimeout);
+        \think\facade\Config::set('cache.stores.redis.host',     $config['app']['cache_host']     ?? '127.0.0.1');
+        \think\facade\Config::set('cache.stores.redis.port',     $config['app']['cache_port']     ?? 6379);
+        \think\facade\Config::set('cache.stores.redis.username', $config['app']['cache_username'] ?? '');
+        \think\facade\Config::set('cache.stores.redis.password', $config['app']['cache_password'] ?? '');
+        if ($config['app']['cache_type'] === 'redis'
+            && isset($config['app']['cache_db'])
+            && intval($config['app']['cache_db']) > 0) {
+            \think\facade\Config::set('cache.stores.redis.select', intval($config['app']['cache_db']));
+        }
+
+        if (!empty($config['app']['lang'])) {
+            \think\facade\Config::set('app.default_lang', $config['app']['lang']);
+        }
+
+        $sessionType = isset($config['app']['session_type'])
+            ? strtolower(trim((string)$config['app']['session_type'])) : '';
+        if ($sessionType === 'redis') {
+            \think\facade\Config::set('session.type',       'redis');
+            \think\facade\Config::set('session.host',       $config['app']['cache_host']     ?? '127.0.0.1');
+            \think\facade\Config::set('session.port',       $config['app']['cache_port']     ?? 6379);
+            \think\facade\Config::set('session.password',   $config['app']['cache_password'] ?? '');
+            \think\facade\Config::set('session.select',     isset($config['app']['cache_db']) ? intval($config['app']['cache_db']) : 0);
+            \think\facade\Config::set('session.timeout',    $cacheTimeout);
+            \think\facade\Config::set('session.persistent', true);
+        }
+
+        $GLOBALS['config'] = $config;
+
+        // 触发 addons 初始化（路由注册 + 钩子加载）
+        if (function_exists('addons_boot')) {
+            addons_boot();
+        }
+
+        return $next($request);
+    }
+}

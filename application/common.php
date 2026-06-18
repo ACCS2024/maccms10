@@ -4332,4 +4332,25 @@ function mac_strip_tags($string) {
     return strip_tags($string);
 }
 
+// ========= TP8 过渡 Shim — 待各模块改写完成后（P5）逐步移除 =========
+if (!function_exists('model')) {
+    /** @deprecated 迁移期 shim，用 new \app\common\model\Xxx() 替代 */
+    function model(string $name, string $layer = 'model'): object {
+        $class = '\\app\\common\\' . $layer . '\\' . ucfirst($name);
+        return new $class();
+    }
+}
+if (!function_exists('input')) {
+    /** @deprecated 迁移期 shim，用 request()->param/post/get() 替代 */
+    function input(string $key = '', $default = null, string $filter = '') {
+        return \think\facade\Request::input($key, $default, $filter);
+    }
+}
+if (!function_exists('url')) {
+    function url(string $url = '', array $vars = [], bool $suffix = true, bool $domain = false): string {
+        return mac_url($url, $vars);
+    }
+}
+// ========= /TP8 过渡 Shim =========
+
 
