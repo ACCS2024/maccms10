@@ -1,7 +1,7 @@
 <?php
 namespace app\api\controller;
 use think\Controller;
-use think\Cache;
+use think\facade\Cache;
 
 class Index extends Base
 {

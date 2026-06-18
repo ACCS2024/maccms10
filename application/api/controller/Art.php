@@ -2,8 +2,8 @@
 
 namespace app\api\controller;
 
-use think\Db;
-use think\Request;
+use think\facade\Db;
+use think\facade\Request;
 
 class Art extends Base
 {
@@ -112,13 +112,13 @@ class Art extends Base
             }
         }
         // 数据获取
-        $total = ($meili_on && $meili_total !== null) ? (int)$meili_total : model('Art')->getCountByCond($where);
+        $total = ($meili_on && $meili_total !== null) ? (int)$meili_total : (new \app\common\model\Art())->getCountByCond($where);
         $list = [];
         if ($total > 0) {
             $field = 'art_id,art_name,art_sub,art_en,art_pic,art_blurb,art_time,art_time_add,art_hits,art_points,art_points_detail,art_remarks,art_author,type_id';
             // Meili 命中已按偏移分页,DB 不可二次 offset
-            $list = model('Art')->getListByCond($meili_on ? 0 : $offset, $limit, $where, $order, $field, []);
-            $type_list = model('Type')->getCache('type_list');
+            $list = (new \app\common\model\Art())->getListByCond($meili_on ? 0 : $offset, $limit, $where, $order, $field, []);
+            $type_list = (new \app\common\model\Type())->getCache('type_list');
             foreach ($list as &$v) {
                 if (!empty($v['type_id']) && isset($type_list[$v['type_id']])) {
                     $v['type'] = $type_list[$v['type_id']];
@@ -171,7 +171,7 @@ class Art extends Base
         }
 
         $aid = (int)$param['art_id'];
-        $data = model('Art')->infoData(['art_id' => ['eq', $aid]], '*', 0);
+        $data = (new \app\common\model\Art())->infoData(['art_id' => ['eq', $aid]], '*', 0);
         if ($data['code'] != 1 || empty($data['info'])) {
             return json(['code' => 1001, 'msg' => $data['msg'] ?? '数据不存在']);
         }
@@ -255,7 +255,7 @@ class Art extends Base
             $page = 1;
         }
 
-        $data = model('Art')->infoData(['art_id' => ['eq', $artId]], '*', 0);
+        $data = (new \app\common\model\Art())->infoData(['art_id' => ['eq', $artId]], '*', 0);
         if ($data['code'] != 1 || empty($data['info'])) {
             return json(['code' => 1002, 'msg' => $data['msg'] ?? '数据不存在']);
         }
@@ -327,7 +327,7 @@ class Art extends Base
         $id = intval($param['id'] ?? 0);
         if ($id < 1) return json(['code' => 1001, 'msg' => '参数错误']);
         $where = ['art_id' => $id];
-        $model = model('Art');
+        $model = (new \app\common\model\Art());
         $type = trim($param['type'] ?? '');
         if ($type) {
             $cookie = 'art-digg-' . $id;
@@ -356,7 +356,7 @@ class Art extends Base
                 $dayStart   = strtotime('today');
                 $weekStart  = $dayStart - ((int)date('w', $now)) * 86400;
                 $monthStart = mktime(0, 0, 0, (int)date('n', $now), 1, (int)date('Y', $now));
-                model('Art')->where($where)
+                (new \app\common\model\Art())->where($where)
                     ->inc('art_hits')
                     ->exp('art_hits_day',   "IF(art_time_hits >= {$dayStart}, art_hits_day + 1, 1)")
                     ->exp('art_hits_week',  "IF(art_time_hits >= {$weekStart}, art_hits_week + 1, 1)")
@@ -364,7 +364,7 @@ class Art extends Base
                     ->update(['art_time_hits' => $now]);
             }
         }
-        $res = model('Art')->infoData($where, 'art_hits,art_hits_day,art_hits_week,art_hits_month');
+        $res = (new \app\common\model\Art())->infoData($where, 'art_hits,art_hits_day,art_hits_week,art_hits_month');
         if ($res['code'] > 1) return json($res);
         $info = $res['info'];
         return json(['code'=>1,'msg'=>'ok','data'=>['hits'=>$info['art_hits'],'hits_day'=>$info['art_hits_day'],'hits_week'=>$info['art_hits_week'],'hits_month'=>$info['art_hits_month']]]);
@@ -379,7 +379,7 @@ class Art extends Base
         $id = intval($param['id'] ?? 0);
         if ($id < 1) return json(['code' => 1001, 'msg' => '参数错误']);
         $where = ['art_id' => $id];
-        $res = model('Art')->infoData($where, 'art_score,art_score_num,art_score_all');
+        $res = (new \app\common\model\Art())->infoData($where, 'art_score,art_score_num,art_score_all');
         if ($res['code'] > 1) return json($res);
         $info = $res['info'];
         $score = intval($param['score'] ?? 0);
@@ -389,7 +389,7 @@ class Art extends Base
             $num = intval($info['art_score_num']) + 1;
             $all = intval($info['art_score_all']) + $score;
             $avg = number_format($all / $num, 1, '.', '');
-            model('Art')->where($where)->update(['art_score_num'=>$num,'art_score_all'=>$all,'art_score'=>$avg]);
+            (new \app\common\model\Art())->where($where)->update(['art_score_num'=>$num,'art_score_all'=>$all,'art_score'=>$avg]);
             cookie($cookie, 't', 30);
             return json(['code'=>1,'msg'=>lang('score_ok'),'data'=>['score'=>$avg,'score_num'=>$num,'score_all'=>$all]]);
         }

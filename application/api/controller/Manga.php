@@ -1,8 +1,8 @@
 <?php
 namespace app\api\controller;
 
-use think\Request;
-use think\Db;
+use think\facade\Request;
+use think\facade\Db;
 
 class Manga extends Base
 {
@@ -53,14 +53,14 @@ class Manga extends Base
         $meili = !empty($param['wd']) ? mac_meili_api_apply('manga', $where, $param['wd'], $param['page'], $param['limit'], $order, 0) : false;
         if ($meili !== false) {
             // Meili 已按 page/limit 分页;listData 以 page=1/start=0 取本页命中,避免二次分页,再用 Meili 总数覆盖
-            $data = model('Manga')->listData($meili[0], $meili[1], 1, $param['limit'], 0, '*', 1, 0);
+            $data = (new \app\common\model\Manga())->listData($meili[0], $meili[1], 1, $param['limit'], 0, '*', 1, 0);
             $data['page'] = $param['page'];
             if ($meili[2] !== null) {
                 $data['total'] = (int)$meili[2];
                 $data['pagecount'] = $param['limit'] > 0 ? (int)ceil($meili[2] / $param['limit']) : 0;
             }
         } else {
-            $data = model('Manga')->listData($where, $order, $param['page'], $param['limit']);
+            $data = (new \app\common\model\Manga())->listData($where, $order, $param['page'], $param['limit']);
         }
         if (!empty($data['list']) && is_array($data['list'])) {
             foreach ($data['list'] as &$v) {
@@ -91,7 +91,7 @@ class Manga extends Base
             $where['manga_id'] = ['eq', $param['id']];
         }
 
-        $data = model('Manga')->infoData($where);
+        $data = (new \app\common\model\Manga())->infoData($where);
         if ($data['code'] == 1 && !empty($data['info'])) {
             $info = &$data['info'];
             // 处理图片 URL
@@ -159,7 +159,7 @@ class Manga extends Base
         $where['manga_status'] = ['eq', 1];
         $where['manga_id'] = ['eq', $id];
 
-        $data = model('Manga')->infoData($where);
+        $data = (new \app\common\model\Manga())->infoData($where);
         if ($data['code'] != 1 || empty($data['info'])) {
             return json(['code' => 1002, 'msg' => $data['msg'] ?? '数据不存在']);
         }

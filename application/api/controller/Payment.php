@@ -2,8 +2,8 @@
 
 namespace app\api\controller;
 
-use think\Db;
-use think\Request;
+use think\facade\Db;
+use think\facade\Request;
 
 /**
  * 支付/充值 API
@@ -132,7 +132,7 @@ class Payment extends Base
      */
     private function _checkLogin()
     {
-        $check = model('User')->checkLogin();
+        $check = (new \app\common\model\User())->checkLogin();
         if ($check['code'] > 1) {
             return ['ok' => false, 'user_id' => 0, 'user' => null,
                     'response' => json(['code' => 1401, 'msg' => lang('api/please_login_first')])];
@@ -156,7 +156,7 @@ class Payment extends Base
     {
         $pay_config = config('maccms.pay');
 
-        $loginCheck = model('User')->checkLogin();
+        $loginCheck = (new \app\common\model\User())->checkLogin();
         $isLogin    = (intval($loginCheck['code']) === 1) && intval($loginCheck['info']['user_id'] ?? 0) > 0;
         $userPoints = $isLogin ? intval($loginCheck['info']['user_points'] ?? 0) : 0;
 
@@ -225,7 +225,7 @@ class Payment extends Base
         $where['order_id']   = $order_id;
         $where['order_code'] = $order_code;
         $where['user_id']    = $auth['user_id'];
-        $res = model('Order')->infoData($where);
+        $res = (new \app\common\model\Order())->infoData($where);
         if ($res['code'] > 1) {
             return json(['code' => 1003, 'msg' => lang('api/payment/order_not_found')]);
         }
@@ -299,7 +299,7 @@ class Payment extends Base
      */
     public function notify()
     {
-        $param = input();
+        $param = \think\facade\Request::param();
         $pay_type = $param['pay_type'] ?? '';
 
         if (empty($pay_type)) {
@@ -349,7 +349,7 @@ class Payment extends Base
         $card_no  = htmlspecialchars(urldecode(trim($param['card_no'] ?? '')));
         $card_pwd = htmlspecialchars(urldecode(trim($param['card_pwd'] ?? '')));
 
-        $res = model('Card')->useData($card_no, $card_pwd, $auth['user']);
+        $res = (new \app\common\model\Card())->useData($card_no, $card_pwd, $auth['user']);
         return json($res);
     }
 
@@ -389,7 +389,7 @@ class Payment extends Base
         if ($param['type'] == '1') {
             // 文章
             $where = ['art_id' => $data['ulog_rid']];
-            $res = model('Art')->infoData($where);
+            $res = (new \app\common\model\Art())->infoData($where);
             if ($res['code'] > 1) {
                 return json($res);
             }
@@ -402,7 +402,7 @@ class Payment extends Base
         } else {
             // 视频
             $where = ['vod_id' => $data['ulog_rid']];
-            $res = model('Vod')->infoData($where);
+            $res = (new \app\common\model\Vod())->infoData($where);
             if ($res['code'] > 1) {
                 return json($res);
             }
@@ -416,7 +416,7 @@ class Payment extends Base
         $data['ulog_points'] = intval($res['info'][$col]);
 
         // 检查是否已购买
-        $exists = model('Ulog')->infoData($data);
+        $exists = (new \app\common\model\Ulog())->infoData($data);
         if ($exists['code'] == 1) {
             return json(['code' => 1, 'msg' => lang('api/payment/already_owned')]);
         }
@@ -452,13 +452,13 @@ class Payment extends Base
             $plog['user_id']     = $auth['user_id'];
             $plog['plog_type']   = 8;
             $plog['plog_points'] = $data['ulog_points'];
-            model('Plog')->saveData($plog);
+            (new \app\common\model\Plog())->saveData($plog);
 
             // 分销佣金
-            model('User')->reward($data['ulog_points']);
+            (new \app\common\model\User())->reward($data['ulog_points']);
 
             // 写入购买记录
-            $save_res = model('Ulog')->saveData($data);
+            $save_res = (new \app\common\model\Ulog())->saveData($data);
 
             Db::commit();
             return json($save_res);
@@ -493,7 +493,7 @@ class Payment extends Base
             return json(['code' => 1001, 'msg' => lang('api/param_validate', [$validate->getError()])]);
         }
 
-        $res = model('User')->upgrade($param);
+        $res = (new \app\common\model\User())->upgrade($param);
         return json($res);
     }
 
@@ -505,7 +505,7 @@ class Payment extends Base
      */
     public function get_groups(Request $request)
     {
-        $group_list = model('Group')->getCache();
+        $group_list = (new \app\common\model\Group())->getCache();
 
         $result = [];
         foreach ($group_list as $g) {
@@ -559,7 +559,7 @@ class Payment extends Base
         $where['card_use_status'] = 1;
 
         $order = 'card_id desc';
-        $res   = model('Card')->listData($where, $order, $page, $limit);
+        $res   = (new \app\common\model\Card())->listData($where, $order, $page, $limit);
 
         return json([
             'code' => 1,

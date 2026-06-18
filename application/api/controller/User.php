@@ -2,9 +2,9 @@
 
 namespace app\api\controller;
 
-use think\Db;
-use think\Request;
-use think\Url;
+use think\facade\Db;
+use think\facade\Request;
+use think\facade\Url;
 
 class User extends Base
 {
@@ -30,7 +30,7 @@ class User extends Base
      */
     public function get_my_invite(Request $request)
     {
-        $check = model('User')->checkLogin();
+        $check = (new \app\common\model\User())->checkLogin();
         if ($check['code'] > 1) {
             return json([
                 'code' => 1401,
@@ -79,7 +79,7 @@ class User extends Base
             ]);
         }
 
-        $check = model('User')->checkLogin();
+        $check = (new \app\common\model\User())->checkLogin();
         if ($check['code'] > 1) {
             return json([
                 'code' => 1401,
@@ -218,7 +218,7 @@ class User extends Base
         }
 
         // 数据获取
-        $total = model('User')->getCountByCond($where);
+        $total = (new \app\common\model\User())->getCountByCond($where);
         $list = [];
         if ($total > 0) {
             // 排序
@@ -228,7 +228,7 @@ class User extends Base
             if (strlen($param['orderby']) > 0) {
                 $order = 'user_' . $param['orderby'] . " DESC";
             }
-            $list = model('User')->getListByCond($offset, $limit, $where, $order, $field, []);
+            $list = (new \app\common\model\User())->getListByCond($offset, $limit, $where, $order, $field, []);
         }
         // 返回
         return json([
@@ -266,7 +266,7 @@ class User extends Base
 
         $userId = (int)$param['id'];
         $result = Db::name('User')
-            ->field(model('User')->publicApiDetailFields())
+            ->field((new \app\common\model\User())->publicApiDetailFields())
             ->where(['user_id' => $userId, 'user_status' => 1])
             ->find();
         if (empty($result)) {
@@ -276,7 +276,7 @@ class User extends Base
             ]);
         }
         $result['user_portrait'] = mac_get_user_portrait($userId);
-        $result = model('User')->stripSensitiveFields($result);
+        $result = (new \app\common\model\User())->stripSensitiveFields($result);
 
         // 返回
         return json([
@@ -309,7 +309,7 @@ class User extends Base
             return json(['code' => 1001, 'msg' => lang('api/user_name_pwd_empty')]);
         }
 
-        $res = model('User')->loginOrRegister($param);
+        $res = (new \app\common\model\User())->loginOrRegister($param);
 
         if ($res['code'] > 1) {
             return json($res);
@@ -353,7 +353,7 @@ class User extends Base
         if (empty($param['user_name']) || empty($param['user_pwd'])) {
             return json(['code' => 1001, 'msg' => lang('api/user_name_pwd_empty')]);
         }
-        $res = model('User')->login(['user_name' => $param['user_name'], 'user_pwd' => $param['user_pwd']]);
+        $res = (new \app\common\model\User())->login(['user_name' => $param['user_name'], 'user_pwd' => $param['user_pwd']]);
         if ($res['code'] > 1) return json($res);
         $info = $res['info'];
         return json(['code' => 1, 'msg' => lang('model/user/login_ok'), 'info' => [
@@ -381,7 +381,7 @@ class User extends Base
         if (empty($param['user_name']) || empty($param['user_pwd'])) {
             return json(['code' => 1001, 'msg' => lang('api/user_name_pwd_empty')]);
         }
-        $res = model('User')->register($param);
+        $res = (new \app\common\model\User())->register($param);
         return json($res);
     }
 
@@ -405,7 +405,7 @@ class User extends Base
      */
     public function get_info(Request $request)
     {
-        $check = model('User')->checkLogin();
+        $check = (new \app\common\model\User())->checkLogin();
         if ($check['code'] > 1) return json(['code' => 1401, 'msg' => lang('api/please_login_first')]);
         $uid = intval($check['info']['user_id']);
         $info = Db::name('User')
@@ -423,7 +423,7 @@ class User extends Base
      */
     public function update_info(Request $request)
     {
-        $check = model('User')->checkLogin();
+        $check = (new \app\common\model\User())->checkLogin();
         if ($check['code'] > 1) return json(['code' => 1401, 'msg' => lang('api/please_login_first')]);
         $uid = intval($check['info']['user_id']);
         $param = $request->param();
@@ -452,7 +452,7 @@ class User extends Base
      */
     public function get_ulog(Request $request)
     {
-        $check = model('User')->checkLogin();
+        $check = (new \app\common\model\User())->checkLogin();
         if ($check['code'] > 1) return json(['code' => 1401, 'msg' => lang('api/please_login_first')]);
         $uid = intval($check['info']['user_id']);
         $param = $request->param();
@@ -462,7 +462,7 @@ class User extends Base
         if (!empty($param['type'])) $where['ulog_type'] = intval($param['type']);
         if (!empty($param['mid'])) $where['ulog_mid'] = intval($param['mid']);
         $order = 'ulog_time desc';
-        $res = model('Ulog')->listData($where, $order, $page, $limit);
+        $res = (new \app\common\model\Ulog())->listData($where, $order, $page, $limit);
         return json(['code' => 1, 'msg' => lang('obtain_ok'), 'info' => $res]);
     }
 
@@ -473,7 +473,7 @@ class User extends Base
      */
     public function add_ulog(Request $request)
     {
-        $check = model('User')->checkLogin();
+        $check = (new \app\common\model\User())->checkLogin();
         if ($check['code'] > 1) return json(['code' => 1401, 'msg' => lang('api/please_login_first')]);
         $uid = intval($check['info']['user_id']);
         $param = $request->param();
@@ -489,13 +489,13 @@ class User extends Base
             return json(['code' => 1001, 'msg' => lang('param_err')]);
         }
         // 已存在则更新时间
-        $existing = model('Ulog')->infoData($data);
+        $existing = (new \app\common\model\Ulog())->infoData($data);
         if ($existing['code'] == 1) {
-            model('Ulog')->where($data)->update(['ulog_time' => time()]);
+            (new \app\common\model\Ulog())->where($data)->update(['ulog_time' => time()]);
             return json(['code' => 1, 'msg' => lang('update_ok')]);
         }
         $data['ulog_points'] = 0;
-        $res = model('Ulog')->saveData($data);
+        $res = (new \app\common\model\Ulog())->saveData($data);
         return json($res);
     }
 
@@ -506,7 +506,7 @@ class User extends Base
      */
     public function del_ulog(Request $request)
     {
-        $check = model('User')->checkLogin();
+        $check = (new \app\common\model\User())->checkLogin();
         if ($check['code'] > 1) return json(['code' => 1401, 'msg' => lang('api/please_login_first')]);
         $uid = intval($check['info']['user_id']);
         $param = $request->param();
@@ -517,7 +517,7 @@ class User extends Base
                 return json(['code' => 1001, 'msg' => lang('api/param_type_required')]);
             }
             $where = ['user_id' => $uid, 'ulog_type' => intval($type)];
-            $return = model('Ulog')->delData($where);
+            $return = (new \app\common\model\Ulog())->delData($where);
             return json($return);
         }
         $ids = [];
@@ -539,7 +539,7 @@ class User extends Base
      */
     public function get_plog(Request $request)
     {
-        $check = model('User')->checkLogin();
+        $check = (new \app\common\model\User())->checkLogin();
         if ($check['code'] > 1) return json(['code' => 1401, 'msg' => lang('api/please_login_first')]);
         $uid = intval($check['info']['user_id']);
         $param = $request->param();
@@ -553,7 +553,7 @@ class User extends Base
             $where['plog_type'] = ['in', [7, 8, 9]];
         }
         $order = 'plog_id desc';
-        $res = model('Plog')->listData($where, $order, $page, $limit);
+        $res = (new \app\common\model\Plog())->listData($where, $order, $page, $limit);
         $list = isset($res['list']) ? $res['list'] : [];
         $out = [];
         foreach ($list as $row) {
@@ -581,7 +581,7 @@ class User extends Base
      */
     public function del_plog(Request $request)
     {
-        $check = model('User')->checkLogin();
+        $check = (new \app\common\model\User())->checkLogin();
         if ($check['code'] > 1) return json(['code' => 1401, 'msg' => lang('api/please_login_first')]);
         $uid = intval($check['info']['user_id']);
         $param = $request->post();
@@ -604,7 +604,7 @@ class User extends Base
             }
             $where['plog_id'] = ['in', array_values($arr)];
         }
-        $return = model('Plog')->delData($where);
+        $return = (new \app\common\model\Plog())->delData($where);
         return json($return);
     }
 
@@ -614,7 +614,7 @@ class User extends Base
      */
     public function get_orders(Request $request)
     {
-        $check = model('User')->checkLogin();
+        $check = (new \app\common\model\User())->checkLogin();
         if ($check['code'] > 1) return json(['code' => 1401, 'msg' => lang('api/please_login_first')]);
         $uid = intval($check['info']['user_id']);
         $param = $request->param();
@@ -622,7 +622,7 @@ class User extends Base
         $limit = max(1, min(100, intval($param['limit'] ?? 20)));
         $where = ['o.user_id' => $uid];
         $order = 'o.order_id desc';
-        $res = model('Order')->listData($where, $order, $page, $limit);
+        $res = (new \app\common\model\Order())->listData($where, $order, $page, $limit);
         return json(['code' => 1, 'msg' => lang('obtain_ok'), 'info' => $res]);
     }
 
@@ -637,7 +637,7 @@ class User extends Base
         if (empty($param['user_email']) && empty($param['user_phone'])) {
             return json(['code' => 1001, 'msg' => lang('api/findpass_need_contact')]);
         }
-        $res = model('User')->reg_msg($param);
+        $res = (new \app\common\model\User())->reg_msg($param);
         return json($res);
     }
 
@@ -656,7 +656,7 @@ class User extends Base
     public function get_favorites_status(Request $request)
     {
         // 需要用户登录
-        $check = model('User')->checkLogin();
+        $check = (new \app\common\model\User())->checkLogin();
         if ($check['code'] > 1) {
             return json([
                 'code' => 1401,
@@ -725,7 +725,7 @@ class User extends Base
      */
     public function get_reward_list(Request $request)
     {
-        $check = model('User')->checkLogin();
+        $check = (new \app\common\model\User())->checkLogin();
         if ($check['code'] > 1) {
             return json(['code' => 1401, 'msg' => lang('api/please_login_first')]);
         }
@@ -746,7 +746,7 @@ class User extends Base
         }
 
         $order = 'user_id desc';
-        $userModel = model('User');
+        $userModel = (new \app\common\model\User());
         $res   = $userModel->listData($where, $order, $page, $limit);
         // 安全加固:listData 走 SELECT *,会带出下线用户的 user_pwd / user_random 等敏感字段。
         // user_random 是构造登录 cookie(md5(user_random-name-id-))与 JWT 的密钥,泄露即可伪造会话/接管账号。
@@ -774,7 +774,7 @@ class User extends Base
             return json(['code' => 1001, 'msg' => lang('param_err')]);
         }
 
-        $group_list = model('Group')->getCache();
+        $group_list = (new \app\common\model\Group())->getCache();
         $scale = max(1, intval($GLOBALS['config']['pay']['scale']));
         $groups = [];
         foreach ($group_list as $vo) {
@@ -862,7 +862,7 @@ class User extends Base
             return json(['code' => 1003, 'msg' => lang('param_err')]);
         }
 
-        $group_list = model('Group')->getCache();
+        $group_list = (new \app\common\model\Group())->getCache();
         if (!isset($group_list[$group_id])) {
             return json(['code' => 1004, 'msg' => lang('model/user/group_not_found')]);
         }
@@ -893,12 +893,12 @@ class User extends Base
         $data['order_points'] = $point;
         $data['order_remarks'] = json_encode($remarks, JSON_UNESCAPED_UNICODE);
 
-        $res = model('Order')->saveData($data);
+        $res = (new \app\common\model\Order())->saveData($data);
         if ($res['code'] > 1) {
             return json($res);
         }
 
-        $this_order = model('Order')->infoData(['order_code' => $data['order_code'], 'user_id' => $data['user_id']]);
+        $this_order = (new \app\common\model\Order())->infoData(['order_code' => $data['order_code'], 'user_id' => $data['user_id']]);
         if ($this_order['code'] > 1) {
             return json($this_order);
         }

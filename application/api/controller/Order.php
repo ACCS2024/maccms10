@@ -2,8 +2,8 @@
 
 namespace app\api\controller;
 
-use think\Db;
-use think\Request;
+use think\facade\Db;
+use think\facade\Request;
 
 /**
  * 充值订单管理 API
@@ -26,7 +26,7 @@ class Order extends Base
      */
     private function _checkLogin()
     {
-        $check = model('User')->checkLogin();
+        $check = (new \app\common\model\User())->checkLogin();
         if ($check['code'] > 1) {
             return ['ok' => false, 'user_id' => 0, 'user' => null,
                     'response' => json(['code' => 1401, 'msg' => '未登录，请先登录'])];
@@ -73,7 +73,7 @@ class Order extends Base
         $data['order_time']   = time();
         $data['order_points'] = intval(($pay_config['scale'] ?? 1) * $price);
 
-        $res = model('Order')->saveData($data);
+        $res = (new \app\common\model\Order())->saveData($data);
         if ($res['code'] > 1) {
             return json($res);
         }
@@ -122,7 +122,7 @@ class Order extends Base
         }
 
         $order = 'o.order_id desc';
-        $res   = model('Order')->listData($where, $order, $page, $limit);
+        $res   = (new \app\common\model\Order())->listData($where, $order, $page, $limit);
 
         return json([
             'code' => 1,
@@ -162,7 +162,7 @@ class Order extends Base
             return json(['code' => 1001, 'msg' => '参数错误: order_id 或 order_code 必须']);
         }
 
-        $res = model('Order')->infoData($where);
+        $res = (new \app\common\model\Order())->infoData($where);
         return json($res);
     }
 
@@ -195,7 +195,7 @@ class Order extends Base
         $where['order_code'] = $order_code;
         $where['user_id']    = $auth['user_id'];
 
-        $res = model('Order')->infoData($where);
+        $res = (new \app\common\model\Order())->infoData($where);
         if ($res['code'] > 1) {
             return json($res);
         }

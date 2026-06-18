@@ -3,8 +3,8 @@
 namespace app\api\controller;
 
 use app\common\util\JwtService;
-use think\Db;
-use think\Request;
+use think\facade\Db;
+use think\facade\Request;
 
 /**
  * Auth 认证与权限控制器
@@ -32,7 +32,7 @@ class Auth extends Base
      */
     public function me(Request $request)
     {
-        $check = model('User')->checkLogin();
+        $check = (new \app\common\model\User())->checkLogin();
 
         if ($check['code'] > 1) {
             // 未登录，返回稳定结构
@@ -119,7 +119,7 @@ class Auth extends Base
         }
 
         // 1. 读取当前登录用户
-        $check = model('User')->checkLogin();
+        $check = (new \app\common\model\User())->checkLogin();
         $isLogin = ($check['code'] == 1) ? 1 : 0;
         $user = $isLogin ? $check['info'] : null;
 
@@ -286,14 +286,14 @@ class Auth extends Base
             if ($typeId > 0) {
                 $groupIdStr = $user['group_id'] ?? '1';
                 // popedom 2=播放/阅读, 3=下载
-                if (!model('User')->popedom($typeId, 2, $groupIdStr)) {
+                if (!(new \app\common\model\User())->popedom($typeId, 2, $groupIdStr)) {
                     $canPlay = 0;
                     $canRead = 0;
                     if (empty($denyReason)) {
                         $denyReason = 'GROUP_PERMISSION_DENIED';
                     }
                 }
-                if (!model('User')->popedom($typeId, 3, $groupIdStr)) {
+                if (!(new \app\common\model\User())->popedom($typeId, 3, $groupIdStr)) {
                     $canDownload = 0;
                     if (empty($denyReason)) {
                         $denyReason = 'GROUP_PERMISSION_DENIED';
@@ -367,7 +367,7 @@ class Auth extends Base
             return json(['code' => 1001, 'msg' => 'POST required']);
         }
         $param = $request->param();
-        $res = model('User')->login(
+        $res = (new \app\common\model\User())->login(
             [
                 'user_name' => isset($param['user_name']) ? $param['user_name'] : '',
                 'user_pwd'  => isset($param['user_pwd']) ? $param['user_pwd'] : '',

@@ -1,7 +1,7 @@
 <?php
 namespace app\api\controller;
 
-use think\Request;
+use think\facade\Request;
 
 class Danmaku extends Base
 {
@@ -47,7 +47,7 @@ class Danmaku extends Base
         $nid = (int)$param['nid'];
         $limit = isset($param['limit']) ? min((int)$param['limit'], 2000) : 1000;
 
-        $res = model('Danmaku')->getEpisodeDanmaku($vod_id, $sid, $nid, $limit);
+        $res = (new \app\common\model\Danmaku())->getEpisodeDanmaku($vod_id, $sid, $nid, $limit);
 
         return json($res);
     }
@@ -75,7 +75,7 @@ class Danmaku extends Base
             $sid = (int)$parts[1];
             $nid = (int)$parts[2];
 
-            $res = model('Danmaku')->getDplayerDanmaku($vod_id, $sid, $nid);
+            $res = (new \app\common\model\Danmaku())->getDplayerDanmaku($vod_id, $sid, $nid);
             return json($res);
         }
 
@@ -125,7 +125,7 @@ class Danmaku extends Base
                 return json(['code' => 1, 'msg' => lang('danmaku/content_empty')]);
             }
 
-            $res = model('Danmaku')->saveData($data);
+            $res = (new \app\common\model\Danmaku())->saveData($data);
             // DPlayer期望code=0为成功
             return json(['code' => ($res['code'] == 1) ? 0 : 1, 'msg' => $res['msg']]);
         }
@@ -198,7 +198,7 @@ class Danmaku extends Base
             $data['danmaku_type'] = 0;
         }
 
-        $res = model('Danmaku')->saveData($data);
+        $res = (new \app\common\model\Danmaku())->saveData($data);
 
         return json($res);
     }
@@ -234,7 +234,7 @@ class Danmaku extends Base
 
         $where = [];
         $where['danmaku_id'] = ['eq', $danmaku_id];
-        $info = model('Danmaku')->infoData($where);
+        $info = (new \app\common\model\Danmaku())->infoData($where);
         if ($info['code'] > 1) {
             return json(['code' => 1002, 'msg' => lang('danmaku/not_found')]);
         }
@@ -274,7 +274,7 @@ class Danmaku extends Base
         }
 
         // 频率限制
-        if (!model('Danmaku')->checkSendRate($user['user_id'], 5)) {
+        if (!(new \app\common\model\Danmaku())->checkSendRate($user['user_id'], 5)) {
             return ['code' => 1003, 'msg' => lang('danmaku/rate_limit')];
         }
 
@@ -305,7 +305,7 @@ class Danmaku extends Base
      */
     private function _checkLoginForApi()
     {
-        $res = model('User')->checkLogin();
+        $res = (new \app\common\model\User())->checkLogin();
         if ($res['code'] == 1) {
             return $res['info'];
         }

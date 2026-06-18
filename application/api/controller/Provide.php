@@ -1,7 +1,7 @@
 <?php
 namespace app\api\controller;
 use think\Controller;
-use think\Cache;
+use think\facade\Cache;
 
 class Provide extends Base
 {
@@ -10,7 +10,7 @@ class Provide extends Base
     public function __construct()
     {
         parent::__construct();
-        $this->_param = input('','','trim,urldecode');
+        $this->_param = \think\facade\Request::param();
     }
 
     public function index()
@@ -131,14 +131,14 @@ class Provide extends Base
             $meili = !empty($this->_param['wd']) ? mac_meili_api_apply('vod', $where, $this->_param['wd'], $this->_param['pg'], $pagesize, $order, 0) : false;
             if ($meili !== false) {
                 // Meili 已分页;listData 以 page=1/start=0 取本页命中,避免二次分页,再用 Meili 总数覆盖
-                $res = model('vod')->listData($meili[0], $meili[1], 1, $pagesize, 0, $field, 0, 0);
+                $res = (new \app\common\model\vod())->listData($meili[0], $meili[1], 1, $pagesize, 0, $field, 0, 0);
                 $res['page'] = $this->_param['pg'];
                 if ($meili[2] !== null) {
                     $res['total'] = (int)$meili[2];
                     $res['pagecount'] = $pagesize > 0 ? (int)ceil($meili[2] / $pagesize) : 0;
                 }
             } else {
-                $res = model('vod')->listData($where, $order, $this->_param['pg'], $pagesize, 0, $field, 0);
+                $res = (new \app\common\model\vod())->listData($where, $order, $this->_param['pg'], $pagesize, 0, $field, 0);
             }
 
 
@@ -158,7 +158,7 @@ class Provide extends Base
             !empty($this->_param['ids']) && (int)$this->_param['ids'] == $this->_param['ids'] && 
             !empty($GLOBALS['config']['api']['vod']['detail_inc_hits'])
         ) {
-            model('Vod')->fieldData(['vod_id' => (int)$this->_param['ids']], ['vod_hits' => ['inc', 1]]);
+            (new \app\common\model\Vod())->fieldData(['vod_id' => (int)$this->_param['ids']], ['vod_hits' => ['inc', 1]]);
         }
         echo $html;
         exit;
@@ -190,7 +190,7 @@ class Provide extends Base
 
     public function vod_json($res)
     {
-        $type_list = model('Type')->getCache('type_list');
+        $type_list = (new \app\common\model\Type())->getCache('type_list');
         foreach($res['list'] as $k=>&$v){
             unset($v['vod_recycle_time'], $v['type_is_vip_exclusive']);
             $type_info = $type_list[$v['type_id']];
@@ -280,7 +280,7 @@ class Provide extends Base
     {
         $xml = '<?xml version="1.0" encoding="utf-8"?>';
         $xml .= '<rss version="5.1">';
-        $type_list = model('Type')->getCache('type_list');
+        $type_list = (new \app\common\model\Type())->getCache('type_list');
 
         //视频列表开始
         $xml .= '<list page="'.$res['page'].'" pagecount="'.$res['pagecount'].'" pagesize="'.$res['limit'].'" recordcount="'.$res['total'].'">';
@@ -416,14 +416,14 @@ class Provide extends Base
             $meili = !empty($this->_param['wd']) ? mac_meili_api_apply('art', $where, $this->_param['wd'], $this->_param['pg'], $art_pagesize, $order, 0) : false;
             if ($meili !== false) {
                 // Meili 已分页;listData 以 page=1/start=0 取本页命中,避免二次分页,再用 Meili 总数覆盖
-                $res = model('art')->listData($meili[0], $meili[1], 1, $art_pagesize, 0, $field, 0, 0);
+                $res = (new \app\common\model\art())->listData($meili[0], $meili[1], 1, $art_pagesize, 0, $field, 0, 0);
                 $res['page'] = $this->_param['pg'];
                 if ($meili[2] !== null) {
                     $res['total'] = (int)$meili[2];
                     $res['pagecount'] = $art_pagesize > 0 ? (int)ceil($meili[2] / $art_pagesize) : 0;
                 }
             } else {
-                $res = model('art')->listData($where, $order, $this->_param['pg'], $art_pagesize, 0, $field, 0);
+                $res = (new \app\common\model\art())->listData($where, $order, $this->_param['pg'], $art_pagesize, 0, $field, 0);
             }
 
             if ($res['code'] > 1) {
@@ -431,7 +431,7 @@ class Provide extends Base
                 exit;
             }
 
-            $type_list = model('Type')->getCache('type_list');
+            $type_list = (new \app\common\model\Type())->getCache('type_list');
             foreach ($res['list'] as $k => &$v) {
                 $type_info = $type_list[$v['type_id']];
                 $v['type_name'] = $type_info['type_name'];
@@ -535,14 +535,14 @@ class Provide extends Base
                 $field = '*';
             }
 
-            $res = model('actor')->listData($where, $order, $this->_param['pg'], $GLOBALS['config']['api']['actor']['pagesize'], 0, $field, 0);
+            $res = (new \app\common\model\actor())->listData($where, $order, $this->_param['pg'], $GLOBALS['config']['api']['actor']['pagesize'], 0, $field, 0);
 
             if ($res['code'] > 1) {
                 echo $res['msg'];
                 exit;
             }
 
-            $type_list = model('Type')->getCache('type_list');
+            $type_list = (new \app\common\model\Type())->getCache('type_list');
             foreach ($res['list'] as $k => &$v) {
                 $type_info = $type_list[$v['type_id']];
                 $v['type_name'] = $type_info['type_name'];
@@ -647,7 +647,7 @@ class Provide extends Base
                 $field = '*';
             }
 
-            $res = model('role')->listData($where, $order, $this->_param['pg'], $GLOBALS['config']['api']['role']['pagesize'], 0, $field, 1);
+            $res = (new \app\common\model\role())->listData($where, $order, $this->_param['pg'], $GLOBALS['config']['api']['role']['pagesize'], 0, $field, 1);
 
             if ($res['code'] > 1) {
                 echo $res['msg'];
@@ -758,14 +758,14 @@ class Provide extends Base
             // 关键词搜索接 Meilisearch；未启用/无命中/含不可翻译条件→回退 MySQL LIKE
             $meili = !empty($this->_param['wd']) ? mac_meili_api_apply('manga', $where, $this->_param['wd'], $this->_param['pg'], $pagesize, $order, 0) : false;
             if ($meili !== false) {
-                $res = model('manga')->listData($meili[0], $meili[1], 1, $pagesize, 0, $field, 0);
+                $res = (new \app\common\model\manga())->listData($meili[0], $meili[1], 1, $pagesize, 0, $field, 0);
                 $res['page'] = $this->_param['pg'];
                 if ($meili[2] !== null) {
                     $res['total'] = (int)$meili[2];
                     $res['pagecount'] = $pagesize > 0 ? (int)ceil($meili[2] / $pagesize) : 0;
                 }
             } else {
-                $res = model('manga')->listData($where, $order, $this->_param['pg'], $pagesize, 0, $field, 0);
+                $res = (new \app\common\model\manga())->listData($where, $order, $this->_param['pg'], $pagesize, 0, $field, 0);
             }
 
 
@@ -785,7 +785,7 @@ class Provide extends Base
 
     public function manga_json($res)
     {
-        $type_list = model('Type')->getCache('type_list');
+        $type_list = (new \app\common\model\Type())->getCache('type_list');
         foreach($res['list'] as $k=>&$v){
             unset($v['manga_recycle_time'], $v['type_is_vip_exclusive']);
             $type_info = $type_list[$v['type_id']];
@@ -824,7 +824,7 @@ class Provide extends Base
     {
         $xml = '<?xml version="1.0" encoding="utf-8"?>';
         $xml .= '<rss version="5.1">';
-        $type_list = model('Type')->getCache('type_list');
+        $type_list = (new \app\common\model\Type())->getCache('type_list');
 
         $xml .= '<list page="'.$res['page'].'" pagecount="'.$res['pagecount'].'" pagesize="'.$res['limit'].'" recordcount="'.$res['total'].'">';
         foreach($res['list'] as $k=>&$v){
@@ -940,14 +940,14 @@ class Provide extends Base
                 $field = '*';
             }
 
-            $res = model('website')->listData($where, $order, $this->_param['pg'], $GLOBALS['config']['api']['website']['pagesize'], 0, $field, 0);
+            $res = (new \app\common\model\website())->listData($where, $order, $this->_param['pg'], $GLOBALS['config']['api']['website']['pagesize'], 0, $field, 0);
 
             if ($res['code'] > 1) {
                 echo $res['msg'];
                 exit;
             }
 
-            $type_list = model('Type')->getCache('type_list');
+            $type_list = (new \app\common\model\Type())->getCache('type_list');
             foreach ($res['list'] as $k => &$v) {
                 $type_info = $type_list[$v['type_id']];
                 $v['type_name'] = $type_info['type_name'];

@@ -2,8 +2,8 @@
 
 namespace app\api\controller;
 
-use think\Db;
-use think\Request;
+use think\facade\Db;
+use think\facade\Request;
 
 class Actor extends Base
 {
@@ -84,7 +84,7 @@ class Actor extends Base
         }
 
         // 数据获取
-        $total = model('Actor')->getCountByCond($where);
+        $total = (new \app\common\model\Actor())->getCountByCond($where);
         $list = [];
         if ($total > 0) {
             // 排序
@@ -93,7 +93,7 @@ class Actor extends Base
                 $order = 'actor_' . $param['orderby'] . " DESC";
             }
             $field = 'actor_id,actor_name,actor_en,actor_alias,actor_sex,actor_pic,actor_remarks,actor_hits,actor_hits_month,actor_hits_week,actor_hits_day,actor_time,type_id';
-            $list = model('Actor')->getListByCond($offset, $limit, $where, $order, $field, false);
+            $list = (new \app\common\model\Actor())->getListByCond($offset, $limit, $where, $order, $field, false);
             foreach ($list as &$row) {
                 $row['actor_pic'] = mac_url_img($row['actor_pic'] ?? '');
                 $row['actor_link'] = mac_url_actor_detail($row);

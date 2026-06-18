@@ -2,7 +2,7 @@
 
 namespace app\api\controller;
 
-use think\Request;
+use think\facade\Request;
 
 class Gbook extends Base
 {
@@ -75,7 +75,7 @@ class Gbook extends Base
         }
 
         // 数据获取
-        $total = model('Gbook')->getCountByCond($where);
+        $total = (new \app\common\model\Gbook())->getCountByCond($where);
         $list = [];
         if ($total > 0) {
             // 排序
@@ -84,7 +84,7 @@ class Gbook extends Base
             if (strlen($param['orderby']) > 0) {
                 $order = 'gbook_' . $param['orderby'] . " DESC";
             }
-            $list = model('Gbook')->getListByCond($offset, $limit, $where, $order, $field, []);
+            $list = (new \app\common\model\Gbook())->getListByCond($offset, $limit, $where, $order, $field, []);
         }
         // 返回
         return json([
@@ -115,7 +115,7 @@ class Gbook extends Base
         $cookie = 'gbook_timespan';
         if (!empty(cookie($cookie))) return json(['code' => 1005, 'msg' => lang('frequently')]);
         if ($GLOBALS['config']['gbook']['login'] == 1) {
-            $check = model('User')->checkLogin();
+            $check = (new \app\common\model\User())->checkLogin();
             if ($check['code'] > 1) return json(['code' => 1003, 'msg' => lang('index/require_login')]);
         }
         $data = [];
@@ -124,7 +124,7 @@ class Gbook extends Base
         $data['gbook_ip'] = mac_get_client_ip();
         $data['gbook_time'] = time();
         if (!empty(cookie('user_id'))) {
-            $uinfo = model('User')->field('user_nick_name,user_name')->where(['user_id' => intval(cookie('user_id'))])->find();
+            $uinfo = (new \app\common\model\User())->field('user_nick_name,user_name')->where(['user_id' => intval(cookie('user_id'))])->find();
             $data['user_id'] = intval(cookie('user_id'));
             $data['gbook_name'] = htmlentities($uinfo['user_nick_name'] ?: $uinfo['user_name']);
         } else {
@@ -133,7 +133,7 @@ class Gbook extends Base
             $data['gbook_name'] = htmlentities($name ?: lang('controller/visitor'));
         }
         $data['gbook_status'] = ($GLOBALS['config']['gbook']['audit'] == 1) ? 0 : 1;
-        $res = model('Gbook')->saveData($data);
+        $res = (new \app\common\model\Gbook())->saveData($data);
         cookie($cookie, 't', 30);
         return json($res);
     }
@@ -148,7 +148,7 @@ class Gbook extends Base
         if ($id < 1) return json(['code' => 1001, 'msg' => '参数错误']);
         $cookie = 'gbook-report-' . $id;
         if (!empty(cookie($cookie))) return json(['code' => 1002, 'msg' => lang('index/haved')]);
-        model('Gbook')->where(['gbook_id' => $id])->setInc('gbook_up');
+        (new \app\common\model\Gbook())->where(['gbook_id' => $id])->setInc('gbook_up');
         cookie($cookie, 't', 86400);
         return json(['code' => 1, 'msg' => 'ok']);
     }

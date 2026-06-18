@@ -2,8 +2,8 @@
 
 namespace app\api\controller;
 
-use think\Db;
-use think\Request;
+use think\facade\Db;
+use think\facade\Request;
 
 class Website extends Base
 {
@@ -91,7 +91,7 @@ class Website extends Base
         }
 
         // 数据获取
-        $total = model('Website')->getCountByCond($where);
+        $total = (new \app\common\model\Website())->getCountByCond($where);
         $list = [];
         if ($total > 0) {
             // 排序
@@ -100,7 +100,7 @@ class Website extends Base
                 $order = 'website_' . $param['orderby'] . " DESC";
             }
             $field = '*';
-            $list = model('Website')->getListByCond($offset, $limit, $where, $order, $field, []);
+            $list = (new \app\common\model\Website())->getListByCond($offset, $limit, $where, $order, $field, []);
         }
         // 返回
         return json([
@@ -141,7 +141,7 @@ class Website extends Base
         $res['website_logo'] = mac_url_img($res['website_logo'] ?? '');
         $res['website_link'] = mac_url_website_detail($res);
 
-        $typeList = model('Type')->getCache('type_list');
+        $typeList = (new \app\common\model\Type())->getCache('type_list');
         if (!empty($res['type_id']) && isset($typeList[$res['type_id']])) {
             $res['type'] = $typeList[$res['type_id']];
             $pid = (int)($res['type']['type_pid'] ?? 0);

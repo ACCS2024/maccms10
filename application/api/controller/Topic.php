@@ -3,9 +3,9 @@
 namespace app\api\controller;
 
 use think\Controller;
-use think\Cache;
-use think\Db;
-use think\Request;
+use think\facade\Cache;
+use think\facade\Db;
+use think\facade\Request;
 use think\Validate;
 
 class Topic extends Base
@@ -55,7 +55,7 @@ class Topic extends Base
         }
 
         // 数据获取
-        $total = model('Topic')->getCountByCond($where);
+        $total = (new \app\common\model\Topic())->getCountByCond($where);
         $list = [];
         if ($total > 0) {
             // 排序
@@ -64,7 +64,7 @@ class Topic extends Base
                 $order = 'topic_' . $param['orderby'] . " DESC";
             }
             $field = 'topic_id,topic_name,topic_en,topic_sub,topic_pic,topic_pic_slide,topic_blurb,topic_rel_vod,topic_content,topic_time,topic_hits,topic_up,topic_down';
-            $list = model('Topic')->getListByCond($offset, $limit, $where, $order, $field, []);
+            $list = (new \app\common\model\Topic())->getListByCond($offset, $limit, $where, $order, $field, []);
             foreach ($list as &$v) {
                 $v['topic_pic'] = mac_url_img($v['topic_pic'] ?? '');
                 $v['topic_link'] = mac_url_topic_detail($v);

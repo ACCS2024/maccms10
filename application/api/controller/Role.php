@@ -2,8 +2,8 @@
 
 namespace app\api\controller;
 
-use think\Db;
-use think\Request;
+use think\facade\Db;
+use think\facade\Request;
 
 /**
  * Role 角色前台 JSON 接口
@@ -85,7 +85,7 @@ class Role extends Base
         }
 
         // 数据获取
-        $total = model('Role')->countData($where);
+        $total = (new \app\common\model\Role())->countData($where);
         $list = [];
 
         if ($total > 0) {

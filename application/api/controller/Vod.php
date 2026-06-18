@@ -3,9 +3,9 @@
 namespace app\api\controller;
 
 use think\Controller;
-use think\Cache;
-use think\Db;
-use think\Request;
+use think\facade\Cache;
+use think\facade\Db;
+use think\facade\Request;
 use think\Validate;
 class Vod extends Base
 {
@@ -114,12 +114,12 @@ class Vod extends Base
             }
         }
         // 数据获取
-        $total = ($meili_on && $meili_total !== null) ? (int)$meili_total : model('Vod')->getCountByCond($where);
+        $total = ($meili_on && $meili_total !== null) ? (int)$meili_total : (new \app\common\model\Vod())->getCountByCond($where);
         $list = [];
         if ($total > 0) {
             $field = 'vod_id,vod_en,vod_name,vod_sub,vod_pic,vod_actor,vod_hits,vod_hits_day,vod_hits_week,vod_hits_month,vod_time,vod_remarks,vod_score,vod_area,vod_year,vod_class,vod_blurb,vod_points_play,vod_isend,type_id,type_id_1';
             // Meili 命中已按偏移分页,DB 不可二次 offset(否则第 2 页起为空)
-            $list = model('Vod')->getListByCond($meili_on ? 0 : $offset, $limit, $where, $order, $field);
+            $list = (new \app\common\model\Vod())->getListByCond($meili_on ? 0 : $offset, $limit, $where, $order, $field);
 
             // 补充 vod_pic、vod_link；主题「进播放页」时补充 vod_play_link（与 mac_url_vod_play 一致，避免前端拼 URL 与伪静态不一致）
             $playlinkOn = mac_tpl_vod_playlink_on();
@@ -425,7 +425,7 @@ class Vod extends Base
                 }
             }
             if (!empty($vodIds)) {
-                $favRows = model('Ulog')->where([
+                $favRows = (new \app\common\model\Ulog())->where([
                     'user_id' => $userId,
                     'ulog_type' => 2,
                     'ulog_rid' => ['in', array_values(array_unique($vodIds))],
@@ -696,7 +696,7 @@ class Vod extends Base
                 $dayStart   = strtotime('today');
                 $weekStart  = $dayStart - ((int)date('w', $now)) * 86400; // 周日为周首(与原逻辑一致)
                 $monthStart = mktime(0, 0, 0, (int)date('n', $now), 1, (int)date('Y', $now));
-                model('Vod')->where($where)
+                (new \app\common\model\Vod())->where($where)
                     ->inc('vod_hits')
                     ->exp('vod_hits_day',   "IF(vod_time_hits >= {$dayStart}, vod_hits_day + 1, 1)")
                     ->exp('vod_hits_week',  "IF(vod_time_hits >= {$weekStart}, vod_hits_week + 1, 1)")
@@ -704,7 +704,7 @@ class Vod extends Base
                     ->update(['vod_time_hits' => $now]);
             }
         }
-        $res = model('Vod')->infoData($where, 'vod_hits,vod_hits_day,vod_hits_week,vod_hits_month');
+        $res = (new \app\common\model\Vod())->infoData($where, 'vod_hits,vod_hits_day,vod_hits_week,vod_hits_month');
         if ($res['code'] > 1) return json($res);
         $info = $res['info'];
         return json(['code' => 1, 'msg' => 'ok', 'data' => [
@@ -724,7 +724,7 @@ class Vod extends Base
         $id = intval($param['id'] ?? 0);
         if ($id < 1) return json(['code' => 1001, 'msg' => '参数错误']);
         $where = ['vod_id' => $id];
-        $model = model('Vod');
+        $model = (new \app\common\model\Vod());
         $type = trim($param['type'] ?? '');
         if ($type) {
             $cookie = 'vod-digg-' . $id;
@@ -748,7 +748,7 @@ class Vod extends Base
         $id = intval($param['id'] ?? 0);
         if ($id < 1) return json(['code' => 1001, 'msg' => '参数错误']);
         $where = ['vod_id' => $id];
-        $res = model('Vod')->infoData($where, 'vod_score,vod_score_num,vod_score_all');
+        $res = (new \app\common\model\Vod())->infoData($where, 'vod_score,vod_score_num,vod_score_all');
         if ($res['code'] > 1) return json($res);
         $info = $res['info'];
         $score = intval($param['score'] ?? 0);
@@ -758,7 +758,7 @@ class Vod extends Base
             $num = intval($info['vod_score_num']) + 1;
             $all = intval($info['vod_score_all']) + $score;
             $avg = number_format($all / $num, 1, '.', '');
-            model('Vod')->where($where)->update(['vod_score_num' => $num, 'vod_score_all' => $all, 'vod_score' => $avg]);
+            (new \app\common\model\Vod())->where($where)->update(['vod_score_num' => $num, 'vod_score_all' => $all, 'vod_score' => $avg]);
             cookie($cookie, 't', 30);
             return json(['code' => 1, 'msg' => lang('score_ok'), 'data' => ['score' => $avg, 'score_num' => $num, 'score_all' => $all]]);
         }
@@ -789,7 +789,7 @@ class Vod extends Base
         $key = '1-' . $type . '-' . $id;
         if (session($key) == '1') return json(['code' => 1002, 'msg' => lang('index/pwd_repeat')]);
         if (mac_get_time_span("last_pwd") < 5) return json(['code' => 1003, 'msg' => lang('index/pwd_frequently')]);
-        $res = model('Vod')->infoData(['vod_id' => ['eq', $id]]);
+        $res = (new \app\common\model\Vod())->infoData(['vod_id' => ['eq', $id]]);
         if ($res['code'] > 1) return json(['code' => 1011, 'msg' => $res['msg']]);
         $pwdMap = [1 => 'vod_pwd', 4 => 'vod_pwd_play', 5 => 'vod_pwd_down'];
         if ($res['info'][$pwdMap[$type]] != $pwd) return json(['code' => 1012, 'msg' => lang('pass_err')]);
@@ -809,7 +809,7 @@ class Vod extends Base
         $nid = intval($param['nid'] ?? 1);
         if ($id < 1) return json(['code' => 1001, 'msg' => '参数错误: id 必须']);
         $where = ['vod_id' => $id, 'vod_status' => ['eq', 1]];
-        $res = model('Vod')->infoData($where);
+        $res = (new \app\common\model\Vod())->infoData($where);
         if ($res['code'] > 1) return json($res);
         $info = $res['info'];
         // 解析播放源
@@ -849,7 +849,7 @@ class Vod extends Base
         $nid = intval($param['nid'] ?? 1);
         if ($id < 1) return json(['code' => 1001, 'msg' => '参数错误: id 必须']);
         $where = ['vod_id' => $id, 'vod_status' => ['eq', 1]];
-        $res = model('Vod')->infoData($where);
+        $res = (new \app\common\model\Vod())->infoData($where);
         if ($res['code'] > 1) return json($res);
         $info = $res['info'];
         $downList = mac_play_list(

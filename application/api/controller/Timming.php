@@ -21,7 +21,7 @@ class Timming extends Base
                 echo json_encode(['code'=>0,'msg'=>'POST method not allowed for timming']);
                 exit;
             }
-            $token = input('get.token','','trim');
+            $token = \think\facade\Request::get('token', '', 'trim');
             $expected_token = (string)config('maccms.app.timming_token');
             if ($expected_token === '' || !hash_equals($expected_token, (string)$token)) {
                 echo json_encode(['code'=>0,'msg'=>'invalid or missing timming token']);
@@ -32,7 +32,7 @@ class Timming extends Base
         // 低峰兜底:把 Redis 播放/阅读计数缓冲的零头落库(未开 hits_buffer 时为空操作)
         \app\common\util\HitsBuffer::flush();
 
-        $param = input('get.','','trim,urldecode');
+        $param = \think\facade\Request::get();
         $name = $param['name'];
         if(empty($name)){
             //return $this->error('参数错误!');

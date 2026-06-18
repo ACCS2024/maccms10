@@ -1,7 +1,7 @@
 <?php
 namespace app\api\controller;
 
-use think\Request;
+use think\facade\Request;
 
 class Chatroom extends Base
 {
@@ -45,7 +45,7 @@ class Chatroom extends Base
         $user = $this->_checkLoginForApi();
         $user_id = $user ? $user['user_id'] : null;
         $interval = $user_id ? 2 : 3;
-        if (!model('Chatroom')->checkReadRate($user_id, $interval)) {
+        if (!(new \app\common\model\Chatroom())->checkReadRate($user_id, $interval)) {
             return json(['code' => 1004, 'msg' => lang('chatroom/rate_limit')]);
         }
 
@@ -53,7 +53,7 @@ class Chatroom extends Base
         $after_id = isset($param['after_id']) ? (int)$param['after_id'] : 0;
         $limit = isset($param['limit']) ? min((int)$param['limit'], 100) : 50;
 
-        $res = model('Chatroom')->getNewMessages($vod_id, $after_id, $limit);
+        $res = (new \app\common\model\Chatroom())->getNewMessages($vod_id, $after_id, $limit);
 
         return json($res);
     }
@@ -103,7 +103,7 @@ class Chatroom extends Base
         }
 
         // 频率限制
-        if (!model('Chatroom')->checkSendRate($user['user_id'], $vod_id, 3)) {
+        if (!(new \app\common\model\Chatroom())->checkSendRate($user['user_id'], $vod_id, 3)) {
             return json(['code' => 1003, 'msg' => lang('chatroom/rate_limit')]);
         }
 
@@ -113,7 +113,7 @@ class Chatroom extends Base
         $data['user_name'] = !empty($user['user_nick_name']) ? $user['user_nick_name'] : $user['user_name'];
         $data['chat_content'] = $content;
 
-        $res = model('Chatroom')->saveData($data);
+        $res = (new \app\common\model\Chatroom())->saveData($data);
 
         return json($res);
     }
@@ -149,7 +149,7 @@ class Chatroom extends Base
 
         $where = [];
         $where['chat_id'] = ['eq', $chat_id];
-        $info = model('Chatroom')->infoData($where);
+        $info = (new \app\common\model\Chatroom())->infoData($where);
         if ($info['code'] > 1) {
             return json(['code' => 1002, 'msg' => lang('chatroom/msg_not_found')]);
         }
@@ -177,7 +177,7 @@ class Chatroom extends Base
      */
     private function _checkLoginForApi()
     {
-        $res = model('User')->checkLogin();
+        $res = (new \app\common\model\User())->checkLogin();
         if ($res['code'] == 1) {
             return $res['info'];
         }

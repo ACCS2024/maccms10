@@ -9,7 +9,7 @@ class Receive extends Base
     public function __construct()
     {
         parent::__construct();
-        $this->_param = input('','','trim,urldecode');
+        $this->_param = \think\facade\Request::param();
 
 
         if($GLOBALS['config']['interface']['status'] != 1){
@@ -52,7 +52,7 @@ class Receive extends Base
         }
 
         $data['data'][] = $info;
-        $res = model('Collect')->vod_data([],$data,0);
+        $res = (new \app\common\model\Collect())->vod_data([],$data,0);
         echo json_encode($res,JSON_UNESCAPED_UNICODE);
     }
 
@@ -74,7 +74,7 @@ class Receive extends Base
             $info['type_id'] = $inter['arttype'][$info['type_name']];
         }
         $data['data'][] = $info;
-        $res = model('Collect')->art_data([],$data,0);
+        $res = (new \app\common\model\Collect())->art_data([],$data,0);
         echo json_encode($res,JSON_UNESCAPED_UNICODE);
     }
 
@@ -100,7 +100,7 @@ class Receive extends Base
             $info['type_id'] = $inter['actortype'][$info['type_name']];
         }
         $data['data'][] = $info;
-        $res = model('Collect')->actor_data([],$data,0);
+        $res = (new \app\common\model\Collect())->actor_data([],$data,0);
         echo json_encode($res,JSON_UNESCAPED_UNICODE);
     }
 
@@ -122,7 +122,7 @@ class Receive extends Base
         }
 
         $data['data'][] = $info;
-        $res = model('Collect')->role_data([],$data,0);
+        $res = (new \app\common\model\Collect())->role_data([],$data,0);
         echo json_encode($res,JSON_UNESCAPED_UNICODE);
     }
 
@@ -144,7 +144,7 @@ class Receive extends Base
             $info['type_id'] = $inter['websitetype'][$info['type_name']];
         }
         $data['data'][] = $info;
-        $res = model('Collect')->website_data([],$data,0);
+        $res = (new \app\common\model\Collect())->website_data([],$data,0);
         echo json_encode($res,JSON_UNESCAPED_UNICODE);
     }
 
@@ -166,7 +166,7 @@ class Receive extends Base
             $info['type_id'] = $inter['mangatype'][$info['type_name']];
         }
         $data['data'][] = $info;
-        $res = model('Collect')->manga_data([],$data,0);
+        $res = (new \app\common\model\Collect())->manga_data([],$data,0);
         echo json_encode($res,JSON_UNESCAPED_UNICODE);
     }
 
@@ -193,7 +193,7 @@ class Receive extends Base
 
 
         $data['data'][] = $info;
-        $res = model('Collect')->comment_data([],$data,0);
+        $res = (new \app\common\model\Collect())->comment_data([],$data,0);
         echo json_encode($res,JSON_UNESCAPED_UNICODE);
     }
 }

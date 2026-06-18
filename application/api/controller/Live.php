@@ -2,8 +2,8 @@
 
 namespace app\api\controller;
 
-use think\Db;
-use think\Request;
+use think\facade\Db;
+use think\facade\Request;
 
 class Live extends Base
 {
@@ -25,7 +25,7 @@ class Live extends Base
      */
     public function get_category(Request $request)
     {
-        $cate_list = model('Live')->categoryList(['cate_status' => 1]);
+        $cate_list = (new \app\common\model\Live())->categoryList(['cate_status' => 1]);
 
         return json([
             'code' => 1,
@@ -79,16 +79,16 @@ class Live extends Base
         ];
         $order = isset($orderMap[$orderby]) ? $orderMap[$orderby] : 'live_sort desc, live_id asc';
 
-        $res = model('Live')->listData($where, $order, 1, $limit, $offset);
+        $res = (new \app\common\model\Live())->listData($where, $order, 1, $limit, $offset);
 
         // 附加分类信息和解析播放地址
         $cateMap = [];
-        $cateRows = model('Live')->categoryList(['cate_status' => 1]);
+        $cateRows = (new \app\common\model\Live())->categoryList(['cate_status' => 1]);
         foreach ($cateRows as $c) {
             $cateMap[$c['cate_id']] = $c;
         }
 
-        $liveModel = model('Live');
+        $liveModel = (new \app\common\model\Live());
         foreach ($res['list'] as &$item) {
             $item['cate_name'] = isset($cateMap[$item['cate_id']]) ? $cateMap[$item['cate_id']]['cate_name'] : '';
             $item['live_url_list'] = $liveModel->parseUrlList($item['live_url'] ?? '');
@@ -123,14 +123,14 @@ class Live extends Base
 
         $live_id = (int)$param['live_id'];
         $where = ['live_id' => ['eq', $live_id], 'live_status' => ['eq', 1]];
-        $res = model('Live')->infoData($where);
+        $res = (new \app\common\model\Live())->infoData($where);
 
         if ($res['code'] > 1) {
             return json($res);
         }
 
         $info = $res['info'];
-        $info['live_url_list'] = model('Live')->parseUrlList($info['live_url'] ?? '');
+        $info['live_url_list'] = (new \app\common\model\Live())->parseUrlList($info['live_url'] ?? '');
         unset($info['live_url']);
 
         // 附加分类信息

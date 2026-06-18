@@ -2,8 +2,8 @@
 
 namespace app\api\controller;
 
-use think\Db;
-use think\Request;
+use think\facade\Db;
+use think\facade\Request;
 
 class Link extends Base
 {
@@ -68,7 +68,7 @@ class Link extends Base
         }
 
         // 数据获取
-        $total = model('Link')->getCountByCond($where);
+        $total = (new \app\common\model\Link())->getCountByCond($where);
         $list = [];
         if ($total > 0) {
             // 排序
@@ -77,7 +77,7 @@ class Link extends Base
             if (strlen($param['orderby']) > 0) {
                 $order = 'link_' . $param['orderby'] . " DESC";
             }
-            $list = model('Link')->getListByCond($offset, $limit, $where, $order, $field, []);
+            $list = (new \app\common\model\Link())->getListByCond($offset, $limit, $where, $order, $field, []);
             foreach ($list as &$item) {
                 $item['link_name'] = htmlspecialchars($item['link_name'], ENT_QUOTES, 'UTF-8');
                 $item['link_logo'] = htmlspecialchars($item['link_logo'], ENT_QUOTES, 'UTF-8');

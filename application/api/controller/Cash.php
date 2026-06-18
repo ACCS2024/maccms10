@@ -2,8 +2,8 @@
 
 namespace app\api\controller;
 
-use think\Db;
-use think\Request;
+use think\facade\Db;
+use think\facade\Request;
 
 /**
  * 提现管理 API
@@ -26,7 +26,7 @@ class Cash extends Base
      */
     private function _checkLogin()
     {
-        $check = model('User')->checkLogin();
+        $check = (new \app\common\model\User())->checkLogin();
         if ($check['code'] > 1) {
             return ['ok' => false, 'user_id' => 0, 'user' => null,
                     'response' => json(['code' => 1401, 'msg' => '未登录，请先登录'])];
@@ -71,7 +71,7 @@ class Cash extends Base
         }
 
         $order = 'cash_id desc';
-        $res   = model('Cash')->listData($where, $order, $page, $limit);
+        $res   = (new \app\common\model\Cash())->listData($where, $order, $page, $limit);
 
         return json([
             'code' => 1,
@@ -106,7 +106,7 @@ class Cash extends Base
             'user_id' => $auth['user_id'],
         ];
 
-        $res = model('Cash')->infoData($where);
+        $res = (new \app\common\model\Cash())->infoData($where);
         return json($res);
     }
 
@@ -143,7 +143,7 @@ class Cash extends Base
         }
 
         $param['user_id'] = $auth['user_id'];
-        $res = model('Cash')->saveData($param);
+        $res = (new \app\common\model\Cash())->saveData($param);
         return json($res);
     }
 
@@ -188,7 +188,7 @@ class Cash extends Base
             $where['cash_id'] = ['in', array_values($arr)];
         }
 
-        $res = model('Cash')->delData($where);
+        $res = (new \app\common\model\Cash())->delData($where);
         return json($res);
     }
 

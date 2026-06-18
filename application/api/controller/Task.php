@@ -1,6 +1,6 @@
 <?php
 namespace app\api\controller;
-use think\Request;
+use think\facade\Request;
 
 class Task extends Base
 {
@@ -18,15 +18,15 @@ class Task extends Base
      */
     public function get_task_list(Request $request)
     {
-        $check = model('User')->checkLogin();
+        $check = (new \app\common\model\User())->checkLogin();
         if ($check['code'] > 1) {
             return json(['code' => 1401, 'msg' => lang('task/login_required')]);
         }
         $user_id = intval($check['info']['user_id']);
         $user_info = $check['info'];
 
-        $task_status = model('TaskLog')->getUserTaskStatus($user_id, $user_info);
-        $sign_info = model('SignLog')->getSignInfo($user_id);
+        $task_status = (new \app\common\model\TaskLog())->getUserTaskStatus($user_id, $user_info);
+        $sign_info = (new \app\common\model\SignLog())->getSignInfo($user_id);
 
         return json([
             'code' => 1,
@@ -47,12 +47,12 @@ class Task extends Base
      */
     public function daily_sign(Request $request)
     {
-        $check = model('User')->checkLogin();
+        $check = (new \app\common\model\User())->checkLogin();
         if ($check['code'] > 1) {
             return json(['code' => 1401, 'msg' => lang('task/login_required')]);
         }
         $user_id = intval($check['info']['user_id']);
-        $res = model('SignLog')->doSign($user_id);
+        $res = (new \app\common\model\SignLog())->doSign($user_id);
         return json($res);
     }
 
@@ -62,12 +62,12 @@ class Task extends Base
      */
     public function get_sign_info(Request $request)
     {
-        $check = model('User')->checkLogin();
+        $check = (new \app\common\model\User())->checkLogin();
         if ($check['code'] > 1) {
             return json(['code' => 1401, 'msg' => lang('task/login_required')]);
         }
         $user_id = intval($check['info']['user_id']);
-        $sign_info = model('SignLog')->getSignInfo($user_id);
+        $sign_info = (new \app\common\model\SignLog())->getSignInfo($user_id);
 
         return json([
             'code' => 1,
@@ -83,7 +83,7 @@ class Task extends Base
      */
     public function claim_sign_milestone(Request $request)
     {
-        $check = model('User')->checkLogin();
+        $check = (new \app\common\model\User())->checkLogin();
         if ($check['code'] > 1) {
             return json(['code' => 1401, 'msg' => lang('task/login_required')]);
         }
@@ -96,10 +96,10 @@ class Task extends Base
         }
 
         // 获取用户当前连续签到天数
-        $sign_info = model('SignLog')->getSignInfo($user_id);
+        $sign_info = (new \app\common\model\SignLog())->getSignInfo($user_id);
         $serial_days = $sign_info['serial_days'];
 
-        $res = model('SignMilestone')->claimMilestone($user_id, $milestone_id, $serial_days);
+        $res = (new \app\common\model\SignMilestone())->claimMilestone($user_id, $milestone_id, $serial_days);
         return json($res);
     }
 
@@ -110,7 +110,7 @@ class Task extends Base
      */
     public function claim_reward(Request $request)
     {
-        $check = model('User')->checkLogin();
+        $check = (new \app\common\model\User())->checkLogin();
         if ($check['code'] > 1) {
             return json(['code' => 1401, 'msg' => lang('task/login_required')]);
         }
@@ -122,7 +122,7 @@ class Task extends Base
             return json(['code' => 1001, 'msg' => lang('param_err')]);
         }
 
-        $res = model('TaskLog')->claimReward($user_id, $task_id);
+        $res = (new \app\common\model\TaskLog())->claimReward($user_id, $task_id);
         return json($res);
     }
 
@@ -133,7 +133,7 @@ class Task extends Base
      */
     public function report_progress(Request $request)
     {
-        $check = model('User')->checkLogin();
+        $check = (new \app\common\model\User())->checkLogin();
         if ($check['code'] > 1) {
             return json(['code' => 1401, 'msg' => lang('task/login_required')]);
         }
@@ -146,7 +146,7 @@ class Task extends Base
             return json(['code' => 1001, 'msg' => lang('param_err')]);
         }
 
-        $res = model('TaskLog')->addProgress($user_id, $task_action, 1);
+        $res = (new \app\common\model\TaskLog())->addProgress($user_id, $task_action, 1);
         return json($res);
     }
 }

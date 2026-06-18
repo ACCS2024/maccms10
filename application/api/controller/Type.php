@@ -2,8 +2,8 @@
 
 namespace app\api\controller;
 
-use think\Db;
-use think\Request;
+use think\facade\Db;
+use think\facade\Request;
 
 class Type extends Base
 {
@@ -47,13 +47,13 @@ class Type extends Base
         }
 
         // 数据获取
-        $total = model('Type')->getCountByCond($where);
+        $total = (new \app\common\model\Type())->getCountByCond($where);
         $list = [];
         if ($total > 0) {
             // 排序
             $order = "type_sort DESC";
             $field = '*';
-            $list = model('Type')->getListByCond(0, PHP_INT_MAX, $where, $order, $field, []);
+            $list = (new \app\common\model\Type())->getListByCond(0, PHP_INT_MAX, $where, $order, $field, []);
             foreach ($list as $index => $item) {
                 $child_total = Db::table('mac_type')->where(['type_pid' => $item['type_id']])->count();
                 if ($child_total > 0) {

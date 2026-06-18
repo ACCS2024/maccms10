@@ -2,9 +2,9 @@
 namespace app\api\controller;
 
 use app\common\util\AnalyticsAggregator;
-use think\Cache;
-use think\Db;
-use think\Request;
+use think\facade\Cache;
+use think\facade\Db;
+use think\facade\Request;
 
 class Analytics extends Base
 {

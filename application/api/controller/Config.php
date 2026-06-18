@@ -1,8 +1,8 @@
 <?php
 namespace app\api\controller;
 
-use think\Request;
-use think\Db;
+use think\facade\Request;
+use think\facade\Db;
 
 class Config extends Base
 {

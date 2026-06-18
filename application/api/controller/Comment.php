@@ -2,8 +2,8 @@
 
 namespace app\api\controller;
 
-use think\Db;
-use think\Request;
+use think\facade\Db;
+use think\facade\Request;
 
 class Comment extends Base
 {
@@ -61,10 +61,10 @@ class Comment extends Base
             'comment_mid'    => $mid,
         ];
 
-        $total = model('Comment')->getCountByCond($where);
+        $total = (new \app\common\model\Comment())->getCountByCond($where);
         $list = [];
         if ($total > 0) {
-            $list = model('Comment')->getListByCond($offset, $limit, $where, $order, '*', []);
+            $list = (new \app\common\model\Comment())->getListByCond($offset, $limit, $where, $order, '*', []);
             foreach ($list as $k => $v) {
                 $list[$k] = $this->commentRowForApi($v, false);
                 $where2 = [
@@ -144,7 +144,7 @@ class Comment extends Base
         if (!empty(cookie($cookie))) return json(['code' => 1005, 'msg' => lang('frequently')]);
 
         if ($GLOBALS['config']['comment']['login'] == 1) {
-            $check = model('User')->checkLogin();
+            $check = (new \app\common\model\User())->checkLogin();
             if ($check['code'] > 1) return json(['code' => 1003, 'msg' => lang('index/require_login')]);
         }
 
@@ -157,7 +157,7 @@ class Comment extends Base
         $data['comment_time'] = time();
 
         if (!empty(cookie('user_id'))) {
-            $uinfo = model('User')->field('user_nick_name,user_name')->where(['user_id' => intval(cookie('user_id'))])->find();
+            $uinfo = (new \app\common\model\User())->field('user_nick_name,user_name')->where(['user_id' => intval(cookie('user_id'))])->find();
             $data['user_id'] = intval(cookie('user_id'));
             $data['comment_name'] = htmlentities($uinfo['user_nick_name'] ?: $uinfo['user_name']);
         } else {
@@ -166,7 +166,7 @@ class Comment extends Base
         }
 
         $data['comment_status'] = ($GLOBALS['config']['comment']['audit'] == 1) ? 0 : 1;
-        $res = model('Comment')->saveData($data);
+        $res = (new \app\common\model\Comment())->saveData($data);
         cookie($cookie, 't', 30);
         return json($res);
     }
@@ -182,7 +182,7 @@ class Comment extends Base
         if ($id < 1) return json(['code' => 1001, 'msg' => '参数错误']);
         $cookie = 'comment-report-' . $id;
         if (!empty(cookie($cookie))) return json(['code' => 1002, 'msg' => lang('index/haved')]);
-        model('Comment')->where(['comment_id' => $id])->setInc('comment_report');
+        (new \app\common\model\Comment())->where(['comment_id' => $id])->setInc('comment_report');
         cookie($cookie, 't', 86400);
         return json(['code' => 1, 'msg' => 'ok']);
     }
@@ -200,8 +200,8 @@ class Comment extends Base
         if ($type) {
             $cookie = 'comment-digg-' . $id;
             if (!empty(cookie($cookie))) return json(['code' => 1002, 'msg' => lang('index/haved')]);
-            if ($type == 'up') { model('Comment')->where(['comment_id'=>$id])->setInc('comment_up'); cookie($cookie,'t',30); }
-            elseif ($type == 'down') { model('Comment')->where(['comment_id'=>$id])->setInc('comment_down'); cookie($cookie,'t',30); }
+            if ($type == 'up') { (new \app\common\model\Comment())->where(['comment_id'=>$id])->setInc('comment_up'); cookie($cookie,'t',30); }
+            elseif ($type == 'down') { (new \app\common\model\Comment())->where(['comment_id'=>$id])->setInc('comment_down'); cookie($cookie,'t',30); }
         }
         $info = Db::name('comment')->field('comment_up,comment_down')->where(['comment_id'=>$id])->find();
         return json(['code'=>1,'msg'=>'ok','data'=>['up'=>$info['comment_up']??0,'down'=>$info['comment_down']??0]]);

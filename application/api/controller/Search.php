@@ -2,9 +2,9 @@
 
 namespace app\api\controller;
 
-use think\Request;
-use think\Db;
-use think\Cache;
+use think\facade\Request;
+use think\facade\Db;
+use think\facade\Cache;
 use app\common\util\ApiMeilisearchSuggest;
 use app\common\util\MeilisearchService;
 use app\common\util\MeilisearchListBridge;
