@@ -485,6 +485,50 @@ site:destroy             → 删库/删账号/删锁/删目录 ✓
 doctor                   → PHP/扩展(pdo_mysql/mbstring/curl/zip 等)/rsync 体检 ✓
 ```
 
+## 十二、安全与健壮性自审(含"是否扩大攻击面")
+
+> 关键问题:**给一个 docroot=项目根、且被反复挂马过的站点,新增 CLI 是否扩大了 Web 攻击面?**
+> 结论:**初版确有扩大,已定位并修复;修复后对 Web 攻击面无净增加。** 详见下。
+
+### 12.1 曾经引入、现已修复的暴露点(🔴)
+
+| 问题 | 风险 | 修复 |
+|---|---|---|
+| `db:export` / reinstall 自动备份默认写 `runtime/backup/*.sql` | `runtime/` **无 Web 保护**,DB 全量(含数据 + 管理员 `$2y$` 哈希)可被 `http://站点/runtime/backup/x.sql` **直接下载** | 默认改写到 `application/data/backup/`(受 `application/.htaccess` `deny from all`);并给 `runtime/` 补 `.htaccess` 拒绝(顺带保护日志/缓存) |
+| `think` 位于 docroot 且无扩展名 | Web 误配置为用 PHP 解析时可能被 HTTP 触达 console;静态访问则源码泄露 | 入口加 `if (PHP_SAPI !== 'cli') exit;`,即便被解析也立即 403;另加 `bin/.htaccess` |
+| `bin/_config.php` 在 docroot 内、是 `.php` | `register_argc_argv=On` 时 `?/etc/passwd+...` 可被 HTTP 执行并 `file()` 攻击者指定路径 | 同样加 `PHP_SAPI !== 'cli'` 守卫 + `bin/.htaccess` `deny from all` |
+
+### 12.2 其余新增 PHP 均不可 Web 触达
+
+- `application/command/*`、`application/common/util/{Installer,DbBackup}.php`:位于 `application/`,已被 `deny from all` 拒绝;且命令类只由 `console`(`php think`)加载,Web 的 `App::run()` 不读 `command.php`。
+- 因此命令本身**不存在 Web 调用入口**:唯一入口 `think` 已 CLI-only。
+
+### 12.3 命令实现的健壮性 / 注入面
+
+- **SQL 注入**:`db:search-replace` 的 search/replace 走占位符 `?`;表名/列名取自 `information_schema`(可信)且反引号转义。`db:export` 表名反引号转义、值用 `PDO::quote()`。建库/建用户:库名反引号转义、用户名收敛 `[A-Za-z0-9_]`、口令字面量转义(`CREATE USER`/`GRANT` 不支持占位符)。`admin:reset-password` 全程 TP 查询构造器参数化。
+- **配置写盘**:`database.php`/`maccms.php` 一律 `var_export()`(沿用仓库既有加固),无 PHP 注入。
+- **口令哈希**:`mac_password_hash`(bcrypt `$2y$12$`),与网页登录校验同源;已实测 `password_verify` 通过。
+- **幂等/破坏防护**:`install.lock` 守卫(`--force` 显式)、`--cover`/`--fresh` 区分、`reinstall` 删库前自动备份(`--no-backup` 可关)、`destroy` 需 `--yes`/`MACCMS_YES=1`、`db:search-replace` 提供 `--dry-run`。
+- **失败处理**:各步抛 `\RuntimeException` → 命令分类退出码(0/2/3/4/5/6/7),不吞错。
+
+### 12.4 信任模型与可接受残留(⚪)
+
+- **CLI = 已具备文件/Shell 访问 = 受信操作者**:这些命令(改密、删库、导库)本就假定操作者已能登录服务器,**不构成新的 Web 提权路径**(同 WP-CLI / artisan / drush 模型)。
+- **root 口令传递**:仅经 env/stdin,**不进 argv**(`ps` 不可见);env 在同用户 `/proc/PID/environ` 可见属可接受残留,**stdin 方式最安全**(文档已注明)。
+- **`db:import` 执行文件内 SQL**:由操作者指定文件,属 import 固有语义;非 Web 向量。
+- **`database.php` 文件权限**:沿用网页安装器(umask 默认),**未强制 `chmod 600`**——因 CLI 执行者与 Web 运行用户可能不同,强制 600 可能导致 Web 读不到配置而站点不可用;权限策略交由部署方(与现状一致,未变差)。
+- **`maccms-cli.yml`**:不含口令(口令永不入文件);已 `.gitignore` 真实配置文件,仅 `.example` 入库。
+
+### 12.5 部署侧建议(纵深防御)
+
+- Apache:已随仓库提供 `application/.htaccess`、`bin/.htaccess`、`runtime/.htaccess`。
+- **Nginx**(无 .htaccess):请在 server 段补:
+  ```nginx
+  location ~ ^/(bin|runtime)/ { deny all; return 403; }
+  location = /think          { deny all; return 403; }
+  ```
+- 长期最佳实践:将 Web 根切到独立 `public/`(TP8 迁移后即为此结构,见 `docs/tp8-migration/`),根治"工具/框架文件与 docroot 混放"。
+
 ## 附:与 WP-CLI 能力对照
 
 | WP-CLI | 本工具 |

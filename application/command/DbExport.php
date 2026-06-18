@@ -46,7 +46,9 @@ class DbExport extends Command
 
         $file = trim((string)$input->getOption('file'));
         if ($file === '') {
-            $file = RUNTIME_PATH . 'backup/' . date('Ymd-His') . '.sql';
+            // 默认写到 application/data/backup/(该目录受 application/.htaccess `deny from all`
+            // 保护,不会被 HTTP 下载);避免把含数据/口令哈希的 .sql 落到 Web 可读路径。
+            $file = APP_PATH . 'data/backup/' . date('Ymd-His') . '.sql';
         }
         // 确保目标目录存在(显式 --file 指向不存在目录时也兜底)
         $pdir = dirname($file);

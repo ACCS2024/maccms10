@@ -25,6 +25,13 @@ define('IN_FILE', 'think');
 ini_set('max_execution_time', '0');
 ini_set('memory_limit', '-1');
 
+// 安全:本入口仅限命令行。即便被 Web 服务器误当作 PHP 解析(本项目 docroot=项目根,
+// think 位于 docroot 内),也立刻拒绝,杜绝 console 被 HTTP 触达。
+if (PHP_SAPI !== 'cli') {
+    http_response_code(403);
+    exit('maccms console entry: CLI only');
+}
+
 // 框架基础引导(内部会注册 \think\Error 的错误/异常处理器并置 error_reporting(E_ALL))
 require __DIR__ . '/thinkphp/base.php';
 

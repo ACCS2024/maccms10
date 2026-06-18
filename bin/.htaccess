@@ -1,0 +1,8 @@
+# maccms-cli 脚本目录:禁止任何 HTTP 访问(纵深防御;入口另有 PHP_SAPI 守卫)。
+<IfModule mod_authz_core.c>
+    Require all denied
+</IfModule>
+<IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+</IfModule>

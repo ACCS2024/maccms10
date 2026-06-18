@@ -18,6 +18,12 @@
  *     all: site1 site2
  */
 
+// 安全:仅限命令行(本文件位于 docroot 内的 bin/,防止被 HTTP 直接执行)。
+if (PHP_SAPI !== 'cli') {
+    http_response_code(403);
+    exit('cli only');
+}
+
 $file = $argv[1] ?? '';
 $action = $argv[2] ?? '';
 if ($file === '' || !is_file($file)) {
