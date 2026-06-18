@@ -654,7 +654,7 @@ plotdetail/<id>   => plot/detail',
     array (
       'host' => 'smtp.qq.com',
       'port' => '587',
-      'secure' => 'tsl',
+      'secure' => 'tls',
       'username' => 'test@qq.com',
       'password' => 'test',
     ),
