@@ -192,6 +192,7 @@ class Provide extends Base
     {
         $type_list = model('Type')->getCache('type_list');
         foreach($res['list'] as $k=>&$v){
+            unset($v['vod_recycle_time'], $v['type_is_vip_exclusive']);
             $type_info = $type_list[$v['type_id']];
             $v['type_name'] = $type_info['type_name'];
             $v['vod_time'] = date('Y-m-d H:i:s',$v['vod_time']);
@@ -786,6 +787,7 @@ class Provide extends Base
     {
         $type_list = model('Type')->getCache('type_list');
         foreach($res['list'] as $k=>&$v){
+            unset($v['manga_recycle_time'], $v['type_is_vip_exclusive']);
             $type_info = $type_list[$v['type_id']];
             $v['type_name'] = $type_info['type_name'];
             $v['manga_time'] = date('Y-m-d H:i:s',$v['manga_time']);
