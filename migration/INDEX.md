@@ -11,12 +11,11 @@
 |--------|------|----------|------|
 | P0 | [P0.md](P0.md) — 启动层（入口+Shim+Middleware+Addons） | 25/25 | ✅ 完成 |
 | P1 | [P1.md](P1.md) — ORM/DB 层 | 6/7 | 🟡 待冒烟 |
-
-| P2 | [P2.md](P2.md) — API 模块 | 0/5 | 🔴 未开始 |
+| P2 | [P2.md](P2.md) — API 模块 | 4/5 | 🟡 待冒烟 |
 | P3 | [P3.md](P3.md) — Admin 模块 | 0/5 | 🔴 未开始 |
 | P4 | [P4.md](P4.md) — 前台 + Console | 0/6 | 🔴 未开始 |
 | P5 | [P5.md](P5.md) — 清理 + 回归 | 0/9 | 🔴 未开始 |
-| **合计** | | **31/57** | |
+| **合计** | | **35/57** | |
 
 ---
 
@@ -70,10 +69,10 @@
 
 | ID | 任务 | 状态 |
 |----|------|------|
-| [P2-01](P2.md#p2-01-api-控制器-use-声明批量更新) | api/controller/：`use think\*` → facade（批量） | [ ] |
-| [P2-02](P2.md#p2-02-api-控制器-model-替换) | api/controller/：model() 169 处 → new Model() | [ ] |
-| [P2-03](P2.md#p2-03-api-控制器-input-替换) | api/controller/：input() → request()->方法（约 5 处） | [ ] |
-| [P2-04](P2.md#p2-04-创建-routeapiphp) | 创建 route/api.php（从 application/route.php 提取 API 路由段） | [ ] |
+| [P2-01](P2.md#p2-01-api-控制器-use-声明批量更新) | api/controller/：`use think\*` → facade（批量） | [x] |
+| [P2-02](P2.md#p2-02-api-控制器-model-替换) | api/controller/：model() 169 处 → new Model() | [x] |
+| [P2-03](P2.md#p2-03-api-控制器-input-替换) | api/controller/：input() → request()->方法（约 5 处） | [x] |
+| [P2-04](P2.md#p2-04-创建-routeapiphp) | 创建 route/api.php（从 application/route.php 提取 API 路由段） | [x] |
 | [P2-05](P2.md#p2-05-api-接口回归测试) | API 接口回归测试（列表/搜索/用户接口） | [ ] |
 
 ---

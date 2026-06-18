@@ -1,0 +1,42 @@
+<?php
+
+use think\facade\Route;
+
+// Global URL variable patterns (used by all apps / taglib URL building)
+Route::pattern([
+    'id'       => '[\s\S]*?',
+    'ids'      => '[\s\S]*?',
+    'wd'       => '[\s\S]*',
+    'en'       => '[\s\S]*?',
+    'state'    => '[\s\S]*?',
+    'area'     => '[\s\S]*',
+    'year'     => '[\s\S]*?',
+    'lang'     => '[\s\S]*?',
+    'letter'   => '[\s\S]*?',
+    'actor'    => '[\s\S]*?',
+    'director' => '[\s\S]*?',
+    'tag'      => '[\s\S]*?',
+    'class'    => '[\s\S]*?',
+    'order'    => '[\s\S]*?',
+    'by'       => '[\s\S]*?',
+    'file'     => '[\s\S]*?',
+    'name'     => '[\s\S]*?',
+    'url'      => '[\s\S]*?',
+    'type'     => '[\s\S]*?',
+    'sex'      => '[\s\S]*?',
+    'version'  => '[\s\S]*?',
+    'blood'    => '[\s\S]*?',
+    'starsign' => '[\s\S]*?',
+    'page'     => '\d+',
+    'ajax'     => '\d+',
+    'tid'      => '\d+',
+    'mid'      => '\d+',
+    'rid'      => '\d+',
+    'pid'      => '\d+',
+    'sid'      => '\d+',
+    'nid'      => '\d+',
+    'uid'      => '\d+',
+    'level'    => '\d+',
+    'score'    => '\d+',
+    'limit'    => '\d+',
+]);
