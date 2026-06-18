@@ -278,11 +278,12 @@ class OpenccConverter
 
                     return true;
                 }
-                if ($cached === 0 || $cached === '0' || $cached === false || $cached === null) {
+                if ($cached === 0 || $cached === '0' || $cached === false) {
                     self::$conversionWorks = false;
 
                     return false;
                 }
+                // null = cache miss → fall through to actual detection
             } catch (\Throwable $e) {
                 // 未初始化缓存时忽略
             }
@@ -328,10 +329,11 @@ class OpenccConverter
                     self::$shellAvailable = true;
                     return true;
                 }
-                if ($cached === 0 || $cached === '0' || $cached === false || $cached === null) {
+                if ($cached === 0 || $cached === '0' || $cached === false) {
                     self::$shellAvailable = false;
                     return false;
                 }
+                // null = cache miss → fall through to shell probe
             } catch (\Throwable $e) {
                 // 未初始化缓存时忽略
             }

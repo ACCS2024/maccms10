@@ -1540,7 +1540,7 @@ class User extends Base
         ksort($sorted_reward);
         
         // 使用事务 + SELECT FOR UPDATE 行锁，防止并发重复发放奖励
-        \think\Db::startTrans();
+        Db::startTrans();
         try {
             $where = [];
             $where['user_id'] = $user_id;
@@ -1548,7 +1548,7 @@ class User extends Base
             $user_info = $this->where($where)->lock(true)->find();
             
             if (!$user_info) {
-                \think\Db::rollback();
+                Db::rollback();
                 return;
             }
             
@@ -1617,9 +1617,9 @@ class User extends Base
                 $this->where($where)->update($update);
             }
             
-            \think\Db::commit();
+            Db::commit();
         } catch (\Exception $e) {
-            \think\Db::rollback();
+            Db::rollback();
         }
     }
 

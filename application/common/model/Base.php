@@ -14,13 +14,12 @@ class Base extends Model
     protected $readFromMaster;
     protected string $_error = '';
 
-    public function __construct(array $data = [])
+    public function __construct(array|object $data = [])
     {
         parent::__construct($data);
-        // $this->name is set by parent::__construct() — safe to use here
         $conn = ThinkConfig::get('database.default', 'mysql');
         $this->tablePrefix    = $this->tablePrefix    ?: ThinkConfig::get("database.connections.{$conn}.prefix", '');
-        $this->primaryId      = $this->primaryId      ?: ($this->name . '_id');
+        $this->primaryId      = $this->primaryId      ?: ($this->getName() . '_id');
         $this->readFromMaster = $this->readFromMaster ?: false;
         if (method_exists($this, 'createTableIfNotExists')) {
             $this->createTableIfNotExists();
