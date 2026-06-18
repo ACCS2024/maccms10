@@ -185,7 +185,7 @@ class Cash extends Base
             if (empty($arr)) {
                 return json(['code' => 1001, 'msg' => '参数错误: ids 格式不正确']);
             }
-            $where['cash_id'] = ['in', array_values($arr)];
+            $where['cash_id'] = array_values($arr);
         }
 
         $res = (new \app\common\model\Cash())->delData($where);

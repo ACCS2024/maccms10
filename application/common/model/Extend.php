@@ -15,14 +15,14 @@ class Extend extends Base {
 
             //视频
             $where = [];
-            $where['vod_status'] = ['eq',1];
+            $where['vod_status'] = 1;
             $tmp = model('Vod')->field('type_id_1,type_id,count(vod_id) as cc')->where($where)->group('type_id_1,type_id')->select();
             foreach($tmp as $k=>$v){
                 $data['vod_all'] += intval($v['cc']);
                 $list['type_all_'.$v['type_id']] = $v->toArray();
             }
 
-            $where['vod_time'] = ['egt',$totay];
+            $where[] = ['vod_time', '>=', $totay];
             $tmp = model('Vod')->field('type_id_1,type_id,count(vod_id) as cc')->where($where)->group('type_id_1,type_id')->select();
             foreach($tmp as $k=>$v){
                 $data['vod_today'] += intval($v['cc']);
@@ -32,13 +32,13 @@ class Extend extends Base {
 
             //文章
             $where = [];
-            $where['art_status'] = ['eq',1];
+            $where['art_status'] = 1;
             $tmp = model('Art')->field('type_id_1,type_id,count(art_id) as cc')->where($where)->group('type_id_1,type_id')->select();
             foreach($tmp as $k=>$v){
                 $data['art_all'] += intval($v['cc']);
                 $list['type_all_'.$v['type_id']] = $v->toArray();
             }
-            $where['art_time'] = ['egt',$totay];
+            $where[] = ['art_time', '>=', $totay];
             $tmp = model('Art')->field('type_id_1,type_id,count(art_id) as cc')->where($where)->group('type_id_1,type_id')->select();
             foreach($tmp as $k=>$v){
                 $data['art_today'] += intval($v['cc']);
@@ -60,10 +60,10 @@ class Extend extends Base {
 
             //专题
             $where = [];
-            $where['topic_status'] = ['eq',1];
+            $where['topic_status'] = 1;
             $tmp = model('Topic')->where($where)->count();
             $data['topic_all'] = $tmp;
-            $where['topic_time'] = ['egt',$totay];
+            $where[] = ['topic_time', '>=', $totay];
             $tmp = model('Topic')->where($where)->count();
             $data['topic_today'] = $tmp;
             $data['tpoic_min'] = model('Topic')->min('topic_id');
@@ -71,30 +71,30 @@ class Extend extends Base {
 
             //演员库
             $where = [];
-            $where['actor_status'] = ['eq',1];
+            $where['actor_status'] = 1;
             $tmp = model('Actor')->where($where)->count();
             $data['actor_all'] = $tmp;
-            $where['actor_time'] = ['egt',$totay];
+            $where[] = ['actor_time', '>=', $totay];
             $tmp = model('Actor')->where($where)->count();
             $data['actor_today'] = $tmp;
             $data['actor_min'] = model('Actor')->min('actor_id');
 
             //角色库
             $where = [];
-            $where['role_status'] = ['eq',1];
+            $where['role_status'] = 1;
             $tmp = model('Role')->where($where)->count();
             $data['role_all'] = $tmp;
-            $where['role_time'] = ['egt',$totay];
+            $where[] = ['role_time', '>=', $totay];
             $tmp = model('Role')->where($where)->count();
             $data['role_today'] = $tmp;
             $data['role_min'] = model('Role')->min('role_id');
 
             //网址库
             $where = [];
-            $where['website_status'] = ['eq',1];
+            $where['website_status'] = 1;
             $tmp = model('Website')->where($where)->count();
             $data['website_all'] = $tmp;
-            $where['website_time'] = ['egt',$totay];
+            $where[] = ['website_time', '>=', $totay];
             $tmp = model('Website')->where($where)->count();
             $data['website_today'] = $tmp;
             $data['website_min'] = model('Website')->min('website_id');

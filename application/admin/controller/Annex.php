@@ -18,14 +18,14 @@ class Annex extends Base
 
         $where = [];
         if (!empty($param['type'])) {
-            $where['annex_type'] = ['eq', $param['type']];
+            $where['annex_type'] = $param['type'];
         }
         if (!empty($param['mid'])) {
-            $where['annex_mid'] = ['eq', $param['mid']];
+            $where['annex_mid'] = $param['mid'];
         }
         if(!empty($param['wd'])){
             $param['wd'] = htmlspecialchars(urldecode($param['wd']));
-            $where['annex_file'] = ['like','%'.$param['wd'].'%'];
+            $where[] = ['annex_file', 'like', '%'.$param['wd'].'%'];
         }
 
         $order='annex_time desc';
@@ -143,7 +143,7 @@ class Annex extends Base
 
         $id = input('id');
         $where=[];
-        $where['annex_id'] = ['eq',$id];
+        $where['annex_id'] = $id;
         $res = model('Annex')->infoData($where);
         $info = $res['info'];
         $this->assign('info',$info);
@@ -164,7 +164,7 @@ class Annex extends Base
                 }
             }
             $where=[];
-            $where['annex_id|annex_file'] = ['in',$ids];
+            $where['annex_id|annex_file'] = $ids; // TODO:TP8-pipe-or
             $res = model('Annex')->delData($where);
             if($res['code']>1){
                 return $this->error($res['msg']);
@@ -213,7 +213,7 @@ class Annex extends Base
             $tmp = $v3['annex_file'];
             if(!file_exists('./'.$tmp)){
                 $where=[];
-                $where['annex_file'] = ['eq',$tmp];
+                $where['annex_file'] = $tmp;
                 $r = Db::name('Annex')->where($where)->delete();
                 mac_echo($tmp . '...del');
             }

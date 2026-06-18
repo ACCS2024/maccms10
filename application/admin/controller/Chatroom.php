@@ -19,19 +19,19 @@ class Chatroom extends Base
 
         $where = [];
         if (isset($param['status']) && in_array($param['status'], ['0', '1'], true)) {
-            $where['chat_status'] = ['eq', $param['status']];
+            $where['chat_status'] = $param['status'];
         }
         if (!empty($param['vod_id'])) {
-            $where['vod_id'] = ['eq', $param['vod_id']];
+            $where['vod_id'] = $param['vod_id'];
         }
         if (!empty($param['uid'])) {
-            $where['user_id'] = ['eq', $param['uid']];
+            $where['user_id'] = $param['uid'];
         }
         if (!empty($param['report'])) {
             if ($param['report'] == 1) {
-                $where['chat_report'] = ['eq', 0];
+                $where['chat_report'] = 0;
             } else {
-                $where['chat_report'] = ['gt', 0];
+                $where[] = ['chat_report', '>', 0];
             }
         }
         if (!empty($param['wd'])) {
@@ -41,9 +41,9 @@ class Chatroom extends Base
             // LIKE '%xx%' 无法使用索引，需搭配 vod_id 或 user_id 前置过滤以缩小扫描范围
             if (empty($where['vod_id']) && empty($where['user_id'])) {
                 // 无前置过滤时仅搜索 chat_content（单字段减轻负担）
-                $where['chat_content'] = ['like', '%' . $param['wd'] . '%'];
+                $where[] = ['chat_content', 'like', '%' . $param['wd'] . '%'];
             } else {
-                $where['user_name|chat_content'] = ['like', '%' . $param['wd'] . '%'];
+                $where[] = ['user_name|chat_content', 'like', '%' . $param['wd'] . '%']; // TODO:TP8-pipe-or
             }
         }
 
@@ -70,9 +70,9 @@ class Chatroom extends Base
 
         if (!empty($ids) || !empty($all)) {
             $where = [];
-            $where['chat_id'] = ['in', $ids];
+            $where['chat_id'] = $ids;
             if ($all == 1) {
-                $where['chat_id'] = ['gt', 0];
+                $where[] = ['chat_id', '>', 0];
             }
             $res = model('Chatroom')->delData($where);
             if ($res['code'] > 1) {
@@ -92,7 +92,7 @@ class Chatroom extends Base
 
         if (!empty($ids) && in_array($col, ['chat_status'])) {
             $where = [];
-            $where['chat_id'] = ['in', $ids];
+            $where['chat_id'] = $ids;
 
             $res = model('Chatroom')->fieldData($where, $col, $val);
             if ($res['code'] > 1) {

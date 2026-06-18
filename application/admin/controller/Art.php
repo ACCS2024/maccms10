@@ -18,26 +18,26 @@ class Art extends Base
 
         $where = [];
         if (!empty($param['type'])) {
-            $where['type_id|type_id_1'] = ['eq', $param['type']];
+            $where['type_id|type_id_1'] = $param['type']; // TODO:TP8-pipe-or
         }
         if (!empty($param['level'])) {
-            $where['art_level'] = ['eq', $param['level']];
+            $where['art_level'] = $param['level'];
         }
         if (in_array($param['status'], ['0', '1'])) {
-            $where['art_status'] = ['eq', $param['status']];
+            $where['art_status'] = $param['status'];
         }
         if (!empty($param['lock'])) {
-            $where['art_lock'] = ['eq', $param['lock']];
+            $where['art_lock'] = $param['lock'];
         }
         if(!empty($param['pic'])){
             if($param['pic'] == '1'){
-                $where['art_pic'] = ['eq',''];
+                $where['art_pic'] = '';
             }
             elseif($param['pic'] == '2'){
-                $where['art_pic'] = ['like','http%'];
+                $where[] = ['art_pic', 'like', 'http%'];
             }
             elseif($param['pic'] == '3'){
-                $where['art_pic'] = ['like','%#err%'];
+                $where[] = ['art_pic', 'like', '%#err%'];
             }
         }
         if(!empty($param['wd'])){
@@ -204,24 +204,24 @@ class Art extends Base
     {
         $where = [];
         if (!empty($param['type'])) {
-            $where['type_id'] = ['eq', $param['type']];
+            $where['type_id'] = $param['type'];
         }
         if (!empty($param['level'])) {
-            $where['art_level'] = ['eq', $param['level']];
+            $where['art_level'] = $param['level'];
         }
         if (in_array($param['status'] ?? '', ['0', '1'])) {
-            $where['art_status'] = ['eq', $param['status']];
+            $where['art_status'] = $param['status'];
         }
         if (!empty($param['lock'])) {
-            $where['art_lock'] = ['eq', $param['lock']];
+            $where['art_lock'] = $param['lock'];
         }
         if (!empty($param['pic'])) {
             if ($param['pic'] == '1') {
-                $where['art_pic'] = ['eq', ''];
+                $where['art_pic'] = '';
             } elseif ($param['pic'] == '2') {
-                $where['art_pic'] = ['like', 'http%'];
+                $where[] = ['art_pic', 'like', 'http%'];
             } elseif ($param['pic'] == '3') {
-                $where['art_pic'] = ['like', '%#err%'];
+                $where[] = ['art_pic', 'like', '%#err%'];
             }
         }
         if (!empty($param['wd'])) {
@@ -262,7 +262,7 @@ class Art extends Base
 
         $id = input('id');
         $where=[];
-        $where['art_id'] = ['eq',$id];
+        $where['art_id'] = $id;
         $where['_recycle'] = 'all';
         $res = model('Art')->infoData($where);
 
@@ -329,7 +329,7 @@ class Art extends Base
 
         if(!empty($ids)){
             $where=[];
-            $where['art_id'] = ['in',$ids];
+            $where['art_id'] = $ids;
             if ($purge) {
                 $res = model('Art')->delData($where);
             } else {
@@ -369,7 +369,7 @@ class Art extends Base
 
         if(!empty($ids) && in_array($col,['art_status','art_lock','art_level','art_hits','type_id'])){
             $where=[];
-            $where['art_id'] = ['in',$ids];
+            $where['art_id'] = $ids;
             $update = [];
             if(empty($start)) {
                 $update[$col] = $val;
@@ -385,7 +385,7 @@ class Art extends Base
                 $ids = explode(',',$ids);
                 foreach($ids as $k=>$v){
                     $val = rand($start,$end);
-                    $where['art_id'] = ['eq',$v];
+                    $where['art_id'] = $v;
                     $update[$col] = $val;
                     $res = model('Art')->fieldData($where, $update);
                 }

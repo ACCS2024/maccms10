@@ -36,7 +36,7 @@ class Ulog extends Base {
 
             if($v['ulog_mid']==12){
                 // 漫画收藏 / 历史
-                $manga_info = model('Manga')->infoData(['manga_id'=>['eq',$v['ulog_rid']]],'*',1);
+                $manga_info = model('Manga')->infoData(['manga_id'=>$v['ulog_rid']],'*',1);
                 if (!empty($manga_info['info'])) {
                     $manga_info['info']['link'] = mac_url_manga_detail($manga_info['info']);
                     $v['data'] = [
@@ -54,7 +54,7 @@ class Ulog extends Base {
             }
 
             if($v['ulog_mid']==1){
-                $vod_info = model('Vod')->infoData(['vod_id'=>['eq',$v['ulog_rid']]],'*',1);
+                $vod_info = model('Vod')->infoData(['vod_id'=>$v['ulog_rid']],'*',1);
 
                 if($v['ulog_sid']>0 && $v['ulog_nid']>0){
                     if($v['ulog_type']==5){
@@ -81,7 +81,7 @@ class Ulog extends Base {
                 ];
             }
             elseif($v['ulog_mid']==2){
-                $art_info = model('Art')->infoData(['art_id'=>['eq',$v['ulog_rid']]],'*',1);
+                $art_info = model('Art')->infoData(['art_id'=>$v['ulog_rid']],'*',1);
                 $art_info['info']['link'] = mac_url_art_detail($art_info['info']);
                 $v['data'] = [
                     'id'=>$art_info['info']['art_id'],
@@ -97,7 +97,7 @@ class Ulog extends Base {
                 ];
             }
             elseif($v['ulog_mid']==3){
-                $topic_info = model('Topic')->infoData(['topic_id'=>['eq',$v['ulog_rid']]],'*',1);
+                $topic_info = model('Topic')->infoData(['topic_id'=>$v['ulog_rid']],'*',1);
                 $topic_info['info']['link'] = mac_url_topic_detail($topic_info['info']);
                 $v['data'] = [
                     'id'=>$topic_info['info']['topic_id'],
@@ -108,7 +108,7 @@ class Ulog extends Base {
                 ];
             }
             elseif($v['ulog_mid']==8){
-                $actor_info = model('Actor')->infoData(['actor_id'=>['eq',$v['ulog_rid']]],'*',1);
+                $actor_info = model('Actor')->infoData(['actor_id'=>$v['ulog_rid']],'*',1);
                 $actor_info['info']['link'] = mac_url_actor_detail($actor_info['info']);
                 $v['data'] = [
                     'id'=>$actor_info['info']['actor_id'],
@@ -122,7 +122,7 @@ class Ulog extends Base {
 
         if(!empty($user_ids)){
             $where2=[];
-            $where['user_id'] = ['in', $user_ids];
+            $where['user_id'] = $user_ids;
             $order='user_id desc';
             $user_list = model('User')->listData($where2,$order,1,999);
             $user_list = mac_array_rekey($user_list['list'],'user_id');
@@ -166,7 +166,7 @@ class Ulog extends Base {
 
         if(!empty($data['ulog_id'])){
             $where=[];
-            $where['ulog_id'] = ['eq',$data['ulog_id']];
+            $where['ulog_id'] = $data['ulog_id'];
             $res = $this->allowField(true)->where($where)->update($data);
         }
         else{

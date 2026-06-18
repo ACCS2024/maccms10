@@ -19,19 +19,19 @@ class Danmaku extends Base
 
         $where = [];
         if (isset($param['status']) && in_array($param['status'], ['0', '1'], true)) {
-            $where['danmaku_status'] = ['eq', $param['status']];
+            $where['danmaku_status'] = $param['status'];
         }
         if (!empty($param['vod_id'])) {
-            $where['vod_id'] = ['eq', $param['vod_id']];
+            $where['vod_id'] = $param['vod_id'];
         }
         if (!empty($param['uid'])) {
-            $where['user_id'] = ['eq', $param['uid']];
+            $where['user_id'] = $param['uid'];
         }
         if (!empty($param['report'])) {
             if ($param['report'] == 1) {
-                $where['danmaku_report'] = ['eq', 0];
+                $where['danmaku_report'] = 0;
             } else {
-                $where['danmaku_report'] = ['gt', 0];
+                $where[] = ['danmaku_report', '>', 0];
             }
         }
         if (!empty($param['wd'])) {
@@ -41,9 +41,9 @@ class Danmaku extends Base
             // LIKE '%xx%' 无法使用索引，需搭配 vod_id 或 user_id 前置过滤以缩小扫描范围
             if (empty($where['vod_id']) && empty($where['user_id'])) {
                 // 无前置过滤时仅搜索 danmaku_text（单字段减轻负担）
-                $where['danmaku_text'] = ['like', '%' . $param['wd'] . '%'];
+                $where[] = ['danmaku_text', 'like', '%' . $param['wd'] . '%'];
             } else {
-                $where['user_name|danmaku_text'] = ['like', '%' . $param['wd'] . '%'];
+                $where[] = ['user_name|danmaku_text', 'like', '%' . $param['wd'] . '%']; // TODO:TP8-pipe-or
             }
         }
 
@@ -70,9 +70,9 @@ class Danmaku extends Base
 
         if (!empty($ids) || !empty($all)) {
             $where = [];
-            $where['danmaku_id'] = ['in', $ids];
+            $where['danmaku_id'] = $ids;
             if ($all == 1) {
-                $where['danmaku_id'] = ['gt', 0];
+                $where[] = ['danmaku_id', '>', 0];
             }
             $res = model('Danmaku')->delData($where);
             if ($res['code'] > 1) {
@@ -92,7 +92,7 @@ class Danmaku extends Base
 
         if (!empty($ids) && in_array($col, ['danmaku_status'])) {
             $where = [];
-            $where['danmaku_id'] = ['in', $ids];
+            $where['danmaku_id'] = $ids;
 
             $res = model('Danmaku')->fieldData($where, $col, $val);
             if ($res['code'] > 1) {

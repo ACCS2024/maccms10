@@ -72,7 +72,7 @@ class Group extends Base {
         }
         if(!empty($data['group_id'])){
             $where=[];
-            $where['group_id'] = ['eq',$data['group_id']];
+            $where['group_id'] = $data['group_id'];
             $res = $this->allowField(true)->where($where)->update($data);
         }
         else{

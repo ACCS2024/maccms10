@@ -62,14 +62,14 @@ class Role extends Base
 
         // 查询条件组装
         $where = [];
-        $where['role_status'] = ['eq', 1];
+        $where['role_status'] = 1;
 
         if (isset($param['rid']) && strlen($param['rid']) > 0) {
             $where['role_rid'] = (int)$param['rid'];
         }
 
         if (isset($param['name']) && strlen($param['name']) > 0) {
-            $where['role_name|role_en'] = ['like', '%' . $this->format_sql_string($param['name']) . '%'];
+            $where[] = ['role_name|role_en', 'like', '%' . $this->format_sql_string($param['name']) . '%']; // TODO:TP8-pipe-or
         }
 
         if (isset($param['letter']) && strlen($param['letter']) > 0) {
@@ -77,11 +77,11 @@ class Role extends Base
         }
 
         if (isset($param['level']) && strlen($param['level']) > 0) {
-            $where['role_level'] = ['in', $this->format_sql_string($param['level'])];
+            $where['role_level'] = $this->format_sql_string($param['level']);
         }
 
         if (isset($param['actor']) && strlen($param['actor']) > 0) {
-            $where['role_actor'] = ['like', '%' . $this->format_sql_string($param['actor']) . '%'];
+            $where[] = ['role_actor', 'like', '%' . $this->format_sql_string($param['actor']) . '%'];
         }
 
         // 数据获取
@@ -232,13 +232,13 @@ class Role extends Base
         }
 
         $where = [];
-        $where['role_status'] = ['eq', 1];
+        $where['role_status'] = 1;
 
         if ($rid > 0) {
             $where['role_rid'] = $rid;
         }
         if (!empty($level)) {
-            $where['role_level'] = ['in', $level];
+            $where['role_level'] = $level;
         }
 
         $list = Db::name('role')

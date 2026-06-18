@@ -18,23 +18,23 @@ class Role extends Base
 
         $where = [];
         if (!empty($param['level'])) {
-            $where['role_level'] = ['eq', $param['level']];
+            $where['role_level'] = $param['level'];
         }
         if (in_array($param['status'], ['0', '1'])) {
-            $where['role_status'] = ['eq', $param['status']];
+            $where['role_status'] = $param['status'];
         }
         if (!empty($param['rid'])) {
-            $where['role_rid'] = ['eq', $param['rid']];
+            $where['role_rid'] = $param['rid'];
         }
         if(!empty($param['pic'])){
             if($param['pic'] == '1'){
-                $where['role_pic'] = ['eq',''];
+                $where['role_pic'] = '';
             }
             elseif($param['pic'] == '2'){
-                $where['role_pic'] = ['like','http%'];
+                $where[] = ['role_pic', 'like', 'http%'];
             }
             elseif($param['pic'] == '3'){
-                $where['role_pic'] = ['like','%#err%'];
+                $where[] = ['role_pic', 'like', '%#err%'];
             }
         }
         if(!empty($param['wd'])){
@@ -78,7 +78,7 @@ class Role extends Base
         $rid = input('rid');
 
         $where=[];
-        $where['role_id'] = ['eq',$id];
+        $where['role_id'] = $id;
         $res = model('Role')->infoData($where);
         $info = $res['info'];
         if(empty($info)){
@@ -87,7 +87,7 @@ class Role extends Base
         $this->assign('info',$info);
 
         $where=[];
-        $where['vod_id'] = ['eq', $info['role_rid'] ];
+        $where['vod_id'] = $info['role_rid'] ;
         $where['_recycle'] = 'all';
         $res = model('Vod')->infoData($where);
         $data = $res['info'];
@@ -104,7 +104,7 @@ class Role extends Base
 
         if(!empty($ids)){
             $where=[];
-            $where['role_id'] = ['in',$ids];
+            $where['role_id'] = $ids;
             $res = model('Role')->delData($where);
             if($res['code']>1){
                 return $this->error($res['msg']);
@@ -126,7 +126,7 @@ class Role extends Base
 
         if(!empty($ids) && in_array($col,['role_status','role_lock','role_level','role_hits'])){
             $where=[];
-            $where['role_id'] = ['in',$ids];
+            $where['role_id'] = $ids;
             if(empty($start)) {
                 $res = model('Role')->fieldData($where, $col, $val);
             }
@@ -135,7 +135,7 @@ class Role extends Base
                 $ids = explode(',',$ids);
                 foreach($ids as $k=>$v){
                     $val = rand($start,$end);
-                    $where['role_id'] = ['eq',$v];
+                    $where['role_id'] = $v;
                     $res = model('Role')->fieldData($where, $col, $val);
                 }
             }

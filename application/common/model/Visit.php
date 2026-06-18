@@ -68,7 +68,7 @@ class Visit extends Base {
 
         if(!empty($data['visit_id'])){
             $where=[];
-            $where['visit_id'] = ['eq',$data['visit_id']];
+            $where['visit_id'] = $data['visit_id'];
             $res = $this->allowField(true)->where($where)->update($data);
         }
         else{

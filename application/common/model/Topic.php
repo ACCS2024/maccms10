@@ -152,13 +152,13 @@ class Topic extends Base {
 
         }
 
-        $where['topic_status'] = ['eq',1];
+        $where['topic_status'] = 1;
         if(!empty($level)) {
-            $where['topic_level'] = ['in',explode(',',$level)];
+            $where['topic_level'] = explode(',',$level);
         }
         if(!empty($ids)) {
             if($ids!='all'){
-                $where['topic_id'] = ['in',explode(',',$ids)];
+                $where['topic_id'] = explode(',',$ids);
             }
         }
         if(!empty($not)){
@@ -168,24 +168,24 @@ class Topic extends Base {
             if(substr($letter,0,1)=='0' && substr($letter,2,1)=='9'){
                 $letter='0,1,2,3,4,5,6,7,8,9';
             }
-            $where['topic_letter'] = ['in',explode(',',$letter)];
+            $where['topic_letter'] = explode(',',$letter);
         }
         if(!empty($timeadd)){
             $s = intval(strtotime($timeadd));
-            $where['topic_time_add'] =['gt',$s];
+            $where[] = ['topic_time_add', '>', $s];
         }
         if(!empty($timehits)){
             $s = intval(strtotime($timehits));
-            $where['topic_time_hits'] =['gt',$s];
+            $where[] = ['topic_time_hits', '>', $s];
         }
         if(!empty($time)){
             $s = intval(strtotime($time));
-            $where['topic_time'] =['gt',$s];
+            $where[] = ['topic_time', '>', $s];
         }
         if(!empty($hitsmonth)){
             $tmp = explode(' ',$hitsmonth);
             if(count($tmp)==1){
-                $where['topic_hits_month'] = ['gt', $tmp];
+                $where[] = ['topic_hits_month', '>', $tmp];
             }
             else{
                 $where['topic_hits_month'] = [$tmp[0],$tmp[1]];
@@ -194,7 +194,7 @@ class Topic extends Base {
         if(!empty($hitsweek)){
             $tmp = explode(' ',$hitsweek);
             if(count($tmp)==1){
-                $where['topic_hits_week'] = ['gt', $tmp];
+                $where[] = ['topic_hits_week', '>', $tmp];
             }
             else{
                 $where['topic_hits_week'] = [$tmp[0],$tmp[1]];
@@ -203,7 +203,7 @@ class Topic extends Base {
         if(!empty($hitsday)){
             $tmp = explode(' ',$hitsday);
             if(count($tmp)==1){
-                $where['topic_hits_day'] = ['gt', $tmp];
+                $where[] = ['topic_hits_day', '>', $tmp];
             }
             else{
                 $where['topic_hits_day'] = [$tmp[0],$tmp[1]];
@@ -212,7 +212,7 @@ class Topic extends Base {
         if(!empty($hits)){
             $tmp = explode(' ',$hits);
             if(count($tmp)==1){
-                $where['topic_hits'] = ['gt', $tmp];
+                $where[] = ['topic_hits', '>', $tmp];
             }
             else{
                 $where['topic_hits'] = [$tmp[0],$tmp[1]];
@@ -220,13 +220,13 @@ class Topic extends Base {
         }
 
         if(!empty($wd)) {
-            $where['topic_name|topic_en|topic_sub'] = ['like', '%' . $wd . '%'];
+            $where[] = ['topic_name|topic_en|topic_sub', 'like', '%' . $wd . '%']; // TODO:TP8-pipe-or
         }
         if(!empty($tag)) {
-            $where['topic_tag'] = ['like', mac_like_arr($tag),'OR'];
+            $where[] = ['topic_tag', 'like', mac_like_arr($tag),'OR'];
         }
         if(!empty($class)) {
-            $where['topic_type'] = ['like', mac_like_arr($class),'OR'];
+            $where[] = ['topic_type', 'like', mac_like_arr($class),'OR'];
         }
         $use_rnd_order = ($by == 'rnd');
         if (!$use_rnd_order) {
@@ -296,8 +296,8 @@ class Topic extends Base {
             return ['code'=>1001,'msg'=>lang('param_err')];
         }
         $data_cache = false;
-        $key = $GLOBALS['config']['app']['cache_flag']. '_'.'topic_detail_'.$where['topic_id'][1].'_'.$where['topic_en'][1];
-        if($where['topic_id'][0]=='eq' || $where['topic_en'][0]=='eq'){
+        $key = $GLOBALS['config']['app']['cache_flag']. '_'.'topic_detail_'.($where['topic_id'] ?? '').'_'.($where['topic_en'] ?? '');
+        if(isset($where['topic_id']) || isset($where['topic_en'])){
             $data_cache = true;
         }
         if($GLOBALS['config']['app']['cache_core']==1 && $data_cache) {
@@ -319,8 +319,8 @@ class Topic extends Base {
 
             if (!empty($info['topic_rel_vod'])) {
                 $where = [];
-                $where['vod_id'] = ['in', $info['topic_rel_vod']];
-                $where['vod_status'] = ['eq', 1];
+                $where['vod_id'] = $info['topic_rel_vod'];
+                $where['vod_status'] = 1;
                 $order = 'vod_time desc';
                 $field = '*';
                 $res = model('Vod')->listData($where, $order, 1, 999, 0, $field);
@@ -330,8 +330,8 @@ class Topic extends Base {
             }
             if (!empty($info['topic_rel_art'])) {
                 $where = [];
-                $where['art_id'] = ['in', $info['topic_rel_art']];
-                $where['art_status'] = ['eq', 1];
+                $where['art_id'] = $info['topic_rel_art'];
+                $where['art_status'] = 1;
                 $order = 'art_time desc';
                 $field = '*';
                 $res = model('Art')->listData($where, $order, 1, 999, 0, $field);
@@ -342,8 +342,8 @@ class Topic extends Base {
 
             if (!empty($info['topic_tag'])) {
                 $where=[];
-                $where['vod_tag'] = ['like', mac_like_arr($info['topic_tag']),'OR'];
-                $where['vod_status'] = ['eq', 1];
+                $where[] = ['vod_tag', 'like', mac_like_arr($info['topic_tag']),'OR'];
+                $where['vod_status'] = 1;
                 $order = 'vod_time desc';
                 $field = '*';
                 $res = model('Vod')->listData($where, $order, 1, 999, 0, $field);
@@ -352,8 +352,8 @@ class Topic extends Base {
                 }
 
                 $where=[];
-                $where['art_tag'] = ['like', mac_like_arr($info['topic_tag']),'OR'];
-                $where['art_status'] = ['eq', 1];
+                $where[] = ['art_tag', 'like', mac_like_arr($info['topic_tag']),'OR'];
+                $where['art_status'] = 1;
                 $order = 'art_time desc';
                 $field = '*';
                 $res = model('Art')->listData($where, $order, 1, 999, 0, $field);
@@ -441,7 +441,7 @@ class Topic extends Base {
 
         if(!empty($data['topic_id'])){
             $where=[];
-            $where['topic_id'] = ['eq',$data['topic_id']];
+            $where['topic_id'] = $data['topic_id'];
             $res = $this->allowField(true)->where($where)->update($data);
         }
         else{

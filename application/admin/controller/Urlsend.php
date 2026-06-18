@@ -59,16 +59,16 @@ class Urlsend extends Base
         switch($mid)
         {
             case 1:
-                $where['vod_status'] = ['eq',1];
+                $where['vod_status'] = 1;
 
                 if($ac2=='today'){
-                    $where['vod_'.$col_time] = ['gt',$today];
+                    $where[] = ['vod_'.$col_time, '>', $today];
                 }
                 if(!empty($ids)){
-                    $where['vod_id'] = ['in',$ids];
+                    $where['vod_id'] = $ids;
                 }
                 elseif(!empty($data)){
-                    $where['vod_id'] = ['gt', $data];
+                    $where[] = ['vod_id', '>', $data];
                 }
 
                 $col = 'vod';
@@ -77,17 +77,17 @@ class Urlsend extends Base
                 $res = model('Vod')->listData($where,$order,$this->_param['page'],$this->_param['limit']);
                 break;
             case 2:
-                $where['art_status'] = ['eq',1];
+                $where['art_status'] = 1;
 
                 if($ac2=='today'){
-                    $where['art_'.$col_time] = ['gt',$today];
+                    $where[] = ['art_'.$col_time, '>', $today];
 
                 }
                 if(!empty($ids)){
-                    $where['art_id'] = ['in',$ids];
+                    $where['art_id'] = $ids;
                 }
                 elseif(!empty($data)){
-                    $where['art_id'] = ['gt', $data];
+                    $where[] = ['art_id', '>', $data];
                 }
 
                 $col = 'art';
@@ -96,17 +96,17 @@ class Urlsend extends Base
                 $res = model('Art')->listData($where,$order,$this->_param['page'],$this->_param['limit']);
                 break;
             case 3:
-                $where['topic_status'] = ['eq',1];
+                $where['topic_status'] = 1;
 
                 if($ac2=='today'){
-                    $where['topic_'.$col_time] = ['gt',$today];
+                    $where[] = ['topic_'.$col_time, '>', $today];
 
                 }
                 if(!empty($ids)){
-                    $where['topic_id'] = ['in',$ids];
+                    $where['topic_id'] = $ids;
                 }
                 elseif(!empty($data)){
-                    $where['topic_id'] = ['gt', $data];
+                    $where[] = ['topic_id', '>', $data];
                 }
 
                 $col = 'topic';
@@ -115,17 +115,17 @@ class Urlsend extends Base
                 $res = model('Topic')->listData($where,$order,$this->_param['page'],$this->_param['limit']);
                 break;
             case 8:
-                $where['actor_status'] = ['eq',1];
+                $where['actor_status'] = 1;
 
                 if($ac2=='today'){
-                    $where['actor_'.$col_time] = ['gt',$today];
+                    $where[] = ['actor_'.$col_time, '>', $today];
 
                 }
                 if(!empty($ids)){
-                    $where['actor_id'] = ['in',$ids];
+                    $where['actor_id'] = $ids;
                 }
                 elseif(!empty($data)){
-                    $where['actor_id'] = ['gt', $data];
+                    $where[] = ['actor_id', '>', $data];
                 }
                 $col = 'actor';
                 $order = 'actor_id asc';
@@ -133,17 +133,17 @@ class Urlsend extends Base
                 $res = model('Actor')->listData($where,$order,$this->_param['page'],$this->_param['limit']);
                 break;
             case 9:
-                $where['role_status'] = ['eq',1];
+                $where['role_status'] = 1;
 
                 if($ac2=='today'){
-                    $where['role_'.$col_time] = ['gt',$today];
+                    $where[] = ['role_'.$col_time, '>', $today];
 
                 }
                 if(!empty($ids)){
-                    $where['role_id'] = ['in',$ids];
+                    $where['role_id'] = $ids;
                 }
                 elseif(!empty($data)){
-                    $where['role_id'] = ['gt', $data];
+                    $where[] = ['role_id', '>', $data];
                 }
                 $col = 'role';
                 $order = 'role_id asc';
@@ -151,17 +151,17 @@ class Urlsend extends Base
                 $res = model('Role')->listData($where,$order,$this->_param['page'],$this->_param['limit']);
                 break;
             case 11:
-                $where['website_status'] = ['eq',1];
+                $where['website_status'] = 1;
 
                 if($ac2=='today'){
-                    $where['website_'.$col_time] = ['gt',$today];
+                    $where[] = ['website_'.$col_time, '>', $today];
 
                 }
                 if(!empty($ids)){
-                    $where['website_id'] = ['in',$ids];
+                    $where['website_id'] = $ids;
                 }
                 elseif(!empty($data)){
-                    $where['website_id'] = ['gt', $data];
+                    $where[] = ['website_id', '>', $data];
                 }
                 $col = 'website';
                 $order = 'website_id asc';
@@ -169,17 +169,17 @@ class Urlsend extends Base
                 $res = model('Website')->listData($where,$order,$this->_param['page'],$this->_param['limit']);
                 break;
             case 12:
-                $where['manga_status'] = ['eq',1];
+                $where['manga_status'] = 1;
 
                 if($ac2=='today'){
-                    $where['manga_'.$col_time] = ['gt',$today];
+                    $where[] = ['manga_'.$col_time, '>', $today];
 
                 }
                 if(!empty($ids)){
-                    $where['manga_id'] = ['in',$ids];
+                    $where['manga_id'] = $ids;
                 }
                 elseif(!empty($data)){
-                    $where['manga_id'] = ['gt', $data];
+                    $where[] = ['manga_id', '>', $data];
                 }
                 $col = 'manga';
                 $order = 'manga_id asc';

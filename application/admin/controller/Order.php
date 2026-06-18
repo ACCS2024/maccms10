@@ -16,14 +16,14 @@ class Order extends Base
         $param['limit'] = intval($param['limit']) <1 ? $this->_pagesize : $param['limit'];
         $where=[];
         if($param['status']!=''){
-            $where['order_status'] = ['eq',$param['status']];
+            $where['order_status'] = $param['status'];
         }
         if(!empty($param['uid'])){
-            $where['o.user_id'] = ['eq',$param['uid'] ];
+            $where['o.user_id'] = $param['uid'] ;
         }
         if(!empty($param['wd'])){
             $param['wd'] = htmlspecialchars(urldecode($param['wd']));
-            $where['order_code'] = ['like','%'.$param['wd'].'%'];
+            $where[] = ['order_code', 'like', '%'.$param['wd'].'%'];
         }
 
         $order='order_id desc';
@@ -53,9 +53,9 @@ class Order extends Base
 
         if(!empty($ids)){
             $where=[];
-            $where['order_id'] = ['in',$ids];
+            $where['order_id'] = $ids;
             if($all==1){
-                $where['order_id'] = ['gt',0];
+                $where[] = ['order_id', '>', 0];
             }
             $res = model('Order')->delData($where);
             if($res['code']>1){

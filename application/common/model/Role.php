@@ -59,7 +59,7 @@ class Role extends Base {
                 $vod_ids[$v['role_rid']] = $v['role_rid'];
             }
             $where2=[];
-            $where2['vod_id'] = ['in', array_values(array_map('intval', $vod_ids))];
+            $where2['vod_id'] = array_values(array_map('intval', $vod_ids));
             $tmp_list = model('Vod')->listData($where2,'vod_id desc',1,999,0);
             //$tmp_list = Db::name('Vod')->field('vod_id,vod_name,vod_en,type_id,type_id_1')->where($where2)->select();
             foreach($tmp_list['list'] as $k=>$v){
@@ -157,16 +157,16 @@ class Role extends Base {
 
         }
 
-        $where['role_status'] = ['eq',1];
+        $where['role_status'] = 1;
         if(!empty($level)) {
             if($level=='all'){
                 $level = '1,2,3,4,5,6,7,8,9';
             }
-            $where['role_level'] = ['in',explode(',',$level)];
+            $where['role_level'] = explode(',',$level);
         }
         if(!empty($ids)) {
             if($ids!='all'){
-                $where['role_id'] = ['in',explode(',',$ids)];
+                $where['role_id'] = explode(',',$ids);
             }
         }
         if(!empty($not)){
@@ -176,27 +176,27 @@ class Role extends Base {
             if(substr($letter,0,1)=='0' && substr($letter,2,1)=='9'){
                 $letter='0,1,2,3,4,5,6,7,8,9';
             }
-            $where['role_letter'] = ['in',explode(',',$letter)];
+            $where['role_letter'] = explode(',',$letter);
         }
         if(!empty($rid)) {
-            $where['role_rid'] = ['eq',$rid];
+            $where['role_rid'] = $rid;
         }
         if(!empty($timeadd)){
             $s = intval(strtotime($timeadd));
-            $where['role_time_add'] =['gt',$s];
+            $where[] = ['role_time_add', '>', $s];
         }
         if(!empty($timehits)){
             $s = intval(strtotime($timehits));
-            $where['role_time_hits'] =['gt',$s];
+            $where[] = ['role_time_hits', '>', $s];
         }
         if(!empty($time)){
             $s = intval(strtotime($time));
-            $where['role_time'] =['gt',$s];
+            $where[] = ['role_time', '>', $s];
         }
         if(!empty($hitsmonth)){
             $tmp = explode(' ',$hitsmonth);
             if(count($tmp)==1){
-                $where['role_hits_month'] = ['gt', $tmp];
+                $where[] = ['role_hits_month', '>', $tmp];
             }
             else{
                 $where['role_hits_month'] = [$tmp[0],$tmp[1]];
@@ -205,7 +205,7 @@ class Role extends Base {
         if(!empty($hitsweek)){
             $tmp = explode(' ',$hitsweek);
             if(count($tmp)==1){
-                $where['role_hits_week'] = ['gt', $tmp];
+                $where[] = ['role_hits_week', '>', $tmp];
             }
             else{
                 $where['role_hits_week'] = [$tmp[0],$tmp[1]];
@@ -214,7 +214,7 @@ class Role extends Base {
         if(!empty($hitsday)){
             $tmp = explode(' ',$hitsday);
             if(count($tmp)==1){
-                $where['role_hits_day'] = ['gt', $tmp];
+                $where[] = ['role_hits_day', '>', $tmp];
             }
             else{
                 $where['role_hits_day'] = [$tmp[0],$tmp[1]];
@@ -223,21 +223,21 @@ class Role extends Base {
         if(!empty($hits)){
             $tmp = explode(' ',$hits);
             if(count($tmp)==1){
-                $where['role_hits'] = ['gt', $tmp];
+                $where[] = ['role_hits', '>', $tmp];
             }
             else{
                 $where['role_hits'] = [$tmp[0],$tmp[1]];
             }
         }
         if(!empty($actor)){
-            $where['role_actor'] = ['in',explode(',',$actor) ];
+            $where['role_actor'] = explode(',',$actor) ;
         }
         if(!empty($name)){
-            $where['role_name'] = ['in',explode(',',$name) ];
+            $where['role_name'] = explode(',',$name) ;
         }
 
         if(!empty($wd)) {
-            $where['role_name|role_en'] = ['like', '%' . $wd . '%'];
+            $where[] = ['role_name|role_en', 'like', '%' . $wd . '%']; // TODO:TP8-pipe-or
         }
         $use_rnd_order = ($by == 'rnd');
         // https://github.com/magicblack/maccms10/issues/1050
@@ -308,8 +308,8 @@ class Role extends Base {
             return ['code'=>1001,'msg'=>lang('param_err')];
         }
         $data_cache = false;
-        $key = $GLOBALS['config']['app']['cache_flag']. '_'. 'role_detail_'.$where['role_id'][1].'_'.$where['role_en'][1];
-        if($where['role_id'][0]=='eq' || $where['role_en'][0]=='eq'){
+        $key = $GLOBALS['config']['app']['cache_flag']. '_'. 'role_detail_'.($where['role_id'] ?? '').'_'.($where['role_en'] ?? '');
+        if(isset($where['role_id']) || isset($where['role_en'])){
             $data_cache = true;
         }
         if($GLOBALS['config']['app']['cache_core']==1 && $data_cache) {
@@ -324,7 +324,7 @@ class Role extends Base {
             $info['data'] = [];
             if(!empty($info['role_rid'])){
                 $where2=[];
-                $where2['vod_id'] = ['eq', $info['role_rid']];
+                $where2['vod_id'] = $info['role_rid'];
                 $vod_info = model('Vod')->infoData($where2);
                 if($vod_info['code'] == 1){
                     $info['data'] = $vod_info['info'];
@@ -379,7 +379,7 @@ class Role extends Base {
 
         if(!empty($data['role_id'])){
             $where=[];
-            $where['role_id'] = ['eq',$data['role_id']];
+            $where['role_id'] = $data['role_id'];
             $res = $this->allowField(true)->where($where)->update($data);
         }
         else{

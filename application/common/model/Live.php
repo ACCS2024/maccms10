@@ -58,7 +58,7 @@ class Live extends Base
         $data['live_time'] = time();
         if (!empty($data['live_id'])) {
             $where = [];
-            $where['live_id'] = ['eq', (int)$data['live_id']];
+            $where['live_id'] = (int)$data['live_id'];
             $res = $this->allowField(true)->where($where)->update($data);
         } else {
             $data['live_time_add'] = time();

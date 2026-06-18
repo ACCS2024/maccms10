@@ -223,13 +223,11 @@ class VodSearch extends Base {
         }
         Cache::set($cach_name, 1, min($clear_seconds, 86400));
         // vod_actor在采集的时候可提高效率，暂不清理
-        $where = [
-            'search_field'       => ['neq', 'vod_actor'],
-            'search_update_time' => ['lt', time() - $clear_seconds],
-        ];
+        $where = [];
+        $where[] = ['search_update_time', '<', time() - $clear_seconds];
         // 后台强制清理时，都清掉
-        if ($force === true) {
-            unset($where['search_field']);
+        if ($force !== true) {
+            $where[] = ['search_field', '<>', 'vod_actor'];
         }
         $this->where($where)->delete();
     }

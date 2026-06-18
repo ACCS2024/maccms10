@@ -66,7 +66,7 @@ class Card extends Base {
 
         if(!empty($data['card_id'])){
             $where=[];
-            $where['card_id'] = ['eq',$data['card_id']];
+            $where['card_id'] = $data['card_id'];
             $res = $this->allowField(true)->where($where)->update($data);
         }
         else{
@@ -129,10 +129,10 @@ class Card extends Base {
         }
 
         $where=[];
-        $where['card_no'] = ['eq',$card_no];
-        $where['card_pwd'] = ['eq',$card_pwd];
-        //$where['card_sale_status'] = ['eq',1];
-        $where['card_use_status'] = ['eq',0];
+        $where['card_no'] = $card_no;
+        $where['card_pwd'] = $card_pwd;
+        //$where['card_sale_status'] = 1;
+        $where['card_use_status'] = 0;
 
         $info = $this->where($where)->find();
         if(empty($info)){
@@ -144,9 +144,9 @@ class Card extends Base {
             // 原子认领:仅当 card_use_status 仍为 0 时置 1;受影响行数==1 才算抢到本卡。
             // 修复 TOCTOU:原逻辑"先加分、后置状态"非原子,并发请求可对同一张卡重复兑换(多次加分)。
             $claim = $this->where([
-                'card_no'         => ['eq', $card_no],
-                'card_pwd'        => ['eq', $card_pwd],
-                'card_use_status' => ['eq', 0],
+                'card_no'         => $card_no,
+                'card_pwd'        => $card_pwd,
+                'card_use_status' => 0,
             ])->update([
                 'card_sale_status' => 1,
                 'card_use_status'  => 1,

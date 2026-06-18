@@ -124,7 +124,7 @@ class Safety extends Base
                 $where = [];
                 foreach ($v1 as $k2 => $v2) {
                     if (strpos($v2['DATA_TYPE'], 'int') === false) {
-                        $where[$k2] = ['like', mac_like_arr(join(',', $check_arr)), 'OR'];
+                        $where[] = [$k2, 'like', mac_like_arr(join(',', $check_arr))];
                     }
                 }
                 if (!empty($where)) {

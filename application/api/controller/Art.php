@@ -45,11 +45,11 @@ class Art extends Base
         $limit = mac_api_norm_limit($param['limit'] ?? 0);
 
         if (isset($param['type_id']) && (int)$param['type_id'] > 0) {
-            $where['type_id|type_id_1'] = ['eq', (int)$param['type_id']];
+            $where['type_id|type_id_1'] = (int)$param['type_id']; // TODO:TP8-pipe-or
         }
 
         if (isset($param['time_end']) && isset($param['time_start'])) {
-            $where['art_time'] = ['between', [(int)$param['time_start'], (int)$param['time_end']]];
+            $where[] = ['art_time', 'between', [(int)$param['time_start'], (int)$param['time_end']]];
         }elseif (isset($param['time_end'])) {
             $where['art_time'] = ['<=', (int)$param['time_end']];
         }elseif (isset($param['time_start'])) {
@@ -65,33 +65,33 @@ class Art extends Base
         }
 
         if (isset($param['name']) && strlen($param['name']) > 0) {
-            $where['art_name'] = ['like', '%' . $this->format_sql_string($param['name']) . '%'];
+            $where[] = ['art_name', 'like', '%' . $this->format_sql_string($param['name']) . '%'];
         }
 
         if (isset($param['sub']) && strlen($param['sub']) > 0) {
-            $where['art_sub'] = ['like', '%' . $this->format_sql_string($param['sub']) . '%'];
+            $where[] = ['art_sub', 'like', '%' . $this->format_sql_string($param['sub']) . '%'];
         }
 
         if (isset($param['blurb']) && strlen($param['blurb']) > 0) {
-            $where['art_blurb'] = ['like', '%' . $this->format_sql_string($param['blurb']) . '%'];
+            $where[] = ['art_blurb', 'like', '%' . $this->format_sql_string($param['blurb']) . '%'];
         }
 
         if (isset($param['title']) && strlen($param['title']) > 0) {
-            $where['art_title'] = ['like', '%' . $this->format_sql_string($param['title']) . '%'];
+            $where[] = ['art_title', 'like', '%' . $this->format_sql_string($param['title']) . '%'];
         }
 
         if (isset($param['content']) && strlen($param['content']) > 0) {
-            $where['art_content'] = ['like', '%' . $this->format_sql_string($param['content']) . '%'];
+            $where[] = ['art_content', 'like', '%' . $this->format_sql_string($param['content']) . '%'];
         }
 
         if (isset($param['class']) && strlen($param['class']) > 0) {
-            $where['art_class'] = ['like', '%' . $this->format_sql_string($param['class']) . '%'];
+            $where[] = ['art_class', 'like', '%' . $this->format_sql_string($param['class']) . '%'];
         }
         if (isset($param['tag']) && strlen($param['tag']) > 0) {
-            $where['art_tag'] = ['like', '%' . $this->format_sql_string($param['tag']) . '%'];
+            $where[] = ['art_tag', 'like', '%' . $this->format_sql_string($param['tag']) . '%'];
         }
         if (isset($param['level']) && strlen($param['level']) > 0) {
-            $where['art_level'] = ['in', $this->format_sql_string($param['level'])];
+            $where['art_level'] = $this->format_sql_string($param['level']);
         }
 
         // 排序(Meili 接入需提前确定 $order)
@@ -171,7 +171,7 @@ class Art extends Base
         }
 
         $aid = (int)$param['art_id'];
-        $data = (new \app\common\model\Art())->infoData(['art_id' => ['eq', $aid]], '*', 0);
+        $data = (new \app\common\model\Art())->infoData(['art_id' => $aid], '*', 0);
         if ($data['code'] != 1 || empty($data['info'])) {
             return json(['code' => 1001, 'msg' => $data['msg'] ?? '数据不存在']);
         }
@@ -255,7 +255,7 @@ class Art extends Base
             $page = 1;
         }
 
-        $data = (new \app\common\model\Art())->infoData(['art_id' => ['eq', $artId]], '*', 0);
+        $data = (new \app\common\model\Art())->infoData(['art_id' => $artId], '*', 0);
         if ($data['code'] != 1 || empty($data['info'])) {
             return json(['code' => 1002, 'msg' => $data['msg'] ?? '数据不存在']);
         }
@@ -410,9 +410,9 @@ class Art extends Base
         }
 
         $where = [];
-        $where['art_status'] = ['eq', 1];
+        $where['art_status'] = 1;
         if ($typeId > 0) {
-            $where['type_id|type_id_1'] = ['eq', $typeId];
+            $where['type_id|type_id_1'] = $typeId; // TODO:TP8-pipe-or
         }
 
         $list = Db::table('mac_art')
@@ -458,9 +458,9 @@ class Art extends Base
         $start = isset($param['start']) ? max(0, (int)$param['start']) : 0;
 
         $where = [];
-        $where['art_status'] = ['eq', 1];
+        $where['art_status'] = 1;
         if ($typeId > 0) {
-            $where['type_id|type_id_1'] = ['eq', $typeId];
+            $where['type_id|type_id_1'] = $typeId; // TODO:TP8-pipe-or
         }
 
         $list = Db::table('mac_art')

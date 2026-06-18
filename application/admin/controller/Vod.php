@@ -18,34 +18,34 @@ class Vod extends Base
 
         $where = [];
         if(!empty($param['type'])){
-            $where['type_id|type_id_1'] = ['eq',$param['type']];
+            $where['type_id|type_id_1'] = $param['type']; // TODO:TP8-pipe-or
         }
         if(!empty($param['level'])){
-            $where['vod_level'] = ['eq',$param['level']];
+            $where['vod_level'] = $param['level'];
         }
         if(in_array($param['status'],['0','1'])){
-            $where['vod_status'] = ['eq',$param['status']];
+            $where['vod_status'] = $param['status'];
         }
         if(in_array($param['copyright'],['0','1'])){
-            $where['vod_copyright'] = ['eq',$param['copyright']];
+            $where['vod_copyright'] = $param['copyright'];
         }
         if(in_array($param['isend'],['0','1'])){
-            $where['vod_isend'] = ['eq',$param['isend']];
+            $where['vod_isend'] = $param['isend'];
         }
         if(!empty($param['lock'])){
-            $where['vod_lock'] = ['eq',$param['lock']];
+            $where['vod_lock'] = $param['lock'];
         }
         if(!empty($param['state'])){
-            $where['vod_state'] = ['eq',$param['state']];
+            $where['vod_state'] = $param['state'];
         }
         if(!empty($param['area'])){
-            $where['vod_area'] = ['eq',$param['area']];
+            $where['vod_area'] = $param['area'];
         }
         if(!empty($param['lang'])){
-            $where['vod_lang'] = ['eq',$param['lang']];
+            $where['vod_lang'] = $param['lang'];
         }
         if(in_array($param['plot'],['0','1'])){
-            $where['vod_plot'] = ['eq',$param['plot']];
+            $where['vod_plot'] = $param['plot'];
         }
 
         // 处理角色筛选 - 通过查询角色表判断是否有角色数据
@@ -54,10 +54,10 @@ class Vod extends Base
             if($param['role'] == '1'){
                 // 有角色数据
                 if(!empty($roleVodIds)){
-                    $where['vod_id'] = ['in', $roleVodIds];
+                    $where['vod_id'] = $roleVodIds;
                 } else {
                     // 如果没有任何角色数据，设置一个不可能匹配的条件
-                    $where['vod_id'] = ['eq', 0];
+                    $where['vod_id'] = 0;
                 }
             } else {
                 // 无角色数据
@@ -73,21 +73,21 @@ class Vod extends Base
             }
         }
         if(!empty($param['points'])){
-            $where['vod_points_play|vod_points_down'] = ['gt', 0];
+            $where[] = ['vod_points_play|vod_points_down', '>', 0];
         }
         if(!empty($param['pic'])){
             if($param['pic'] == '1'){
-                $where['vod_pic'] = ['eq',''];
+                $where['vod_pic'] = '';
             }
             elseif($param['pic'] == '2'){
-                $where['vod_pic'] = ['like','http%'];
+                $where[] = ['vod_pic', 'like', 'http%'];
             }
             elseif($param['pic'] == '3'){
-                $where['vod_pic'] = ['like','%#err%'];
+                $where[] = ['vod_pic', 'like', '%#err%'];
             }
         }
         if(!empty($param['weekday'])){
-            $where['vod_weekday'] = ['like','%'.$param['weekday'].'%'];
+            $where[] = ['vod_weekday', 'like', '%'.$param['weekday'].'%'];
         }
         if(!empty($param['wd'])){
             @set_time_limit(120);
@@ -95,27 +95,27 @@ class Vod extends Base
             $param['wd'] = mac_filter_xss($param['wd']);
             $like = mac_search_wd_like($param['wd']);
             if ($like) {
-                $where['vod_name|vod_actor|vod_sub'] = $like;
+                $where['vod_name|vod_actor|vod_sub'] = $like; // TODO:TP8-pipe-or
             }
         }
         if(!empty($param['player'])){
             if($param['player']=='no'){
-                $where['vod_play_from'] = [['eq', ''], ['eq', 'no'], 'or'];
+                $where['vod_play_from'] = ['', 'no'];
             }
             else {
-                $where['vod_play_from'] = ['like', '%' . $param['player'] . '%'];
+                $where[] = ['vod_play_from', 'like', '%' . $param['player'] . '%'];
             }
         }
         if(!empty($param['downer'])){
             if($param['downer']=='no'){
-                $where['vod_down_from'] = [['eq', ''], ['eq', 'no'], 'or'];
+                $where['vod_down_from'] = ['', 'no'];
             }
             else {
-                $where['vod_down_from'] = ['like', '%' . $param['downer'] . '%'];
+                $where[] = ['vod_down_from', 'like', '%' . $param['downer'] . '%'];
             }
         }
         if(!empty($param['server'])){
-            $where['vod_play_server|vod_down_server'] = ['like','%'.$param['server'].'%'];
+            $where[] = ['vod_play_server|vod_down_server', 'like', '%'.$param['server'].'%']; // TODO:TP8-pipe-or
         }
         if (!empty($param['recycle'])) {
             $where['vod_recycle_time'] = ['>', 0];
@@ -398,42 +398,42 @@ class Vod extends Base
     {
         $where = [];
         if (!empty($param['type'])) {
-            $where['type_id'] = ['eq', $param['type']];
+            $where['type_id'] = $param['type'];
         }
         if (!empty($param['level'])) {
-            $where['vod_level'] = ['eq', $param['level']];
+            $where['vod_level'] = $param['level'];
         }
         if (in_array($param['status'] ?? '', ['0', '1'])) {
-            $where['vod_status'] = ['eq', $param['status']];
+            $where['vod_status'] = $param['status'];
         }
         if (in_array($param['copyright'] ?? '', ['0', '1'])) {
-            $where['vod_copyright'] = ['eq', $param['copyright']];
+            $where['vod_copyright'] = $param['copyright'];
         }
         if (in_array($param['isend'] ?? '', ['0', '1'])) {
-            $where['vod_isend'] = ['eq', $param['isend']];
+            $where['vod_isend'] = $param['isend'];
         }
         if (!empty($param['lock'])) {
-            $where['vod_lock'] = ['eq', $param['lock']];
+            $where['vod_lock'] = $param['lock'];
         }
         if (!empty($param['state'])) {
-            $where['vod_state'] = ['eq', $param['state']];
+            $where['vod_state'] = $param['state'];
         }
         if (!empty($param['area'])) {
-            $where['vod_area'] = ['eq', $param['area']];
+            $where['vod_area'] = $param['area'];
         }
         if (!empty($param['lang'])) {
-            $where['vod_lang'] = ['eq', $param['lang']];
+            $where['vod_lang'] = $param['lang'];
         }
         if (in_array($param['plot'] ?? '', ['0', '1'])) {
-            $where['vod_plot'] = ['eq', $param['plot']];
+            $where['vod_plot'] = $param['plot'];
         }
         if (in_array($param['role'] ?? '', ['0', '1'])) {
             $roleVodIds = Db::name('role')->where('role_rid', '>', 0)->group('role_rid')->column('role_rid');
             if ($param['role'] == '1') {
                 if (!empty($roleVodIds)) {
-                    $where['vod_id'] = ['in', $roleVodIds];
+                    $where['vod_id'] = $roleVodIds;
                 } else {
-                    $where['vod_id'] = ['eq', 0];
+                    $where['vod_id'] = 0;
                 }
             } else {
                 if (!empty($roleVodIds)) {
@@ -447,15 +447,15 @@ class Vod extends Base
             }
         }
         if (!empty($param['points'])) {
-            $where['vod_points_play|vod_points_down'] = ['gt', 0];
+            $where[] = ['vod_points_play|vod_points_down', '>', 0];
         }
         if (!empty($param['pic'])) {
             if ($param['pic'] == '1') {
-                $where['vod_pic'] = ['eq', ''];
+                $where['vod_pic'] = '';
             } elseif ($param['pic'] == '2') {
-                $where['vod_pic'] = ['like', 'http%'];
+                $where[] = ['vod_pic', 'like', 'http%'];
             } elseif ($param['pic'] == '3') {
-                $where['vod_pic'] = ['like', '%#err%'];
+                $where[] = ['vod_pic', 'like', '%#err%'];
             }
         }
         if (!empty($param['wd'])) {
@@ -466,24 +466,24 @@ class Vod extends Base
             }
         }
         if (!empty($param['weekday'])) {
-            $where['vod_weekday'] = ['like', '%' . $param['weekday'] . '%'];
+            $where[] = ['vod_weekday', 'like', '%' . $param['weekday'] . '%'];
         }
         if (!empty($param['player'])) {
             if ($param['player'] == 'no') {
-                $where['vod_play_from'] = [['eq', ''], ['eq', 'no'], 'or'];
+                $where['vod_play_from'] = ['', 'no'];
             } else {
-                $where['vod_play_from'] = ['like', '%' . $param['player'] . '%'];
+                $where[] = ['vod_play_from', 'like', '%' . $param['player'] . '%'];
             }
         }
         if (!empty($param['downer'])) {
             if ($param['downer'] == 'no') {
-                $where['vod_down_from'] = [['eq', ''], ['eq', 'no'], 'or'];
+                $where['vod_down_from'] = ['', 'no'];
             } else {
-                $where['vod_down_from'] = ['like', '%' . $param['downer'] . '%'];
+                $where[] = ['vod_down_from', 'like', '%' . $param['downer'] . '%'];
             }
         }
         if (!empty($param['server'])) {
-            $where['vod_play_server|vod_down_server'] = ['like', '%' . $param['server'] . '%'];
+            $where[] = ['vod_play_server|vod_down_server', 'like', '%' . $param['server'] . '%']; // TODO:TP8-pipe-or
         }
         if (!empty($param['recycle'])) {
             $where['vod_recycle_time'] = ['>', 0];
@@ -683,7 +683,7 @@ class Vod extends Base
 
         if(!empty($ids)){
             $where=[];
-            $where['vod_id'] = ['in',$ids];
+            $where['vod_id'] = $ids;
             if ($purge) {
                 $res = model('Vod')->delData($where);
             } else {
@@ -743,7 +743,7 @@ class Vod extends Base
 
         if(!empty($ids) && in_array($col,['vod_status','vod_lock','vod_level','vod_hits','type_id','vod_copyright'])){
             $where=[];
-            $where['vod_id'] = ['in',$ids];
+            $where['vod_id'] = $ids;
             $update = [];
             if(empty($start)) {
                 $update[$col] = $val;
@@ -759,7 +759,7 @@ class Vod extends Base
                 $ids = explode(',',$ids);
                 foreach($ids as $k=>$v){
                     $val = rand($start,$end);
-                    $where['vod_id'] = ['eq',$v];
+                    $where['vod_id'] = $v;
                     $update[$col] = $val;
                     $res = model('Vod')->fieldData($where, $update);
                 }

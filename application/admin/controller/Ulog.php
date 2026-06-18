@@ -16,13 +16,13 @@ class Ulog extends Base
         $param['limit'] = intval($param['limit']) <1 ? $this->_pagesize : $param['limit'];
         $where=[];
         if(!empty($param['mid'])){
-            $where['ulog_mid'] = ['eq',$param['mid']];
+            $where['ulog_mid'] = $param['mid'];
         }
         if(!empty($param['type'])){
-            $where['ulog_type'] = ['eq',$param['type']];
+            $where['ulog_type'] = $param['type'];
         }
         if(!empty($param['uid'])){
-            $where['user_id'] = ['eq',$param['uid'] ];
+            $where['user_id'] = $param['uid'] ;
         }
 
         $order='ulog_id desc';
@@ -48,9 +48,9 @@ class Ulog extends Base
         $all = $param['all'];
         if(!empty($ids)){
             $where=[];
-            $where['ulog_id'] = ['in',$ids];
+            $where['ulog_id'] = $ids;
             if($all==1){
-                $where['ulog_id'] = ['gt',0];
+                $where[] = ['ulog_id', '>', 0];
             }
             $res = model('Ulog')->delData($where);
             if($res['code']>1){

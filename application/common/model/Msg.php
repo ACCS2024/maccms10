@@ -72,7 +72,7 @@ class Msg extends Base {
 
         if(!empty($data['msg_id'])){
             $where=[];
-            $where['msg_id'] = ['eq',$data['msg_id']];
+            $where['msg_id'] = $data['msg_id'];
             $res = $this->allowField(true)->where($where)->update($data);
         }
         else{

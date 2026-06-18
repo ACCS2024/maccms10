@@ -190,7 +190,7 @@ class User extends Base
         }
 
         if (isset($param['time_end']) && isset($param['time_start'])) {
-            $where['user_reg_time'] = ['between', [(int)$param['time_start'], (int)$param['time_end']]];
+            $where[] = ['user_reg_time', 'between', [(int)$param['time_start'], (int)$param['time_end']]];
         }elseif (isset($param['time_end'])) {
             $where['user_reg_time'] = ['<=', (int)$param['time_end']];
         }elseif (isset($param['time_start'])) {
@@ -198,23 +198,23 @@ class User extends Base
         }
 
         if (isset($param['phone']) && strlen($param['phone']) > 0) {
-            $where['user_phone'] = ['like', '%' . $this->format_sql_string($param['phone']) . '%'];
+            $where[] = ['user_phone', 'like', '%' . $this->format_sql_string($param['phone']) . '%'];
         }
 
         if (isset($param['qq']) && strlen($param['qq']) > 0) {
-            $where['user_qq'] = ['like', '%' . $this->format_sql_string($param['qq']) . '%'];
+            $where[] = ['user_qq', 'like', '%' . $this->format_sql_string($param['qq']) . '%'];
         }
 
         if (isset($param['email']) && strlen($param['email']) > 0) {
-            $where['user_email'] = ['like', '%' . $this->format_sql_string($param['email']) . '%'];
+            $where[] = ['user_email', 'like', '%' . $this->format_sql_string($param['email']) . '%'];
         }
 
         if (isset($param['nickname']) && strlen($param['nickname']) > 0) {
-            $where['user_nick_name'] = ['like', '%' . $this->format_sql_string($param['nickname']) . '%'];
+            $where[] = ['user_nick_name', 'like', '%' . $this->format_sql_string($param['nickname']) . '%'];
         }
 
         if (isset($param['name']) && strlen($param['name']) > 0) {
-            $where['user_name'] = ['like', '%' . $this->format_sql_string($param['name']) . '%'];
+            $where[] = ['user_name', 'like', '%' . $this->format_sql_string($param['name']) . '%'];
         }
 
         // 数据获取
@@ -529,7 +529,7 @@ class User extends Base
         if (empty($ids)) {
             return json(['code' => 1001, 'msg' => lang('api/param_ids_required')]);
         }
-        Db::name('ulog')->where(['user_id' => $uid, 'ulog_id' => ['in', $ids]])->delete();
+        Db::name('ulog')->where(['user_id' => $uid, 'ulog_id' => $ids])->delete();
         return json(['code' => 1, 'msg' => lang('del_ok')]);
     }
 
@@ -548,9 +548,9 @@ class User extends Base
         $where = ['user_id' => $uid];
         $filter = isset($param['filter']) ? trim($param['filter']) : '';
         if ($filter === 'income') {
-            $where['plog_type'] = ['in', [1, 2, 3, 4, 5, 6, 10, 11]];
+            $where['plog_type'] = [1, 2, 3, 4, 5, 6, 10, 11];
         } elseif ($filter === 'expense') {
-            $where['plog_type'] = ['in', [7, 8, 9]];
+            $where['plog_type'] = [7, 8, 9];
         }
         $order = 'plog_id desc';
         $res = (new \app\common\model\Plog())->listData($where, $order, $page, $limit);
@@ -602,7 +602,7 @@ class User extends Base
             if (empty($arr)) {
                 return json(['code' => 1001, 'msg' => lang('param_err')]);
             }
-            $where['plog_id'] = ['in', array_values($arr)];
+            $where['plog_id'] = array_values($arr);
         }
         $return = (new \app\common\model\Plog())->delData($where);
         return json($return);
@@ -680,7 +680,7 @@ class User extends Base
             'user_id'   => $user_id,
             'ulog_mid'  => $mid,
             'ulog_type' => $ulogType,
-            'ulog_rid'  => ['in', $vodIds],
+            'ulog_rid'  => $vodIds,
         ];
 
         $favorites = Db::name('ulog')
@@ -738,11 +738,11 @@ class User extends Base
 
         $where = [];
         if ($level == 2) {
-            $where['user_pid_2'] = ['eq', $uid];
+            $where['user_pid_2'] = $uid;
         } elseif ($level == 3) {
-            $where['user_pid_3'] = ['eq', $uid];
+            $where['user_pid_3'] = $uid;
         } else {
-            $where['user_pid'] = ['eq', $uid];
+            $where['user_pid'] = $uid;
         }
 
         $order = 'user_id desc';

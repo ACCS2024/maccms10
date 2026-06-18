@@ -18,7 +18,7 @@ class SignMilestone extends Base
 
         $where = [];
         if (in_array($param['status'], ['0', '1'], true)) {
-            $where['milestone_status'] = ['eq', $param['status']];
+            $where['milestone_status'] = $param['status'];
         }
 
         $order = 'milestone_sort asc, milestone_days asc';
@@ -51,7 +51,7 @@ class SignMilestone extends Base
         $info = [];
         if (!empty($param['id'])) {
             $where = [];
-            $where['milestone_id'] = ['eq', $param['id']];
+            $where['milestone_id'] = $param['id'];
             $res = model('SignMilestone')->infoData($where);
             if ($res['code'] == 1) {
                 $info = $res['info'];
@@ -69,7 +69,7 @@ class SignMilestone extends Base
         $ids = $param['ids'];
         if (!empty($ids)) {
             $where = [];
-            $where['milestone_id'] = ['in', $ids];
+            $where['milestone_id'] = $ids;
             $res = model('SignMilestone')->delData($where);
             if ($res['code'] > 1) {
                 return $this->error($res['msg']);
@@ -88,7 +88,7 @@ class SignMilestone extends Base
         $val = $param['val'];
         if (!empty($ids) && in_array($col, ['milestone_status'])) {
             $where = [];
-            $where['milestone_id'] = ['in', $ids];
+            $where['milestone_id'] = $ids;
             $res = model('SignMilestone')->fieldData($where, $col, $val);
             if ($res['code'] > 1) {
                 return $this->error($res['msg']);

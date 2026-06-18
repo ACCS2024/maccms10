@@ -28,20 +28,20 @@ class Manga extends Base
         $param['limit'] = mac_api_norm_limit($param['limit'] ?? 0);
 
         $where = [];
-        $where['manga_status'] = ['eq', 1];
+        $where['manga_status'] = 1;
 
         if (!empty($param['t'])) {
             $tid = (int)$param['t'];
             if ($tid > 0) {
-                $where['type_id|type_id_1'] = ['eq', $tid];
+                $where['type_id|type_id_1'] = $tid; // TODO:TP8-pipe-or
             }
         }
         if (!empty($param['ids'])) {
-            $where['manga_id'] = ['in', $param['ids']];
+            $where['manga_id'] = $param['ids'];
         }
         if (!empty($param['wd'])) {
             $param['wd'] = trim($param['wd']);
-            $where['manga_name'] = ['like', '%' . $param['wd'] . '%'];
+            $where[] = ['manga_name', 'like', '%' . $param['wd'] . '%'];
         }
 
         $order = 'manga_time desc';
@@ -85,10 +85,10 @@ class Manga extends Base
             ]);
         }
         $where = [];
-        $where['manga_status'] = ['eq', 1];
+        $where['manga_status'] = 1;
 
         if (!empty($param['id'])) {
-            $where['manga_id'] = ['eq', $param['id']];
+            $where['manga_id'] = $param['id'];
         }
 
         $data = (new \app\common\model\Manga())->infoData($where);
@@ -156,8 +156,8 @@ class Manga extends Base
         }
 
         $where = [];
-        $where['manga_status'] = ['eq', 1];
-        $where['manga_id'] = ['eq', $id];
+        $where['manga_status'] = 1;
+        $where['manga_id'] = $id;
 
         $data = (new \app\common\model\Manga())->infoData($where);
         if ($data['code'] != 1 || empty($data['info'])) {
@@ -236,7 +236,7 @@ class Manga extends Base
         }
 
         $where = [];
-        $where['manga_status'] = ['eq', 1];
+        $where['manga_status'] = 1;
 
         $list = Db::table('mac_manga')
             ->field('manga_id,manga_name,manga_pic,manga_blurb,manga_remarks,manga_score,manga_time,manga_hits_month,type_id')
@@ -279,7 +279,7 @@ class Manga extends Base
         $start = isset($param['start']) ? max(0, (int)$param['start']) : 0;
 
         $where = [];
-        $where['manga_status'] = ['eq', 1];
+        $where['manga_status'] = 1;
 
         $list = Db::table('mac_manga')
             ->field('manga_id,manga_name,manga_pic,manga_blurb,manga_remarks,manga_score,manga_points,manga_time,type_id')

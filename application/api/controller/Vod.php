@@ -44,11 +44,11 @@ class Vod extends Base
         $limit = mac_api_norm_limit($param['limit'] ?? 0);
         // 查询条件组装（与前台分类一致：父类下视频多为子类 type_id + 父类 type_id_1）
         $where = [];
-        $where['vod_status'] = ['eq', 1];
+        $where['vod_status'] = 1;
         if (isset($param['type_id'])) {
             $tid = (int)$param['type_id'];
             if ($tid > 0) {
-                $where['type_id|type_id_1'] = ['eq', $tid];
+                $where['type_id|type_id_1'] = $tid; // TODO:TP8-pipe-or
             }
         }
         if (isset($param['id'])) {
@@ -61,16 +61,16 @@ class Vod extends Base
             $where['vod_letter'] = $param['vod_letter'];
         }
         if (isset($param['vod_tag']) && strlen($param['vod_tag']) > 0) {
-            $where['vod_tag'] = ['like', '%' . $this->format_sql_string($param['vod_tag']) . '%'];
+            $where[] = ['vod_tag', 'like', '%' . $this->format_sql_string($param['vod_tag']) . '%'];
         }
         if (isset($param['vod_name']) && strlen($param['vod_name']) > 0) {
-            $where['vod_name'] = ['like', '%' . $this->format_sql_string($param['vod_name']) . '%'];
+            $where[] = ['vod_name', 'like', '%' . $this->format_sql_string($param['vod_name']) . '%'];
         }
         if (isset($param['vod_blurb']) && strlen($param['vod_blurb']) > 0) {
-            $where['vod_blurb'] = ['like', '%' . $this->format_sql_string($param['vod_blurb']) . '%'];
+            $where[] = ['vod_blurb', 'like', '%' . $this->format_sql_string($param['vod_blurb']) . '%'];
         }
         if (isset($param['vod_class']) && strlen($param['vod_class']) > 0) {
-            $where['vod_class'] = ['like', '%' . $this->format_sql_string($param['vod_class']) . '%'];
+            $where[] = ['vod_class', 'like', '%' . $this->format_sql_string($param['vod_class']) . '%'];
         }
         if (isset($param['vod_area']) && strlen($param['vod_area']) > 0) {
             $where['vod_area'] = $this->format_sql_string($param['vod_area']);
@@ -82,7 +82,7 @@ class Vod extends Base
             $where['vod_lang'] = $this->format_sql_string($param['vod_lang']);
         }
         if (isset($param['vod_level']) && strlen($param['vod_level']) > 0) {
-            $where['vod_level'] = ['in', $this->format_sql_string($param['vod_level'])];
+            $where['vod_level'] = $this->format_sql_string($param['vod_level']);
         }
         if (isset($param['vod_state']) && strlen($param['vod_state']) > 0) {
             $where['vod_state'] = $this->format_sql_string($param['vod_state']);
@@ -93,7 +93,7 @@ class Vod extends Base
         if (isset($param['vod_actor']) && strlen($param['vod_actor']) > 0) {
             $an = $this->format_sql_string($param['vod_actor']);
             if (strlen($an) > 0) {
-                $where['vod_actor'] = ['like', mac_like_arr($an), 'OR'];
+                $where[] = ['vod_actor', 'like', mac_like_arr($an), 'OR'];
             }
         }
         // 排序(Meili 接入需提前确定 $order)
@@ -405,8 +405,8 @@ class Vod extends Base
         $level = isset($param['level']) ? trim($param['level']) : '9';
 
         $where = [];
-        $where['vod_status'] = ['eq', 1];
-        $where['vod_level'] = ['in', $level];
+        $where['vod_status'] = 1;
+        $where['vod_level'] = $level;
 
         $list = Db::table('mac_vod')
             ->field('vod_id,vod_name,vod_sub,vod_pic,vod_pic_slide,vod_actor,vod_director,vod_score,vod_content,vod_blurb,vod_remarks,vod_year,vod_area,vod_class,vod_points_play,type_id,type_id_1')
@@ -428,7 +428,7 @@ class Vod extends Base
                 $favRows = (new \app\common\model\Ulog())->where([
                     'user_id' => $userId,
                     'ulog_type' => 2,
-                    'ulog_rid' => ['in', array_values(array_unique($vodIds))],
+                    'ulog_rid' => array_values(array_unique($vodIds)),
                 ])->column('ulog_id', 'ulog_rid');
                 if (is_array($favRows)) {
                     $favMap = $favRows;
@@ -493,13 +493,13 @@ class Vod extends Base
         }
 
         $where = [];
-        $where['vod_status'] = ['eq', 1];
+        $where['vod_status'] = 1;
         if ($typeId > 0) {
             // 同时匹配 type_id 和 type_id_1（父分类）
-            $where['type_id|type_id_1'] = ['eq', $typeId];
+            $where['type_id|type_id_1'] = $typeId; // TODO:TP8-pipe-or
         }
         if (!empty($level)) {
-            $where['vod_level'] = ['in', $level];
+            $where['vod_level'] = $level;
         }
 
         $list = Db::table('mac_vod')
@@ -647,9 +647,9 @@ class Vod extends Base
         }
 
         $where = [];
-        $where['vod_status'] = ['eq', 1];
+        $where['vod_status'] = 1;
         if ($typeId > 0) {
-            $where['type_id|type_id_1'] = ['eq', $typeId];
+            $where['type_id|type_id_1'] = $typeId; // TODO:TP8-pipe-or
         }
 
         $list = Db::table('mac_vod')
@@ -789,7 +789,7 @@ class Vod extends Base
         $key = '1-' . $type . '-' . $id;
         if (session($key) == '1') return json(['code' => 1002, 'msg' => lang('index/pwd_repeat')]);
         if (mac_get_time_span("last_pwd") < 5) return json(['code' => 1003, 'msg' => lang('index/pwd_frequently')]);
-        $res = (new \app\common\model\Vod())->infoData(['vod_id' => ['eq', $id]]);
+        $res = (new \app\common\model\Vod())->infoData(['vod_id' => $id]);
         if ($res['code'] > 1) return json(['code' => 1011, 'msg' => $res['msg']]);
         $pwdMap = [1 => 'vod_pwd', 4 => 'vod_pwd_play', 5 => 'vod_pwd_down'];
         if ($res['info'][$pwdMap[$type]] != $pwd) return json(['code' => 1012, 'msg' => lang('pass_err')]);
@@ -808,7 +808,7 @@ class Vod extends Base
         $sid = intval($param['sid'] ?? 1);
         $nid = intval($param['nid'] ?? 1);
         if ($id < 1) return json(['code' => 1001, 'msg' => '参数错误: id 必须']);
-        $where = ['vod_id' => $id, 'vod_status' => ['eq', 1]];
+        $where = ['vod_id' => $id, 'vod_status' => 1];
         $res = (new \app\common\model\Vod())->infoData($where);
         if ($res['code'] > 1) return json($res);
         $info = $res['info'];
@@ -848,7 +848,7 @@ class Vod extends Base
         $sid = intval($param['sid'] ?? 1);
         $nid = intval($param['nid'] ?? 1);
         if ($id < 1) return json(['code' => 1001, 'msg' => '参数错误: id 必须']);
-        $where = ['vod_id' => $id, 'vod_status' => ['eq', 1]];
+        $where = ['vod_id' => $id, 'vod_status' => 1];
         $res = (new \app\common\model\Vod())->infoData($where);
         if ($res['code'] > 1) return json($res);
         $info = $res['info'];

@@ -240,16 +240,16 @@ class Website extends Base {
             }
         }
 
-        $where['website_status'] = ['eq',1];
+        $where['website_status'] = 1;
         if(!empty($level)) {
             if($level=='all'){
                 $level = '1,2,3,4,5,6,7,8,9';
             }
-            $where['website_level'] = ['in',explode(',',$level)];
+            $where['website_level'] = explode(',',$level);
         }
         if(!empty($ids)) {
             if($ids!='all'){
-                $where['website_id'] = ['in',explode(',',$ids)];
+                $where['website_id'] = explode(',',$ids);
             }
         }
         if(!empty($not)){
@@ -259,20 +259,20 @@ class Website extends Base {
             if(substr($letter,0,1)=='0' && substr($letter,2,1)=='9'){
                 $letter='0,1,2,3,4,5,6,7,8,9';
             }
-            $where['website_letter'] = ['in',explode(',',$letter)];
+            $where['website_letter'] = explode(',',$letter);
         }
 
         if(!empty($timeadd)){
             $s = intval(strtotime($timeadd));
-            $where['website_time_add'] =['gt',$s];
+            $where[] = ['website_time_add', '>', $s];
         }
         if(!empty($timehits)){
             $s = intval(strtotime($timehits));
-            $where['website_time_hits'] =['gt',$s];
+            $where[] = ['website_time_hits', '>', $s];
         }
         if(!empty($time)){
             $s = intval(strtotime($time));
-            $where['website_time'] =['gt',$s];
+            $where[] = ['website_time', '>', $s];
         }
         if(!empty($type)) {
             if($type=='current'){
@@ -288,19 +288,19 @@ class Website extends Base {
                     }
                 }
                 $type = array_unique($type);
-                $where['type_id'] = ['in', array_values(array_map('intval', $type))];
+                $where['type_id'] = array_values(array_map('intval', $type));
             }
         }
         if(!empty($typenot)){
             $where['type_id'] = ['not in', array_map('intval', explode(',', $typenot))];
         }
         if(!empty($tid)) {
-            $where['type_id|type_id_1'] = ['eq',$tid];
+            $where['type_id|type_id_1'] = $tid; // TODO:TP8-pipe-or
         }
         if(!empty($hitsmonth)){
             $tmp = explode(' ',$hitsmonth);
             if(count($tmp)==1){
-                $where['website_hits_month'] = ['gt', $tmp];
+                $where[] = ['website_hits_month', '>', $tmp];
             }
             else{
                 $where['website_hits_month'] = [$tmp[0],$tmp[1]];
@@ -309,7 +309,7 @@ class Website extends Base {
         if(!empty($hitsweek)){
             $tmp = explode(' ',$hitsweek);
             if(count($tmp)==1){
-                $where['website_hits_week'] = ['gt', $tmp];
+                $where[] = ['website_hits_week', '>', $tmp];
             }
             else{
                 $where['website_hits_week'] = [$tmp[0],$tmp[1]];
@@ -318,7 +318,7 @@ class Website extends Base {
         if(!empty($hitsday)){
             $tmp = explode(' ',$hitsday);
             if(count($tmp)==1){
-                $where['website_hits_day'] = ['gt', $tmp];
+                $where[] = ['website_hits_day', '>', $tmp];
             }
             else{
                 $where['website_hits_day'] = [$tmp[0],$tmp[1]];
@@ -327,7 +327,7 @@ class Website extends Base {
         if(!empty($hits)){
             $tmp = explode(' ',$hits);
             if(count($tmp)==1){
-                $where['website_hits'] = ['gt', $tmp];
+                $where[] = ['website_hits', '>', $tmp];
             }
             else{
                 $where['website_hits'] = [$tmp[0],$tmp[1]];
@@ -336,7 +336,7 @@ class Website extends Base {
         if(!empty($refermonth)){
             $tmp = explode(' ',$refermonth);
             if(count($tmp)==1){
-                $where['website_refer_month'] = ['gt', $tmp];
+                $where[] = ['website_refer_month', '>', $tmp];
             }
             else{
                 $where['website_refer_month'] = [$tmp[0],$tmp[1]];
@@ -345,7 +345,7 @@ class Website extends Base {
         if(!empty($referweek)){
             $tmp = explode(' ',$referweek);
             if(count($tmp)==1){
-                $where['website_refer_week'] = ['gt', $tmp];
+                $where[] = ['website_refer_week', '>', $tmp];
             }
             else{
                 $where['website_refer_week'] = [$tmp[0],$tmp[1]];
@@ -354,7 +354,7 @@ class Website extends Base {
         if(!empty($referday)){
             $tmp = explode(' ',$referday);
             if(count($tmp)==1){
-                $where['website_refer_day'] = ['gt', $tmp];
+                $where[] = ['website_refer_day', '>', $tmp];
             }
             else{
                 $where['website_refer_day'] = [$tmp[0],$tmp[1]];
@@ -363,7 +363,7 @@ class Website extends Base {
         if(!empty($refer)){
             $tmp = explode(' ',$refer);
             if(count($tmp)==1){
-                $where['website_refer'] = ['gt', $tmp];
+                $where[] = ['website_refer', '>', $tmp];
             }
             else{
                 $where['website_refer'] = [$tmp[0],$tmp[1]];
@@ -371,22 +371,22 @@ class Website extends Base {
         }
 
         if(!empty($area)){
-            $where['website_area'] = ['in',explode(',',$area) ];
+            $where['website_area'] = explode(',',$area) ;
         }
         if(!empty($lang)){
-            $where['website_lang'] = ['in',explode(',',$lang) ];
+            $where['website_lang'] = explode(',',$lang) ;
         }
         if(!empty($name)){
-            $where['website_name'] = ['in',explode(',',$name) ];
+            $where['website_name'] = explode(',',$name) ;
         }
         if(!empty($wd)) {
-            $where['website_name|website_en'] = ['like', '%' . $wd . '%'];
+            $where[] = ['website_name|website_en', 'like', '%' . $wd . '%']; // TODO:TP8-pipe-or
         }
         if(!empty($tag)) {
-            $where['website_tag'] = ['like', mac_like_arr($tag),'OR'];
+            $where[] = ['website_tag', 'like', mac_like_arr($tag),'OR'];
         }
         if(!empty($class)) {
-            $where['website_class'] = ['like',mac_like_arr($class),'OR'];
+            $where[] = ['website_class', 'like', mac_like_arr($class),'OR'];
         }
         $use_rnd_order = ($by == 'rnd');
         if (!$use_rnd_order) {
@@ -464,8 +464,8 @@ class Website extends Base {
             return ['code'=>1001,'msg'=>lang('param_err')];
         }
         $data_cache = false;
-        $key = $GLOBALS['config']['app']['cache_flag']. '_'.'website_detail_'.$where['website_id'][1].'_'.$where['website_en'][1];
-        if($where['website_id'][0]=='eq' || $where['website_en'][0]=='eq'){
+        $key = $GLOBALS['config']['app']['cache_flag']. '_'.'website_detail_'.($where['website_id'] ?? '').'_'.($where['website_en'] ?? '');
+        if(isset($where['website_id']) || isset($where['website_en'])){
             $data_cache = true;
         }
         if($GLOBALS['config']['app']['cache_core']==1 && $data_cache) {
@@ -556,7 +556,7 @@ class Website extends Base {
 
         if(!empty($data['website_id'])){
             $where=[];
-            $where['website_id'] = ['eq',$data['website_id']];
+            $where['website_id'] = $data['website_id'];
             $res = $this->allowField(true)->where($where)->update($data);
         }
         else{
@@ -626,7 +626,7 @@ class Website extends Base {
     {
         $today = strtotime(date('Y-m-d'));
         $where = [];
-        $where['website_time'] = ['gt',$today];
+        $where[] = ['website_time', '>', $today];
         if($flag=='type'){
             $ids = $this->where($where)->column('type_id');
         }
@@ -652,7 +652,7 @@ class Website extends Base {
         $where = [];
         $where['user_id'] = 0;
         $where['visit_ip'] = $ip;
-        $where['visit_time'] = ['gt', $todayunix];
+        $where[] = ['visit_time', '>', $todayunix];
         $cc = model('visit')->where($where)->count();
         if ($cc>= $max_cc){
             return ['code' => 102, 'msg' =>lang('model/website/refer_max')];

@@ -47,7 +47,7 @@ class Task extends Base {
         $data['task_time'] = time();
         if (!empty($data['task_id'])) {
             $where = [];
-            $where['task_id'] = ['eq', $data['task_id']];
+            $where['task_id'] = $data['task_id'];
             $res = $this->allowField(true)->where($where)->update($data);
         } else {
             $data['task_time_add'] = time();

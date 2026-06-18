@@ -8,14 +8,14 @@ class SeoAi
         $mid = intval($mid);
         $objId = intval($objId);
         if ($mid === 1) {
-            $res = model('Vod')->infoData(['vod_id' => ['eq', $objId]], '*', 0);
+            $res = model('Vod')->infoData(['vod_id' => $objId], '*', 0);
             if ($res['code'] !== 1 || empty($res['info'])) {
                 return ['code' => 0, 'msg' => 'vod not found'];
             }
             return self::generateForVod($res['info']);
         }
         if ($mid === 2) {
-            $res = model('Art')->infoData(['art_id' => ['eq', $objId]], '*', 0);
+            $res = model('Art')->infoData(['art_id' => $objId], '*', 0);
             if ($res['code'] !== 1 || empty($res['info'])) {
                 return ['code' => 0, 'msg' => 'art not found'];
             }

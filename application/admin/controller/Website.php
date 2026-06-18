@@ -18,26 +18,26 @@ class Website extends Base
 
         $where = [];
         if (!empty($param['type'])) {
-            $where['type_id|type_id_1'] = ['eq', $param['type']];
+            $where['type_id|type_id_1'] = $param['type']; // TODO:TP8-pipe-or
         }
         if (!empty($param['level'])) {
-            $where['website_level'] = ['eq', $param['level']];
+            $where['website_level'] = $param['level'];
         }
         if (in_array($param['status'], ['0', '1'])) {
-            $where['website_status'] = ['eq', $param['status']];
+            $where['website_status'] = $param['status'];
         }
         if (!empty($param['lock'])) {
-            $where['website_lock'] = ['eq', $param['lock']];
+            $where['website_lock'] = $param['lock'];
         }
         if(!empty($param['pic'])){
             if($param['pic'] == '1'){
-                $where['website_pic'] = ['eq',''];
+                $where['website_pic'] = '';
             }
             elseif($param['pic'] == '2'){
-                $where['website_pic'] = ['like','http%'];
+                $where[] = ['website_pic', 'like', 'http%'];
             }
             elseif($param['pic'] == '3'){
-                $where['website_pic'] = ['like','%#err%'];
+                $where[] = ['website_pic', 'like', '%#err%'];
             }
         }
         if(!empty($param['wd'])){
@@ -97,26 +97,26 @@ class Website extends Base
             }
             $where = [];
             if(!empty($param['type'])){
-                $where['type_id'] = ['eq',$param['type']];
+                $where['type_id'] = $param['type'];
             }
             if(!empty($param['level'])){
-                $where['website_level'] = ['eq',$param['level']];
+                $where['website_level'] = $param['level'];
             }
             if(in_array($param['status'],['0','1'])){
-                $where['website_status'] = ['eq',$param['status']];
+                $where['website_status'] = $param['status'];
             }
             if(!empty($param['lock'])){
-                $where['website_lock'] = ['eq',$param['lock']];
+                $where['website_lock'] = $param['lock'];
             }
             if(!empty($param['pic'])){
                 if($param['pic'] == '1'){
-                    $where['website_pic'] = ['eq',''];
+                    $where['website_pic'] = '';
                 }
                 elseif($param['pic'] == '2'){
-                    $where['website_pic'] = ['like','http%'];
+                    $where[] = ['website_pic', 'like', 'http%'];
                 }
                 elseif($param['pic'] == '3'){
-                    $where['website_pic'] = ['like','%#err%'];
+                    $where[] = ['website_pic', 'like', '%#err%'];
                 }
             }
             if(!empty($param['wd'])){
@@ -210,7 +210,7 @@ class Website extends Base
 
         $id = input('id');
         $where=[];
-        $where['website_id'] = ['eq',$id];
+        $where['website_id'] = $id;
         $res = model('Website')->infoData($where);
 
         $info = $res['info'];
@@ -231,7 +231,7 @@ class Website extends Base
 
         if(!empty($ids)){
             $where=[];
-            $where['website_id'] = ['in',$ids];
+            $where['website_id'] = $ids;
             $res = model('Website')->delData($where);
             if($res['code']>1){
                 return $this->error($res['msg']);
@@ -267,7 +267,7 @@ class Website extends Base
 
         if(!empty($ids) && in_array($col,['website_status','website_lock','website_level','website_hits','type_id'])){
             $where=[];
-            $where['website_id'] = ['in',$ids];
+            $where['website_id'] = $ids;
             $update = [];
             if(empty($start)) {
                 $update[$col] = $val;
@@ -283,7 +283,7 @@ class Website extends Base
                 $ids = explode(',',$ids);
                 foreach($ids as $k=>$v){
                     $val = rand($start,$end);
-                    $where['website_id'] = ['eq',$v];
+                    $where['website_id'] = $v;
                     $update[$col] = $val;
                     $res = model('Website')->fieldData($where, $update);
                 }

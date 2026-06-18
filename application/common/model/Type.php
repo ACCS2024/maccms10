@@ -119,14 +119,14 @@ class Type extends Base {
             $format = 'def';
         }
         if (in_array($mid, ['1', '2', '8', '11', '12'])) {
-            $where['type_mid'] = ['eq',$mid];
+            $where['type_mid'] = $mid;
         }
         if(!empty($flag)){
             if($flag=='vod'){
-                $where['type_mid'] = ['eq',1];
+                $where['type_mid'] = 1;
             }
             elseif($flag=='art'){
-                $where['type_mid'] = ['eq',2];
+                $where['type_mid'] = 2;
             }
         }
 
@@ -134,10 +134,10 @@ class Type extends Base {
 
         if (!empty($ids)) {
             if($ids=='parent'){
-                $where['type_pid'] = ['eq',0];
+                $where['type_pid'] = 0;
             }
             elseif($ids=='child'){
-                $where['type_pid'] = ['gt',0];
+                $where[] = ['type_pid', '>', 0];
             }
             elseif($ids=='current'){
                 $type_info = $this->getCacheInfo($param['id']);
@@ -149,10 +149,10 @@ class Type extends Base {
                     $childs = $type_info1['childids'];
                 }
 
-                $where['type_id'] = ['in',$childs];
+                $where['type_id'] = $childs;
             }
             else{
-                $where['type_id'] = ['in',$ids];
+                $where['type_id'] = $ids;
             }
         }
         if(!empty($parent)){
@@ -163,7 +163,7 @@ class Type extends Base {
                     //$parent = $type_info['type_pid'];
                 }
             }
-            $where['type_pid'] = ['in',$parent];
+            $where['type_pid'] = $parent;
         }
         if(!empty($not)){
             $where['type_id'] = ['not in',$not];
@@ -173,7 +173,7 @@ class Type extends Base {
             $name_arr = array_map('trim', explode(',', $names));
             $name_arr = array_filter($name_arr);
             if(!empty($name_arr)){
-                $where['type_name'] = ['in', $name_arr];
+                $where['type_name'] = $name_arr;
             }
         }
 
@@ -189,7 +189,7 @@ class Type extends Base {
             }
         }
 
-        $where['type_status'] = ['eq',1];
+        $where['type_status'] = 1;
 
         $by = 'type_'.$by;
         $order = 'type_pid asc,' . mac_safe_order('', $by, $order, 'type_id');
@@ -273,7 +273,7 @@ class Type extends Base {
 
         if(!empty($data['type_id'])){
             $where=[];
-            $where['type_id'] = ['eq',$data['type_id']];
+            $where['type_id'] = $data['type_id'];
             $res = $this->allowField(true)->where($where)->update($data);
         }
         else{
@@ -292,7 +292,7 @@ class Type extends Base {
         $list = $this->where($where)->select();
         foreach($list as $k=>$v){
             $where2=[];
-            $where2['type_id|type_id_1'] = ['eq',$v['type_id']];
+            $where2['type_id|type_id_1'] = $v['type_id']; // TODO:TP8-pipe-or
             $flag = $v['type_mid'] == 1 ? 'Vod' : 'Art';
             $cc = model($flag)->where($where2)->count();
             if($cc > 0){
@@ -337,7 +337,7 @@ class Type extends Base {
         }
         foreach($list as $k=>$v){
             $where2=[];
-            $where2['type_id|type_id_1'] = ['eq',$v['type_id']];
+            $where2['type_id|type_id_1'] = $v['type_id']; // TODO:TP8-pipe-or
             $update=[];
             $update['type_id'] = $val;
             $update['type_id_1'] = $type_info['type_pid'];

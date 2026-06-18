@@ -56,11 +56,11 @@ class Link extends Base
         }
 
         if (isset($param['name']) && strlen($param['name']) > 0) {
-            $where['link_name'] = ['like', '%' . $this->format_sql_string($param['name']) . '%'];
+            $where[] = ['link_name', 'like', '%' . $this->format_sql_string($param['name']) . '%'];
         }
 
         if (isset($param['time_end']) && isset($param['time_start'])) {
-            $where['link_time'] = ['between', [(int)$param['time_start'], (int)$param['time_end']]];
+            $where[] = ['link_time', 'between', [(int)$param['time_start'], (int)$param['time_end']]];
         }elseif (isset($param['time_end'])) {
             $where['link_time'] = ['<=', (int)$param['time_end']];
         }elseif (isset($param['time_start'])) {

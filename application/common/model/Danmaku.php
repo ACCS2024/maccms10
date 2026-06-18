@@ -56,10 +56,10 @@ class Danmaku extends Base {
         }
 
         $where = [];
-        $where['vod_id'] = ['eq', (int)$vod_id];
-        $where['vod_sid'] = ['eq', (int)$sid];
-        $where['vod_nid'] = ['eq', (int)$nid];
-        $where['danmaku_status'] = ['eq', 1];
+        $where['vod_id'] = (int)$vod_id;
+        $where['vod_sid'] = (int)$sid;
+        $where['vod_nid'] = (int)$nid;
+        $where['danmaku_status'] = 1;
 
         $list = Db::name('Danmaku')
             ->field('danmaku_id,danmaku_time,danmaku_type,danmaku_color,danmaku_text,user_name,danmaku_send_time')
@@ -155,7 +155,7 @@ class Danmaku extends Base {
 
         if (!empty($data['danmaku_id'])) {
             $where = [];
-            $where['danmaku_id'] = ['eq', $data['danmaku_id']];
+            $where['danmaku_id'] = $data['danmaku_id'];
             $res = $this->allowField(true)->where($where)->update($data);
             // 更新时也清除缓存（编辑弹幕内容后前台立即生效）
             $this->_clearEpisodeCache($where);

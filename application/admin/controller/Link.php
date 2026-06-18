@@ -17,7 +17,7 @@ class Link extends Base
 
         if(!empty($param['wd'])){
             $param['wd'] = htmlspecialchars(urldecode($param['wd']));
-            $where['link_name'] = ['like','%'.$param['wd'].'%'];
+            $where[] = ['link_name', 'like', '%'.$param['wd'].'%'];
         }
 
         $order='link_id desc';
@@ -48,7 +48,7 @@ class Link extends Base
 
         $id = input('id');
         $where=[];
-        $where['link_id'] = ['eq',$id];
+        $where['link_id'] = $id;
         $res = model('Link')->infoData($where);
 
 
@@ -64,7 +64,7 @@ class Link extends Base
 
         if(!empty($ids)){
             $where=[];
-            $where['link_id'] = ['in',$ids];
+            $where['link_id'] = $ids;
             $res = model('Link')->delData($where);
             if($res['code']>1){
                 return $this->error($res['msg']);

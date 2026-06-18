@@ -1215,14 +1215,14 @@ MacPlayer.Show();
 
         // 基础条件
         $where = [];
-        $where['vod_status'] = ['eq', 1];
-        $where['vod_pic'] = ['neq', ''];
+        $where['vod_status'] = 1;
+        $where[] = ['vod_pic', '<>', ''];
 
         // 筛选条件
         if ($filter == 'recommended') {
-            $where['vod_level'] = ['gt', 0];
+            $where[] = ['vod_level', '>', 0];
         } elseif ($filter == 'not_recommended') {
-            $where['vod_level'] = ['eq', 0];
+            $where['vod_level'] = 0;
         }
 
         // 排序：已推荐优先，然后按点击量
@@ -1231,7 +1231,7 @@ MacPlayer.Show();
         $total = Db::name('vod')->where($where)->count();
 
         // 统计已推荐数量
-        $recommended_count = Db::name('vod')->where(['vod_status' => ['eq', 1], 'vod_pic' => ['neq', ''], 'vod_level' => ['gt', 0]])->count();
+        $recommended_count = Db::name('vod')->where('vod_status', 1)->where('vod_pic', '<>', '')->where('vod_level', '>', 0)->count();
 
         $this->assign('list', $list);
         $this->assign('total', $total);

@@ -61,7 +61,7 @@ class Cj extends Base
 
         $id = input('id');
         $where=[];
-        $where['nodeid'] = ['eq',$id];
+        $where['nodeid'] = $id;
         $res = model('Cj')->infoData('cj_node',$where);
         if(!empty($res['info']['customize_config'])){
             $res['info']['customize_config'] = json_decode($res['info']['customize_config'],true);
@@ -290,7 +290,7 @@ class Cj extends Base
         $where=[];
         $where['nodeid'] = $param['id'];
         if(!empty($param['status'])){
-            $where['status'] = ['eq',$param['status']];
+            $where['status'] = $param['status'];
         }
 
         $order='id desc';
@@ -313,7 +313,7 @@ class Cj extends Base
     {
         $id = input('id');
         $where=[];
-        $where['id'] = ['eq',$id];
+        $where['id'] = $id;
         $info = Db::name('cj_content')->where($where)->find();
         if(!empty($info['data'])){
             $info['data'] = @json_decode($info['data'],true);
@@ -332,9 +332,9 @@ class Cj extends Base
 
         if(!empty($ids)){
             $where=[];
-            $where['id'] = ['in',$ids];
+            $where['id'] = $ids;
             if($all=='1'){
-                $where['id'] = ['gt',0];
+                $where[] = ['id', '>', 0];
             }
             $urls = [];
             $list = Db::name('cj_content')->field('url')->where($where)->select();
@@ -344,7 +344,7 @@ class Cj extends Base
             }
 
             $where2=[];
-            $where2['md5'] = ['in',$md5];
+            $where2['md5'] = $md5;
             Db::name('cj_history')->where($where2)->delete();
 
             $res = Db::name('cj_content')->where($where)->delete();
@@ -376,10 +376,10 @@ class Cj extends Base
         $node = $res['info'];
         $where=[];
         $where['nodeid'] = $nodeid;
-        $where['status'] =['eq',2];
-        $where['id'] = ['in',$ids];
+        $where['status'] =2;
+        $where['id'] = $ids;
         if($all=='1'){
-            $where['id'] = ['gt',0];
+            $where[] = ['id', '>', 0];
         }
 
         mac_echo('<style type="text/css">body{font-size:12px;color: #333333;line-height:21px;}span{font-weight:bold;color:#FF0000}</style>');
@@ -435,7 +435,7 @@ class Cj extends Base
 
         if(!empty($update_ids)){
             $where=[];
-            $where['id'] = ['in',$update_ids];
+            $where['id'] = $update_ids;
             $res = Db::name('cj_content')->where($where)->update(['status' => 3]);
         }
 
@@ -479,7 +479,7 @@ class Cj extends Base
 
         if(!empty($ids)){
             $where=[];
-            $where['nodeid'] = ['in',$ids];
+            $where['nodeid'] = $ids;
             $res = model('Cj')->delData($where);
             if($res['code']>1){
                 return $this->error($res['msg']);

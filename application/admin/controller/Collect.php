@@ -100,7 +100,7 @@ class Collect extends Base
 
         $id = input('id');
         $where = [];
-        $where['collect_id'] = ['eq', $id];
+        $where['collect_id'] = $id;
         $res = model('Collect')->infoData($where);
         $this->assign('info', $res['info']);
         $this->assign('title', lang('admin/collect/title'));
@@ -114,7 +114,7 @@ class Collect extends Base
 
         if (!empty($ids)) {
             $where = [];
-            $where['collect_id'] = ['in', $ids];
+            $where['collect_id'] = $ids;
 
             $res = model('Collect')->delData($where);
             if ($res['code'] > 1) {

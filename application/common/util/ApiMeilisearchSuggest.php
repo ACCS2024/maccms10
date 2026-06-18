@@ -214,9 +214,9 @@ class ApiMeilisearchSuggest
         }
         $like = self::sqlLikeContains($wd);
         $where = [
-            $m['status'] => ['eq', 1],
-            $m['like'] => ['like', $like],
+            $m['status'] => 1,
         ];
+        $where[] = [$m['like'], 'like', $like];
         $order = $m['pk'] . ' desc';
         $model = model($m['model']);
         $field = $m['field'];
@@ -384,9 +384,9 @@ class ApiMeilisearchSuggest
 
         $like = self::sqlLikeContains($wd);
         $where = [
-            $m['status'] => ['eq', 1],
-            $m['like'] => ['like', $like],
+            $m['status'] => 1,
         ];
+        $where[] = [$m['like'], 'like', $like];
         $order = SearchService::suggestOrder($k, $orderMode);
         $modelName = $m['model'];
         $field = $k . '_id as id,' . $k . '_name as name,' . $k . '_en as en,' . $k . '_pic as pic';

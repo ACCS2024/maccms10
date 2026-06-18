@@ -41,7 +41,7 @@ class Actor extends Base
         $limit = isset($param['limit']) ? (int)$param['limit'] : 20;
         // 查询条件组装（0/1 均展示：采集/默认入库常见 actor_status=0，仅 eq 1 会导致「库里有数据但接口为空」）
         $where = [];
-        $where['actor_status'] = ['in', [0, 1]];
+        $where['actor_status'] = [0, 1];
 
         if (isset($param['type_id']) && (int)$param['type_id'] > 0) {
             $where['type_id'] = (int)$param['type_id'];
@@ -52,31 +52,31 @@ class Actor extends Base
         }
 
         if (isset($param['area']) && strlen($param['area']) > 0) {
-            $where['actor_area'] = ['like', '%' . $this->format_sql_string($param['area']) . '%'];
+            $where[] = ['actor_area', 'like', '%' . $this->format_sql_string($param['area']) . '%'];
         }
 
         if (isset($param['letter']) && strlen($param['letter']) > 0) {
-            $where['actor_letter'] = ['like', '%' . $this->format_sql_string($param['letter']) . '%'];
+            $where[] = ['actor_letter', 'like', '%' . $this->format_sql_string($param['letter']) . '%'];
         }
 
         if (isset($param['level']) && strlen($param['level']) > 0) {
-            $where['actor_level'] = ['like', '%' . $this->format_sql_string($param['level']) . '%'];
+            $where[] = ['actor_level', 'like', '%' . $this->format_sql_string($param['level']) . '%'];
         }
 
         if (isset($param['name']) && strlen($param['name']) > 0) {
-            $where['actor_name'] = ['like', '%' . $this->format_sql_string($param['name']) . '%'];
+            $where[] = ['actor_name', 'like', '%' . $this->format_sql_string($param['name']) . '%'];
         }
 
         if (isset($param['blood']) && strlen($param['blood']) > 0) {
-            $where['actor_blood'] = ['like', '%' . $this->format_sql_string($param['blood']) . '%'];
+            $where[] = ['actor_blood', 'like', '%' . $this->format_sql_string($param['blood']) . '%'];
         }
 
         if (isset($param['starsign']) && strlen($param['starsign']) > 0) {
-            $where['actor_starsign'] = ['like', '%' . $this->format_sql_string($param['starsign']) . '%'];
+            $where[] = ['actor_starsign', 'like', '%' . $this->format_sql_string($param['starsign']) . '%'];
         }
 
         if (isset($param['time_end']) && isset($param['time_start'])) {
-            $where['actor_time'] = ['between', [(int)$param['time_start'], (int)$param['time_end']]];
+            $where[] = ['actor_time', 'between', [(int)$param['time_start'], (int)$param['time_end']]];
         } elseif (isset($param['time_end'])) {
             $where['actor_time'] = ['<', (int)$param['time_end']];
         } elseif (isset($param['time_start'])) {
@@ -180,10 +180,10 @@ class Actor extends Base
         }
 
         $where = [];
-        $where['actor_status'] = ['eq', 1];
+        $where['actor_status'] = 1;
         if (!empty($ids)) {
             $idArr = array_map('intval', explode(',', $ids));
-            $where['actor_id'] = ['in', $idArr];
+            $where['actor_id'] = $idArr;
         }
 
         $list = Db::table('mac_actor')

@@ -299,10 +299,10 @@ class Vod extends Base {
                 $pageurl = mac_url($pageurl,$param);
             }
         }
-        $where['vod_status'] = ['eq',1];
+        $where['vod_status'] = 1;
         if(!empty($ids)) {
             if($ids!='all'){
-                $where['vod_id'] = ['in',explode(',',$ids)];
+                $where['vod_id'] = explode(',',$ids);
             }
         }
         if(!empty($not)){
@@ -311,57 +311,57 @@ class Vod extends Base {
         if(!empty($rel)){
             $tmp = explode(',',$rel);
             if(is_numeric($rel) || mac_array_check_num($tmp)==true  ){
-                $where['vod_id'] = ['in',$tmp];
+                $where['vod_id'] = $tmp;
             }
             else{
-                $where['vod_rel_vod'] = ['like', mac_like_arr($rel),'OR'];
+                $where[] = ['vod_rel_vod', 'like', mac_like_arr($rel),'OR'];
             }
         }
         if(!empty($level)) {
             if($level=='all'){
                 $level = '1,2,3,4,5,6,7,8,9';
             }
-            $where['vod_level'] = ['in',explode(',',$level)];
+            $where['vod_level'] = explode(',',$level);
         }
         if(!empty($year)) {
-            $where['vod_year'] = ['in',explode(',',$year)];
+            $where['vod_year'] = explode(',',$year);
         }
         if(!empty($area)) {
-            $where['vod_area'] = ['in',explode(',',$area)];
+            $where['vod_area'] = explode(',',$area);
         }
         if(!empty($lang)) {
-            $where['vod_lang'] = ['in',explode(',',$lang)];
+            $where['vod_lang'] = explode(',',$lang);
         }
         if(!empty($state)) {
-            $where['vod_state'] = ['in',explode(',',$state)];
+            $where['vod_state'] = explode(',',$state);
         }
         if(!empty($version)) {
-            $where['vod_version'] = ['in',explode(',',$version)];
+            $where['vod_version'] = explode(',',$version);
         }
         if(!empty($weekday)){
-            //$where['vod_weekday'] = ['in',explode(',',$weekday)];
-            $where['vod_weekday'] = ['like', mac_like_arr($weekday),'OR'];
+            //$where['vod_weekday'] = explode(',',$weekday);
+            $where[] = ['vod_weekday', 'like', mac_like_arr($weekday),'OR'];
         }
         if(!empty($tv)){
-            $where['vod_tv'] = ['in',explode(',',$tv)];
+            $where['vod_tv'] = explode(',',$tv);
         }
         if(!empty($timeadd)){
             $s = intval(strtotime($timeadd));
-            $where['vod_time_add'] =['gt',$s];
+            $where[] = ['vod_time_add', '>', $s];
         }
         if(!empty($timehits)){
             $s = intval(strtotime($timehits));
-            $where['vod_time_hits'] =['gt',$s];
+            $where[] = ['vod_time_hits', '>', $s];
         }
         if(!empty($time)){
             $s = intval(strtotime($time));
-            $where['vod_time'] =['gt',$s];
+            $where[] = ['vod_time', '>', $s];
         }
         if(!empty($letter)){
             if(substr($letter,0,1)=='0' && substr($letter,2,1)=='9'){
                 $letter='0,1,2,3,4,5,6,7,8,9';
             }
-            $where['vod_letter'] = ['in',explode(',',$letter)];
+            $where['vod_letter'] = explode(',',$letter);
         }
         if(!empty($type)) {
             if($type=='current'){
@@ -377,7 +377,7 @@ class Vod extends Base {
                     }
                 }
                 $type = array_unique($type);
-                $where['type_id'] = ['in', array_values(array_map('intval', $type))];
+                $where['type_id'] = array_values(array_map('intval', $type));
             }
         }
         if(!empty($typenot)){
@@ -386,17 +386,17 @@ class Vod extends Base {
             if(!empty($type) && is_array($type)){
                 $type = array_diff($type, $typenot_arr);
                 if(!empty($type)){
-                    $where['type_id'] = ['in', array_values(array_map('intval', $type))];
+                    $where['type_id'] = array_values(array_map('intval', $type));
                 } else {
                     // type 被完全排除后，设置一个永不匹配的条件，避免查询所有视频
-                    $where['type_id'] = ['eq', -1];
+                    $where['type_id'] = -1;
                 }
             } else {
                 $where['type_id'] = ['not in', $typenot_arr];
             }
         }
         if(!empty($tid)) {
-            $where['type_id|type_id_1'] = ['eq',$tid];
+            $where['type_id|type_id_1'] = $tid; // TODO:TP8-pipe-or
         }
         if(!in_array($GLOBALS['aid'],[13,14,15]) && !empty($param['id'])){
             //$where['vod_id'] = ['not in',$param['id']];
@@ -405,7 +405,7 @@ class Vod extends Base {
         if(!empty($hitsmonth)){
             $tmp = explode(' ',$hitsmonth);
             if(count($tmp)==1){
-                $where['vod_hits_month'] = ['gt', $tmp];
+                $where[] = ['vod_hits_month', '>', $tmp];
             }
             else{
                 $where['vod_hits_month'] = [$tmp[0],$tmp[1]];
@@ -414,7 +414,7 @@ class Vod extends Base {
         if(!empty($hitsweek)){
             $tmp = explode(' ',$hitsweek);
             if(count($tmp)==1){
-                $where['vod_hits_week'] = ['gt', $tmp];
+                $where[] = ['vod_hits_week', '>', $tmp];
             }
             else{
                 $where['vod_hits_week'] = [$tmp[0],$tmp[1]];
@@ -423,7 +423,7 @@ class Vod extends Base {
         if(!empty($hitsday)){
             $tmp = explode(' ',$hitsday);
             if(count($tmp)==1){
-                $where['vod_hits_day'] = ['gt', $tmp];
+                $where[] = ['vod_hits_day', '>', $tmp];
             }
             else{
                 $where['vod_hits_day'] = [$tmp[0],$tmp[1]];
@@ -432,7 +432,7 @@ class Vod extends Base {
         if(!empty($hits)){
             $tmp = explode(' ',$hits);
             if(count($tmp)==1){
-                $where['vod_hits'] = ['gt', $tmp];
+                $where[] = ['vod_hits', '>', $tmp];
             }
             else{
                 $where['vod_hits'] = [$tmp[0],$tmp[1]];
@@ -455,42 +455,42 @@ class Vod extends Base {
                 if(!empty($GLOBALS['config']['app']['search_vod_rule'])){
                     $role .= '|'.$GLOBALS['config']['app']['search_vod_rule'];
                 }
-                $where[$role] = ['like', '%' . $wd . '%'];
+                $where[] = [$role, 'like', '%' . $wd . '%'];
                 if (count($search_id_list_tmp = $vod_search->getResultIdList($wd, $role)) <= $max_id_count) {
                     $search_id_list = array_merge($search_id_list, $search_id_list_tmp);
                     unset($where[$role]);
                 }
             }
             if(!empty($name)) {
-                $where['vod_name'] = ['like',mac_like_arr($name),'OR'];
+                $where[] = ['vod_name', 'like', mac_like_arr($name),'OR'];
                 if (count($search_id_list_tmp = $vod_search->getResultIdList($name, 'vod_name')) <= $max_id_count) {
                     $search_id_list = array_merge($search_id_list, $search_id_list_tmp);
                     unset($where['vod_name']);
                 }
             }
             if(!empty($tag)) {
-                $where['vod_tag'] = ['like',mac_like_arr($tag),'OR'];
+                $where[] = ['vod_tag', 'like', mac_like_arr($tag),'OR'];
                 if (count($search_id_list_tmp = $vod_search->getResultIdList($tag, 'vod_tag', true)) <= $max_id_count) {
                     $search_id_list = array_merge($search_id_list, $search_id_list_tmp);
                     unset($where['vod_tag']);
                 }
             }
             if(!empty($class)) {
-                $where['vod_class'] = ['like',mac_like_arr($class), 'OR'];
+                $where[] = ['vod_class', 'like', mac_like_arr($class), 'OR'];
                 if (count($search_id_list_tmp = $vod_search->getResultIdList($class, 'vod_class', true)) <= $max_id_count) {
                     $search_id_list = array_merge($search_id_list, $search_id_list_tmp);
                     unset($where['vod_class']);
                 }
             }
             if(!empty($actor)) {
-                $where['vod_actor'] = ['like', mac_like_arr($actor), 'OR'];
+                $where[] = ['vod_actor', 'like', mac_like_arr($actor), 'OR'];
                 if (count($search_id_list_tmp = $vod_search->getResultIdList($actor, 'vod_actor', true)) <= $max_id_count) {
                     $search_id_list = array_merge($search_id_list, $search_id_list_tmp);
                     unset($where['vod_actor']);
                 }
             }
             if(!empty($director)) {
-                $where['vod_director'] = ['like',mac_like_arr($director),'OR'];
+                $where[] = ['vod_director', 'like', mac_like_arr($director),'OR'];
                 if (count($search_id_list_tmp = $vod_search->getResultIdList($director, 'vod_director', true)) <= $max_id_count) {
                     $search_id_list = array_merge($search_id_list, $search_id_list_tmp);
                     unset($where['vod_director']);
@@ -507,22 +507,22 @@ class Vod extends Base {
                 if(!empty($GLOBALS['config']['app']['search_vod_rule'])){
                     $role .= '|'.$GLOBALS['config']['app']['search_vod_rule'];
                 }
-                $where[$role] = ['like', '%' . $wd . '%'];
+                $where[] = [$role, 'like', '%' . $wd . '%'];
             }
             if(!empty($name)) {
-                $where['vod_name'] = ['like',mac_like_arr($name),'OR'];
+                $where[] = ['vod_name', 'like', mac_like_arr($name),'OR'];
             }
             if(!empty($tag)) {
-                $where['vod_tag'] = ['like',mac_like_arr($tag),'OR'];
+                $where[] = ['vod_tag', 'like', mac_like_arr($tag),'OR'];
             }
             if(!empty($class)) {
-                $where['vod_class'] = ['like',mac_like_arr($class), 'OR'];
+                $where[] = ['vod_class', 'like', mac_like_arr($class), 'OR'];
             }
             if(!empty($actor)) {
-                $where['vod_actor'] = ['like', mac_like_arr($actor), 'OR'];
+                $where[] = ['vod_actor', 'like', mac_like_arr($actor), 'OR'];
             }
             if(!empty($director)) {
-                $where['vod_director'] = ['like',mac_like_arr($director),'OR'];
+                $where[] = ['vod_director', 'like', mac_like_arr($director),'OR'];
             }
         }
         if(in_array($plot,['0','1'])){
@@ -579,7 +579,7 @@ class Vod extends Base {
                         $window_ids = array_values(array_unique(array_merge($window_ids, $more)));
                     }
                     if (!empty($window_ids)) {
-                        $where['vod_id'] = ['in', $window_ids];
+                        $where['vod_id'] = $window_ids;
                     }
                 }
             }
@@ -656,8 +656,8 @@ class Vod extends Base {
         $this->ensureRecycleColumnExists();
         $where = $this->mergeRecycleWhere($where);
         $data_cache = false;
-        $key = $GLOBALS['config']['app']['cache_flag']. '_'.'vod_detail_'.$where['vod_id'][1].'_'.$where['vod_en'][1];
-        if($where['vod_id'][0]=='eq' || $where['vod_en'][0]=='eq'){
+        $key = $GLOBALS['config']['app']['cache_flag']. '_'.'vod_detail_'.($where['vod_id'] ?? '').'_'.($where['vod_en'] ?? '');
+        if(isset($where['vod_id']) || isset($where['vod_en'])){
             $data_cache = true;
         }
         if($GLOBALS['config']['app']['cache_core']==1 && $data_cache) {
@@ -800,7 +800,7 @@ class Vod extends Base {
         if(!empty($data['vod_id'])){
 
             $where=[];
-            $where['vod_id'] = ['eq',$data['vod_id']];
+            $where['vod_id'] = $data['vod_id'];
             $res = $this->allowField(true)->where($where)->update($data);
             //编辑 先获取到之前的name
             $old_name = $this->where('vod_id',$data['vod_id'])->value('vod_name');
@@ -864,7 +864,7 @@ class Vod extends Base {
 
         if(!empty($data['vod_id'])){
             $where=[];
-            $where['vod_id'] = ['eq',$data['vod_id']];
+            $where['vod_id'] = $data['vod_id'];
             $res = $this->allowField(true)->where($where)->update($data);
         }
         else{
@@ -946,7 +946,7 @@ class Vod extends Base {
     {
         $today = strtotime(date('Y-m-d'));
         $where = [];
-        $where['vod_time'] = ['gt',$today];
+        $where[] = ['vod_time', '>', $today];
         if($flag=='type'){
             $ids = $this->where($where)->column('type_id');
         }

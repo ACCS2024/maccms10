@@ -82,13 +82,13 @@ class User extends Base
             $param['page'] = intval($param['page']) < 1 ? 1 : intval($param['page']);
             $param['limit'] = intval($param['limit']) < 1 ? 10 : intval($param['limit']);
             if(intval($param['mid'])>0){
-                $where['ulog_mid'] = ['eq',intval($param['mid'])];
+                $where['ulog_mid'] = intval($param['mid']);
             }
             if(intval($param['id'])>0){
-                $where['ulog_rid'] = ['eq',intval($param['id'])];
+                $where['ulog_rid'] = intval($param['id']);
             }
             if(intval($param['type'])>0){
-                $where['ulog_type'] = ['eq',intval($param['type'])];
+                $where['ulog_type'] = intval($param['type']);
             }
             $order = 'ulog_time desc';
             $res = model('Ulog')->listData($where, $order, $param['page'], $param['limit']);
@@ -794,9 +794,9 @@ class User extends Base
         $where['user_id'] = $GLOBALS['user']['user_id'];
         // 筛选：income=收入(1-6 与任务/里程碑奖励 10-11), expense=支出(7-9)
         if ($param['filter'] == 'income') {
-            $where['plog_type'] = ['in', [1, 2, 3, 4, 5, 6, 10, 11]];
+            $where['plog_type'] = [1, 2, 3, 4, 5, 6, 10, 11];
         } elseif ($param['filter'] == 'expense') {
-            $where['plog_type'] = ['in', [7, 8, 9]];
+            $where['plog_type'] = [7, 8, 9];
         }
         $order = 'plog_id desc';
         $res = model('Plog')->listData($where, $order, $param['page'], $param['limit']);
@@ -896,13 +896,13 @@ class User extends Base
 
         $where = [];
         if($param['level']=='2'){
-            $where['user_pid_2'] = ['eq',$GLOBALS['user']['user_id']];
+            $where['user_pid_2'] = $GLOBALS['user']['user_id'];
         }
         elseif($param['level']=='3'){
-            $where['user_pid_3'] = ['eq',$GLOBALS['user']['user_id']];
+            $where['user_pid_3'] = $GLOBALS['user']['user_id'];
         }
         else{
-            $where['user_pid'] = ['eq',$GLOBALS['user']['user_id']];
+            $where['user_pid'] = $GLOBALS['user']['user_id'];
         }
 
         $order = 'user_id desc';

@@ -94,7 +94,7 @@ class Make extends Base
 
         //专题列表
         $where = [];
-        $where['topic_status'] = ['eq',1];
+        $where['topic_status'] = 1;
         $order = 'topic_id desc';
         $topic_list = model('Topic')->listData($where,$order,1,999);
         $this->assign('topic_list',$topic_list['list']);
@@ -303,16 +303,16 @@ class Make extends Base
 
         if(empty($data_count)){
             $where = [];
-            $where['type_id|type_id_1'] = ['eq',$id];
+            $where['type_id|type_id_1'] = $id; // TODO:TP8-pipe-or
 
             if($this->_param['tab'] =='art') {
-                $where['art_status'] = ['eq', 1];
+                $where['art_status'] = 1;
                 $data_count = model('Art')->countData($where);
                 $html = mac_read_file($GLOBALS['MAC_ROOT_TEMPLATE'] . 'art/'.$type_info['type_tpl']);
                 $labelRule = '{maccms:art(.*?)num="(.*?)"(.*?)paging="yes"([\s\S]*?)}([\s\S]*?){/maccms:art}';
             }
             else{
-                $where['vod_status'] = ['eq', 1];
+                $where['vod_status'] = 1;
                 $data_count = model('Vod')->countData($where);
                 $html = mac_read_file($GLOBALS['MAC_ROOT_TEMPLATE'] . 'vod/'.$type_info['type_tpl']);
                 $labelRule = '{maccms:vod(.*?)num="(.*?)"(.*?)paging="yes"([\s\S]*?)}([\s\S]*?){/maccms:vod}';
@@ -439,7 +439,7 @@ class Make extends Base
 
         if(empty($data_count)){
             $where = [];
-            $where['topic_status'] = ['eq', 1];
+            $where['topic_status'] = 1;
             $data_count = model('Topic')->countData($where);
             $html = mac_read_file($GLOBALS['MAC_ROOT_TEMPLATE'] . 'topic/index.html');
             $labelRule = '{maccms:topic(.*?)num="(.*?)"(.*?)paging="yes"([\s\S]*?)}([\s\S]*?){/maccms:topic}';
@@ -539,8 +539,8 @@ class Make extends Base
             $_REQUEST['id'] = $a;
 
             $where = [];
-            $where['topic_id'] = ['eq',$a];
-            $where['topic_status'] = ['eq',1];
+            $where['topic_id'] = $a;
+            $where['topic_status'] = 1;
             $res = model('Topic')->infoData($where);
             if($res['code'] == 1) {
                 $topic_info = $res['info'];
@@ -554,7 +554,7 @@ class Make extends Base
         }
 
         if(!empty($ids)){
-            Db::name('topic')->where(['topic_id'=>['in',$ids]])->update(['topic_time_make'=>time()]);
+            Db::name('topic')->where(['topic_id'=>$ids])->update(['topic_time_make'=>time()]);
         }
         if($this->_param['ref'] ==1 && !empty($_SERVER["HTTP_REFERER"])){
             if(ENTRANCE=='admin'){
@@ -578,7 +578,7 @@ class Make extends Base
         if($this->_param['tab'] =='art'){
             $type_ids = $this->_param['arttype'];
             $order='art_time desc';
-            $where['art_status'] = ['eq',1];
+            $where['art_status'] = 1;
 
             if($GLOBALS['config']['view']['art_detail'] <2){
                 mac_echo(lang('admin/make/view_model_static_err'));
@@ -589,7 +589,7 @@ class Make extends Base
         else{
             $type_ids = $this->_param['vodtype'];
             $order='vod_time desc';
-            $where['vod_status'] = ['eq',1];
+            $where['vod_status'] = 1;
 
             if($GLOBALS['config']['view']['vod_detail'] <2 && $GLOBALS['config']['view']['vod_play'] <2 && $GLOBALS['config']['view']['vod_down'] <2){
                 mac_echo(lang('admin/make/view_model_static_err'));
@@ -644,7 +644,7 @@ class Make extends Base
             $type_info = $type_list[$type_id];
 
             $type_name = $type_info['type_name'];
-            $where['type_id'] = ['eq',$type_id];
+            $where['type_id'] = $type_id;
         }
         elseif(!empty($ids)){
             $type_name =lang('select_data');
@@ -652,13 +652,13 @@ class Make extends Base
                 mac_echo(lang('admin/make/info_make_complete').'2');
                 exit;
             }
-            $where[$this->_param['tab'].'_id'] = ['in',$ids];
+            $where[] = [$this->_param['tab'].'_id', 'in', $ids];
         }
 
 
         if($this->_param['ac2'] =='day'){
             $type_name .=lang('today_data');
-            $where[$this->_param['tab'].'_time'] = ['gt', strtotime(date('Y-m-d'))];
+            $where[] = [$this->_param['tab'].'_time', '>', strtotime(date('Y-m-d'))];
 
 
             if ($num>=count($type_ids)){
@@ -866,7 +866,7 @@ class Make extends Base
         }
 
         if(!empty($update_ids)){
-            Db::name($this->_param['tab'])->where([$this->_param['tab'].'_id'=>['in',$update_ids]])->update([$this->_param['tab'].'_time_make'=>time()]);
+            Db::name($this->_param['tab'])->where([$this->_param['tab'].'_id'=>$update_ids])->update([$this->_param['tab'].'_time_make'=>time()]);
         }
         if($this->_param['ref'] ==1 && !empty($_SERVER["HTTP_REFERER"])){
             if(ENTRANCE=='admin'){

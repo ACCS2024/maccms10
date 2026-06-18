@@ -61,7 +61,7 @@ class Annex extends Base {
 
         if(!empty($data['annex_id'])){
             $where=[];
-            $where['annex_id'] = ['eq',$data['annex_id']];
+            $where['annex_id'] = $data['annex_id'];
             $res = $this->allowField(true)->where($where)->update($data);
         }
         else{

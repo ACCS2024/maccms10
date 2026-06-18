@@ -18,23 +18,23 @@ class Actor extends Base
 
         $where = [];
         if (!empty($param['type'])) {
-            $where['type_id|type_id_1'] = ['eq', $param['type']];
+            $where['type_id|type_id_1'] = $param['type']; // TODO:TP8-pipe-or
         }
         if (!empty($param['level'])) {
-            $where['actor_level'] = ['eq', $param['level']];
+            $where['actor_level'] = $param['level'];
         }
         if (in_array($param['status'], ['0', '1'])) {
-            $where['actor_status'] = ['eq', $param['status']];
+            $where['actor_status'] = $param['status'];
         }
         if(!empty($param['pic'])){
             if($param['pic'] == '1'){
-                $where['actor_pic'] = ['eq',''];
+                $where['actor_pic'] = '';
             }
             elseif($param['pic'] == '2'){
-                $where['actor_pic'] = ['like','http%'];
+                $where[] = ['actor_pic', 'like', 'http%'];
             }
             elseif($param['pic'] == '3'){
-                $where['actor_pic'] = ['like','%#err%'];
+                $where[] = ['actor_pic', 'like', '%#err%'];
             }
         }
         if(!empty($param['wd'])){
@@ -77,7 +77,7 @@ class Actor extends Base
 
         $id = input('id');
         $where=[];
-        $where['actor_id'] = ['eq',$id];
+        $where['actor_id'] = $id;
         $res = model('Actor')->infoData($where);
         $info = $res['info'];
         $this->assign('info',$info);
@@ -96,7 +96,7 @@ class Actor extends Base
 
         if(!empty($ids)){
             $where=[];
-            $where['actor_id'] = ['in',$ids];
+            $where['actor_id'] = $ids;
             $res = model('Actor')->delData($where);
             if($res['code']>1){
                 return $this->error($res['msg']);
@@ -119,7 +119,7 @@ class Actor extends Base
         if(!empty($ids) && in_array($col,['actor_status','actor_lock','actor_level','type_id','actor_hits'])){
             $where=[];
             $update = [];
-            $where['actor_id'] = ['in',$ids];
+            $where['actor_id'] = $ids;
             if(empty($start)){
                 $update[$col] = $val;
                 if($col == 'type_id'){
@@ -134,7 +134,7 @@ class Actor extends Base
                 $ids = explode(',',$ids);
                 foreach($ids as $k=>$v){
                     $val = rand($start,$end);
-                    $where['actor_id'] = ['eq',$v];
+                    $where['actor_id'] = $v;
                     $update[$col] = $val;
                     $res = model('Actor')->fieldData($where, $update);
                 }

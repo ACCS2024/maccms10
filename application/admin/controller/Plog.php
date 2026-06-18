@@ -16,10 +16,10 @@ class Plog extends Base
         $param['limit'] = intval($param['limit']) <1 ? $this->_pagesize : $param['limit'];
         $where=[];
         if(!empty($param['type'])){
-            $where['plog_type'] = ['eq',$param['type']];
+            $where['plog_type'] = $param['type'];
         }
         if(!empty($param['uid'])){
-            $where['user_id'] = ['eq',$param['uid'] ];
+            $where['user_id'] = $param['uid'] ;
         }
 
         $order='plog_id desc';
@@ -45,9 +45,9 @@ class Plog extends Base
         $all = $param['all'];
         if(!empty($ids)){
             $where=[];
-            $where['plog_id'] = ['in',$ids];
+            $where['plog_id'] = $ids;
             if($all==1){
-                $where['plog_id'] = ['gt',0];
+                $where[] = ['plog_id', '>', 0];
             }
             $res = model('Plog')->delData($where);
             if($res['code']>1){

@@ -43,10 +43,10 @@ class Provide extends Base
         if(empty($html) || $cache_time==0) {
             $where = [];
             if (!empty($this->_param['ids'])) {
-                $where['vod_id'] = ['in', $this->_param['ids']];
+                $where['vod_id'] = $this->_param['ids'];
             }
             if (!empty($GLOBALS['config']['api']['vod']['typefilter'])) {
-                $where['type_id'] = ['in', $GLOBALS['config']['api']['vod']['typefilter']];
+                $where['type_id'] = $GLOBALS['config']['api']['vod']['typefilter'];
             }
 
             if (!empty($this->_param['t'])) {
@@ -65,10 +65,11 @@ class Provide extends Base
                 $todayunix = strtotime($todaydate);
                 $tommunix = strtotime($tommdate);
 
-                $where['vod_time'] = [['gt', $tommunix], ['lt', $todayunix]];
+                $where[] = ['vod_time', '>', $tommunix];
+				$where[] = ['vod_time', '<', $todayunix];
             }
             if (!empty($this->_param['wd'])) {
-                $where['vod_name'] = ['like', '%' . $this->_param['wd'] . '%'];
+                $where[] = ['vod_name', 'like', '%' . $this->_param['wd'] . '%'];
             }
             // 增加年份筛选 https://github.com/magicblack/maccms10/issues/815
             if (!empty($this->_param['year'])) {
@@ -91,7 +92,7 @@ class Provide extends Base
                     }
                     $year = join(',', $tmp_arr);
                 }
-                $where['vod_year'] = ['in', explode(',', $year)];
+                $where['vod_year'] = explode(',', $year);
             }
             if (empty($GLOBALS['config']['api']['vod']['from']) && !empty($this->_param['from']) && strlen($this->_param['from']) >= 2) {
                 $GLOBALS['config']['api']['vod']['from'] = $this->_param['from'];
@@ -103,10 +104,12 @@ class Provide extends Base
                 $vod_play_from_list = array_unique($vod_play_from_list);
                 $vod_play_from_list = array_filter($vod_play_from_list);
                 if (!empty($vod_play_from_list)) {
-                    $where['vod_play_from'] = ['or'];
-                    foreach ($vod_play_from_list as $vod_play_from) {
-                        array_unshift($where['vod_play_from'], ['like', '%' . trim($vod_play_from) . '%']);
-                    }
+                    $patterns = array_map(fn($f) => '%' . trim($f) . '%', $vod_play_from_list);
+                    $where[] = function ($q) use ($patterns) {
+                        foreach ($patterns as $i => $p) {
+                            $i === 0 ? $q->whereLike('vod_play_from', $p) : $q->whereLike('vod_play_from', $p, 'OR');
+                        }
+                    };
                 }
             }
             if (!empty($GLOBALS['config']['api']['vod']['datafilter'])) {
@@ -377,7 +380,7 @@ class Provide extends Base
         if(empty($html) || $cache_time==0) {
             $where = [];
             if (!empty($this->_param['ids'])) {
-                $where['art_id'] = ['in', $this->_param['ids']];
+                $where['art_id'] = $this->_param['ids'];
             }
             if (!empty($this->_param['t'])) {
                 if (empty($GLOBALS['config']['api']['art']['typefilter']) || strpos($GLOBALS['config']['api']['art']['typefilter'], $this->_param['t']) !== false) {
@@ -392,10 +395,11 @@ class Provide extends Base
                 $todayunix = strtotime($todaydate);
                 $tommunix = strtotime($tommdate);
 
-                $where['art_time'] = [['gt', $tommunix], ['lt', $todayunix]];
+                $where[] = ['art_time', '>', $tommunix];
+				$where[] = ['art_time', '<', $todayunix];
             }
             if (!empty($this->_param['wd'])) {
-                $where['art_name'] = ['like', '%' . $this->_param['wd'] . '%'];
+                $where[] = ['art_name', 'like', '%' . $this->_param['wd'] . '%'];
             }
             if (!empty($GLOBALS['config']['api']['art']['datafilter'])) {
                 $where['_string'] = $GLOBALS['config']['api']['art']['datafilter'];
@@ -502,7 +506,7 @@ class Provide extends Base
         if(empty($html) || $cache_time==0) {
             $where = [];
             if (!empty($this->_param['ids'])) {
-                $where['actor_id'] = ['in', $this->_param['ids']];
+                $where['actor_id'] = $this->_param['ids'];
             }
             if (!empty($this->_param['t'])) {
                 if (empty($GLOBALS['config']['api']['actor']['typefilter']) || strpos($GLOBALS['config']['api']['actor']['typefilter'], $this->_param['t']) !== false) {
@@ -516,10 +520,11 @@ class Provide extends Base
                 $todayunix = strtotime($todaydate);
                 $tommunix = strtotime($tommdate);
 
-                $where['actor_time'] = [['gt', $tommunix], ['lt', $todayunix]];
+                $where[] = ['actor_time', '>', $tommunix];
+				$where[] = ['actor_time', '<', $todayunix];
             }
             if (!empty($this->_param['wd'])) {
-                $where['actor_name'] = ['like', '%' . $this->_param['wd'] . '%'];
+                $where[] = ['actor_name', 'like', '%' . $this->_param['wd'] . '%'];
             }
             if (!empty($GLOBALS['config']['api']['actor']['datafilter'])) {
                 $where['_string'] = $GLOBALS['config']['api']['actor']['datafilter'];
@@ -614,7 +619,7 @@ class Provide extends Base
         if(empty($html) || $cache_time==0) {
             $where = [];
             if (!empty($this->_param['ids'])) {
-                $where['role_id'] = ['in', $this->_param['ids']];
+                $where['role_id'] = $this->_param['ids'];
             }
             if (!empty($this->_param['t'])) {
                 if (empty($GLOBALS['config']['api']['role']['typefilter']) || strpos($GLOBALS['config']['api']['role']['typefilter'], $this->_param['t']) !== false) {
@@ -628,10 +633,11 @@ class Provide extends Base
                 $todayunix = strtotime($todaydate);
                 $tommunix = strtotime($tommdate);
 
-                $where['role_time'] = [['gt', $tommunix], ['lt', $todayunix]];
+                $where[] = ['role_time', '>', $tommunix];
+				$where[] = ['role_time', '<', $todayunix];
             }
             if (!empty($this->_param['wd'])) {
-                $where['role_name'] = ['like', '%' . $this->_param['wd'] . '%'];
+                $where[] = ['role_name', 'like', '%' . $this->_param['wd'] . '%'];
             }
             if (!empty($GLOBALS['config']['api']['role']['datafilter'])) {
                 $where['_string'] = $GLOBALS['config']['api']['role']['datafilter'];
@@ -715,10 +721,10 @@ class Provide extends Base
         if(empty($html) || $cache_time==0) {
             $where = [];
             if (!empty($this->_param['ids'])) {
-                $where['manga_id'] = ['in', $this->_param['ids']];
+                $where['manga_id'] = $this->_param['ids'];
             }
             if (!empty($GLOBALS['config']['api']['manga']['typefilter'])) {
-                $where['type_id'] = ['in', $GLOBALS['config']['api']['manga']['typefilter']];
+                $where['type_id'] = $GLOBALS['config']['api']['manga']['typefilter'];
             }
 
             if (!empty($this->_param['t'])) {
@@ -733,10 +739,11 @@ class Provide extends Base
                 $todayunix = strtotime($todaydate);
                 $tommunix = strtotime($tommdate);
 
-                $where['manga_time'] = [['gt', $tommunix], ['lt', $todayunix]];
+                $where[] = ['manga_time', '>', $tommunix];
+				$where[] = ['manga_time', '<', $todayunix];
             }
             if (!empty($this->_param['wd'])) {
-                $where['manga_name'] = ['like', '%' . $this->_param['wd'] . '%'];
+                $where[] = ['manga_name', 'like', '%' . $this->_param['wd'] . '%'];
             }
             if (!empty($GLOBALS['config']['api']['manga']['datafilter'])) {
                 $where['_string'] .= ' ' . $GLOBALS['config']['api']['manga']['datafilter'];
@@ -907,7 +914,7 @@ class Provide extends Base
         if(empty($html) || $cache_time==0) {
             $where = [];
             if (!empty($this->_param['ids'])) {
-                $where['website_id'] = ['in', $this->_param['ids']];
+                $where['website_id'] = $this->_param['ids'];
             }
             if (!empty($this->_param['t'])) {
                 if (empty($GLOBALS['config']['api']['website']['typefilter']) || strpos($GLOBALS['config']['api']['website']['typefilter'], $this->_param['t']) !== false) {
@@ -921,10 +928,11 @@ class Provide extends Base
                 $todayunix = strtotime($todaydate);
                 $tommunix = strtotime($tommdate);
 
-                $where['website_time'] = [['gt', $tommunix], ['lt', $todayunix]];
+                $where[] = ['website_time', '>', $tommunix];
+				$where[] = ['website_time', '<', $todayunix];
             }
             if (!empty($this->_param['wd'])) {
-                $where['website_name'] = ['like', '%' . $this->_param['wd'] . '%'];
+                $where[] = ['website_name', 'like', '%' . $this->_param['wd'] . '%'];
             }
             if (!empty($GLOBALS['config']['api']['website']['datafilter'])) {
                 $where['_string'] = $GLOBALS['config']['api']['website']['datafilter'];

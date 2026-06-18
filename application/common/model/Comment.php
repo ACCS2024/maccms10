@@ -48,7 +48,7 @@ class Comment extends Base {
 
             $where2=[];
             $where2['comment_pid'] = $v['comment_id'];
-            $where2['comment_status'] = ['eq',1];
+            $where2['comment_status'] = 1;
             $sub = Db::name('Comment')->where($where2)->order($order)->select();
             $list[$k]['sub'] = $sub;
             foreach($sub as $k2=>$v2){
@@ -58,43 +58,43 @@ class Comment extends Base {
             $list[$k]['data'] = [];
             if($v['comment_mid'] == 1){
                 $where3=[];
-                $where3['vod_id'] = ['eq',$v['comment_rid']];
+                $where3['vod_id'] = $v['comment_rid'];
                 $vod = model('Vod')->infoData($where3);
                 $list[$k]['data'] = $vod['info'];
             }
             elseif($v['comment_mid'] == 2){
                 $where3=[];
-                $where3['art_id'] = ['eq',$v['comment_rid']];
+                $where3['art_id'] = $v['comment_rid'];
                 $vod = model('Art')->infoData($where3);
                 $list[$k]['data'] = $vod['info'];
             }
             elseif($v['comment_mid'] == 3){
                 $where3=[];
-                $where3['topic_id'] = ['eq',$v['comment_rid']];
+                $where3['topic_id'] = $v['comment_rid'];
                 $vod = model('Topic')->infoData($where3);
                 $list[$k]['data'] = $vod['info'];
             }
             elseif($v['comment_mid'] == 8){
                 $where3=[];
-                $where3['actor_id'] = ['eq',$v['comment_rid']];
+                $where3['actor_id'] = $v['comment_rid'];
                 $vod = model('Actor')->infoData($where3);
                 $list[$k]['data'] = $vod['info'];
             }
             elseif($v['comment_mid'] == 9){
                 $where3=[];
-                $where3['role_id'] = ['eq',$v['comment_rid']];
+                $where3['role_id'] = $v['comment_rid'];
                 $vod = model('Role')->infoData($where3);
                 $list[$k]['data'] = $vod['info'];
             }
             elseif($v['comment_mid'] == 12){
                 $where3=[];
-                $where3['manga_id'] = ['eq',$v['comment_rid']];
+                $where3['manga_id'] = $v['comment_rid'];
                 $vod = model('Manga')->infoData($where3);
                 $list[$k]['data'] = $vod['info'];
             }
             elseif($v['comment_mid'] == 11){
                 $where3=[];
-                $where3['website_id'] = ['eq',$v['comment_rid']];
+                $where3['website_id'] = $v['comment_rid'];
                 $vod = model('Website')->infoData($where3);
                 $list[$k]['data'] = $vod['info'];
             }
@@ -170,20 +170,20 @@ class Comment extends Base {
             $pageurl = mac_url($pageurl,$param);
         }
 
-        $where['comment_status'] = ['eq',1];
-        $where['comment_pid'] = ['eq',0];
+        $where['comment_status'] = 1;
+        $where['comment_pid'] = 0;
 
         if(!empty($rid)){
-            $where['comment_rid'] = ['eq',$rid];
+            $where['comment_rid'] = $rid;
         }
         if(!empty($pid)){
-            $where['comment_pid'] = ['eq',$pid];
+            $where['comment_pid'] = $pid;
         }
         if(!empty($uid)){
-            $where['user_id'] = ['eq',$uid];
+            $where['user_id'] = $uid;
         }
         if(!empty($mid)){
-            $where['comment_mid'] = ['eq',$mid];
+            $where['comment_mid'] = $mid;
         }
 
         if(!in_array($by, ['id', 'time','up','down'])) {
@@ -239,7 +239,7 @@ class Comment extends Base {
 
         if(!empty($data['comment_id'])){
             $where=[];
-            $where['comment_id'] = ['eq',$data['comment_id']];
+            $where['comment_id'] = $data['comment_id'];
             $res = $this->allowField(true)->where($where)->update($data);
         }
         else{

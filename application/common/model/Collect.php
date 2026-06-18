@@ -54,7 +54,7 @@ class Collect extends Base {
             }
 
             $where=[];
-            $where['collect_id'] = ['eq',$data['collect_id']];
+            $where['collect_id'] = $data['collect_id'];
             $res = $this->where($where)->update($data);
         }
         else{
@@ -786,7 +786,7 @@ class Collect extends Base {
                 }
                 $search_actor_id_list = [];
                 if (strpos($config['inrule'], 'f')!==false && !empty(trim($v['vod_actor']))) {
-                    $where['vod_actor'] = ['like', mac_like_arr(mac_filter_xss($v['vod_actor'])), 'OR'];
+                    $where[] = ['vod_actor', 'like', mac_like_arr(mac_filter_xss($v['vod_actor'])), 'OR'];
                     if ($vod_search_enabled) {
                         $search_actor_id_list = $vod_search->getResultIdList(mac_filter_xss($v['vod_actor']), 'vod_actor', true);
                         $search_actor_id_list = empty($search_actor_id_list) ? [0] : $search_actor_id_list;
@@ -2131,18 +2131,18 @@ class Collect extends Base {
                 $blend = false;
 
                 if(!empty($v['douban_id'])){
-                    $where2['vod_douban_id'] = ['eq',$v['douban_id']];
+                    $where2['vod_douban_id'] = $v['douban_id'];
                     unset($v['douban_id']);
                 }
                 else{
-                    $where2['vod_name'] = ['eq',$v['vod_name']];
+                    $where2['vod_name'] = $v['vod_name'];
                 }
 
                 if (strpos($config['inrule'], 'c')!==false) {
-                    $where2['vod_actor'] = ['like', mac_like_arr($v['role_actor']), 'OR'];
+                    $where2[] = ['vod_actor', 'like', mac_like_arr($v['role_actor']), 'OR'];
                 }
                 if (strpos($config['inrule'], 'd')!==false) {
-                    $where2['vod_director'] = ['like', mac_like_arr($v['role_actor']), 'OR'];
+                    $where2[] = ['vod_director', 'like', mac_like_arr($v['role_actor']), 'OR'];
                 }
                 if(!empty($where2['vod_actor']) && !empty($where2['vod_director'])){
                     $blend = true;
@@ -2705,41 +2705,41 @@ class Collect extends Base {
                 $blend = false;
 
                 if (strpos($config['inrule'], 'b')!==false) {
-                    $where['comment_content'] = ['eq', $v['comment_content']];
+                    $where['comment_content'] = $v['comment_content'];
                 }
                 if (strpos($config['inrule'], 'c')!==false) {
-                    $where['comment_name'] = ['eq', $v['comment_name']];
+                    $where['comment_name'] = $v['comment_name'];
                 }
 
                 if(empty($v['rel_id'])){
                     if($v['comment_mid']==1){
                         if(!empty($v['douban_id'])){
-                            $where2['vod_douban_id'] = ['eq',$v['douban_id']];
+                            $where2['vod_douban_id'] = $v['douban_id'];
                             unset($v['douban_id']);
                         }
                         else{
-                            $where2['vod_name'] = ['eq',$v['rel_name']];
+                            $where2['vod_name'] = $v['rel_name'];
                         }
                         $rel_info = model('Vod')->where($where2)->find();
                     }
                     elseif($v['comment_mid']==2){
-                        $where2['art_name'] = ['eq',$v['rel_name']];
+                        $where2['art_name'] = $v['rel_name'];
                         $rel_info = model('Art')->where($where2)->find();
                     }
                     elseif($v['comment_mid']==3){
-                        $where2['topic_name'] = ['eq',$v['rel_name']];
+                        $where2['topic_name'] = $v['rel_name'];
                         $rel_info = model('Topic')->where($where2)->find();
                     }
                     elseif($v['comment_mid']==8){
-                        $where2['actor_name'] = ['eq',$v['rel_name']];
+                        $where2['actor_name'] = $v['rel_name'];
                         $rel_info = model('Actor')->where($where2)->find();
                     }
                     elseif($v['comment_mid']==9){
-                        $where2['role_name'] = ['eq',$v['rel_name']];
+                        $where2['role_name'] = $v['rel_name'];
                         $rel_info = model('Role')->where($where2)->find();
                     }
                     elseif($v['comment_mid']==11){
-                        $where2['website_name'] = ['eq',$v['rel_name']];
+                        $where2['website_name'] = $v['rel_name'];
                         $rel_info = model('Website')->where($where2)->find();
                     }
 

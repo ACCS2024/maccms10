@@ -148,7 +148,7 @@ class Chatroom extends Base
         $chat_id = (int)$param['chat_id'];
 
         $where = [];
-        $where['chat_id'] = ['eq', $chat_id];
+        $where['chat_id'] = $chat_id;
         $info = (new \app\common\model\Chatroom())->infoData($where);
         if ($info['code'] > 1) {
             return json(['code' => 1002, 'msg' => lang('chatroom/msg_not_found')]);

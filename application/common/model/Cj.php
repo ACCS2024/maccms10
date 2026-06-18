@@ -33,7 +33,7 @@ class Cj extends Base {
         $data['lastdate'] = time();
         if(!empty($data['nodeid'])){
             $where=[];
-            $where['nodeid'] = ['eq',$data['nodeid']];
+            $where['nodeid'] = $data['nodeid'];
             $res = Db::name('cj_node')->where($where)->update($data);
         }
         else{

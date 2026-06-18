@@ -65,12 +65,12 @@ class Chatroom extends Base {
         }
 
         $where = [];
-        $where['vod_id'] = ['eq', $vod_id];
-        $where['chat_status'] = ['eq', 1];
+        $where['vod_id'] = $vod_id;
+        $where['chat_status'] = 1;
 
         if ($after_id > 0) {
             // 增量拉取：获取 after_id 之后的新消息
-            $where['chat_id'] = ['gt', $after_id];
+            $where[] = ['chat_id', '>', $after_id];
 
             $list = Db::name('Chatroom')
                 ->field('chat_id,vod_id,user_id,user_name,chat_content,chat_time')
@@ -153,7 +153,7 @@ class Chatroom extends Base {
 
         if (!empty($data['chat_id'])) {
             $where = [];
-            $where['chat_id'] = ['eq', $data['chat_id']];
+            $where['chat_id'] = $data['chat_id'];
             $res = $this->allowField(true)->where($where)->update($data);
         } else {
             $data['chat_time'] = time();

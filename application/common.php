@@ -3781,15 +3781,15 @@ function mac_label_website_detail($param)
 {
     $where = [];
     if($GLOBALS['config']['rewrite']['website_id']==1){
-        $where['website_en'] = ['eq',$param['id']];
+        $where['website_en'] = $param['id'];
     }
     else{
         if($GLOBALS['config']['rewrite']['website_id']==2) {
             $param['id'] = mac_alphaID($param['id'], true, $GLOBALS['config']['rewrite']['encode_len'],$GLOBALS['config']['rewrite']['encode_key'] );
         }
-        $where['website_id'] = ['eq',$param['id']];
+        $where['website_id'] = $param['id'];
     }
-    $where['website_status'] = ['eq',1];
+    $where['website_status'] = 1;
     $res = model('Website')->infoData($where,'*',1);
 
     $GLOBALS['type_id'] = $res['info']['type_id'];
@@ -3800,15 +3800,15 @@ function mac_label_actor_detail($param)
 {
     $where = [];
     if($GLOBALS['config']['rewrite']['actor_id']==1){
-        $where['actor_en'] = ['eq',$param['id']];
+        $where['actor_en'] = $param['id'];
     }
     else{
         if($GLOBALS['config']['rewrite']['actor_id']==2) {
             $param['id'] = mac_alphaID($param['id'], true, $GLOBALS['config']['rewrite']['encode_len'],$GLOBALS['config']['rewrite']['encode_key'] );
         }
-        $where['actor_id'] = ['eq',$param['id']];
+        $where['actor_id'] = $param['id'];
     }
-    $where['actor_status'] = ['eq',1];
+    $where['actor_status'] = 1;
     $res = model('Actor')->infoData($where,'*',1);
 
     $GLOBALS['type_id'] = $res['info']['type_id'];
@@ -3819,15 +3819,15 @@ function mac_label_role_detail($param)
 {
     $where = [];
     if($GLOBALS['config']['rewrite']['role_id']==1){
-        $where['role_en'] = ['eq',$param['id']];
+        $where['role_en'] = $param['id'];
     }
     else{
         if($GLOBALS['config']['rewrite']['role_id']==2) {
             $param['id'] = mac_alphaID($param['id'], true, $GLOBALS['config']['rewrite']['encode_len'],$GLOBALS['config']['rewrite']['encode_key'] );
         }
-        $where['role_id'] = ['eq',$param['id']];
+        $where['role_id'] = $param['id'];
     }
-    $where['role_status'] = ['eq',1];
+    $where['role_status'] = 1;
     $res = model('Role')->infoData($where,'*',1);
 
     // https://github.com/magicblack/maccms10/issues/960
@@ -3839,15 +3839,15 @@ function mac_label_topic_detail($param)
 {
     $where = [];
     if($GLOBALS['config']['rewrite']['topic_id']==1){
-        $where['topic_en'] = ['eq',$param['id']];
+        $where['topic_en'] = $param['id'];
     }
     else{
         if($GLOBALS['config']['rewrite']['topic_id']==2) {
             $param['id'] = mac_alphaID($param['id'], true, $GLOBALS['config']['rewrite']['encode_len'],$GLOBALS['config']['rewrite']['encode_key'] );
         }
-        $where['topic_id'] = ['eq',$param['id']];
+        $where['topic_id'] = $param['id'];
     }
-    $where['topic_status'] = ['eq',1];
+    $where['topic_status'] = 1;
     $res = model('Topic')->infoData($where,'*',1);
     return $res;
 }
@@ -3855,15 +3855,15 @@ function mac_label_art_detail($param)
 {
     $where = [];
     if($GLOBALS['config']['rewrite']['art_id']==1){
-        $where['art_en'] = ['eq',$param['id']];
+        $where['art_en'] = $param['id'];
     }
     else{
         if($GLOBALS['config']['rewrite']['art_id']==2) {
             $param['id'] = mac_alphaID($param['id'], true, $GLOBALS['config']['rewrite']['encode_len'],$GLOBALS['config']['rewrite']['encode_key'] );
         }
-        $where['art_id'] = ['eq',$param['id']];
+        $where['art_id'] = $param['id'];
     }
-    $where['art_status'] = ['eq',1];
+    $where['art_status'] = 1;
     $res = model('Art')->infoData($where,'*',1);
     if($res['code'] ==1){
         if($param['page']>$res['info']['art_page_total']){ $param['page'] = $res['info']['art_page_total']; }
@@ -3877,15 +3877,15 @@ function mac_label_manga_detail($param)
 {
     $where = [];
     if($GLOBALS['config']['rewrite']['manga_id']==1){
-        $where['manga_en'] = ['eq',$param['id']];
+        $where['manga_en'] = $param['id'];
     }
     else{
         if($GLOBALS['config']['rewrite']['manga_id']==2) {
             $param['id'] = mac_alphaID($param['id'], true, $GLOBALS['config']['rewrite']['encode_len'],$GLOBALS['config']['rewrite']['encode_key'] );
         }
-        $where['manga_id'] = ['eq',$param['id']];
+        $where['manga_id'] = $param['id'];
     }
-    $where['manga_status'] = ['eq',1];
+    $where['manga_status'] = 1;
     $res = model('Manga')->infoData($where,'*',1);
     if($res['code'] != 1){
         return $res;
@@ -3899,15 +3899,15 @@ function mac_label_vod_detail($param)
 {
     $where = [];
     if($GLOBALS['config']['rewrite']['vod_id']==1){
-        $where['vod_en'] = ['eq',$param['id']];
+        $where['vod_en'] = $param['id'];
     }
     else{
         if($GLOBALS['config']['rewrite']['vod_id']==2) {
             $param['id'] = mac_alphaID($param['id'], true, $GLOBALS['config']['rewrite']['encode_len'],$GLOBALS['config']['rewrite']['encode_key'] );
         }
-        $where['vod_id'] = ['eq',$param['id']];
+        $where['vod_id'] = $param['id'];
     }
-    $where['vod_status'] = ['eq',1];
+    $where['vod_status'] = 1;
     $res = model('Vod')->infoData($where,'*',1);
 
     $GLOBALS['type_id'] = $res['info']['type_id'];
@@ -3919,7 +3919,7 @@ function mac_label_vod_role($param)
 {
     $where = [];
     $where['role_rid'] = $param['rid'];
-    $where['role_status'] = ['eq',1];
+    $where['role_status'] = 1;
     $order='role_sort desc,role_id desc';
     $res = model('Role')->listData($where,$order,1,999,0,'*',0,0);
     return $res;

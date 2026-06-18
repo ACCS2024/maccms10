@@ -63,7 +63,7 @@ class Order extends Base {
         $data['order_time'] = time();
         if(!empty($data['order_id'])){
             $where=[];
-            $where['order_id'] = ['eq',$data['order_id']];
+            $where['order_id'] = $data['order_id'];
             $res = $this->allowField(true)->where($where)->update($data);
         }
         else{

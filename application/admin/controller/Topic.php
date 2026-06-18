@@ -17,7 +17,7 @@ class Topic extends Base
 
         $where=[];
         if(in_array($param['status'],['0','1'],true)){
-            $where['topic_status'] = ['eq',$param['status']];
+            $where['topic_status'] = $param['status'];
         }
         if(!empty($param['wd'])){
             $param['wd'] = htmlspecialchars(urldecode($param['wd']));
@@ -63,7 +63,7 @@ class Topic extends Base
 
         $id = input('id');
         $where=[];
-        $where['topic_id'] = ['eq',$id];
+        $where['topic_id'] = $id;
         $res = model('Topic')->infoData($where);
 
 
@@ -82,7 +82,7 @@ class Topic extends Base
 
         if(!empty($ids)){
             $where=[];
-            $where['topic_id'] = ['in',$ids];
+            $where['topic_id'] = $ids;
             $res = model('Topic')->delData($where);
             if($res['code']>1){
                 return $this->error($res['msg']);
@@ -101,7 +101,7 @@ class Topic extends Base
 
         if(!empty($ids) && in_array($col,['topic_status','topic_level']) ){
             $where=[];
-            $where['topic_id'] = ['in',$ids];
+            $where['topic_id'] = $ids;
 
             $res = model('Topic')->fieldData($where,$col,$val);
             if($res['code']>1){

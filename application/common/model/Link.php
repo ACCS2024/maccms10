@@ -109,7 +109,7 @@ class Link extends Base {
         $data['link_time'] = time();
         if(!empty($data['link_id'])){
             $where=[];
-            $where['link_id'] = ['eq',$data['link_id']];
+            $where['link_id'] = $data['link_id'];
             $res = $this->allowField(true)->where($where)->update($data);
         }
         else{

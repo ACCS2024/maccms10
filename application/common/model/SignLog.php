@@ -127,10 +127,9 @@ class SignLog extends Base {
         // 本月签到记录
         $month_start = date('Y-m-01');
         $month_end = date('Y-m-t');
-        $month_logs = Db::name('SignLog')->where([
-            'user_id' => $user_id,
-            'sign_date' => ['between', [$month_start, $month_end]],
-        ])->order('sign_date asc')->select();
+        $month_logs = Db::name('SignLog')->where('user_id', $user_id)
+            ->whereBetween('sign_date', [$month_start, $month_end])
+            ->order('sign_date asc')->select();
 
         $month_dates = [];
         $month_total_points = 0;

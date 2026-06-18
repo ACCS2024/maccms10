@@ -37,7 +37,7 @@ class Plog extends Base {
 
         if(!empty($user_ids)){
             $where2=[];
-            $where2['user_id'] = ['in', $user_ids];
+            $where2['user_id'] = $user_ids;
             $order='user_id desc';
             $user_list = model('User')->listData($where2,$order,1,999);
             $user_list = mac_array_rekey($user_list['list'],'user_id');
@@ -81,7 +81,7 @@ class Plog extends Base {
 
         if(!empty($data['plog_id'])){
             $where=[];
-            $where['plog_id'] = ['eq',$data['plog_id']];
+            $where['plog_id'] = $data['plog_id'];
             $res = $this->allowField(true)->where($where)->update($data);
         }
         else{

@@ -183,42 +183,42 @@ class Actor extends Base {
 
         }
 
-        $where['actor_status'] = ['eq',1];
+        $where['actor_status'] = 1;
         if(!empty($level)) {
             if($level=='all'){
                 $level = '1,2,3,4,5,6,7,8,9';
             }
-            $where['actor_level'] = ['in',explode(',',$level)];
+            $where['actor_level'] = explode(',',$level);
         }
         if(!empty($ids)) {
             if($ids!='all'){
-                $where['actor_id'] = ['in',explode(',',$ids)];
+                $where['actor_id'] = explode(',',$ids);
             }
         }
         if(!empty($not)){
             $where['actor_id'] = ['not in',explode(',',$not)];
         }
         if(!empty($sex)){
-            $where['actor_sex'] = ['eq',$sex];
+            $where['actor_sex'] = $sex;
         }
         if(!empty($letter)){
             if(substr($letter,0,1)=='0' && substr($letter,2,1)=='9'){
                 $letter='0,1,2,3,4,5,6,7,8,9';
             }
-            $where['actor_letter'] = ['in',explode(',',$letter)];
+            $where['actor_letter'] = explode(',',$letter);
         }
 
         if(!empty($timeadd)){
             $s = intval(strtotime($timeadd));
-            $where['actor_time_add'] =['gt',$s];
+            $where[] = ['actor_time_add', '>', $s];
         }
         if(!empty($timehits)){
             $s = intval(strtotime($timehits));
-            $where['actor_time_hits'] =['gt',$s];
+            $where[] = ['actor_time_hits', '>', $s];
         }
         if(!empty($time)){
             $s = intval(strtotime($time));
-            $where['actor_time'] =['gt',$s];
+            $where[] = ['actor_time', '>', $s];
         }
         if(!empty($type)) {
             if($type=='current'){
@@ -234,19 +234,19 @@ class Actor extends Base {
                     }
                 }
                 $type = array_unique($type);
-                $where['type_id'] = ['in', array_values(array_map('intval', $type))];
+                $where['type_id'] = array_values(array_map('intval', $type));
             }
         }
         if(!empty($typenot)){
             $where['type_id'] = ['not in', array_map('intval', explode(',', $typenot))];
         }
         if(!empty($tid)) {
-            $where['type_id|type_id_1'] = ['eq',$tid];
+            $where['type_id|type_id_1'] = $tid; // TODO:TP8-pipe-or
         }
         if(!empty($hitsmonth)){
             $tmp = explode(' ',$hitsmonth);
             if(count($tmp)==1){
-                $where['actor_hits_month'] = ['gt', $tmp];
+                $where[] = ['actor_hits_month', '>', $tmp];
             }
             else{
                 $where['actor_hits_month'] = [$tmp[0],$tmp[1]];
@@ -255,7 +255,7 @@ class Actor extends Base {
         if(!empty($hitsweek)){
             $tmp = explode(' ',$hitsweek);
             if(count($tmp)==1){
-                $where['actor_hits_week'] = ['gt', $tmp];
+                $where[] = ['actor_hits_week', '>', $tmp];
             }
             else{
                 $where['actor_hits_week'] = [$tmp[0],$tmp[1]];
@@ -264,7 +264,7 @@ class Actor extends Base {
         if(!empty($hitsday)){
             $tmp = explode(' ',$hitsday);
             if(count($tmp)==1){
-                $where['actor_hits_day'] = ['gt', $tmp];
+                $where[] = ['actor_hits_day', '>', $tmp];
             }
             else{
                 $where['actor_hits_day'] = [$tmp[0],$tmp[1]];
@@ -273,7 +273,7 @@ class Actor extends Base {
         if(!empty($hits)){
             $tmp = explode(' ',$hits);
             if(count($tmp)==1){
-                $where['actor_hits'] = ['gt', $tmp];
+                $where[] = ['actor_hits', '>', $tmp];
             }
             else{
                 $where['actor_hits'] = [$tmp[0],$tmp[1]];
@@ -281,20 +281,20 @@ class Actor extends Base {
         }
 
         if(!empty($area)){
-            $where['actor_area'] = ['in',explode(',',$area) ];
+            $where['actor_area'] = explode(',',$area) ;
         }
         if(!empty($starsign)){
-            $where['actor_starsign'] = ['in',explode(',',$starsign) ];
+            $where['actor_starsign'] = explode(',',$starsign) ;
         }
         if(!empty($blood)){
-            $where['actor_blood'] = ['in',explode(',',$blood) ];
+            $where['actor_blood'] = explode(',',$blood) ;
         }
 
         if(!empty($name)){
-            $where['actor_name'] = ['in',explode(',',$name) ];
+            $where['actor_name'] = explode(',',$name) ;
         }
         if(!empty($wd)) {
-            $where['actor_name|actor_en'] = ['like', '%' . $wd . '%'];
+            $where[] = ['actor_name|actor_en', 'like', '%' . $wd . '%']; // TODO:TP8-pipe-or
         }
         $use_rnd_order = ($by == 'rnd');
         if (!$use_rnd_order) {
@@ -370,8 +370,8 @@ class Actor extends Base {
             return ['code'=>1001,'msg'=>lang('param_err')];
         }
         $data_cache = false;
-        $key = $GLOBALS['config']['app']['cache_flag']. '_'. 'actor_detail_'.$where['actor_id'][1].'_'.$where['actor_en'][1];
-        if($where['actor_id'][0]=='eq' || $where['actor_en'][0]=='eq'){
+        $key = $GLOBALS['config']['app']['cache_flag']. '_'. 'actor_detail_'.($where['actor_id'] ?? '').'_'.($where['actor_en'] ?? '');
+        if(isset($where['actor_id']) || isset($where['actor_en'])){
             $data_cache = true;
         }
         if($GLOBALS['config']['app']['cache_core']==1 && $data_cache) {
@@ -479,7 +479,7 @@ class Actor extends Base {
 
         if(!empty($data['actor_id'])){
             $where=[];
-            $where['actor_id'] = ['eq',$data['actor_id']];
+            $where['actor_id'] = $data['actor_id'];
             $res = $this->allowField(true)->where($where)->update($data);
         }
         else{

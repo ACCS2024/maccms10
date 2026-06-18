@@ -435,7 +435,7 @@ polyfill;
 
         if($total=='') {
             $where = [];
-            $where['topic_status'] = ['eq', 1];
+            $where['topic_status'] = 1;
             $total = model('Topic')->countData($where);
         }
 

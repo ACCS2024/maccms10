@@ -57,7 +57,7 @@ class SeoAiResult extends Base
             $row = $this->where([
                 'seo_mid' => $mid,
                 'seo_obj_uuid' => $objUuid,
-                'seo_status' => ['in', [1, 2]]
+                'seo_status' => [1, 2]
             ])->find();
             if (!empty($row)) {
                 return $row;
@@ -67,7 +67,7 @@ class SeoAiResult extends Base
             $row = $this->where([
                 'seo_mid' => $mid,
                 'seo_obj_id' => $objId,
-                'seo_status' => ['in', [1, 2]]
+                'seo_status' => [1, 2]
             ])->find();
             if (!empty($row) && empty($row['seo_obj_uuid'])) {
                 $this->where(['seo_id' => intval($row['seo_id'])])->update(['seo_obj_uuid' => $objUuid]);

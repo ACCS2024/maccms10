@@ -16,14 +16,14 @@ class Cash extends Base
         $param['limit'] = intval($param['limit']) <1 ? $this->_pagesize : $param['limit'];
         $where=[];
         if($param['status']!=''){
-            $where['cash_status'] = ['eq',$param['status']];
+            $where['cash_status'] = $param['status'];
         }
         if(!empty($param['uid'])){
-            $where['user_id'] = ['eq',$param['uid'] ];
+            $where['user_id'] = $param['uid'] ;
         }
         if(!empty($param['wd'])){
             $param['wd'] = htmlspecialchars(urldecode($param['wd']));
-            $where['cash_bank_no'] = ['like','%'.$param['wd'].'%' ];
+            $where[] = ['cash_bank_no', 'like', '%'.$param['wd'].'%' ];
         }
 
         $order='cash_id desc';
@@ -49,9 +49,9 @@ class Cash extends Base
         $all = $param['all'];
         if(!empty($ids)){
             $where=[];
-            $where['cash_id'] = ['in',$ids];
+            $where['cash_id'] = $ids;
             if($all==1){
-                $where['cash_id'] = ['gt',0];
+                $where[] = ['cash_id', '>', 0];
             }
             $res = model('Cash')->delData($where);
             if($res['code']>1){
@@ -68,7 +68,7 @@ class Cash extends Base
         $ids = $param['ids'];
         if(!empty($ids)){
             $where=[];
-            $where['cash_id'] = ['in',$ids];
+            $where['cash_id'] = $ids;
             $res = model('Cash')->auditData($where);
             if($res['code']>1){
                 return $this->error($res['msg']);

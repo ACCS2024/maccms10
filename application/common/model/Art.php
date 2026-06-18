@@ -256,16 +256,16 @@ class Art extends Base {
 
         }
 
-        $where['art_status'] = ['eq',1];
+        $where['art_status'] = 1;
         if(!empty($level)) {
             if($level=='all'){
                 $level = '1,2,3,4,5,6,7,8,9';
             }
-            $where['art_level'] = ['in',explode(',',$level)];
+            $where['art_level'] = explode(',',$level);
         }
         if(!empty($ids)) {
             if($ids!='all'){
-                $where['art_id'] = ['in',explode(',',$ids)];
+                $where['art_id'] = explode(',',$ids);
             }
         }
         if(!empty($not)){
@@ -274,29 +274,29 @@ class Art extends Base {
         if(!empty($rel)){
             $tmp = explode(',',$rel);
             if(is_numeric($rel) || mac_array_check_num($tmp)==true ){
-                $where['art_id'] = ['in',$tmp];
+                $where['art_id'] = $tmp;
             }
             else{
-                $where['art_rel_art'] = ['like', mac_like_arr($rel),'OR'];
+                $where[] = ['art_rel_art', 'like', mac_like_arr($rel),'OR'];
             }
         }
         if(!empty($letter)){
             if(substr($letter,0,1)=='0' && substr($letter,2,1)=='9'){
                 $letter='0,1,2,3,4,5,6,7,8,9';
             }
-            $where['art_letter'] = ['in',explode(',',$letter)];
+            $where['art_letter'] = explode(',',$letter);
         }
         if(!empty($timeadd)){
             $s = intval(strtotime($timeadd));
-            $where['art_time_add'] =['gt',$s];
+            $where[] = ['art_time_add', '>', $s];
         }
         if(!empty($timehits)){
             $s = intval(strtotime($timehits));
-            $where['art_time_hits'] =['gt',$s];
+            $where[] = ['art_time_hits', '>', $s];
         }
         if(!empty($time)){
             $s = intval(strtotime($time));
-            $where['art_time'] =['gt',$s];
+            $where[] = ['art_time', '>', $s];
         }
         if(!empty($type)) {
             if($type=='current'){
@@ -312,19 +312,19 @@ class Art extends Base {
                     }
                 }
                 $type = array_unique($type);
-                $where['type_id'] = ['in', array_values(array_map('intval', $type))];
+                $where['type_id'] = array_values(array_map('intval', $type));
             }
         }
         if(!empty($typenot)){
             $where['type_id'] = ['not in', array_map('intval', explode(',', $typenot))];
         }
         if(!empty($tid)) {
-            $where['type_id|type_id_1'] = ['eq',$tid];
+            $where['type_id|type_id_1'] = $tid; // TODO:TP8-pipe-or
         }
         if(!empty($hitsmonth)){
             $tmp = explode(' ',$hitsmonth);
             if(count($tmp)==1){
-                $where['art_hits_month'] = ['gt', $tmp];
+                $where[] = ['art_hits_month', '>', $tmp];
             }
             else{
                 $where['art_hits_month'] = [$tmp[0],$tmp[1]];
@@ -333,7 +333,7 @@ class Art extends Base {
         if(!empty($hitsweek)){
             $tmp = explode(' ',$hitsweek);
             if(count($tmp)==1){
-                $where['art_hits_week'] = ['gt', $tmp];
+                $where[] = ['art_hits_week', '>', $tmp];
             }
             else{
                 $where['art_hits_week'] = [$tmp[0],$tmp[1]];
@@ -342,7 +342,7 @@ class Art extends Base {
         if(!empty($hitsday)){
             $tmp = explode(' ',$hitsday);
             if(count($tmp)==1){
-                $where['art_hits_day'] = ['gt', $tmp];
+                $where[] = ['art_hits_day', '>', $tmp];
             }
             else{
                 $where['art_hits_day'] = [$tmp[0],$tmp[1]];
@@ -351,7 +351,7 @@ class Art extends Base {
         if(!empty($hits)){
             $tmp = explode(' ',$hits);
             if(count($tmp)==1){
-                $where['art_hits'] = ['gt', $tmp];
+                $where[] = ['art_hits', '>', $tmp];
             }
             else{
                 $where['art_hits'] = [$tmp[0],$tmp[1]];
@@ -363,16 +363,16 @@ class Art extends Base {
             if(!empty($GLOBALS['config']['app']['search_art_rule'])){
                 $role .= '|'.$GLOBALS['config']['app']['search_art_rule'];
             }
-            $where[$role] = ['like', '%' . $wd . '%'];
+            $where[] = [$role, 'like', '%' . $wd . '%'];
         }
         if(!empty($name)) {
-            $where['art_name'] = ['like', mac_like_arr($name),'OR'];
+            $where[] = ['art_name', 'like', mac_like_arr($name),'OR'];
         }
         if(!empty($tag)) {
-            $where['art_tag'] = ['like', mac_like_arr($tag),'OR'];
+            $where[] = ['art_tag', 'like', mac_like_arr($tag),'OR'];
         }
         if(!empty($class)) {
-            $where['art_class'] = ['like',mac_like_arr($class),'OR'];
+            $where[] = ['art_class', 'like', mac_like_arr($class),'OR'];
         }
         if(defined('ENTRANCE') && ENTRANCE == 'index' && $GLOBALS['config']['app']['popedom_filter'] ==1){
             $type_ids = mac_get_popedom_filter($GLOBALS['user']['group']['group_type']);
@@ -464,8 +464,8 @@ class Art extends Base {
         $this->ensureRecycleColumnExists();
         $where = $this->mergeRecycleWhere($where);
         $data_cache = false;
-        $key = $GLOBALS['config']['app']['cache_flag']. '_'.'art_detail_'.$where['art_id'][1].'_'.$where['art_en'][1];
-        if($where['art_id'][0]=='eq' || $where['art_en'][0]=='eq'){
+        $key = $GLOBALS['config']['app']['cache_flag']. '_'.'art_detail_'.($where['art_id'] ?? '').'_'.($where['art_en'] ?? '');
+        if(isset($where['art_id']) || isset($where['art_en'])){
             $data_cache = true;
         }
         if($GLOBALS['config']['app']['cache_core']==1 && $data_cache) {
@@ -598,7 +598,7 @@ class Art extends Base {
         $seoObjId = 0;
         if(!empty($data['art_id'])){
             $where=[];
-            $where['art_id'] = ['eq',$data['art_id']];
+            $where['art_id'] = $data['art_id'];
             $res = $this->allowField(true)->where($where)->update($data);
             $seoObjId = intval($data['art_id']);
         }
@@ -693,7 +693,7 @@ class Art extends Base {
     {
         $today = strtotime(date('Y-m-d'));
         $where = [];
-        $where['art_time'] = ['gt',$today];
+        $where[] = ['art_time', '>', $today];
         if($flag=='type'){
             $ids = $this->where($where)->column('type_id');
         }

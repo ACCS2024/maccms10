@@ -16,11 +16,11 @@ class Visit extends Base
         $param['limit'] = intval($param['limit']) <1 ? $this->_pagesize : $param['limit'];
         $where=[];
         if(!empty($param['uid'])){
-            $where['user_id'] = ['eq',$param['uid'] ];
+            $where['user_id'] = $param['uid'] ;
         }
         if(isset($param['time'])){
             $t = strtotime(date('Y-m-d',strtotime('-'.$param['time'] .' day')));
-            $where['visit_time'] = ['egt', intval($t) ];
+            $where[] = ['visit_time', '>=', intval($t) ];
         }
         if(!empty($param['wd'])){
             $a = $param['wd'];
@@ -34,7 +34,7 @@ class Visit extends Base
                 $a = 'http://'.$param['wd'];
                 $b  = 'https://'.$param['wd'];
             }
-            $where['visit_ly'] = ['like', [$a.'%',$b.'%'],'OR'];
+            $where[] = ['visit_ly', 'like', [$a.'%',$b.'%'],'OR'];
         }
 
         $order='visit_id desc';
@@ -60,9 +60,9 @@ class Visit extends Base
         $all = $param['all'];
         if(!empty($ids)){
             $where=[];
-            $where['visit_id'] = ['in',$ids];
+            $where['visit_id'] = $ids;
             if($all==1){
-                $where['visit_id'] = ['gt',0];
+                $where[] = ['visit_id', '>', 0];
             }
             $res = model('Visit')->delData($where);
             if($res['code']>1){

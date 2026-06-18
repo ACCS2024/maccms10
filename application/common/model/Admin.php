@@ -67,7 +67,7 @@ class Admin extends Base {
                 $data['admin_pwd'] = mac_password_hash($data['admin_pwd']);
             }
             $where=[];
-            $where['admin_id'] = ['eq',$data['admin_id']];
+            $where['admin_id'] = $data['admin_id'];
             $res = $this->where($where)->update($data);
         }
         else{
@@ -132,8 +132,8 @@ class Admin extends Base {
 
 
         $where=[];
-        $where['admin_name'] = ['eq',$data['admin_name']];
-        $where['admin_status'] = ['eq',1];
+        $where['admin_name'] = $data['admin_name'];
+        $where['admin_status'] = 1;
 
         $row = $this->where($where)->find();
 

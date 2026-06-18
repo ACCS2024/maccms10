@@ -55,7 +55,7 @@ class VodAiCover
             return ['code' => 0, 'msg' => lang('param_err')];
         }
 
-        $res = model('Vod')->infoData(['vod_id' => ['eq', $vodId]], '*', 0);
+        $res = model('Vod')->infoData(['vod_id' => $vodId], '*', 0);
         if ($res['code'] !== 1 || empty($res['info'])) {
             return ['code' => 0, 'msg' => lang('obtain_err')];
         }

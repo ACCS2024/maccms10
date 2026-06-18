@@ -19,13 +19,13 @@ class Live extends Base
 
         if (!empty($param['wd'])) {
             $param['wd'] = htmlspecialchars(urldecode($param['wd']));
-            $where['live_name'] = ['like', '%' . $param['wd'] . '%'];
+            $where[] = ['live_name', 'like', '%' . $param['wd'] . '%'];
         }
         if (isset($param['cate_id']) && $param['cate_id'] !== '') {
-            $where['cate_id'] = ['eq', (int)$param['cate_id']];
+            $where['cate_id'] = (int)$param['cate_id'];
         }
         if (isset($param['status']) && $param['status'] !== '') {
-            $where['live_status'] = ['eq', (int)$param['status']];
+            $where['live_status'] = (int)$param['status'];
         }
 
         $order = 'live_sort desc, live_id desc';
@@ -61,7 +61,7 @@ class Live extends Base
         $id = input('id');
         $where = [];
         if (!empty($id)) {
-            $where['live_id'] = ['eq', $id];
+            $where['live_id'] = $id;
         }
         $res = model('Live')->infoData($where);
 
@@ -80,7 +80,7 @@ class Live extends Base
 
         if (!empty($ids)) {
             $where = [];
-            $where['live_id'] = ['in', $ids];
+            $where['live_id'] = $ids;
             $res = model('Live')->delData($where);
             if ($res['code'] > 1) {
                 return $this->error($res['msg']);
@@ -105,9 +105,9 @@ class Live extends Base
         if (!empty($ids) && isset($col) && isset($val)) {
             $where = [];
             if (is_array($ids)) {
-                $where['live_id'] = ['in', $ids];
+                $where['live_id'] = $ids;
             } else {
-                $where['live_id'] = ['eq', (int)$ids];
+                $where['live_id'] = (int)$ids;
             }
             $res = model('Live')->fieldData($where, $col, $val);
             if ($res['code'] > 1) {

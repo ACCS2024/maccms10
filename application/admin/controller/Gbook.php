@@ -17,25 +17,25 @@ class Gbook extends Base
 
         $where=[];
         if(in_array($param['status'],['0','1'],true)){
-            $where['gbook_status'] = ['eq',$param['status']];
+            $where['gbook_status'] = $param['status'];
         }
         if(in_array($param['type'],['1','2'])){
             if($param['type'] == 1){
                 $where['gbook_rid'] = 0;
             }
             elseif($param['type'] ==2){
-                $where['gbook_rid'] = ['gt',0];
+                $where[] = ['gbook_rid', '>', 0];
             }
         }
         if(!empty($param['reply'])){
-            $where['gbook_reply_time'] = ['gt', 0];
+            $where[] = ['gbook_reply_time', '>', 0];
         }
         if(!empty($param['uid'])){
-            $where['user_id'] = ['eq',$param['uid'] ];
+            $where['user_id'] = $param['uid'] ;
         }
         if(!empty($param['wd'])){
             $param['wd'] = htmlspecialchars(urldecode($param['wd']));
-            $where['gbook_name|gbook_content'] = ['like','%'.$param['wd'].'%'];
+            $where[] = ['gbook_name|gbook_content', 'like', '%'.$param['wd'].'%']; // TODO:TP8-pipe-or
         }
 
 
@@ -67,7 +67,7 @@ class Gbook extends Base
 
         $id = input('id');
         $where=[];
-        $where['gbook_id'] = ['eq',$id];
+        $where['gbook_id'] = $id;
         $res = model('Gbook')->infoData($where);
 
         $this->assign('info',$res['info']);
@@ -83,9 +83,9 @@ class Gbook extends Base
 
         if(!empty($ids) || !empty($all)){
             $where=[];
-            $where['gbook_id'] = ['in',$ids];
+            $where['gbook_id'] = $ids;
             if($all==1){
-                $where['gbook_id'] = ['gt',0];
+                $where[] = ['gbook_id', '>', 0];
             }
             $res = model('Gbook')->delData($where);
             if($res['code']>1){
@@ -105,7 +105,7 @@ class Gbook extends Base
 
         if(!empty($ids) && in_array($col,['gbook_status']) ){
             $where=[];
-            $where['gbook_id'] = ['in',$ids];
+            $where['gbook_id'] = $ids;
 
             $res = model('Gbook')->fieldData($where,$col,$val);
             if($res['code']>1){

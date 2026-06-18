@@ -273,9 +273,9 @@ class Search extends Base
 
         // 2) MySQL LIKE 回退
         $where = [
-            $meta['status'] => ['eq', 1],
-            $meta['like']   => ['like', '%' . $wd . '%'],
+            $meta['status'] => 1,
         ];
+        $where[] = [$meta['like'], 'like', '%' . $wd . '%'];
         if (!empty($meta['recycle'])) {
             try {
                 $total = Db::name($meta['table'])->where($where)->where($meta['recycle'], 0)->count();

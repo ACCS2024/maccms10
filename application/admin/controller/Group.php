@@ -15,11 +15,11 @@ class Group extends Base
         $where=[];
 
         if(in_array($param['status'],['0','1'],true)){
-            $where['group_status'] = ['eq',$param['status']];
+            $where['group_status'] = $param['status'];
         }
         if(!empty($param['wd'])){
             $param['wd'] = htmlspecialchars(urldecode($param['wd']));
-            $where['group_name'] = ['like','%'.$param['wd'].'%'];
+            $where[] = ['group_name', 'like', '%'.$param['wd'].'%'];
         }
 
         $order='group_id asc';
@@ -50,7 +50,7 @@ class Group extends Base
 
         $id = input('id');
         $where=[];
-        $where['group_id'] = ['eq',$id];
+        $where['group_id'] = $id;
         $res = model('Group')->infoData($where);
 
         $this->assign('info',$res['info']);
@@ -75,7 +75,7 @@ class Group extends Base
             }
 
             $where=[];
-            $where['group_id'] = ['in',$ids];
+            $where['group_id'] = $ids;
             $res = model('Group')->delData($where);
             if($res['code']>1){
                 return $this->error($res['msg']);
@@ -94,7 +94,7 @@ class Group extends Base
 
         if(!empty($ids) && in_array($col,['group_status']) && in_array($val,['0','1'])){
             $where=[];
-            $where['group_id'] = ['in',$ids];
+            $where['group_id'] = $ids;
 
             $res = model('Group')->fieldData($where,$col,$val);
             if($res['code']>1){

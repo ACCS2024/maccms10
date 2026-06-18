@@ -121,7 +121,7 @@ class Type extends Base
         $where = [];
         if (!empty($ids)) {
             $idArr = array_map('intval', explode(',', $ids));
-            $where['type_id'] = ['in', $idArr];
+            $where['type_id'] = $idArr;
         }
         if ($parent) {
             $where['type_pid'] = 0;

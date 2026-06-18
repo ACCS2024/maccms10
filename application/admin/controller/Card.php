@@ -17,14 +17,14 @@ class Card extends Base
 
         $where=[];
         if(in_array($param['sale_status'],['0','1'],true)){
-            $where['card_sale_status'] = ['eq',$param['sale_status']];
+            $where['card_sale_status'] = $param['sale_status'];
         }
         if(in_array($param['use_status'],['0','1'],true)){
-            $where['card_use_status'] = ['eq',$param['use_status']];
+            $where['card_use_status'] = $param['use_status'];
         }
         if(!empty($param['wd'])){
             $param['wd'] = htmlspecialchars(urldecode($param['wd']));
-            $where['card_no'] = ['like','%'.$param['wd'].'%'];
+            $where[] = ['card_no', 'like', '%'.$param['wd'].'%'];
         }
         if(isset($param['time'])){
             $t=0;
@@ -34,7 +34,7 @@ class Card extends Base
             else{
                 $t = strtotime(date('Y-m-d',strtotime('-'.$param['time'] .' day')));
             }
-            $where['card_add_time'] = ['egt', intval($t) ];
+            $where[] = ['card_add_time', '>=', intval($t) ];
         }
 
         if($param['export'] =='1'){
@@ -94,7 +94,7 @@ class Card extends Base
 
         $id = input('id');
         $where=[];
-        $where['card_id'] = ['eq',$id];
+        $where['card_id'] = $id;
         $res = model('Card')->infoData($where);
 
         $this->assign('info',$res['info']);
@@ -110,9 +110,9 @@ class Card extends Base
 
         if(!empty($ids)){
             $where=[];
-            $where['card_id'] = ['in',$ids];
+            $where['card_id'] = $ids;
             if($all==1){
-                $where['card_id'] = ['gt',0];
+                $where[] = ['card_id', '>', 0];
             }
 
             $res = model('Card')->delData($where);

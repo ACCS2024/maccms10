@@ -44,14 +44,14 @@ class Ajax extends Base
         $pre = mac_get_mid_code($mid);
         $order= $pre.'_time desc';
         $where=[];
-        $where[$pre.'_status'] = [ 'eq',1];
+        $where[$pre.'_status'] = 1;
         if(!empty($type_id)) {
             if(in_array($mid, ['1', '2'])){
                 $type_list = model('Type')->getCache('type_list');
                 $type_info = $type_list[$type_id];
                 if(!empty($type_info)) {
                     $ids = $type_info['type_pid'] == 0 ? $type_info['childids'] : $type_info['type_id'];
-                    $where['type_id|type_id_1'] = ['in', $ids];
+                    $where['type_id|type_id_1'] = $ids; // TODO:TP8-pipe-or
                 }
             }
         }
@@ -546,7 +546,7 @@ class Ajax extends Base
 
         if($mid=='1'){
             $where=[];
-            $where['vod_id'] = ['eq',$id];
+            $where['vod_id'] = $id;
             $info = model('Vod')->infoData($where);
             if($info['code'] >1){
                 return json(['code'=>1011,'msg'=>$info['msg']]);
@@ -569,7 +569,7 @@ class Ajax extends Base
         }
         else{
             $where=[];
-            $where['art_id'] = ['eq',$id];
+            $where['art_id'] = $id;
             $info = model('Art')->infoData($where);
             if($info['code'] >1){
                 return json(['code'=>1021,'msg'=>$info['msg']]);
@@ -594,8 +594,8 @@ class Ajax extends Base
         $num = intval($this->_param['num'] ?? 9);
         if ($num < 1 || $num > 20) $num = 9;
 
-        $where = ['manga_status' => ['eq', 1]];
-        if ($id > 0) $where['manga_id'] = ['neq', $id];
+        $where = ['manga_status' => 1];
+        if ($id > 0) $where[] = ['manga_id', '<>', $id];
         if ($tid > 0) $where['type_id'] = $tid;
 
         $order = 'manga_hits desc, manga_id desc';
@@ -643,8 +643,8 @@ class Ajax extends Base
         $num = intval($this->_param['num'] ?? 9);
         if ($num < 1 || $num > 20) $num = 9;
 
-        $where = ['art_status' => ['eq', 1]];
-        if ($id > 0) $where['art_id'] = ['neq', $id];
+        $where = ['art_status' => 1];
+        if ($id > 0) $where[] = ['art_id', '<>', $id];
         if ($tid > 0) $where['type_id'] = $tid;
 
         $order = 'art_hits desc, art_id desc';
@@ -758,9 +758,9 @@ class Ajax extends Base
                 'txt_list' => [],
             ];
         }
-        $where = ['vod_status' => ['eq', 1]];
+        $where = ['vod_status' => 1];
         $ids = $this->resolveTypeIds($typeId);
-        $where['type_id|type_id_1'] = ['in', $ids];
+        $where['type_id|type_id_1'] = $ids; // TODO:TP8-pipe-or
 
         $model = model('Vod');
         $imgRes = $model->listData($where, 'vod_hits_month desc', 1, 6, 0, '*', 1, 1);
@@ -780,7 +780,7 @@ class Ajax extends Base
                 $favRows = model('Ulog')->where([
                     'user_id' => $userId,
                     'ulog_type' => 2,
-                    'ulog_rid' => ['in', array_values(array_unique($vodIds))],
+                    'ulog_rid' => array_values(array_unique($vodIds)),
                 ])->column('ulog_id', 'ulog_rid');
                 if (is_array($favRows)) {
                     $favMap = $favRows;
@@ -846,8 +846,8 @@ class Ajax extends Base
         }
 
         $model = model('Manga');
-        $imgRes = $model->listData(['manga_status' => ['eq', 1]], 'manga_hits_month desc', 1, intval($vars['index_manga_hnum_str']), 0, '*', 1, 1);
-        $txtRes = $model->listData(['manga_status' => ['eq', 1]], 'manga_hits_month desc', 1, intval($vars['index_manga_hot_txt_num']), intval($vars['index_manga_hot_txt_start']), '*', 1, 1);
+        $imgRes = $model->listData(['manga_status' => 1], 'manga_hits_month desc', 1, intval($vars['index_manga_hnum_str']), 0, '*', 1, 1);
+        $txtRes = $model->listData(['manga_status' => 1], 'manga_hits_month desc', 1, intval($vars['index_manga_hot_txt_num']), intval($vars['index_manga_hot_txt_start']), '*', 1, 1);
 
         $imgList = [];
         if (($imgRes['code'] ?? 0) == 1 && !empty($imgRes['list'])) {
@@ -884,8 +884,8 @@ class Ajax extends Base
         }
 
         $model = model('Art');
-        $imgRes = $model->listData(['art_status' => ['eq', 1]], 'art_time desc', 1, intval($vars['index_art_hnum']), 0, '*', 1, 1);
-        $txtRes = $model->listData(['art_status' => ['eq', 1]], 'art_time desc', 1, intval($vars['index_art_hot_txt_num']), intval($vars['index_art_hot_txt_start']), '*', 1, 1);
+        $imgRes = $model->listData(['art_status' => 1], 'art_time desc', 1, intval($vars['index_art_hnum']), 0, '*', 1, 1);
+        $txtRes = $model->listData(['art_status' => 1], 'art_time desc', 1, intval($vars['index_art_hot_txt_num']), intval($vars['index_art_hot_txt_start']), '*', 1, 1);
 
         $imgList = [];
         if (($imgRes['code'] ?? 0) == 1 && !empty($imgRes['list'])) {

@@ -17,25 +17,25 @@ class Comment extends Base
 
         $where=[];
         if(in_array($param['status'],['0','1'],true)){
-            $where['comment_status'] = ['eq',$param['status']];
+            $where['comment_status'] = $param['status'];
         }
         if(in_array($param['mid'],['1','2','3'])){
-            $where['comment_mid'] = ['eq',$param['mid']];
+            $where['comment_mid'] = $param['mid'];
         }
         if(!empty($param['uid'])){
-            $where['user_id'] = ['eq',$param['uid'] ];
+            $where['user_id'] = $param['uid'] ;
         }
         if(!empty($param['report'])){
             if($param['report'] == 1){
-                $where['comment_report'] = ['eq',0];
+                $where['comment_report'] = 0;
             }
             else{
-                $where['comment_report'] = ['gt',0];
+                $where[] = ['comment_report', '>', 0];
             }
         }
         if(!empty($param['wd'])){
             $param['wd'] = htmlspecialchars(urldecode($param['wd']));
-            $where['comment_name|comment_content'] = ['like','%'.$param['wd'].'%'];
+            $where[] = ['comment_name|comment_content', 'like', '%'.$param['wd'].'%']; // TODO:TP8-pipe-or
         }
 
         $order='comment_id desc';
@@ -66,7 +66,7 @@ class Comment extends Base
 
         $id = input('id');
         $where=[];
-        $where['comment_id'] = ['eq',$id];
+        $where['comment_id'] = $id;
         $res = model('Comment')->infoData($where);
 
         $this->assign('info',$res['info']);
@@ -82,9 +82,9 @@ class Comment extends Base
 
         if(!empty($ids) || !empty($all)){
             $where=[];
-            $where['comment_id'] = ['in',$ids];
+            $where['comment_id'] = $ids;
             if($all==1){
-                $where['comment_id'] = ['gt',0];
+                $where[] = ['comment_id', '>', 0];
             }
             $res = model('Comment')->delData($where);
             if($res['code']>1){
@@ -104,7 +104,7 @@ class Comment extends Base
 
         if(!empty($ids) && in_array($col,['comment_status']) ){
             $where=[];
-            $where['comment_id'] = ['in',$ids];
+            $where['comment_id'] = $ids;
 
             $res = model('Comment')->fieldData($where,$col,$val);
             if($res['code']>1){

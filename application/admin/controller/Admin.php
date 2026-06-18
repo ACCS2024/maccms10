@@ -17,7 +17,7 @@ class Admin extends Base
         $where=[];
         if(!empty($param['wd'])){
             $param['wd'] = htmlspecialchars(urldecode($param['wd']));
-            $where['admin_name'] = ['like','%'.$param['wd'].'%'];
+            $where[] = ['admin_name', 'like', '%'.$param['wd'].'%'];
         }
 
         $order='admin_id desc';
@@ -59,7 +59,7 @@ class Admin extends Base
         $id = input('id');
 
         $where=[];
-        $where['admin_id'] = ['eq',$id];
+        $where['admin_id'] = $id;
 
         $res = model('Admin')->infoData($where);
         $this->assign('info',$res['info']);
@@ -103,7 +103,7 @@ class Admin extends Base
 
         if(!empty($ids)){
             $where=[];
-            $where['admin_id'] = ['in',$ids];
+            $where['admin_id'] = $ids;
             if(!is_array($ids)) {
                 $ids = explode(',', $ids);
             }
@@ -128,7 +128,7 @@ class Admin extends Base
 
         if(!empty($ids) && in_array($col,['admin_status']) && in_array($val,['0','1'])){
             $where=[];
-            $where['admin_id'] = ['in',$ids];
+            $where['admin_id'] = $ids;
 
             $res = model('Admin')->fieldData($where,$col,$val);
             if($res['code']>1){

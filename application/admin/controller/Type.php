@@ -83,11 +83,11 @@ class Type extends Base
         $id = input('id');
         $pid = input('pid');
         $where=[];
-        $where['type_id'] = ['eq',$id];
+        $where['type_id'] = $id;
         $res = model('Type')->infoData($where);
 
         $where=[];
-        $where['type_id'] = ['eq',$pid];
+        $where['type_id'] = $pid;
         $resp = model('Type')->infoData($where);
 
         $this->assign('info',$res['info']);
@@ -95,7 +95,7 @@ class Type extends Base
         $this->assign('pid',$pid);
 
         $where=[];
-        $where['type_pid'] = ['eq','0'];
+        $where['type_pid'] = '0';
         $order='type_sort asc';
         $parent = model('Type')->listData($where,$order);
         $this->assign('parent',$parent['list']);
@@ -110,7 +110,7 @@ class Type extends Base
 
         if(!empty($ids)){
             $where=[];
-            $where['type_id'] = ['in',$ids];
+            $where['type_id'] = $ids;
             $res = model('Type')->delData($where);
             if($res['code']>1){
                 return $this->error($res['msg']);
@@ -129,7 +129,7 @@ class Type extends Base
 
         if(!empty($ids) && in_array($col,['type_status']) && in_array($val,['0','1'])){
             $where=[];
-            $where['type_id'] = ['in',$ids];
+            $where['type_id'] = $ids;
 
             $res = model('Type')->fieldData($where,$col,$val);
             if($res['code']>1){
@@ -258,7 +258,7 @@ class Type extends Base
         $val = $param['val'];
         if(!empty($ids) && !empty($val)){
             $where=[];
-            $where['type_id'] = ['in',$ids];
+            $where['type_id'] = $ids;
             $res = model('Type')->moveData($where,$val);
             if($res['code']>1){
                 return $this->error($res['msg']);

@@ -44,10 +44,10 @@ class Topic extends Base
         $limit = isset($param['limit']) ? (int)$param['limit'] : 20;
         // 查询条件组装
         $where = [];
-        $where['topic_status'] = ['eq', 1];
+        $where['topic_status'] = 1;
 
         if (isset($param['time_end']) && isset($param['time_start'])) {
-            $where['topic_time'] = ['between', [(int)$param['time_start'], (int)$param['time_end']]];
+            $where[] = ['topic_time', 'between', [(int)$param['time_start'], (int)$param['time_end']]];
         }elseif (isset($param['time_end'])) {
             $where['topic_time'] = ['<', (int)$param['time_end']];
         }elseif (isset($param['time_start'])) {
@@ -263,7 +263,7 @@ class Topic extends Base
         }
 
         $where = [];
-        $where['topic_status'] = ['eq', 1];
+        $where['topic_status'] = 1;
 
         $list = Db::table('mac_topic')
             ->field('topic_id,topic_name,topic_en,topic_sub,topic_pic,topic_pic_slide,topic_blurb,topic_rel_vod,topic_time,topic_hits')

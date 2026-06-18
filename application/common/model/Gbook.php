@@ -95,12 +95,12 @@ class Gbook extends Base {
             $pageurl = mac_url($pageurl,$param);
         }
 
-        $where['gbook_status'] = ['eq',1];
+        $where['gbook_status'] = 1;
         if(!empty($rid)){
-            $where['gbook_rid'] = ['eq',$rid];
+            $where['gbook_rid'] = $rid;
         }
         if(!empty($uid)){
-            $where['user_id'] = ['eq',$uid];
+            $where['user_id'] = $uid;
         }
         if(!in_array($by, ['id', 'time','reply_time'])) {
             $by = 'time';
@@ -160,7 +160,7 @@ class Gbook extends Base {
                 $data['gbook_reply_time'] = time();
             }
             $where=[];
-            $where['gbook_id'] = ['eq',$data['gbook_id']];
+            $where['gbook_id'] = $data['gbook_id'];
             $res = $this->allowField(true)->where($where)->update($data);
         }
         else{

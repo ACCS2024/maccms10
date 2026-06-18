@@ -50,21 +50,21 @@ class Live extends Base
         }
 
         $where = [];
-        $where['live_status'] = ['eq', 1];
+        $where['live_status'] = 1;
 
         $offset = isset($param['offset']) ? (int)$param['offset'] : 0;
         $limit  = isset($param['limit']) ? (int)$param['limit'] : 20;
 
         if (isset($param['cate_id']) && (int)$param['cate_id'] > 0) {
-            $where['cate_id'] = ['eq', (int)$param['cate_id']];
+            $where['cate_id'] = (int)$param['cate_id'];
         }
 
         if (isset($param['name']) && strlen($param['name']) > 0) {
-            $where['live_name'] = ['like', '%' . htmlspecialchars($param['name']) . '%'];
+            $where[] = ['live_name', 'like', '%' . htmlspecialchars($param['name']) . '%'];
         }
 
         if (isset($param['level']) && (int)$param['level'] > 0) {
-            $where['live_level'] = ['egt', (int)$param['level']];
+            $where[] = ['live_level', '>=', (int)$param['level']];
         }
 
         // 排序
@@ -122,7 +122,7 @@ class Live extends Base
         }
 
         $live_id = (int)$param['live_id'];
-        $where = ['live_id' => ['eq', $live_id], 'live_status' => ['eq', 1]];
+        $where = ['live_id' => $live_id, 'live_status' => 1];
         $res = (new \app\common\model\Live())->infoData($where);
 
         if ($res['code'] > 1) {

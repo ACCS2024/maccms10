@@ -255,16 +255,16 @@ class Manga extends Base {
 
         }
 
-        $where['manga_status'] = ['eq',1];
+        $where['manga_status'] = 1;
         if(!empty($level)) {
             if($level=='all'){
                 $level = '1,2,3,4,5,6,7,8,9';
             }
-            $where['manga_level'] = ['in',explode(',',$level)];
+            $where['manga_level'] = explode(',',$level);
         }
         if(!empty($ids)) {
             if($ids!='all'){
-                $where['manga_id'] = ['in',explode(',',$ids)];
+                $where['manga_id'] = explode(',',$ids);
             }
         }
         if(!empty($not)){
@@ -273,29 +273,29 @@ class Manga extends Base {
         if(!empty($rel)){
             $tmp = explode(',',$rel);
             if(is_numeric($rel) || mac_array_check_num($tmp)==true ){
-                $where['manga_id'] = ['in',$tmp];
+                $where['manga_id'] = $tmp;
             }
             else{
-                $where['manga_rel_manga'] = ['like', mac_like_arr($rel),'OR'];
+                $where[] = ['manga_rel_manga', 'like', mac_like_arr($rel),'OR'];
             }
         }
         if(!empty($letter)){
             if(substr($letter,0,1)=='0' && substr($letter,2,1)=='9'){
                 $letter='0,1,2,3,4,5,6,7,8,9';
             }
-            $where['manga_letter'] = ['in',explode(',',$letter)];
+            $where['manga_letter'] = explode(',',$letter);
         }
         if(!empty($timeadd)){
             $s = intval(strtotime($timeadd));
-            $where['manga_time_add'] =['gt',$s];
+            $where[] = ['manga_time_add', '>', $s];
         }
         if(!empty($timehits)){
             $s = intval(strtotime($timehits));
-            $where['manga_time_hits'] =['gt',$s];
+            $where[] = ['manga_time_hits', '>', $s];
         }
         if(!empty($time)){
             $s = intval(strtotime($time));
-            $where['manga_time'] =['gt',$s];
+            $where[] = ['manga_time', '>', $s];
         }
         if(!empty($type)) {
             if($type=='current'){
@@ -311,19 +311,19 @@ class Manga extends Base {
                     }
                 }
                 $type = array_unique($type);
-                $where['type_id'] = ['in', array_values(array_map('intval', $type))];
+                $where['type_id'] = array_values(array_map('intval', $type));
             }
         }
         if(!empty($typenot)){
             $where['type_id'] = ['not in', array_map('intval', explode(',', $typenot))];
         }
         if(!empty($tid)) {
-            $where['type_id|type_id_1'] = ['eq',$tid];
+            $where['type_id|type_id_1'] = $tid; // TODO:TP8-pipe-or
         }
         if(!empty($hitsmonth)){
             $tmp = explode(' ',$hitsmonth);
             if(count($tmp)==1){
-                $where['manga_hits_month'] = ['gt', $tmp];
+                $where[] = ['manga_hits_month', '>', $tmp];
             }
             else{
                 $where['manga_hits_month'] = [$tmp[0],$tmp[1]];
@@ -332,7 +332,7 @@ class Manga extends Base {
         if(!empty($hitsweek)){
             $tmp = explode(' ',$hitsweek);
             if(count($tmp)==1){
-                $where['manga_hits_week'] = ['gt', $tmp];
+                $where[] = ['manga_hits_week', '>', $tmp];
             }
             else{
                 $where['manga_hits_week'] = [$tmp[0],$tmp[1]];
@@ -341,7 +341,7 @@ class Manga extends Base {
         if(!empty($hitsday)){
             $tmp = explode(' ',$hitsday);
             if(count($tmp)==1){
-                $where['manga_hits_day'] = ['gt', $tmp];
+                $where[] = ['manga_hits_day', '>', $tmp];
             }
             else{
                 $where['manga_hits_day'] = [$tmp[0],$tmp[1]];
@@ -350,7 +350,7 @@ class Manga extends Base {
         if(!empty($hits)){
             $tmp = explode(' ',$hits);
             if(count($tmp)==1){
-                $where['manga_hits'] = ['gt', $tmp];
+                $where[] = ['manga_hits', '>', $tmp];
             }
             else{
                 $where['manga_hits'] = [$tmp[0],$tmp[1]];
@@ -362,16 +362,16 @@ class Manga extends Base {
             if(!empty($GLOBALS['config']['app']['search_manga_rule'])){
                 $role .= '|'.$GLOBALS['config']['app']['search_manga_rule'];
             }
-            $where[$role] = ['like', '%' . $wd . '%'];
+            $where[] = [$role, 'like', '%' . $wd . '%'];
         }
         if(!empty($name)) {
-            $where['manga_name'] = ['like', mac_like_arr($name),'OR'];
+            $where[] = ['manga_name', 'like', mac_like_arr($name),'OR'];
         }
         if(!empty($tag)) {
-            $where['manga_tag'] = ['like', mac_like_arr($tag),'OR'];
+            $where[] = ['manga_tag', 'like', mac_like_arr($tag),'OR'];
         }
         if(!empty($class)) {
-            $where['manga_class'] = ['like',mac_like_arr($class),'OR'];
+            $where[] = ['manga_class', 'like', mac_like_arr($class),'OR'];
         }
         if(defined('ENTRANCE') && ENTRANCE == 'index' && $GLOBALS['config']['app']['popedom_filter'] ==1){
             $type_ids = mac_get_popedom_filter($GLOBALS['user']['group']['group_type']);
@@ -463,8 +463,8 @@ class Manga extends Base {
         $this->ensureRecycleColumnExists();
         $where = $this->mergeRecycleWhere($where);
         $data_cache = false;
-        $key = $GLOBALS['config']['app']['cache_flag']. '_'.'manga_detail_'.$where['manga_id'][1].'_'.$where['manga_en'][1];
-        if($where['manga_id'][0]=='eq' || $where['manga_en'][0]=='eq'){
+        $key = $GLOBALS['config']['app']['cache_flag']. '_'.'manga_detail_'.($where['manga_id'] ?? '').'_'.($where['manga_en'] ?? '');
+        if(isset($where['manga_id']) || isset($where['manga_en'])){
             $data_cache = true;
         }
         if($GLOBALS['config']['app']['cache_core']==1 && $data_cache) {
@@ -602,7 +602,7 @@ class Manga extends Base {
 
         if(!empty($data['manga_id'])){
             $where=[];
-            $where['manga_id'] = ['eq',$data['manga_id']];
+            $where['manga_id'] = $data['manga_id'];
             $res = $this->allowField(true)->where($where)->update($data);
         }
         else{
@@ -689,7 +689,7 @@ class Manga extends Base {
     {
         $today = strtotime(date('Y-m-d'));
         $where = [];
-        $where['manga_time'] = ['gt',$today];
+        $where[] = ['manga_time', '>', $today];
         if($flag=='type'){
             $ids = $this->where($where)->column('type_id');
         }

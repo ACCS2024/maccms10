@@ -28,7 +28,7 @@ class User extends Base
         }
         if(!empty($param['wd'])){
             $param['wd'] = htmlspecialchars(urldecode($param['wd']));
-            $where['user_name'] = ['like','%'.$param['wd'].'%'];
+            $where[] = ['user_name', 'like', '%'.$param['wd'].'%'];
         }
 
         $order='user_id desc';
@@ -70,22 +70,22 @@ class User extends Base
         $where=[];
         if(!empty($param['level'])){
             if($param['level']=='1'){
-                $where['user_pid'] = ['eq', $param['uid']];
+                $where['user_pid'] = $param['uid'];
             }
             elseif($param['level']=='2'){
-                $where['user_pid_2'] = ['eq', $param['uid']];
+                $where['user_pid_2'] = $param['uid'];
             }
             elseif($param['level']=='3'){
-                $where['user_pid_3'] = ['eq', $param['uid']];
+                $where['user_pid_3'] = $param['uid'];
             }
         }
         else{
-            $where['user_pid|user_pid_2|user_pid_3'] = ['eq', intval($param['uid']) ];
+            $where['user_pid|user_pid_2|user_pid_3'] = intval($param['uid']) ; // TODO:TP8-pipe-or
         }
 
         if(!empty($param['wd'])){
             $param['wd'] = htmlspecialchars(urldecode($param['wd']));
-            $where['user_name'] = ['like','%'.$param['wd'].'%'];
+            $where[] = ['user_name', 'like', '%'.$param['wd'].'%'];
         }
 
         $order='user_id desc';
@@ -96,7 +96,7 @@ class User extends Base
         }
 
         $where2=[];
-        $where2['user_pid'] = ['eq', $param['uid']];
+        $where2['user_pid'] = $param['uid'];
         $level_cc_1 = Db::name('User')->where($where2)->count();
         $where3 = [];
         $where3['user_id'] = $param['uid'];
@@ -104,7 +104,7 @@ class User extends Base
         $points_cc_1 = Db::name('Plog')->where($where3)->sum('plog_points');
 
         $where2=[];
-        $where2['user_pid_2'] = ['eq', $param['uid']];
+        $where2['user_pid_2'] = $param['uid'];
         $level_cc_2 = Db::name('User')->where($where2)->count();
         $where3 = [];
         $where3['user_id'] = $param['uid'];
@@ -112,7 +112,7 @@ class User extends Base
         $points_cc_2 = Db::name('Plog')->where($where3)->sum('plog_points');
 
         $where2=[];
-        $where2['user_pid_3'] = ['eq', $param['uid']];
+        $where2['user_pid_3'] = $param['uid'];
         $level_cc_3 = Db::name('User')->where($where2)->count();
         $where3 = [];
         $where3['user_id'] = $param['uid'];
@@ -150,12 +150,12 @@ class User extends Base
 
         $where = [];
         
-        $where['user_invite_count'] = ['gt', 0];
+        $where[] = ['user_invite_count', '>', 0];
         
         if(!empty($param['wd'])){
             $wd = htmlspecialchars(urldecode($param['wd']));
             $wd = str_replace(['%', '_'], ['\\%', '\\_'], $wd);
-            $where['user_name'] = ['like','%'.$wd.'%'];
+            $where[] = ['user_name', 'like', '%'.$wd.'%'];
         }
 
         $order='user_invite_count desc, user_id desc';
@@ -233,7 +233,7 @@ class User extends Base
 
         $id = input('id/d');
         $where=[];
-        $where['user_id'] = ['eq',$id];
+        $where['user_id'] = $id;
         $res = model('User')->infoData($where);
         $info = $res['info'];
 
@@ -259,7 +259,7 @@ class User extends Base
 
         if(!empty($ids)){
             $where=[];
-            $where['user_id'] = ['in',$ids];
+            $where['user_id'] = $ids;
             $res = model('User')->delData($where);
             if($res['code']>1){
                 return $this->error($res['msg']);
@@ -278,7 +278,7 @@ class User extends Base
 
         if(!empty($ids) && in_array($col,['user_status']) && in_array($val,['0','1'])){
             $where=[];
-            $where['user_id'] = ['in',$ids];
+            $where['user_id'] = $ids;
 
             $res = model('User')->fieldData($where,$col,$val);
             if($res['code']>1){

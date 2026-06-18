@@ -37,7 +37,7 @@ class Cash extends Base {
 
         if(!empty($user_ids)){
             $where2=[];
-            $where['user_id'] = ['in', $user_ids];
+            $where['user_id'] = $user_ids;
             $order='user_id desc';
             $user_list = model('User')->listData($where2,$order,1,999);
             $user_list = mac_array_rekey($user_list['list'],'user_id');

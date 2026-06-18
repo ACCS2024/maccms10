@@ -147,7 +147,7 @@ class User extends Base
                 $data['user_pwd'] = mac_password_hash($data['user_pwd']);
             }
             $where = [];
-            $where['user_id'] = ['eq', $data['user_id']];
+            $where['user_id'] = $data['user_id'];
             $res = $this->where($where)->update($data);
         } else {
             if (!$validate->scene('edit')->check($data)) {
@@ -250,8 +250,8 @@ class User extends Base
         $ip = mac_get_ip_long();
         if( $GLOBALS['config']['user']['reg_num'] > 0){
             $where2=[];
-            $where2['user_reg_ip'] = ['eq', $ip];
-            $where2['user_reg_time'] = ['gt', strtotime('today')];
+            $where2['user_reg_ip'] = $ip;
+            $where2[] = ['user_reg_time', '>', strtotime('today')];
             $cc = $this->where($where2)->count();
             if($cc >= $GLOBALS['config']['user']['reg_num']){
                 return ['code' => 1009, 'msg' => lang('model/user/ip_limit',[$GLOBALS['config']['user']['reg_num']])];
@@ -514,8 +514,8 @@ class User extends Base
         $ip = mac_get_ip_long();
         if (!empty($GLOBALS['config']['user']['reg_num']) && $GLOBALS['config']['user']['reg_num'] > 0) {
             $where2 = [];
-            $where2['user_reg_ip'] = ['eq', $ip];
-            $where2['user_reg_time'] = ['gt', strtotime('today')];
+            $where2['user_reg_ip'] = $ip;
+            $where2[] = ['user_reg_time', '>', strtotime('today')];
             $cc = $this->where($where2)->count();
             if ($cc >= $GLOBALS['config']['user']['reg_num']) {
                 return ['code' => 1009, 'msg' => lang('model/user/reg_daily_limit_reached')];
@@ -638,9 +638,9 @@ class User extends Base
             $where = [];
             $pattern = '/\w+([-+.]\w+)*@\w+([-.]\w+)*\.\w+([-.]\w+)*/';
             if (!preg_match($pattern, $data['user_name'])) {
-                $where['user_name'] = ['eq', $data['user_name']];
+                $where['user_name'] = $data['user_name'];
             } else {
-                $where['user_email'] = ['eq', $data['user_name']];
+                $where['user_email'] = $data['user_name'];
             }
             // 安全加固(V4):密码不再进 WHERE(并移除明文 OR 分支),改为取行后 mac_password_verify 校验
         } else {
@@ -652,7 +652,7 @@ class User extends Base
             }
             $where[$data['col']] = $data['openid'];
         }
-        $where['user_status'] = ['eq', 1];
+        $where['user_status'] = 1;
         $row = $this->where($where)->find();
 
         if(empty($row)) {
@@ -724,8 +724,8 @@ class User extends Base
     {
         $where=[];
         // 只处理VIP会员组（group_id > 2）且 user_end_time 已过期（排除 user_end_time=0 的普通用户）
-        $where['group_id'] = ['gt', 2];
-        $where['user_end_time'] = ['between', [1, time()]];
+        $where[] = ['group_id', '>', 2];
+        $where[] = ['user_end_time', 'between', [1, time()]];
 
         $update=[];
         $update['group_id'] = '2';
@@ -1111,9 +1111,9 @@ class User extends Base
 
         $where=[];
         $where['user_id'] = intval($GLOBALS['user']['user_id']);
-        $where['msg_time'] = ['gt',$stime];
-        $where['msg_code'] = ['eq',$param['code']];
-        $where['msg_type'] = ['eq', $param['type'] ];
+        $where[] = ['msg_time', '>', $stime];
+        $where['msg_code'] = $param['code'];
+        $where['msg_type'] = $param['type'] ;
         $res = model('msg')->infoData($where);
         if($res['code'] >1){
             return ['code'=>9002,'msg'=>lang('model/user/msg_not_found')];
@@ -1162,9 +1162,9 @@ class User extends Base
         }
         $where=[];
         $where['user_id'] = intval($GLOBALS['user']['user_id']);
-        $where['msg_time'] = ['gt',$stime];
-        $where['msg_type'] = ['eq', $param['type'] ];
-        $where['msg_to'] = ['eq', $param['to'] ];
+        $where[] = ['msg_time', '>', $stime];
+        $where['msg_type'] = $param['type'] ;
+        $where['msg_to'] = $param['to'] ;
         $res = model('msg')->infoData($where);
         if($res['code'] ==1){
             return ['code'=>9002,'msg'=>lang('model/user/do_not_send_frequently')];
@@ -1362,7 +1362,7 @@ class User extends Base
         $where = [];
         $where['user_id'] = $param['uid'];
         $where['visit_ip'] = $ip;
-        $where['visit_time'] = ['gt', $todayunix];
+        $where[] = ['visit_time', '>', $todayunix];
         $cc = model('visit')->where($where)->count();
         if ($cc>= $max_cc){
             return ['code' => 102, 'msg' => lang('model/user/visit_tip')];

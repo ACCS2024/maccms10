@@ -18,26 +18,26 @@ class Manga extends Base
 
         $where = [];
         if (!empty($param['type'])) {
-            $where['type_id|type_id_1'] = ['eq', $param['type']];
+            $where['type_id|type_id_1'] = $param['type']; // TODO:TP8-pipe-or
         }
         if (!empty($param['level'])) {
-            $where['manga_level'] = ['eq', $param['level']];
+            $where['manga_level'] = $param['level'];
         }
         if (in_array($param['status'], ['0', '1'])) {
-            $where['manga_status'] = ['eq', $param['status']];
+            $where['manga_status'] = $param['status'];
         }
         if (!empty($param['lock'])) {
-            $where['manga_lock'] = ['eq', $param['lock']];
+            $where['manga_lock'] = $param['lock'];
         }
         if(!empty($param['pic'])){
             if($param['pic'] == '1'){
-                $where['manga_pic'] = ['eq',''];
+                $where['manga_pic'] = '';
             }
             elseif($param['pic'] == '2'){
-                $where['manga_pic'] = ['like','http%'];
+                $where[] = ['manga_pic', 'like', 'http%'];
             }
             elseif($param['pic'] == '3'){
-                $where['manga_pic'] = ['like','%#err%'];
+                $where[] = ['manga_pic', 'like', '%#err%'];
             }
         }
         if(!empty($param['wd'])){
@@ -54,12 +54,12 @@ class Manga extends Base
 
         if(!empty($param['url'])){
             if($param['url'] == '1'){
-                $where['manga_chapter_url'] = ['eq',''];
+                $where['manga_chapter_url'] = '';
             }
         }
         if(!empty($param['points'])){
             if($param['points'] == '1'){
-                $where['manga_points'] = ['gt',0];
+                $where[] = ['manga_points', '>', 0];
             }
         }
 
@@ -198,24 +198,24 @@ class Manga extends Base
     {
         $where = [];
         if (!empty($param['type'])) {
-            $where['type_id'] = ['eq', $param['type']];
+            $where['type_id'] = $param['type'];
         }
         if (!empty($param['level'])) {
-            $where['manga_level'] = ['eq', $param['level']];
+            $where['manga_level'] = $param['level'];
         }
         if (in_array($param['status'] ?? '', ['0', '1'])) {
-            $where['manga_status'] = ['eq', $param['status']];
+            $where['manga_status'] = $param['status'];
         }
         if (!empty($param['lock'])) {
-            $where['manga_lock'] = ['eq', $param['lock']];
+            $where['manga_lock'] = $param['lock'];
         }
         if (!empty($param['pic'])) {
             if ($param['pic'] == '1') {
-                $where['manga_pic'] = ['eq', ''];
+                $where['manga_pic'] = '';
             } elseif ($param['pic'] == '2') {
-                $where['manga_pic'] = ['like', 'http%'];
+                $where[] = ['manga_pic', 'like', 'http%'];
             } elseif ($param['pic'] == '3') {
-                $where['manga_pic'] = ['like', '%#err%'];
+                $where[] = ['manga_pic', 'like', '%#err%'];
             }
         }
         if (!empty($param['wd'])) {
@@ -256,7 +256,7 @@ class Manga extends Base
 
         $id = input('id');
         $where=[];
-        $where['manga_id'] = ['eq',$id];
+        $where['manga_id'] = $id;
         $where['_recycle'] = 'all';
         $res = model('Manga')->infoData($where);
 
@@ -297,7 +297,7 @@ class Manga extends Base
 
         if(!empty($ids)){
             $where=[];
-            $where['manga_id'] = ['in',$ids];
+            $where['manga_id'] = $ids;
             if ($purge) {
                 $res = model('Manga')->delData($where);
             } else {
@@ -337,7 +337,7 @@ class Manga extends Base
 
         if(!empty($ids) && in_array($col,['manga_status','manga_lock','manga_level','manga_hits','type_id'])){
             $where=[];
-            $where['manga_id'] = ['in',$ids];
+            $where['manga_id'] = $ids;
             $update = [];
             if(empty($start)) {
                 $update[$col] = $val;
@@ -353,7 +353,7 @@ class Manga extends Base
                 $ids = explode(',',$ids);
                 foreach($ids as $k=>$v){
                     $val = rand($start,$end);
-                    $where['manga_id'] = ['eq',$v];
+                    $where['manga_id'] = $v;
                     $update[$col] = $val;
                     $res = model('Manga')->fieldData($where, $update);
                 }

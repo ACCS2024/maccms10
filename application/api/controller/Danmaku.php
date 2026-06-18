@@ -233,7 +233,7 @@ class Danmaku extends Base
         $danmaku_id = (int)$param['danmaku_id'];
 
         $where = [];
-        $where['danmaku_id'] = ['eq', $danmaku_id];
+        $where['danmaku_id'] = $danmaku_id;
         $info = (new \app\common\model\Danmaku())->infoData($where);
         if ($info['code'] > 1) {
             return json(['code' => 1002, 'msg' => lang('danmaku/not_found')]);

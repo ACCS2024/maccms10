@@ -68,21 +68,21 @@ class MeilisearchListBridge
 
         // 索引滞后（Meilisearch 有命中但 ID 解析失败）：返回空集，不回退 MySQL LIKE
         if (self::shouldAbortMeiliForStaleHits($hitRows, $ids)) {
-            $nw['vod_id'] = ['eq', -1];
+            $nw['vod_id'] = -1;
             return ['where' => $nw, 'order' => $currentOrder, 'total' => 0];
         }
         $ids = self::refineMeiliPrimaryIds($ids, 'vod');
         // 索引滞后（Meilisearch 有命中但 MySQL 中已全部下架/删除）：返回空集，不回退 MySQL LIKE
         if (self::shouldAbortMeiliForStaleHits($hitRows, $ids)) {
-            $nw['vod_id'] = ['eq', -1];
+            $nw['vod_id'] = -1;
             return ['where' => $nw, 'order' => $currentOrder, 'total' => 0];
         }
 
         if (empty($ids)) {
-            $nw['vod_id'] = ['eq', -1];
+            $nw['vod_id'] = -1;
             $order = $currentOrder;
         } else {
-            $nw['vod_id'] = ['in', $ids];
+            $nw['vod_id'] = $ids;
             $order = Db::raw('FIELD(vod_id,' . implode(',', $ids) . ')');
         }
 
@@ -146,20 +146,20 @@ class MeilisearchListBridge
         }
 
         if (self::shouldAbortMeiliForStaleHits($hitRows, $ids)) {
-            $nw['art_id'] = ['eq', -1];
+            $nw['art_id'] = -1;
             return ['where' => $nw, 'order' => $currentOrder, 'total' => 0];
         }
         $ids = self::refineMeiliPrimaryIds($ids, 'art');
         if (self::shouldAbortMeiliForStaleHits($hitRows, $ids)) {
-            $nw['art_id'] = ['eq', -1];
+            $nw['art_id'] = -1;
             return ['where' => $nw, 'order' => $currentOrder, 'total' => 0];
         }
 
         if (empty($ids)) {
-            $nw['art_id'] = ['eq', -1];
+            $nw['art_id'] = -1;
             $order = $currentOrder;
         } else {
-            $nw['art_id'] = ['in', $ids];
+            $nw['art_id'] = $ids;
             $order = Db::raw('FIELD(art_id,' . implode(',', $ids) . ')');
         }
 
@@ -223,20 +223,20 @@ class MeilisearchListBridge
         }
 
         if (self::shouldAbortMeiliForStaleHits($hitRows, $ids)) {
-            $nw['manga_id'] = ['eq', -1];
+            $nw['manga_id'] = -1;
             return ['where' => $nw, 'order' => $currentOrder, 'total' => 0];
         }
         $ids = self::refineMeiliPrimaryIds($ids, 'manga');
         if (self::shouldAbortMeiliForStaleHits($hitRows, $ids)) {
-            $nw['manga_id'] = ['eq', -1];
+            $nw['manga_id'] = -1;
             return ['where' => $nw, 'order' => $currentOrder, 'total' => 0];
         }
 
         if (empty($ids)) {
-            $nw['manga_id'] = ['eq', -1];
+            $nw['manga_id'] = -1;
             $order = $currentOrder;
         } else {
-            $nw['manga_id'] = ['in', $ids];
+            $nw['manga_id'] = $ids;
             $order = Db::raw('FIELD(manga_id,' . implode(',', $ids) . ')');
         }
 
@@ -304,10 +304,10 @@ class MeilisearchListBridge
             }
         }
         if (empty($ids)) {
-            $nw['topic_id'] = ['eq', -1];
+            $nw['topic_id'] = -1;
             $order = $currentOrder;
         } else {
-            $nw['topic_id'] = ['in', $ids];
+            $nw['topic_id'] = $ids;
             $order = Db::raw('FIELD(topic_id,' . implode(',', $ids) . ')');
         }
 
@@ -375,10 +375,10 @@ class MeilisearchListBridge
             }
         }
         if (empty($ids)) {
-            $nw['actor_id'] = ['eq', -1];
+            $nw['actor_id'] = -1;
             $order = $currentOrder;
         } else {
-            $nw['actor_id'] = ['in', $ids];
+            $nw['actor_id'] = $ids;
             $order = Db::raw('FIELD(actor_id,' . implode(',', $ids) . ')');
         }
 
@@ -446,10 +446,10 @@ class MeilisearchListBridge
             }
         }
         if (empty($ids)) {
-            $nw['role_id'] = ['eq', -1];
+            $nw['role_id'] = -1;
             $order = $currentOrder;
         } else {
-            $nw['role_id'] = ['in', $ids];
+            $nw['role_id'] = $ids;
             $order = Db::raw('FIELD(role_id,' . implode(',', $ids) . ')');
         }
 
@@ -517,10 +517,10 @@ class MeilisearchListBridge
             }
         }
         if (empty($ids)) {
-            $nw['website_id'] = ['eq', -1];
+            $nw['website_id'] = -1;
             $order = $currentOrder;
         } else {
-            $nw['website_id'] = ['in', $ids];
+            $nw['website_id'] = $ids;
             $order = Db::raw('FIELD(website_id,' . implode(',', $ids) . ')');
         }
 
@@ -716,7 +716,7 @@ class MeilisearchListBridge
     {
         $parts = ['kind = "art"', 'recycle = 0', 'status = 1'];
         if (isset($w['art_status'])) {
-            if (!is_array($w['art_status']) || ($w['art_status'][0] ?? '') !== 'eq' || (int)($w['art_status'][1] ?? 0) !== 1) {
+            if (self::extractStatusVal($w['art_status']) !== 1) {
                 return null;
             }
         }
@@ -779,7 +779,7 @@ class MeilisearchListBridge
     {
         $parts = ['kind = "manga"', 'recycle = 0', 'status = 1'];
         if (isset($w['manga_status'])) {
-            if (!is_array($w['manga_status']) || ($w['manga_status'][0] ?? '') !== 'eq' || (int)($w['manga_status'][1] ?? 0) !== 1) {
+            if (self::extractStatusVal($w['manga_status']) !== 1) {
                 return null;
             }
         }
@@ -842,7 +842,7 @@ class MeilisearchListBridge
     {
         $parts = ['kind = "topic"', 'recycle = 0', 'status = 1'];
         if (isset($w['topic_status'])) {
-            if (!is_array($w['topic_status']) || ($w['topic_status'][0] ?? '') !== 'eq' || (int)($w['topic_status'][1] ?? 0) !== 1) {
+            if (self::extractStatusVal($w['topic_status']) !== 1) {
                 return null;
             }
         }
@@ -890,7 +890,7 @@ class MeilisearchListBridge
     {
         $parts = ['kind = "actor"', 'recycle = 0', 'status = 1'];
         if (isset($w['actor_status'])) {
-            if (!is_array($w['actor_status']) || ($w['actor_status'][0] ?? '') !== 'eq' || (int)($w['actor_status'][1] ?? 0) !== 1) {
+            if (self::extractStatusVal($w['actor_status']) !== 1) {
                 return null;
             }
         }
@@ -963,7 +963,7 @@ class MeilisearchListBridge
     {
         $parts = ['kind = "role"', 'recycle = 0', 'status = 1'];
         if (isset($w['role_status'])) {
-            if (!is_array($w['role_status']) || ($w['role_status'][0] ?? '') !== 'eq' || (int)($w['role_status'][1] ?? 0) !== 1) {
+            if (self::extractStatusVal($w['role_status']) !== 1) {
                 return null;
             }
         }
@@ -1020,7 +1020,7 @@ class MeilisearchListBridge
     {
         $parts = ['kind = "website"', 'recycle = 0', 'status = 1'];
         if (isset($w['website_status'])) {
-            if (!is_array($w['website_status']) || ($w['website_status'][0] ?? '') !== 'eq' || (int)($w['website_status'][1] ?? 0) !== 1) {
+            if (self::extractStatusVal($w['website_status']) !== 1) {
                 return null;
             }
         }
@@ -1101,11 +1101,33 @@ class MeilisearchListBridge
     }
 
     /**
+     * Extract integer status value, handling both TP8 scalar and legacy TP5 ['eq', $v] format.
+     * @return int|null
+     */
+    private static function extractStatusVal($cond): ?int
+    {
+        if ($cond === null) {
+            return null;
+        }
+        if (!is_array($cond)) {
+            return is_numeric($cond) ? (int)$cond : null;
+        }
+        if (isset($cond[0]) && $cond[0] === 'eq' && isset($cond[1])) {
+            return (int)$cond[1];
+        }
+        return null;
+    }
+
+    /**
      * @return int|null
      */
     private static function parseEq($cond)
     {
-        if (!is_array($cond) || !isset($cond[0])) {
+        // After TP8 fix: scalar values are direct equality
+        if (!is_array($cond)) {
+            return is_numeric($cond) ? (int)$cond : null;
+        }
+        if (!isset($cond[0])) {
             return null;
         }
         if ($cond[0] === 'eq' && isset($cond[1])) {
