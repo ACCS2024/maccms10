@@ -2,6 +2,7 @@
 /.vscode
 *.DS_Store
 /vendor
+composer.phar
 .env
 .tags*
 .swp
