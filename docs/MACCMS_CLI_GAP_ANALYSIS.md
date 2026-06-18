@@ -156,7 +156,7 @@
 
 | 批次 | 内容 | 预估 | 价值 |
 |---|---|---|---|
-| **批 1(debug 刚需)** | `admin:reset-password`、`cache:flush`、`info`、`db:export`/`db:import` | ~0.5–1 天 | 立竿见影 |
+| **批 1(debug 刚需)✅ 已完成** | `admin:reset-password`、`cache:flush`、`info`、`db:export`/`db:import`(+ `bin/maccms` 透传 `--path`) | — | 已实测通过 |
 | **批 2(多站/脚本化)** | `--path` 全命令、`maccms-cli.yml` + `@别名`/`@all`、`--format=json`/`--porcelain` | ~1–2 天 | 直击"频繁多站" |
 | **批 3(迁移/安全)** | `db:search-replace`(+`--dry-run`)、破坏前自动备份、`--dry-run` 全面化、`--yes` 统一 | ~1–2 天 | 克隆/迁移、安全 |
 | **批 4(打磨)** | bash 补全、`db:query`、`cron:run`、`config:get/set`、`addon:list` | 按需 | 效率 |

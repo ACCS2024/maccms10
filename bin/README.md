@@ -37,6 +37,24 @@ bin/maccms doctor
 | `doctor` | PHP/扩展/rsync 体检 |
 | `help` | 使用帮助 |
 
+### 站点运维命令(透传给 `php think`,可加 `--path=<站点根>` 指定其它站点)
+
+| 命令 | 作用 |
+|---|---|
+| `info [--format=table\|json]` | 站点/环境自检(版本/扩展/安装状态/数据库/可写目录/性能建议) |
+| `cache:flush [--with-log]` | 清空 runtime 缓存(改完代码即清),重置 opcache |
+| `admin:reset-password --user=admin [--password=xxx]` | 重置后台管理员口令(进不去后台时自救;缺省随机) |
+| `db:export [--file=xx.sql] [--tables=a,b]` | 导出数据库到 .sql(PDO 实现,无需 mysqldump) |
+| `db:import --file=xx.sql [--src-prefix=mac_ --dst-prefix=site1_]` | 从 .sql 恢复(可选表前缀替换) |
+
+```bash
+# 例:对另一个站点目录做运维
+bin/maccms info --path=/srv/site1
+bin/maccms cache:flush --path=/srv/site1
+bin/maccms admin:reset-password --path=/srv/site1 --user=admin
+bin/maccms db:export --path=/srv/site1 --file=/backup/site1.sql
+```
+
 ## root 口令传递(三选一,按优先级)
 
 1. **环境变量**:`MACCMS_DB_ROOT_PASS=secret bin/maccms install ...`

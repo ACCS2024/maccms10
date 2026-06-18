@@ -45,6 +45,24 @@ maccms-cli —— 一键建站 / 快速部署
   help
         显示本帮助。
 
+  —— 以下为站点运维命令(透传给 php think;默认作用于当前代码树,
+     可用 --path=<站点根> 指定其它站点) ——
+
+  info [--format=table|json]
+        站点/环境自检(版本/扩展/安装状态/数据库/可写目录/性能建议)。
+
+  cache:flush [--with-log]
+        清空 runtime 缓存(改完代码即清)。
+
+  admin:reset-password --user=admin [--password=xxx]
+        重置后台管理员口令(后台进不去时自救)。
+
+  db:export [--file=xx.sql] [--tables=a,b]
+        导出数据库到 .sql(无需 mysqldump)。
+
+  db:import --file=xx.sql [--src-prefix=mac_ --dst-prefix=site1_]
+        从 .sql 恢复数据库。
+
 口令传递(三选一,按优先级):
   1) 环境变量:  MACCMS_DB_ROOT_PASS=secret bin/maccms install ...
   2) 标准输入:  echo "$ROOTPW" | bin/maccms install ...
@@ -119,6 +137,15 @@ case "$cmd" in
     ;;
 
   *)
-    die "未知命令: $cmd(运行 bin/maccms help 查看用法)"
+    # 透传:其余命令直接转发给 php think(支持 --path=<站点根> 定位站点)
+    root="$SRC_ROOT"; args=()
+    for a in "$@"; do
+      case "$a" in
+        --path=*) root="${a#--path=}" ;;
+        *) args+=("$a") ;;
+      esac
+    done
+    [ -f "$root/think" ] || die "未找到 $root/think(用 --path=<站点根> 指定站点)"
+    exec "$(php_bin)" "$root/think" "$cmd" ${args[@]+"${args[@]}"}
     ;;
 esac
