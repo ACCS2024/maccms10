@@ -1046,7 +1046,6 @@ polyfill;
         return ['code' => 1, 'msg' => lang('controller/popedom_ok')];
     }
 
-    // ===== TP8 Controller Shim（P5 阶段移除）=====
     protected function success($msg = '', $url = null, $data = '', $wait = 3)
     {
         if (\think\facade\Request::isAjax()) {
@@ -1077,5 +1076,4 @@ polyfill;
         }
         return \think\facade\View::fetch($template);
     }
-    // ===== /TP8 Controller Shim =====
 }
