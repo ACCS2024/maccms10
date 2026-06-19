@@ -11,12 +11,14 @@ class All
     var $_tsp;
     var $_url;
     protected $_page_sf_lock = false; // 整页缓存单飞:本请求持有的锁键(产出后释放)
+    protected $request;
 
     public function __construct()
     {
         if (method_exists($this, 'initialize')) {
             $this->initialize();
         }
+        $this->request = request();
         $this->_ref = mac_get_refer();
         $this->_cl = request()->controller();
         $this->_ac = request()->action();

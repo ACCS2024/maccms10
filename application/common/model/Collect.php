@@ -4,7 +4,6 @@ use think\facade\Db;
 use think\facade\Cache;
 use app\common\util\Pinyin;
 use app\common\util\Dir;
-use think\Request;
 use app\common\validate\Vod as VodValidate;
 
 class Collect extends Base {

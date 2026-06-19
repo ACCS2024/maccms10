@@ -1,7 +1,6 @@
 <?php
 namespace app\common\extend\urlsend;
 
-use think\Cache;
 
 class Baidufast {
 

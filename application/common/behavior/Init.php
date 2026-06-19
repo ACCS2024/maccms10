@@ -1,7 +1,7 @@
 <?php
 namespace app\common\behavior;
 
-use think\Cache;
+use think\facade\Cache;
 use think\Exception;
 
 class Init
@@ -135,7 +135,7 @@ class Init
         }
         if($config['app']['cache_type'] != 'file'){
             $opt = config('cache');
-            Cache::$handler = null;
+            Cache::forgetDriver();
         }
 
         // 会话存储:可选切 Redis(默认文件)。PHP 文件 session 有写锁——同一用户的并发请求
