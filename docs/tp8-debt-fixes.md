@@ -12,7 +12,7 @@
 
 - [x] 修复 install.php bootstrap
 - [x] lint 通过
-- [ ] commit
+- [x] commit 8646dc4
 
 ---
 
@@ -42,7 +42,7 @@ $where[] = function($query) use ($tid) {
 - [x] common/model/Actor|Art|Manga|Vod|Website.php（模型层 type_id|type_id_1，共 5 处）
 - [x] admin/controller/Actor|Art|Manga|Vod|Website.php + Make.php（admin 层，共 6 处）
 - [x] index/controller/Ajax.php（前台层，共 2 处）
-- [ ] commit
+- [x] commit 8646dc4
 
 ---
 
@@ -66,7 +66,7 @@ $where[] = function($query) use ($wd) {
 - [x] api/controller/Role.php:72
 - [x] common/model/Role|Website|Topic.php（模型层 LIKE 管道，3 处）
 - [x] admin/controller/Adminaudit|Comment|Gbook|Task|Chatroom|Danmaku|Vod.php（admin 层 LIKE 管道，9 处）
-- [ ] commit
+- [x] commit 8646dc4
 
 ---
 
@@ -99,7 +99,7 @@ $where[] = ['actor_hits_month', 'between', [$tmp[0], $tmp[1]]];
 - [x] Website.php（8 处）
 - [x] Role.php（4 处）
 - [x] Topic.php（4 处）
-- [ ] commit
+- [x] commit 8646dc4
 
 ---
 
