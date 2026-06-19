@@ -6,13 +6,13 @@ on:
 
 jobs:
   php-lint:
-    name: PHP Lint (7.4)
+    name: PHP Lint (8.1)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: shivammathur/setup-php@v2
         with:
-          php-version: '7.4'
+          php-version: '8.1'
           coverage: none
       - name: php -l on application/ + entry files
         run: |
