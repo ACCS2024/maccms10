@@ -160,11 +160,7 @@ class Card extends Base {
             }
 
             // 认领成功后再加积分
-            $res = (new \app\common\model\User())->where(['user_id' => $user_info['user_id']])->setInc('user_points', $info['card_points']);
-            if ($res === false) {
-                Db::rollback();
-                return ['code' => 1003, 'msg' => lang('model/card/update_user_points_err')];
-            }
+            (new \app\common\model\User())->where(['user_id' => $user_info['user_id']])->setInc('user_points', $info['card_points']);
 
             //积分日志
             (new \app\common\model\Plog())->saveData([

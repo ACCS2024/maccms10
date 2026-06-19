@@ -46,7 +46,7 @@ class Art extends Base
             mac_apply_like_where($where, 'art_name', $param['wd']);
         }
         if (!empty($param['recycle'])) {
-            $where['art_recycle_time'] = ['>', 0];
+            $where[] = ['art_recycle_time', '>', 0];
         }
 
         if(!empty($param['repeat'])){
@@ -226,7 +226,7 @@ class Art extends Base
             mac_apply_like_where($where, 'art_name', $param['wd']);
         }
         if (!empty($param['recycle'])) {
-            $where['art_recycle_time'] = ['>', 0];
+            $where[] = ['art_recycle_time', '>', 0];
         }
         return $where;
     }
@@ -307,7 +307,7 @@ class Art extends Base
         if (empty($ids)) {
             return $this->error(lang('param_err'));
         }
-        $where = ['art_id' => ['in', $ids]];
+        $where = [['art_id', 'in', $ids]];
         $res = (new \app\common\model\Art())->restoreData($where);
         if ($res['code'] > 1) {
             return $this->error($res['msg']);

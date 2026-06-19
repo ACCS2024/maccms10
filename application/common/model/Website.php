@@ -254,7 +254,7 @@ class Website extends Base {
             }
         }
         if(!empty($not)){
-            $where['website_id'] = ['not in',explode(',',$not)];
+            $where[] = ['website_id', 'not in', explode(',', $not)];
         }
         if(!empty($letter)){
             if(substr($letter,0,1)=='0' && substr($letter,2,1)=='9'){
@@ -293,7 +293,7 @@ class Website extends Base {
             }
         }
         if(!empty($typenot)){
-            $where['type_id'] = ['not in', array_map('intval', explode(',', $typenot))];
+            $where[] = ['type_id', 'not in', array_map('intval', explode(',', $typenot))];
         }
         if(!empty($tid)) {
             $where['type_id|type_id_1'] = $tid;

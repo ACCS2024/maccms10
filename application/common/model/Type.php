@@ -165,7 +165,7 @@ class Type extends Base {
             $where['type_pid'] = $parent;
         }
         if(!empty($not)){
-            $where['type_id'] = ['not in',$not];
+            $where[] = ['type_id', 'not in', $not];
         }
         // 按名称查询：仅展示名称在列表中的分类，查不到的不展示
         if(!empty($names)){
@@ -179,11 +179,14 @@ class Type extends Base {
         if(defined('ENTRANCE') && ENTRANCE == 'index' && $GLOBALS['config']['app']['popedom_filter'] ==1){
             $type_ids = mac_get_popedom_filter($GLOBALS['user']['group']['group_type']);
             if(!empty($type_ids)){
-                if(!empty($where['type_id'])){
-                    $where['type_id'] = [ $where['type_id'],['not in', explode(',',$type_ids)] ];
-                }
-                else{
-                    $where['type_id'] = ['not in', explode(',',$type_ids)];
+                $type_ids_arr = array_map('intval', explode(',', $type_ids));
+                if(isset($where['type_id']) && is_array($where['type_id'])){
+                    $where['type_id'] = array_values(array_diff($where['type_id'], $type_ids_arr));
+                    if(empty($where['type_id'])){
+                        $where['type_id'] = -1;
+                    }
+                } else {
+                    $where[] = ['type_id', 'not in', $type_ids_arr];
                 }
             }
         }

@@ -197,7 +197,7 @@ class Actor extends Base {
             }
         }
         if(!empty($not)){
-            $where['actor_id'] = ['not in',explode(',',$not)];
+            $where[] = ['actor_id', 'not in', explode(',', $not)];
         }
         if(!empty($sex)){
             $where['actor_sex'] = $sex;
@@ -239,7 +239,7 @@ class Actor extends Base {
             }
         }
         if(!empty($typenot)){
-            $where['type_id'] = ['not in', array_map('intval', explode(',', $typenot))];
+            $where[] = ['type_id', 'not in', array_map('intval', explode(',', $typenot))];
         }
         if(!empty($tid)) {
             $where['type_id|type_id_1'] = $tid;

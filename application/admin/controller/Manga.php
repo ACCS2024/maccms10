@@ -46,7 +46,7 @@ class Manga extends Base
             mac_apply_like_where($where, 'manga_name', $param['wd']);
         }
         if (!empty($param['recycle'])) {
-            $where['manga_recycle_time'] = ['>', 0];
+            $where[] = ['manga_recycle_time', '>', 0];
         }
 
         if(!empty($param['url'])){
@@ -220,7 +220,7 @@ class Manga extends Base
             mac_apply_like_where($where, 'manga_name', $param['wd']);
         }
         if (!empty($param['recycle'])) {
-            $where['manga_recycle_time'] = ['>', 0];
+            $where[] = ['manga_recycle_time', '>', 0];
         }
         return $where;
     }
@@ -275,7 +275,7 @@ class Manga extends Base
         if (empty($ids)) {
             return $this->error(lang('param_err'));
         }
-        $where = ['manga_id' => ['in', $ids]];
+        $where = [['manga_id', 'in', $ids]];
         $res = (new \app\common\model\Manga())->restoreData($where);
         if ($res['code'] > 1) {
             return $this->error($res['msg']);

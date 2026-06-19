@@ -174,8 +174,8 @@ class User extends Base
     public function delData($where)
     {
         $res = $this->where($where)->delete();
-        if ($res === false) {
-            return ['code' => 1001, 'msg' => lang('del_err').'：' . $this->getError()];
+        if ($res < 1) {
+            return ['code' => 1001, 'msg' => lang('del_err')];
         }
         return ['code' => 1, 'msg'=>lang('del_ok')];
     }
@@ -188,8 +188,8 @@ class User extends Base
         $data = [];
         $data[$col] = $val;
         $res = $this->where($where)->update($data);
-        if ($res === false) {
-            return ['code' => 1002, 'msg' => lang('set_err').'：' . $this->getError()];
+        if ($res < 1) {
+            return ['code' => 1002, 'msg' => lang('set_err')];
         }
         return ['code' => 1, 'msg' =>lang('set_ok')];
     }
@@ -312,7 +312,7 @@ class User extends Base
         }
 
         $res = $this->insert($fields);
-        if ($res === false) {
+        if ($res < 1) {
             return ['code' => 1010, 'msg' => lang('model/user/reg_err')];
         }
         $nid = $this->getLastInsID();
@@ -543,7 +543,7 @@ class User extends Base
         $fields['user_login_num'] = 1;
 
         $res = $this->insert($fields);
-        if ($res === false) {
+        if ($res < 1) {
             return ['code' => 1011, 'msg' => lang('model/user/reg_fail_try_later')];
         }
         $nid = $this->getLastInsID();
@@ -684,7 +684,7 @@ class User extends Base
         $update['user_last_login_ip'] = $row['user_login_ip'];
 
         $res = $this->where($where)->update($update);
-        if ($res === false) {
+        if ($res < 1) {
             return ['code' => 1004, 'msg' => lang('model/user/update_login_err')];
         }
 
@@ -731,7 +731,7 @@ class User extends Base
         $update['group_id'] = '2';
 
         $res = $this->where($where)->update($update);
-        if ($res === false) {
+        if ($res < 1) {
             return ['code' => 101, 'msg' => lang('model/user/update_expire_err')];
         }
         return ['code' => 1, 'msg' => lang('model/user/update_expire_ok')];
@@ -853,7 +853,7 @@ class User extends Base
             $update['group_id'] = 2;
 
             $res = $this->where($whereUpdate)->update($update);
-            if($res === false){
+            if($res < 1){
                 return ['code' => 1004, 'msg' => lang('model/user/update_expire_err')];
             }
 
@@ -984,7 +984,7 @@ class User extends Base
                 $affected = $this->where($where)
                     ->where('user_points', '>=', $point)
                     ->setDec('user_points', $point);
-                if ($affected === 0 || $affected === false) {
+                if ($affected === 0) {
                     Db::rollback();
                     return ['code'=>1005,'msg'=>lang('model/user/potins_not_enough')];
                 }
@@ -1058,7 +1058,7 @@ class User extends Base
             $affected = $this->where($where)
                 ->where('user_points', '>=', $point)
                 ->setDec('user_points', $point);
-            if ($affected === 0 || $affected === false) {
+            if ($affected === 0) {
                 return ['code' => 1004, 'msg' => lang('model/user/potins_not_enough')];
             }
         }
@@ -1066,7 +1066,7 @@ class User extends Base
             'user_end_time' => $end_time,
             'group_id'      => $group_id,
         ]);
-        if ($res === false) {
+        if ($res < 1) {
             return ['code' => 1005, 'msg' => lang('model/user/update_group_err')];
         }
 

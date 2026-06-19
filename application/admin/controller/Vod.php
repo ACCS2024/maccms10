@@ -62,7 +62,7 @@ class Vod extends Base
             } else {
                 // 无角色数据
                 if(!empty($roleVodIds)){
-                    $where['vod_id'] = ['not in', $roleVodIds];
+                    $where[] = ['vod_id', 'not in', $roleVodIds];
                 }
             }
         }
@@ -115,7 +115,7 @@ class Vod extends Base
             $where[] = ['vod_play_server|vod_down_server', 'like', '%'.$param['server'].'%'];
         }
         if (!empty($param['recycle'])) {
-            $where['vod_recycle_time'] = ['>', 0];
+            $where[] = ['vod_recycle_time', '>', 0];
         }
         $order='vod_time desc';
         if(in_array($param['order'],['vod_id','vod_hits','vod_hits_month','vod_hits_week','vod_hits_day'])){
@@ -434,7 +434,7 @@ class Vod extends Base
                 }
             } else {
                 if (!empty($roleVodIds)) {
-                    $where['vod_id'] = ['not in', $roleVodIds];
+                    $where[] = ['vod_id', 'not in', $roleVodIds];
                 }
             }
         }
@@ -480,7 +480,7 @@ class Vod extends Base
             $where[] = ['vod_play_server|vod_down_server', 'like', '%' . $param['server'] . '%'];
         }
         if (!empty($param['recycle'])) {
-            $where['vod_recycle_time'] = ['>', 0];
+            $where[] = ['vod_recycle_time', '>', 0];
         }
         return $where;
     }
@@ -660,7 +660,7 @@ class Vod extends Base
         if (empty($ids)) {
             return $this->error(lang('param_err'));
         }
-        $where = ['vod_id' => ['in', $ids]];
+        $where = [['vod_id', 'in', $ids]];
         $res = (new \app\common\model\Vod())->restoreData($where);
         if ($res['code'] > 1) {
             return $this->error($res['msg']);

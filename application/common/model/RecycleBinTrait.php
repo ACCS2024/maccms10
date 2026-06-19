@@ -57,7 +57,7 @@ trait RecycleBinTrait
             return $where;
         }
         if ($mode === 'recycle') {
-            $where[$f] = ['>', 0];
+            $where[] = [$f, '>', 0];
             return $where;
         }
         if (!array_key_exists($f, $where)) {
@@ -86,8 +86,8 @@ trait RecycleBinTrait
         }
         $t = time();
         $res = $this->where($where)->update([$f => $t]);
-        if ($res === false) {
-            return ['code' => 1002, 'msg' => lang('del_err') . '：' . $this->getError()];
+        if ($res < 1) {
+            return ['code' => 1002, 'msg' => lang('del_err')];
         }
         return ['code' => 1, 'msg' => lang('recycle_ok')];
     }
@@ -112,8 +112,8 @@ trait RecycleBinTrait
             return ['code' => 1002, 'msg' => lang('del_err')];
         }
         $res = $this->where($where)->update([$f => 0]);
-        if ($res === false) {
-            return ['code' => 1002, 'msg' => lang('del_err') . '：' . $this->getError()];
+        if ($res < 1) {
+            return ['code' => 1002, 'msg' => lang('del_err')];
         }
         return ['code' => 1, 'msg' => lang('recycle_restore_ok')];
     }

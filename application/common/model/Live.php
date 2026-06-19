@@ -73,8 +73,8 @@ class Live extends Base
     public function delData($where)
     {
         $res = $this->where($where)->delete();
-        if ($res === false) {
-            return ['code' => 1001, 'msg' => lang('del_err') . '：' . $this->getError()];
+        if ($res < 1) {
+            return ['code' => 1001, 'msg' => lang('del_err')];
         }
         return ['code' => 1, 'msg' => lang('del_ok')];
     }
@@ -87,8 +87,8 @@ class Live extends Base
         $data = [];
         $data[$col] = $val;
         $res = $this->where($where)->update($data);
-        if ($res === false) {
-            return ['code' => 1001, 'msg' => lang('set_err') . '：' . $this->getError()];
+        if ($res < 1) {
+            return ['code' => 1001, 'msg' => lang('set_err')];
         }
         return ['code' => 1, 'msg' => lang('set_ok')];
     }
@@ -150,7 +150,7 @@ class Live extends Base
             $data['cate_time_add'] = time();
             $res = Db::name('live_category')->insert($data);
         }
-        if ($res === false) {
+        if ($res < 1) {
             return ['code' => 1002, 'msg' => lang('save_err')];
         }
         return ['code' => 1, 'msg' => lang('save_ok')];

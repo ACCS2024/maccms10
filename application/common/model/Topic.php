@@ -163,7 +163,7 @@ class Topic extends Base {
             }
         }
         if(!empty($not)){
-            $where['topic_id'] = ['not in',explode(',',$not)];
+            $where[] = ['topic_id', 'not in', explode(',', $not)];
         }
         if(!empty($letter)){
             if(substr($letter,0,1)=='0' && substr($letter,2,1)=='9'){

@@ -307,7 +307,7 @@ class Vod extends Base {
             }
         }
         if(!empty($not)){
-            $where['vod_id'] = ['not in',explode(',',$not)];
+            $where[] = ['vod_id', 'not in', explode(',', $not)];
         }
         if(!empty($rel)){
             $tmp = explode(',',$rel);
@@ -393,7 +393,7 @@ class Vod extends Base {
                     $where['type_id'] = -1;
                 }
             } else {
-                $where['type_id'] = ['not in', $typenot_arr];
+                $where[] = ['type_id', 'not in', $typenot_arr];
             }
         }
         if(!empty($tid)) {
@@ -533,11 +533,14 @@ class Vod extends Base {
         if(defined('ENTRANCE') && ENTRANCE == 'index' && $GLOBALS['config']['app']['popedom_filter'] ==1){
             $type_ids = mac_get_popedom_filter($GLOBALS['user']['group']['group_type']);
             if(!empty($type_ids)){
-                if(!empty($where['type_id'])){
-                    $where['type_id'] = [ $where['type_id'],['not in', explode(',',$type_ids)] ];
-                }
-                else{
-                    $where['type_id'] = ['not in', explode(',',$type_ids)];
+                $type_ids_arr = array_map('intval', explode(',', $type_ids));
+                if(isset($where['type_id']) && is_array($where['type_id'])){
+                    $where['type_id'] = array_values(array_diff($where['type_id'], $type_ids_arr));
+                    if(empty($where['type_id'])){
+                        $where['type_id'] = -1;
+                    }
+                } else {
+                    $where[] = ['type_id', 'not in', $type_ids_arr];
                 }
             }
         }

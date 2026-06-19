@@ -44,10 +44,7 @@ class SignLog extends Base {
             ]);
 
             // 发放签到积分到用户余额（与任务中心「领取奖励」一致，并写积分流水）
-            $inc = Db::name('User')->where('user_id', $user_id)->setInc('user_points', $total_points);
-            if ($inc === false) {
-                throw new \Exception('user_points');
-            }
+            Db::name('User')->where('user_id', $user_id)->setInc('user_points', $total_points);
 
             $taskName = $task ? (string)$task['task_name'] : lang('task/daily_sign_task');
             $plog = [
@@ -173,8 +170,8 @@ class SignLog extends Base {
     public function delData($where)
     {
         $res = $this->where($where)->delete();
-        if ($res === false) {
-            return ['code' => 1001, 'msg' => lang('del_err') . '：' . $this->getError()];
+        if ($res < 1) {
+            return ['code' => 1001, 'msg' => lang('del_err')];
         }
         return ['code' => 1, 'msg' => lang('del_ok')];
     }

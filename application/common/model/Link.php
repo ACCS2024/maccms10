@@ -65,7 +65,7 @@ class Link extends Base {
             $where['link_type'] = $type;
         }
         if(!empty($not)){
-            $where['link_id'] = ['not in',explode(',',$not)];
+            $where[] = ['link_id', 'not in', explode(',', $not)];
         }
 
         $by = 'link_'.$by;

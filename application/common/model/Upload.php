@@ -211,10 +211,7 @@ class Upload extends Base {
             $update['user_portrait'] = $new_file;
             $where = [];
             $where['user_id'] = $GLOBALS['user']['user_id'];
-            $res = (new \app\common\model\User())->where($where)->update($update);
-            if ($res === false) {
-                return self::upload_return(lang('index/portrait_err'), $param['from']);
-            }
+            (new \app\common\model\User())->where($where)->update($update);
         }
         else {
             if ($type == 'image') {

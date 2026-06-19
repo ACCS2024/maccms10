@@ -62,8 +62,8 @@ class Task extends Base {
     public function delData($where)
     {
         $res = $this->where($where)->delete();
-        if ($res === false) {
-            return ['code' => 1001, 'msg' => lang('del_err') . '：' . $this->getError()];
+        if ($res < 1) {
+            return ['code' => 1001, 'msg' => lang('del_err')];
         }
         return ['code' => 1, 'msg' => lang('del_ok')];
     }
@@ -76,8 +76,8 @@ class Task extends Base {
         $data = [];
         $data[$col] = $val;
         $res = $this->where($where)->update($data);
-        if ($res === false) {
-            return ['code' => 1001, 'msg' => lang('set_err') . '：' . $this->getError()];
+        if ($res < 1) {
+            return ['code' => 1001, 'msg' => lang('set_err')];
         }
         return ['code' => 1, 'msg' => lang('set_ok')];
     }

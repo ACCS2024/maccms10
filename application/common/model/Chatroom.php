@@ -172,8 +172,8 @@ class Chatroom extends Base {
         // 删除前先查出受影响的 vod_id，用于清缓存
         $this->_clearChatroomCache($where);
         $res = $this->where($where)->delete();
-        if ($res === false) {
-            return ['code' => 1001, 'msg' => lang('del_err') . '：' . $this->getError()];
+        if ($res < 1) {
+            return ['code' => 1001, 'msg' => lang('del_err')];
         }
         return ['code' => 1, 'msg' => lang('del_ok')];
     }
@@ -186,8 +186,8 @@ class Chatroom extends Base {
         $data = [];
         $data[$col] = $val;
         $res = $this->where($where)->update($data);
-        if ($res === false) {
-            return ['code' => 1001, 'msg' => lang('set_err') . '：' . $this->getError()];
+        if ($res < 1) {
+            return ['code' => 1001, 'msg' => lang('set_err')];
         }
         // status 变更时清缓存（管理员禁用/启用消息后前台立即生效）
         if ($col === 'chat_status') {

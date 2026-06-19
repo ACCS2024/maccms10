@@ -180,8 +180,8 @@ class Danmaku extends Base {
         // 删除前先查出受影响的集数，用于清缓存
         $this->_clearEpisodeCache($where);
         $res = $this->where($where)->delete();
-        if ($res === false) {
-            return ['code' => 1001, 'msg' => lang('del_err') . '：' . $this->getError()];
+        if ($res < 1) {
+            return ['code' => 1001, 'msg' => lang('del_err')];
         }
         return ['code' => 1, 'msg' => lang('del_ok')];
     }
@@ -194,8 +194,8 @@ class Danmaku extends Base {
         $data = [];
         $data[$col] = $val;
         $res = $this->where($where)->update($data);
-        if ($res === false) {
-            return ['code' => 1001, 'msg' => lang('set_err') . '：' . $this->getError()];
+        if ($res < 1) {
+            return ['code' => 1001, 'msg' => lang('set_err')];
         }
         // status 变更时清缓存（管理员禁用/启用弹幕后前台立即生效）
         if ($col === 'danmaku_status') {

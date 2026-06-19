@@ -1201,12 +1201,9 @@ class Collect extends Base {
                             $where = [];
                             $where['vod_id'] = $info['vod_id'];
                             $update = VodValidate::formatDataBeforeDb($update);
-                            $res = (new \app\common\model\Vod())->where($where)->update($update);
+                            (new \app\common\model\Vod())->where($where)->update($update);
                             \app\common\util\MeilisearchSync::afterVodSave((int)$info['vod_id']); // 采集更新:增量同步 Meili
                             $color = 'green';
-                            if ($res === false) {
-
-                            }
                         }
                         else{
                             $des = lang('model/collect/not_need_update');
@@ -2179,9 +2176,6 @@ class Collect extends Base {
                         $msg = $tmp['msg'];
                         $res = (new \app\common\model\Role())->insert($v, false, true);
                         \app\common\util\MeilisearchSync::afterRoleSave((int)$res); // 采集入库:增量同步 Meili(Meili 关闭则空操作)
-                        if ($res === false) {
-
-                        }
                         $color = 'green';
                         $des = lang('model/collect/add_ok');
                     } else {
@@ -2214,12 +2208,9 @@ class Collect extends Base {
                                     $update['role_time'] = time();
                                     $where = [];
                                     $where['role_id'] = $info['role_id'];
-                                    $res = (new \app\common\model\Role())->where($where)->update($update);
+                                    (new \app\common\model\Role())->where($where)->update($update);
                                     \app\common\util\MeilisearchSync::afterRoleSave((int)$info['role_id']); // 采集更新:增量同步 Meili
                                     $color = 'green';
-                                    if ($res === false) {
-
-                                    }
                                 }
                                 else{
                                     $des = lang('model/collect/not_need_update');
@@ -2763,10 +2754,7 @@ class Collect extends Base {
                     }
                     if (!$info) {
                         $msg = isset($tmp['msg']) ? $tmp['msg'] : '';
-                        $res = (new \app\common\model\Comment())->insert($v);
-                        if ($res === false) {
-
-                        }
+                        (new \app\common\model\Comment())->insert($v);
                         $color = 'green';
                         $des = lang('model/collect/add_ok');
                     } else {
@@ -2787,11 +2775,8 @@ class Collect extends Base {
                                     $update['comment_time'] = time();
                                     $where = [];
                                     $where['comment_id'] = $info['comment_id'];
-                                    $res = (new \app\common\model\Comment())->where($where)->update($update);
+                                    (new \app\common\model\Comment())->where($where)->update($update);
                                     $color = 'green';
-                                    if ($res === false) {
-
-                                    }
                                 }
                                 else{
                                     $des = lang('model/collect/not_need_update');

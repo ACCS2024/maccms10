@@ -362,7 +362,8 @@ class Ajax extends Base
 
         $pre = 'website';
         $where=[];
-        $where[$pre.'_jumpurl'] =  ['like', ['http://'.$domain.'%','https://'.$domain.'%'],'OR'];
+        $where[] = [$pre.'_jumpurl', 'like', 'http://'.$domain.'%', 'OR'];
+        $where[] = [$pre.'_jumpurl', 'like', 'https://'.$domain.'%', 'OR'];
         $model = model($pre);
         $field = $pre.'_referer,'.$pre.'_referer_day,'.$pre.'_referer_week,'.$pre.'_referer_month,'.$pre.'_time_referer';
         $res = $model->infoData($where,$field);

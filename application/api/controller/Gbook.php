@@ -69,9 +69,9 @@ class Gbook extends Base
         if (isset($param['time_end']) && isset($param['time_start'])) {
             $where[] = ['gbook_time', 'between', [(int)$param['time_start'], (int)$param['time_end']]];
         }elseif (isset($param['time_end'])) {
-            $where['gbook_time'] = ['<', (int)$param['time_end']];
+            $where[] = ['gbook_time', '<', (int)$param['time_end']];
         }elseif (isset($param['time_start'])) {
-            $where['gbook_time'] = ['>', (int)$param['time_start']];
+            $where[] = ['gbook_time', '>', (int)$param['time_start']];
         }
 
         // 数据获取

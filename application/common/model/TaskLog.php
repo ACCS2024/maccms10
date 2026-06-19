@@ -32,8 +32,8 @@ class TaskLog extends Base {
     public function delData($where)
     {
         $res = $this->where($where)->delete();
-        if ($res === false) {
-            return ['code' => 1001, 'msg' => lang('del_err') . '：' . $this->getError()];
+        if ($res < 1) {
+            return ['code' => 1001, 'msg' => lang('del_err')];
         }
         return ['code' => 1, 'msg' => lang('del_ok')];
     }
@@ -149,10 +149,7 @@ class TaskLog extends Base {
                 return ['code' => 1004, 'msg' => lang('task/already_claimed')];
             }
 
-            $inc = Db::name('User')->where('user_id', $user_id)->setInc('user_points', $points);
-            if ($inc === false) {
-                throw new \Exception('user_points');
-            }
+            Db::name('User')->where('user_id', $user_id)->setInc('user_points', $points);
 
             // 积分日志 plog_type=11 任务/签到奖励（与 SignLog::doSign 一致；9 保留为提现）
             $plog = [

@@ -49,9 +49,9 @@ class Topic extends Base
         if (isset($param['time_end']) && isset($param['time_start'])) {
             $where[] = ['topic_time', 'between', [(int)$param['time_start'], (int)$param['time_end']]];
         }elseif (isset($param['time_end'])) {
-            $where['topic_time'] = ['<', (int)$param['time_end']];
+            $where[] = ['topic_time', '<', (int)$param['time_end']];
         }elseif (isset($param['time_start'])) {
-            $where['topic_time'] = ['>', (int)$param['time_start']];
+            $where[] = ['topic_time', '>', (int)$param['time_start']];
         }
 
         // 数据获取
