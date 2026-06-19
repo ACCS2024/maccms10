@@ -71,7 +71,7 @@ class System extends Base
     {
         if (Request()->isPost()) {
             $config = \think\facade\Request::param();
-            $validate = \think\Loader::validate('Token');
+            $validate = mac_validate('Token');
             if(!$validate->check($config)){
                 $err = $validate->getError();
                 $msg = is_scalar($err) ? (string)$err : lang('param_err');
@@ -305,7 +305,7 @@ class System extends Base
         if (Request()->isPost()) {
             $config = \think\facade\Request::param();
 
-            $validate = \think\Loader::validate('Token');
+            $validate = mac_validate('Token');
             if(!$validate->check($config)){
                 $err = $validate->getError();
                 $msg = is_scalar($err) ? (string)$err : lang('param_err');
@@ -397,7 +397,7 @@ class System extends Base
         if (Request()->isPost()) {
             $config = \think\facade\Request::param();
 
-            $validate = \think\Loader::validate('Token');
+            $validate = mac_validate('Token');
             if(!$validate->check($config)){
                 $err = $validate->getError();
                 $msg = is_scalar($err) ? (string)$err : lang('param_err');
@@ -480,7 +480,7 @@ class System extends Base
                 return $this->ajaxErrorWithFreshToken(lang('save_err'));
             }
 
-            $validate = \think\Loader::validate('Token');
+            $validate = mac_validate('Token');
             if(!$validate->check($config)){
                 $err = $validate->getError();
                 $msg = is_scalar($err) ? (string)$err : lang('param_err');
@@ -547,7 +547,7 @@ class System extends Base
                 return $this->error($invalidSubmitMsg);
             }
 
-            $validate = \think\Loader::validate('Token');
+            $validate = mac_validate('Token');
             if(!$validate->check($config)){
                 $err = $validate->getError();
                 $msg = is_scalar($err) ? (string)$err : lang('param_err');
@@ -576,7 +576,7 @@ class System extends Base
         if (Request()->isPost()) {
             $config = \think\facade\Request::param();
 
-            $validate = \think\Loader::validate('Token');
+            $validate = mac_validate('Token');
             if(!$validate->check($config)){
                 $err = $validate->getError();
                 $msg = is_scalar($err) ? (string)$err : lang('param_err');
@@ -604,7 +604,7 @@ class System extends Base
         if (Request()->isPost()) {
             $config = \think\facade\Request::param();
 
-            $validate = \think\Loader::validate('Token');
+            $validate = mac_validate('Token');
             if(!$validate->check($config)){
                 $err = $validate->getError();
                 $msg = is_scalar($err) ? (string)$err : lang('param_err');
@@ -632,7 +632,7 @@ class System extends Base
         if (Request()->isPost()) {
             $config = \think\facade\Request::param();
 
-            $validate = \think\Loader::validate('Token');
+            $validate = mac_validate('Token');
             if(!$validate->check($config)){
                 $err = $validate->getError();
                 $msg = is_scalar($err) ? (string)$err : lang('param_err');
@@ -670,7 +670,7 @@ class System extends Base
         if (Request()->isPost()) {
             $config = \think\facade\Request::param();
 
-            $validate = \think\Loader::validate('Token');
+            $validate = mac_validate('Token');
             if(!$validate->check($config)){
                 $err = $validate->getError();
                 $msg = is_scalar($err) ? (string)$err : lang('param_err');
@@ -703,7 +703,7 @@ class System extends Base
         if (Request()->isPost()) {
             $config = \think\facade\Request::param();
 
-            $validate = \think\Loader::validate('Token');
+            $validate = mac_validate('Token');
             if(!$validate->check($config)){
                 $err = $validate->getError();
                 $msg = is_scalar($err) ? (string)$err : lang('param_err');
@@ -737,7 +737,7 @@ class System extends Base
         if (Request()->isPost()) {
             $config = \think\facade\Request::param();
 
-            $validate = \think\Loader::validate('Token');
+            $validate = mac_validate('Token');
             if(!$validate->check($config)){
                 $err = $validate->getError();
                 $msg = is_scalar($err) ? (string)$err : lang('param_err');
@@ -771,7 +771,7 @@ class System extends Base
         if (Request()->isPost()) {
             $config = \think\facade\Request::param();
 
-            $validate = \think\Loader::validate('Token');
+            $validate = mac_validate('Token');
             if(!$validate->check($config)){
                 $err = $validate->getError();
                 $msg = is_scalar($err) ? (string)$err : lang('param_err');
@@ -808,7 +808,7 @@ class System extends Base
     {
         if (Request()->isPost()) {
             $config = \think\facade\Request::param();
-            $validate = \think\Loader::validate('Token');
+            $validate = mac_validate('Token');
             if(!$validate->check($config)){
                 $err = $validate->getError();
                 $msg = is_scalar($err) ? (string)$err : lang('param_err');
@@ -938,7 +938,7 @@ class System extends Base
         if (Request()->isPost()) {
             $config = \think\facade\Request::param();
 
-            $validate = \think\Loader::validate('Token');
+            $validate = mac_validate('Token');
             if(!$validate->check($config)){
                 $err = $validate->getError();
                 $msg = is_scalar($err) ? (string)$err : lang('param_err');
@@ -978,7 +978,7 @@ class System extends Base
         if (Request()->isPost()) {
             $config = \think\facade\Request::param();
 
-            $validate = \think\Loader::validate('Token');
+            $validate = mac_validate('Token');
             if(!$validate->check($config)){
                 $err = $validate->getError();
                 $msg = is_scalar($err) ? (string)$err : lang('param_err');
@@ -1004,7 +1004,7 @@ class System extends Base
     {
         if (Request()->isPost()) {
             $post = \think\facade\Request::post();
-            $validate = \think\Loader::validate('Token');
+            $validate = mac_validate('Token');
             if (!$validate->check($post)) {
                 $err = $validate->getError();
                 $msg = is_scalar($err) ? (string)$err : lang('param_err');
@@ -1063,7 +1063,7 @@ class System extends Base
     {
         if (Request()->isPost()) {
             $post = \think\facade\Request::post();
-            $validate = \think\Loader::validate('Token');
+            $validate = mac_validate('Token');
             if (!$validate->check($post)) {
                 $err = $validate->getError();
                 $msg = is_scalar($err) ? (string) $err : lang('param_err');
@@ -1138,7 +1138,7 @@ class System extends Base
     {
         if (Request()->isPost()) {
             $post = \think\facade\Request::post();
-            $validate = \think\Loader::validate('Token');
+            $validate = mac_validate('Token');
             if (!$validate->check($post)) {
                 $err = $validate->getError();
                 $msg = is_scalar($err) ? (string)$err : lang('param_err');
@@ -1495,7 +1495,7 @@ class System extends Base
     {
         if (Request()->isPost()) {
             $post = \think\facade\Request::post();
-            $validate = \think\Loader::validate('Token');
+            $validate = mac_validate('Token');
             if (!$validate->check($post)) {
                 $err = $validate->getError();
                 $msg = is_scalar($err) ? (string)$err : lang('param_err');

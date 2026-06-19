@@ -1,6 +1,5 @@
 <?php
 namespace app\index\controller;
-use think\Controller;
 use app\common\controller\All;
 use ip_limit\IpLocationQuery;
 class Base extends All

@@ -178,12 +178,12 @@ class Template extends Base
         $this->assign('filter',$filter);
 
         if (Request()->isPost()) {
-            $validate = \think\Loader::validate('Token');
+            $validate = mac_validate('Token');
             if(!$validate->check($param)){
                 return $this->error($validate->getError());
             }
 
-            $validate = \think\Loader::validate('Template');
+            $validate = mac_validate('Template');
             if(!$validate->check($param)){
                 return $this->error($validate->getError());
             }

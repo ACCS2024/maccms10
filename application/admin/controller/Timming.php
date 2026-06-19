@@ -23,7 +23,7 @@ class Timming extends Base
         $param = \think\facade\Request::param();
         $list = config('timming');
         if (Request()->isPost()) {
-            $validate = \think\Loader::validate('Token');
+            $validate = mac_validate('Token');
             if(!$validate->check($param)){
                 return $this->error($validate->getError());
             }

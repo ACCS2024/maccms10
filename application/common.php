@@ -644,7 +644,7 @@ function mac_send_mail($to,$title,$body,$conf=[])
 /**
  * 安全加固(V3/CSRF):返回稳定的 per-session CSRF 令牌(生成一次、整会话复用,
  * 不一次性销毁),供后台 head meta 输出、全局 ajax 头 X-CSRF-Token 使用。
- * 与控制器内 \think\Loader::validate('Token') 用的一次性 __token__ 分开存放,互不干扰。
+ * 与控制器内 mac_validate('Token') 用的一次性 __token__ 分开存放,互不干扰。
  */
 function mac_csrf_token()
 {
@@ -4403,6 +4403,16 @@ if (!function_exists('input')) {
 if (!function_exists('url')) {
     function url(string $url = '', array $vars = [], bool $suffix = true, bool $domain = false): string {
         return (string) \think\facade\Route::buildUrl($url, $vars)->suffix($suffix)->domain($domain);
+    }
+}
+if (!function_exists('mac_validate')) {
+    function mac_validate(string $name): \think\Validate
+    {
+        $class = 'app\\common\\validate\\' . $name;
+        if (!class_exists($class)) {
+            throw new \RuntimeException("Validate class not found: {$class}");
+        }
+        return new $class();
     }
 }
 // ========= /TP8 global helpers =========

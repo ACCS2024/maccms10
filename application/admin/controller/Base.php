@@ -1,6 +1,5 @@
 <?php
 namespace app\admin\controller;
-use think\Controller;
 use app\common\controller\All;
 use app\common\util\BulkTableIo;
 use think\facade\Cache;
@@ -196,7 +195,7 @@ class Base extends All
             return $this->error(lang('illegal_request'));
         }
         $param = \think\facade\Request::post();
-        $validate = \think\Loader::validate('Token');
+        $validate = mac_validate('Token');
         if (!$validate->check($param)) {
             return $this->error($validate->getError());
         }

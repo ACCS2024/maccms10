@@ -2,15 +2,9 @@
 namespace app\index\controller;
 use think\captcha\Captcha;
 use think\facade\Config;
-use think\Controller;
 
-class Verify extends Controller
+class Verify
 {
-    public function __construct()
-    {
-        parent::__construct();
-    }
-
     public function index($id='')
     {
         ob_end_clean();

@@ -369,7 +369,7 @@ class Database extends Base
     {
         if($this->request->isPost()){
             $param=\think\facade\Request::param();
-            $validate = \think\Loader::validate('Token');
+            $validate = mac_validate('Token');
             if(!$validate->check($param)){
                 return $this->error($validate->getError());
             }
@@ -433,7 +433,7 @@ class Database extends Base
             $tostr = isset($param['tostr']) ? $param['tostr'] : '';
             $where = isset($param['where']) ? $param['where'] : '';
 
-            $validate = \think\Loader::validate('Token');
+            $validate = mac_validate('Token');
             if(!$validate->check($param)){
                 return $this->error($validate->getError());
             }

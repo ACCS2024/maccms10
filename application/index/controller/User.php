@@ -1,6 +1,5 @@
 <?php
 namespace app\index\controller;
-use think\Controller;
 use think\facade\Db;
 use think\facade\Request;
 use login\ThinkOauth;

@@ -1,6 +1,5 @@
 <?php
 namespace app\api\controller;
-use think\Controller;
 use think\facade\Request;
 use app\common\controller\All;
 use app\common\util\ApiMeilisearchSuggest;

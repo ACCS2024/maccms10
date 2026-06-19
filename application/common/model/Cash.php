@@ -89,7 +89,7 @@ class Cash extends Base {
         $data['cash_points'] = $tx_points;
         $data['cash_time'] = time();
 
-        $validate = \think\Loader::validate('Cash');
+        $validate = mac_validate('Cash');
         if(!$validate->check($data)){
             return ['code'=>1001,'msg'=>lang('param_err').'：'.$validate->getError() ];
         }

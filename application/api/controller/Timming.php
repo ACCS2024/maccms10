@@ -1,7 +1,6 @@
 <?php
 namespace app\api\controller;
 use app\common\util\ExternalSyncRunner;
-use think\Controller;
 use app\common\util\AnalyticsAggregator;
 
 class Timming extends Base

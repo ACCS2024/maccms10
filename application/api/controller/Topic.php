@@ -2,7 +2,6 @@
 
 namespace app\api\controller;
 
-use think\Controller;
 use think\facade\Cache;
 use think\facade\Db;
 use think\facade\Request;

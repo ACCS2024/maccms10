@@ -1,10 +1,9 @@
 <?php
 namespace app\common\controller;
-use think\Controller;
 use think\facade\Cache;
 use think\facade\Request;
 
-class All extends Controller
+class All
 {
     var $_ref;
     var $_cl;
@@ -15,7 +14,9 @@ class All extends Controller
 
     public function __construct()
     {
-        parent::__construct();
+        if (method_exists($this, 'initialize')) {
+            $this->initialize();
+        }
         $this->_ref = mac_get_refer();
         $this->_cl = request()->controller();
         $this->_ac = request()->action();

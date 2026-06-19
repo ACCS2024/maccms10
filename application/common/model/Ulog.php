@@ -155,7 +155,7 @@ class Ulog extends Base {
         $data['user_id'] = intval(cookie('user_id'));
         $data['ulog_time'] = time();
 
-        $validate = \think\Loader::validate('Ulog');
+        $validate = mac_validate('Ulog');
         if(!$validate->check($data)){
             return ['code'=>1001,'msg'=>lang('param_err').'：'.$validate->getError() ];
         }

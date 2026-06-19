@@ -1,6 +1,5 @@
 <?php
 namespace app\api\controller;
-use think\Controller;
 use app\common\util\WechatPublic as wcOper;
 
 class Wechat extends Base

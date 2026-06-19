@@ -1,6 +1,5 @@
 <?php
 namespace app\index\controller;
-use think\Controller;
 use app\common\util\SearchService;
 
 class Art extends Base

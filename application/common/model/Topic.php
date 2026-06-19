@@ -70,7 +70,7 @@ class Topic extends Base {
         $paging = ($lp['paging'] ?? null);
         $pageurl = ($lp['pageurl'] ?? null);
         $level = ($lp['level'] ?? null);
-        $wd = isset(($lp['wd'] ?? null)) ? ($lp['wd'] ?? null) : '';
+        $wd = ($lp['wd'] ?? '');
         $letter = ($lp['letter'] ?? null);
         $tag = ($lp['tag'] ?? null);
         $class = ($lp['class'] ?? null);
@@ -371,7 +371,7 @@ class Topic extends Base {
 
     public function saveData($data)
     {
-        $validate = \think\Loader::validate('Topic');
+        $validate = mac_validate('Topic');
         if(!$validate->check($data)){
             return ['code'=>1001,'msg'=>lang('param_err').'：'.$validate->getError() ];
         }

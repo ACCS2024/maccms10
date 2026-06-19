@@ -68,7 +68,7 @@ class Type extends Base
     {
         if (Request()->isPost()) {
             $param = \think\facade\Request::post();
-            $validate = \think\Loader::validate('Token');
+            $validate = mac_validate('Token');
             if(!$validate->check($param)){
                 return $this->error($validate->getError());
             }

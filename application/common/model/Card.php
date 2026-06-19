@@ -59,7 +59,7 @@ class Card extends Base {
 
     public function saveData($data)
     {
-        $validate = \think\Loader::validate('Card');
+        $validate = mac_validate('Card');
         if(!$validate->check($data)){
             return ['code'=>1001,'msg'=>lang('param_err').'：'.$validate->getError() ];
         }

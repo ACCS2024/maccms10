@@ -54,7 +54,7 @@ class Admin extends Base {
         else{
             $data['admin_auth'] = '';
         }
-        $validate = \think\Loader::validate('Admin');
+        $validate = mac_validate('Admin');
         if(!empty($data['admin_id'])){
             if(!$validate->scene('edit')->check($data)){
                 return ['code'=>1001,'msg'=>lang('param_err').'：'.$validate->getError() ];

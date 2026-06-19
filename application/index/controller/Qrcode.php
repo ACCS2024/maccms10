@@ -1,16 +1,10 @@
 <?php
 namespace app\index\controller;
 
-use think\Controller;
 use app\common\util\Qrcode as QR;
 
-class Qrcode extends Controller
+class Qrcode
 {
-    public function __construct()
-    {
-        parent::__construct();
-    }
-
     public function index()
     {
         $param = \think\facade\Request::param();

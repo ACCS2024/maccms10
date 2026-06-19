@@ -143,7 +143,7 @@ class Index extends Base
     {
         if (Request()->isPost()) {
             $param = \think\facade\Request::param();
-            $validate = \think\Loader::validate('Token');
+            $validate = mac_validate('Token');
             if (!$validate->check($param)) {
                 return $this->error($validate->getError());
             }

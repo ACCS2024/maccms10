@@ -69,7 +69,7 @@ class Plog extends Base {
     {
         $data['plog_time'] = time();
 
-        $validate = \think\Loader::validate('Plog');
+        $validate = mac_validate('Plog');
         if(!$validate->check($data)){
             return ['code'=>1001,'msg'=>lang('param_err').'：'.$validate->getError() ];
         }

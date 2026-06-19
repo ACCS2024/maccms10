@@ -45,7 +45,7 @@ class Admin extends Base
             if(!in_array('index/welcome',$param['admin_auth'])){
                 $param['admin_auth'][] = 'index/welcome';
             }
-            $validate = \think\Loader::validate('Token');
+            $validate = mac_validate('Token');
             if(!$validate->check($param)){
                 return $this->error($validate->getError());
             }

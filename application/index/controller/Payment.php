@@ -1,6 +1,5 @@
 <?php
 namespace app\index\controller;
-use think\Controller;
 use \think\Request;
 use app\api\controller\Payment as ApiPayment;
 

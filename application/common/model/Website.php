@@ -496,7 +496,7 @@ class Website extends Base {
 
     public function saveData($data)
     {
-        $validate = \think\Loader::validate('Website');
+        $validate = mac_validate('Website');
         if(!$validate->check($data)){
             return ['code'=>1001,'msg'=>lang('param_err').'：'.$validate->getError() ];
         }

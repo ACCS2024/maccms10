@@ -66,7 +66,7 @@ class Group extends Base {
             $data['group_popedom'] ='';
         }
 
-        $validate = \think\Loader::validate('Group');
+        $validate = mac_validate('Group');
         if(!$validate->check($data)){
             return ['code'=>1001,'msg'=>lang('param_err').'：'.$validate->getError() ];
         }

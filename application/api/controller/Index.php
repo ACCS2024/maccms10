@@ -1,6 +1,5 @@
 <?php
 namespace app\api\controller;
-use think\Controller;
 use think\facade\Cache;
 
 class Index extends Base
