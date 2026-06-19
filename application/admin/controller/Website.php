@@ -18,7 +18,10 @@ class Website extends Base
 
         $where = [];
         if (!empty($param['type'])) {
-            $where['type_id|type_id_1'] = $param['type'];
+            $_t = (int)$param['type'];
+            $where[] = function($q) use ($_t) {
+                $q->where('type_id', $_t)->whereOr('type_id_1', $_t);
+            };
         }
         if (!empty($param['level'])) {
             $where['website_level'] = $param['level'];

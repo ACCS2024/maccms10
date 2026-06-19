@@ -43,7 +43,10 @@ class Danmaku extends Base
                 // 无前置过滤时仅搜索 danmaku_text（单字段减轻负担）
                 $where[] = ['danmaku_text', 'like', '%' . $param['wd'] . '%'];
             } else {
-                $where[] = ['user_name|danmaku_text', 'like', '%' . $param['wd'] . '%'];
+                $_wd_like = '%' . $param['wd'] . '%';
+                $where[] = function($q) use ($_wd_like) {
+                    $q->where('user_name', 'like', $_wd_like)->whereOr('danmaku_text', 'like', $_wd_like);
+                };
             }
         }
 

@@ -24,7 +24,9 @@ class Adminaudit extends Base
         }
         if (!empty($param['wd'])) {
             $like = '%' . str_replace(['%', '_'], ['\\%', '\\_'], trim((string)$param['wd'])) . '%';
-            $where[] = ['audit_route|admin_name|audit_uri', 'like', $like];
+            $where[] = function($q) use ($like) {
+                $q->where('audit_route', 'like', $like)->whereOr('admin_name', 'like', $like)->whereOr('audit_uri', 'like', $like);
+            };
         }
         if (!empty($param['method'])) {
             $where['audit_method'] = strtoupper(trim((string)$param['method']));

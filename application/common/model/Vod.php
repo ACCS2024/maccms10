@@ -397,7 +397,9 @@ class Vod extends Base {
             }
         }
         if(!empty($tid)) {
-            $where['type_id|type_id_1'] = $tid;
+            $where[] = function($q) use ($tid) {
+                $q->where('type_id', $tid)->whereOr('type_id_1', $tid);
+            };
         }
         if(!in_array($GLOBALS['aid'],[13,14,15]) && !empty($param['id'])){
             //$where['vod_id'] = ['not in',$param['id']];
@@ -409,7 +411,7 @@ class Vod extends Base {
                 $where[] = ['vod_hits_month', '>', $tmp];
             }
             else{
-                $where['vod_hits_month'] = [$tmp[0],$tmp[1]];
+                $where[] = ['vod_hits_month', 'between', [$tmp[0], $tmp[1]]];
             }
         }
         if(!empty($hitsweek)){
@@ -418,7 +420,7 @@ class Vod extends Base {
                 $where[] = ['vod_hits_week', '>', $tmp];
             }
             else{
-                $where['vod_hits_week'] = [$tmp[0],$tmp[1]];
+                $where[] = ['vod_hits_week', 'between', [$tmp[0], $tmp[1]]];
             }
         }
         if(!empty($hitsday)){
@@ -427,7 +429,7 @@ class Vod extends Base {
                 $where[] = ['vod_hits_day', '>', $tmp];
             }
             else{
-                $where['vod_hits_day'] = [$tmp[0],$tmp[1]];
+                $where[] = ['vod_hits_day', 'between', [$tmp[0], $tmp[1]]];
             }
         }
         if(!empty($hits)){
@@ -436,7 +438,7 @@ class Vod extends Base {
                 $where[] = ['vod_hits', '>', $tmp];
             }
             else{
-                $where['vod_hits'] = [$tmp[0],$tmp[1]];
+                $where[] = ['vod_hits', 'between', [$tmp[0], $tmp[1]]];
             }
         }
 

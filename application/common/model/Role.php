@@ -200,7 +200,7 @@ class Role extends Base {
                 $where[] = ['role_hits_month', '>', $tmp];
             }
             else{
-                $where['role_hits_month'] = [$tmp[0],$tmp[1]];
+                $where[] = ['role_hits_month', 'between', [$tmp[0], $tmp[1]]];
             }
         }
         if(!empty($hitsweek)){
@@ -209,7 +209,7 @@ class Role extends Base {
                 $where[] = ['role_hits_week', '>', $tmp];
             }
             else{
-                $where['role_hits_week'] = [$tmp[0],$tmp[1]];
+                $where[] = ['role_hits_week', 'between', [$tmp[0], $tmp[1]]];
             }
         }
         if(!empty($hitsday)){
@@ -218,7 +218,7 @@ class Role extends Base {
                 $where[] = ['role_hits_day', '>', $tmp];
             }
             else{
-                $where['role_hits_day'] = [$tmp[0],$tmp[1]];
+                $where[] = ['role_hits_day', 'between', [$tmp[0], $tmp[1]]];
             }
         }
         if(!empty($hits)){
@@ -227,7 +227,7 @@ class Role extends Base {
                 $where[] = ['role_hits', '>', $tmp];
             }
             else{
-                $where['role_hits'] = [$tmp[0],$tmp[1]];
+                $where[] = ['role_hits', 'between', [$tmp[0], $tmp[1]]];
             }
         }
         if(!empty($actor)){
@@ -238,7 +238,10 @@ class Role extends Base {
         }
 
         if(!empty($wd)) {
-            $where[] = ['role_name|role_en', 'like', '%' . $wd . '%'];
+            $_wd_like = '%' . $wd . '%';
+            $where[] = function($q) use ($_wd_like) {
+                $q->where('role_name', 'like', $_wd_like)->whereOr('role_en', 'like', $_wd_like);
+            };
         }
         $use_rnd_order = ($by == 'rnd');
         // https://github.com/magicblack/maccms10/issues/1050

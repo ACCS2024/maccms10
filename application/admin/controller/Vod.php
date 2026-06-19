@@ -18,7 +18,10 @@ class Vod extends Base
 
         $where = [];
         if(!empty($param['type'])){
-            $where['type_id|type_id_1'] = $param['type'];
+            $_t = (int)$param['type'];
+            $where[] = function($q) use ($_t) {
+                $q->where('type_id', $_t)->whereOr('type_id_1', $_t);
+            };
         }
         if(!empty($param['level'])){
             $where['vod_level'] = $param['level'];
@@ -112,7 +115,10 @@ class Vod extends Base
             }
         }
         if(!empty($param['server'])){
-            $where[] = ['vod_play_server|vod_down_server', 'like', '%'.$param['server'].'%'];
+            $_srv_like = '%' . $param['server'] . '%';
+            $where[] = function($q) use ($_srv_like) {
+                $q->where('vod_play_server', 'like', $_srv_like)->whereOr('vod_down_server', 'like', $_srv_like);
+            };
         }
         if (!empty($param['recycle'])) {
             $where[] = ['vod_recycle_time', '>', 0];
@@ -477,7 +483,10 @@ class Vod extends Base
             }
         }
         if (!empty($param['server'])) {
-            $where[] = ['vod_play_server|vod_down_server', 'like', '%' . $param['server'] . '%'];
+            $_srv_like = '%' . $param['server'] . '%';
+            $where[] = function($q) use ($_srv_like) {
+                $q->where('vod_play_server', 'like', $_srv_like)->whereOr('vod_down_server', 'like', $_srv_like);
+            };
         }
         if (!empty($param['recycle'])) {
             $where[] = ['vod_recycle_time', '>', 0];

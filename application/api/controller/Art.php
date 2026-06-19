@@ -45,7 +45,10 @@ class Art extends Base
         $limit = mac_api_norm_limit($param['limit'] ?? 0);
 
         if (isset($param['type_id']) && (int)$param['type_id'] > 0) {
-            $where['type_id|type_id_1'] = (int)$param['type_id'];
+            $_tid = (int)$param['type_id'];
+            $where[] = function($q) use ($_tid) {
+                $q->where('type_id', $_tid)->whereOr('type_id_1', $_tid);
+            };
         }
 
         if (isset($param['time_end']) && isset($param['time_start'])) {
@@ -412,7 +415,9 @@ class Art extends Base
         $where = [];
         $where['art_status'] = 1;
         if ($typeId > 0) {
-            $where['type_id|type_id_1'] = $typeId;
+            $where[] = function($q) use ($typeId) {
+                $q->where('type_id', $typeId)->whereOr('type_id_1', $typeId);
+            };
         }
 
         $list = Db::table('mac_art')
@@ -460,7 +465,9 @@ class Art extends Base
         $where = [];
         $where['art_status'] = 1;
         if ($typeId > 0) {
-            $where['type_id|type_id_1'] = $typeId;
+            $where[] = function($q) use ($typeId) {
+                $q->where('type_id', $typeId)->whereOr('type_id_1', $typeId);
+            };
         }
 
         $list = Db::table('mac_art')

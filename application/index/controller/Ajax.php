@@ -51,7 +51,9 @@ class Ajax extends Base
                 $type_info = $type_list[$type_id];
                 if(!empty($type_info)) {
                     $ids = $type_info['type_pid'] == 0 ? $type_info['childids'] : $type_info['type_id'];
-                    $where['type_id|type_id_1'] = $ids;
+                    $where[] = function($q) use ($ids) {
+                        $q->where('type_id', $ids)->whereOr('type_id_1', $ids);
+                    };
                 }
             }
         }
@@ -761,7 +763,9 @@ class Ajax extends Base
         }
         $where = ['vod_status' => 1];
         $ids = $this->resolveTypeIds($typeId);
-        $where['type_id|type_id_1'] = $ids;
+        $where[] = function($q) use ($ids) {
+            $q->where('type_id', 'in', $ids)->whereOr('type_id_1', 'in', $ids);
+        };
 
         $model = (new \app\common\model\Vod());
         $imgRes = $model->listData($where, 'vod_hits_month desc', 1, 6, 0, '*', 1, 1);

@@ -47,7 +47,9 @@ class Vod extends Base
         if (isset($param['type_id'])) {
             $tid = (int)$param['type_id'];
             if ($tid > 0) {
-                $where['type_id|type_id_1'] = $tid;
+                $where[] = function($q) use ($tid) {
+                    $q->where('type_id', $tid)->whereOr('type_id_1', $tid);
+                };
             }
         }
         if (isset($param['id'])) {
@@ -495,7 +497,9 @@ class Vod extends Base
         $where['vod_status'] = 1;
         if ($typeId > 0) {
             // 同时匹配 type_id 和 type_id_1（父分类）
-            $where['type_id|type_id_1'] = $typeId;
+            $where[] = function($q) use ($typeId) {
+                $q->where('type_id', $typeId)->whereOr('type_id_1', $typeId);
+            };
         }
         if (!empty($level)) {
             $where['vod_level'] = $level;
@@ -648,7 +652,9 @@ class Vod extends Base
         $where = [];
         $where['vod_status'] = 1;
         if ($typeId > 0) {
-            $where['type_id|type_id_1'] = $typeId;
+            $where[] = function($q) use ($typeId) {
+                $q->where('type_id', $typeId)->whereOr('type_id_1', $typeId);
+            };
         }
 
         $list = Db::table('mac_vod')

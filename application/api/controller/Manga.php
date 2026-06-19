@@ -33,7 +33,9 @@ class Manga extends Base
         if (!empty($param['t'])) {
             $tid = (int)$param['t'];
             if ($tid > 0) {
-                $where['type_id|type_id_1'] = $tid;
+                $where[] = function($q) use ($tid) {
+                    $q->where('type_id', $tid)->whereOr('type_id_1', $tid);
+                };
             }
         }
         if (!empty($param['ids'])) {

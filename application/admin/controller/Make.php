@@ -303,7 +303,9 @@ class Make extends Base
 
         if(empty($data_count)){
             $where = [];
-            $where['type_id|type_id_1'] = $id;
+            $where[] = function($q) use ($id) {
+                $q->where('type_id', $id)->whereOr('type_id_1', $id);
+            };
 
             if($this->_param['tab'] =='art') {
                 $where['art_status'] = 1;

@@ -189,7 +189,7 @@ class Topic extends Base {
                 $where[] = ['topic_hits_month', '>', $tmp];
             }
             else{
-                $where['topic_hits_month'] = [$tmp[0],$tmp[1]];
+                $where[] = ['topic_hits_month', 'between', [$tmp[0], $tmp[1]]];
             }
         }
         if(!empty($hitsweek)){
@@ -198,7 +198,7 @@ class Topic extends Base {
                 $where[] = ['topic_hits_week', '>', $tmp];
             }
             else{
-                $where['topic_hits_week'] = [$tmp[0],$tmp[1]];
+                $where[] = ['topic_hits_week', 'between', [$tmp[0], $tmp[1]]];
             }
         }
         if(!empty($hitsday)){
@@ -207,7 +207,7 @@ class Topic extends Base {
                 $where[] = ['topic_hits_day', '>', $tmp];
             }
             else{
-                $where['topic_hits_day'] = [$tmp[0],$tmp[1]];
+                $where[] = ['topic_hits_day', 'between', [$tmp[0], $tmp[1]]];
             }
         }
         if(!empty($hits)){
@@ -216,12 +216,15 @@ class Topic extends Base {
                 $where[] = ['topic_hits', '>', $tmp];
             }
             else{
-                $where['topic_hits'] = [$tmp[0],$tmp[1]];
+                $where[] = ['topic_hits', 'between', [$tmp[0], $tmp[1]]];
             }
         }
 
         if(!empty($wd)) {
-            $where[] = ['topic_name|topic_en|topic_sub', 'like', '%' . $wd . '%'];
+            $_wd_like = '%' . $wd . '%';
+            $where[] = function($q) use ($_wd_like) {
+                $q->where('topic_name', 'like', $_wd_like)->whereOr('topic_en', 'like', $_wd_like)->whereOr('topic_sub', 'like', $_wd_like);
+            };
         }
         if(!empty($tag)) {
             $where[] = ['topic_tag', 'like', mac_like_arr($tag),'OR'];

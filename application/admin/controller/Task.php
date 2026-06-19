@@ -25,7 +25,10 @@ class Task extends Base
         }
         if (!empty($param['wd'])) {
             $param['wd'] = htmlspecialchars(urldecode($param['wd']));
-            $where[] = ['task_name|task_action', 'like', '%' . $param['wd'] . '%'];
+            $_wd_like = '%' . $param['wd'] . '%';
+            $where[] = function($q) use ($_wd_like) {
+                $q->where('task_name', 'like', $_wd_like)->whereOr('task_action', 'like', $_wd_like);
+            };
         }
 
         $order = 'task_type asc, task_sort asc, task_id asc';

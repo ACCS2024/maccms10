@@ -242,7 +242,9 @@ class Actor extends Base {
             $where[] = ['type_id', 'not in', array_map('intval', explode(',', $typenot))];
         }
         if(!empty($tid)) {
-            $where['type_id|type_id_1'] = $tid;
+            $where[] = function($q) use ($tid) {
+                $q->where('type_id', $tid)->whereOr('type_id_1', $tid);
+            };
         }
         if(!empty($hitsmonth)){
             $tmp = explode(' ',$hitsmonth);
@@ -250,7 +252,7 @@ class Actor extends Base {
                 $where[] = ['actor_hits_month', '>', $tmp];
             }
             else{
-                $where['actor_hits_month'] = [$tmp[0],$tmp[1]];
+                $where[] = ['actor_hits_month', 'between', [$tmp[0], $tmp[1]]];
             }
         }
         if(!empty($hitsweek)){
@@ -259,7 +261,7 @@ class Actor extends Base {
                 $where[] = ['actor_hits_week', '>', $tmp];
             }
             else{
-                $where['actor_hits_week'] = [$tmp[0],$tmp[1]];
+                $where[] = ['actor_hits_week', 'between', [$tmp[0], $tmp[1]]];
             }
         }
         if(!empty($hitsday)){
@@ -268,7 +270,7 @@ class Actor extends Base {
                 $where[] = ['actor_hits_day', '>', $tmp];
             }
             else{
-                $where['actor_hits_day'] = [$tmp[0],$tmp[1]];
+                $where[] = ['actor_hits_day', 'between', [$tmp[0], $tmp[1]]];
             }
         }
         if(!empty($hits)){
@@ -277,7 +279,7 @@ class Actor extends Base {
                 $where[] = ['actor_hits', '>', $tmp];
             }
             else{
-                $where['actor_hits'] = [$tmp[0],$tmp[1]];
+                $where[] = ['actor_hits', 'between', [$tmp[0], $tmp[1]]];
             }
         }
 
@@ -295,7 +297,10 @@ class Actor extends Base {
             $where['actor_name'] = explode(',',$name) ;
         }
         if(!empty($wd)) {
-            $where[] = ['actor_name|actor_en', 'like', '%' . $wd . '%'];
+            $_wd = '%' . $wd . '%';
+            $where[] = function($q) use ($_wd) {
+                $q->where('actor_name', 'like', $_wd)->whereOr('actor_en', 'like', $_wd);
+            };
         }
         $use_rnd_order = ($by == 'rnd');
         if (!$use_rnd_order) {

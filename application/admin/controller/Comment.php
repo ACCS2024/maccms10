@@ -35,7 +35,10 @@ class Comment extends Base
         }
         if(!empty($param['wd'])){
             $param['wd'] = htmlspecialchars(urldecode($param['wd']));
-            $where[] = ['comment_name|comment_content', 'like', '%'.$param['wd'].'%'];
+            $_wd_like = '%' . $param['wd'] . '%';
+            $where[] = function($q) use ($_wd_like) {
+                $q->where('comment_name', 'like', $_wd_like)->whereOr('comment_content', 'like', $_wd_like);
+            };
         }
 
         $order='comment_id desc';

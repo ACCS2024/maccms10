@@ -35,7 +35,10 @@ class Gbook extends Base
         }
         if(!empty($param['wd'])){
             $param['wd'] = htmlspecialchars(urldecode($param['wd']));
-            $where[] = ['gbook_name|gbook_content', 'like', '%'.$param['wd'].'%'];
+            $_wd_like = '%' . $param['wd'] . '%';
+            $where[] = function($q) use ($_wd_like) {
+                $q->where('gbook_name', 'like', $_wd_like)->whereOr('gbook_content', 'like', $_wd_like);
+            };
         }
 
 
