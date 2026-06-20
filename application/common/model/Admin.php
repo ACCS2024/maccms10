@@ -162,9 +162,8 @@ class Admin extends Base {
         session('admin_info',$row->toArray());
 
         // 安全加固：登录后重新生成 session_id，防止会话固定攻击
-        if(function_exists('session_regenerate_id')){
-            session_regenerate_id(true);
-        }
+        // TP8 使用框架自身的 Session(非原生 PHP session),需用 Session::regenerate
+        \think\facade\Session::regenerate(true);
 
         //cookie('admin_id',$row['admin_id']);
         //cookie('admin_name',$row['admin_name']);

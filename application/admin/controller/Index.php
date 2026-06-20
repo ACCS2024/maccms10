@@ -29,7 +29,7 @@ class Index extends Base
     public function logout()
     {
         $res = (new \app\common\model\Admin())->logout();
-        $this->redirect('index/login');
+        return redirect((string) url('index/login'));
     }
 
     public function index()

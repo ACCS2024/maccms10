@@ -48,7 +48,7 @@ class Base extends All
                     echo json_encode(['code'=>1009,'msg'=>'not login']);
                     exit;
                 }
-                return $this->redirect('index/login');
+                return redirect((string) url('index/login'));
             }
             $this->_admin = $res['info'];
             $this->_pagesize = $GLOBALS['config']['app']['pagesize'];

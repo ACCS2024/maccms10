@@ -30,9 +30,9 @@ class System extends Base
         $title = $GLOBALS['config']['email']['tpl']['test_title'];
         $msg = $GLOBALS['config']['email']['tpl']['test_body'];
         $code = mac_get_rndstr(6,'num');
-        View::instance()->assign(['code'=>$code,'time'=>$GLOBALS['config']['email']['time']]);
-        $title =  View::instance()->display($title);
-        $msg =  View::instance()->display($msg);
+        \think\facade\View::assign(['code'=>$code,'time'=>$GLOBALS['config']['email']['time']]);
+        $title =  \think\facade\View::display($title);
+        $msg =  \think\facade\View::display($msg);
         $msg = htmlspecialchars_decode($msg);
         $res = mac_send_mail($to, $title, $msg, $conf);
         if ($res['code']==1) {
@@ -389,7 +389,7 @@ class System extends Base
             return $this->success(lang('save_ok'));
         }
 
-        return $this->redirect( url('configupload', ['tab' => 'url']) );
+        return redirect( url('configupload', ['tab' => 'url']) );
     }
 
     public function configuser()
@@ -568,7 +568,7 @@ class System extends Base
             return $this->success(lang('save_ok'));
         }
 
-        return $this->redirect( url('configuser', ['tab' => 'comment']) );
+        return redirect( url('configuser', ['tab' => 'comment']) );
     }
 
     public function configweixin()
@@ -596,7 +596,7 @@ class System extends Base
             return $this->success(lang('save_ok'));
         }
 
-        return $this->redirect( url('configconnect', ['tab' => 'weixin']) );
+        return redirect( url('configconnect', ['tab' => 'weixin']) );
     }
 
     public function configpay()
@@ -624,7 +624,7 @@ class System extends Base
             return $this->success(lang('save_ok'));
         }
 
-        return $this->redirect( url('configconnect', ['tab' => 'pay']) );
+        return redirect( url('configconnect', ['tab' => 'pay']) );
     }
 
     public function configconnect()
@@ -763,7 +763,7 @@ class System extends Base
             return $this->success(lang('save_ok'));
         }
 
-        return $this->redirect( url('configcollect', ['tab' => 'api']) );
+        return redirect( url('configcollect', ['tab' => 'api']) );
     }
 
     public function configinterface()
@@ -801,7 +801,7 @@ class System extends Base
             return $this->success(lang('save_ok'));
         }
 
-        return $this->redirect( url('configcollect', ['tab' => 'interface']) );
+        return redirect( url('configcollect', ['tab' => 'interface']) );
     }
 
     public function configcollect()
@@ -970,7 +970,7 @@ class System extends Base
             return $this->success(lang('save_ok'));
         }
 
-        return $this->redirect( url('configupload', ['tab' => 'play']) );
+        return redirect( url('configupload', ['tab' => 'play']) );
     }
 
     public function configseo()
@@ -997,7 +997,7 @@ class System extends Base
             return $this->success(lang('save_ok'));
         }
 
-        return $this->redirect( url('config', ['tab' => 'seo']) );
+        return redirect( url('config', ['tab' => 'seo']) );
     }
 
     public function configaiseo()
@@ -1056,7 +1056,7 @@ class System extends Base
             return $this->success(lang('save_ok'));
         }
 
-        return $this->redirect( url('config', ['tab' => 'aiseo']) );
+        return redirect( url('config', ['tab' => 'aiseo']) );
     }
 
     public function configaicover()
@@ -1131,7 +1131,7 @@ class System extends Base
             return $this->success(lang('save_ok'));
         }
 
-        return $this->redirect(url('config', ['tab' => 'aicover']));
+        return redirect(url('config', ['tab' => 'aicover']));
     }
 
     public function configaisearch()

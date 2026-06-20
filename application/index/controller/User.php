@@ -230,7 +230,7 @@ class User extends Base
         //加载ThinkOauth类并实例化一个对象
         $sns = ThinkOauth::getInstance($type);
         //跳转到授权页面
-        $this->redirect($sns->getRequestCodeURL());
+        return redirect($sns->getRequestCodeURL());
     }
 
     //授权回调地址
@@ -299,7 +299,7 @@ class User extends Base
                 if ($login['code'] > 1) {
                     return $this->error($login['msg']);
                 }
-                $this->redirect('user/index');
+                return redirect((string) url('user/index'));
             } else {
                 return $this->error($res['msg']);
             }
@@ -1071,7 +1071,7 @@ class User extends Base
                 $url = $param['url'];
             }
         }
-        $this->redirect($url);
+        return redirect((string) $url);
     }
 
 }

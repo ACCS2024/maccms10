@@ -997,7 +997,7 @@ MacPlayer.Show();
         ];
 
         $redirect_url = url('collect/api') . '?' . http_build_query($collect_params);
-        return $this->redirect($redirect_url);
+        return redirect($redirect_url);
     }
 
     /**

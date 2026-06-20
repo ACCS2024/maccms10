@@ -8,5 +8,5 @@ if( (!file_exists($ue_new) && file_exists($ue_old)) || $editor=='' ){
     $editor = 'ueditor';
 }
 
-echo  View::instance()->fetch('admin@extend/editor/'.$editor.'');
+echo  \think\facade\View::fetch('admin@extend/editor/'.$editor.'');
 {/php}
