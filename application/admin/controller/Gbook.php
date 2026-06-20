@@ -19,7 +19,7 @@ class Gbook extends Base
         if(in_array($param['status'] ?? '',['0','1'],true)){
             $where['gbook_status'] = $param['status'];
         }
-        if(in_array($param['type'],['1','2'])){
+        if(in_array($param['type'] ?? '',['1','2'])){
             if($param['type'] == 1){
                 $where['gbook_rid'] = 0;
             }

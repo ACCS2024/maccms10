@@ -13,7 +13,7 @@ class Make extends Base
         $this->_param = \think\facade\Request::param();
         $GLOBALS['ismake'] = '1';
 
-        if($this->_param['ac2']=='wap'){
+        if(($this->_param['ac2'] ?? '')=='wap'){
             $TMP_TEMPLATEDIR = $GLOBALS['config']['site']['mob_template_dir'];
             $TMP_HTMLDIR = $GLOBALS['config']['site']['mob_html_dir'];
             $TMP_ADSDIR = $GLOBALS['config']['site']['mob_ads_dir'];
@@ -167,7 +167,7 @@ class Make extends Base
         $GLOBALS['aid'] = mac_get_aid('index');
 
         $link = 'index.html';
-        if($this->_param['ac2']=='wap'){
+        if(($this->_param['ac2'] ?? '')=='wap'){
             $link = 'wap_index.html';
         }
         $this->label_maccms();

@@ -16,10 +16,10 @@ class Card extends Base
         $param['limit'] = intval($param['limit'] ?? 0) <1 ? $this->_pagesize : $param['limit'];
 
         $where=[];
-        if(in_array($param['sale_status'],['0','1'],true)){
+        if(in_array($param['sale_status'] ?? '',['0','1'],true)){
             $where['card_sale_status'] = $param['sale_status'];
         }
-        if(in_array($param['use_status'],['0','1'],true)){
+        if(in_array($param['use_status'] ?? '',['0','1'],true)){
             $where['card_use_status'] = $param['use_status'];
         }
         if(!empty($param['wd'])){
@@ -37,7 +37,7 @@ class Card extends Base
             $where[] = ['card_add_time', '>=', intval($t) ];
         }
 
-        if($param['export'] =='1'){
+        if(($param['export'] ?? '') =='1'){
             $param['page'] = 1;
             $param['limit'] = 9999;
         }
@@ -45,7 +45,7 @@ class Card extends Base
         $order='card_id desc';
         $res = (new \app\common\model\Card())->listData($where,$order,$param['page'],$param['limit']);
 
-        if($param['export'] =='1'){
+        if(($param['export'] ?? '') =='1'){
             $filename = 'card_' . date('Y-m-d'). '.csv';
             header("Content-type:text/csv");
             header("Accept-Ranges:bytes");

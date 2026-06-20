@@ -4377,7 +4377,9 @@ if (!function_exists('input')) {
     }
 }
 if (!function_exists('url')) {
-    function url(string $url = '', array $vars = [], bool $suffix = true, bool $domain = false): string {
+    function url(string $url = '', iterable $vars = [], bool $suffix = true, bool $domain = false): string {
+        // iterable:兼容 SafeParam 等 ArrayObject(后台 {$param} 既回显又建链),转纯数组传入
+        $vars = is_array($vars) ? $vars : iterator_to_array($vars);
         return (string) \think\facade\Route::buildUrl($url, $vars)->suffix($suffix)->domain($domain);
     }
 }

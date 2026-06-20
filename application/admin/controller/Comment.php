@@ -19,7 +19,7 @@ class Comment extends Base
         if(in_array($param['status'] ?? '',['0','1'],true)){
             $where['comment_status'] = $param['status'];
         }
-        if(in_array($param['mid'],['1','2','3'])){
+        if(in_array($param['mid'] ?? '',['1','2','3'])){
             $where['comment_mid'] = $param['mid'];
         }
         if(!empty($param['uid'])){

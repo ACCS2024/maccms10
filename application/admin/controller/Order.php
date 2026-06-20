@@ -15,7 +15,7 @@ class Order extends Base
         $param['page'] = intval($param['page'] ?? 0) <1 ? 1 : $param['page'];
         $param['limit'] = intval($param['limit'] ?? 0) <1 ? $this->_pagesize : $param['limit'];
         $where=[];
-        if($param['status']!=''){
+        if(($param['status'] ?? '')!=''){
             $where['order_status'] = $param['status'];
         }
         if(!empty($param['uid'])){

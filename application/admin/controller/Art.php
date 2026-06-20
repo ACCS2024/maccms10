@@ -76,7 +76,7 @@ class Art extends Base
                 ->where('seo_status', 'in', [1, 2])
                 ->select();
             foreach ((array)$seoRows as $seoRow) {
-                $artSeoStatusMap[intval($seoRow['seo_obj_id'])] = intval($seoRow['seo_status']);
+                $artSeoStatusMap[intval($seoRow['seo_obj_id'] ?? 0)] = intval($seoRow['seo_status'] ?? 0);
             }
         }
 

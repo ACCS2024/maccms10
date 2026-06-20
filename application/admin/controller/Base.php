@@ -59,7 +59,31 @@ class Base extends All
             }
         }
         $this->assign('cl',$this->_cl);
-        $this->assign('MAC_VERSION',config('version')['code']);
+        $this->assign('MAC_VERSION',config('version.code') ?? '');
+    }
+
+    /**
+     * 后台模板渲染:在渲染前重新注入后台公共变量。
+     * TP8 下构造函数期的 View::assign 未能稳定保留到 fetch(动作期 assign 正常),
+     * 故在此统一兜底,确保 public/head.html 等公共模板所需变量始终存在。
+     */
+    protected function fetch(string $template = '', array $vars = []): string
+    {
+        $this->assign('MAC_VERSION', config('version.code') ?? '');
+        $this->assign('cl', $this->_cl);
+        return parent::fetch($template, $vars);
+    }
+
+    /**
+     * 后台模板的筛选参数 param 包成 SafeParam:{$param.xxx} 缺键回显时返回空串,
+     * 避免 PHP8 未定义键 → 500(控制器内 $where 仍用原始数组,不受影响)。
+     */
+    protected function assign($name, $value = ''): void
+    {
+        if ($name === 'param' && is_array($value)) {
+            $value = new \app\common\util\SafeParam($value);
+        }
+        parent::assign($name, $value);
     }
 
     public function check_auth($c,$a)

@@ -29,10 +29,10 @@ class Vod extends Base
         if(in_array($param['status'] ?? '',['0','1'])){
             $where['vod_status'] = $param['status'];
         }
-        if(in_array($param['copyright'],['0','1'])){
+        if(in_array($param['copyright'] ?? '',['0','1'])){
             $where['vod_copyright'] = $param['copyright'];
         }
-        if(in_array($param['isend'],['0','1'])){
+        if(in_array($param['isend'] ?? '',['0','1'])){
             $where['vod_isend'] = $param['isend'];
         }
         if(!empty($param['lock'])){
@@ -47,12 +47,12 @@ class Vod extends Base
         if(!empty($param['lang'])){
             $where['vod_lang'] = $param['lang'];
         }
-        if(in_array($param['plot'],['0','1'])){
+        if(in_array($param['plot'] ?? '',['0','1'])){
             $where['vod_plot'] = $param['plot'];
         }
 
         // 处理角色筛选 - 通过查询角色表判断是否有角色数据
-        if(in_array($param['role'],['0','1'])){
+        if(in_array($param['role'] ?? '',['0','1'])){
             $roleVodIds = Db::name('role')->where('role_rid', '>', 0)->group('role_rid')->column('role_rid');
             if($param['role'] == '1'){
                 // 有角色数据
@@ -124,7 +124,7 @@ class Vod extends Base
             $where[] = ['vod_recycle_time', '>', 0];
         }
         $order='vod_time desc';
-        if(in_array($param['order'],['vod_id','vod_hits','vod_hits_month','vod_hits_week','vod_hits_day'])){
+        if(in_array($param['order'] ?? '',['vod_id','vod_hits','vod_hits_month','vod_hits_week','vod_hits_day'])){
             $order = $param['order'] .' desc';
         }
 
@@ -169,7 +169,7 @@ class Vod extends Base
                 ->where('seo_status', 'in', [1, 2])
                 ->select();
             foreach ((array)$seoRows as $seoRow) {
-                $vodSeoStatusMap[intval($seoRow['seo_obj_id'])] = intval($seoRow['seo_status']);
+                $vodSeoStatusMap[intval($seoRow['seo_obj_id'] ?? 0)] = intval($seoRow['seo_status'] ?? 0);
             }
         }
 
