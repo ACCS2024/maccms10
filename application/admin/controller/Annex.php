@@ -164,7 +164,9 @@ class Annex extends Base
                 }
             }
             $where=[];
-            $where['annex_id|annex_file'] = $ids;
+            $where[] = function($q) use ($ids) {
+                $q->where('annex_id', 'in', $ids)->whereOr('annex_file', 'in', $ids);
+            };
             $res = (new \app\common\model\Annex())->delData($where);
             if($res['code']>1){
                 return $this->error($res['msg']);

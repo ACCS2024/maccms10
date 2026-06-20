@@ -80,7 +80,10 @@ class User extends Base
             }
         }
         else{
-            $where['user_pid|user_pid_2|user_pid_3'] = intval($param['uid']) ;
+            $_uid = intval($param['uid']);
+            $where[] = function($q) use ($_uid) {
+                $q->where('user_pid', $_uid)->whereOr('user_pid_2', $_uid)->whereOr('user_pid_3', $_uid);
+            };
         }
 
         if(!empty($param['wd'])){
