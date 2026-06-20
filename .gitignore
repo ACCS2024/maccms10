@@ -23,3 +23,5 @@ thinkphp_legacy_*/
 application/data/install/install.lock
 # 后台安全schema更新锁(运行时生成)
 application/data/update/sec_schema.lock
+# 本地冒烟用的后台入口副本(绕过 admin.php 改名防护;不入库)
+adm_smoke.php
