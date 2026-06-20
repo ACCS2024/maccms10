@@ -80,7 +80,7 @@ class Base extends All
      */
     protected function assign($name, $value = ''): void
     {
-        if ($name === 'param' && is_array($value)) {
+        if (($name === 'param' || $name === 'info') && is_array($value)) {
             $value = new \app\common\util\SafeParam($value);
         }
         parent::assign($name, $value);
