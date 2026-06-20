@@ -13,8 +13,8 @@ class Actor extends Base
     public function data()
     {
         $param = \think\facade\Request::param();
-        $param['page'] = intval($param['page']) < 1 ? 1 : $param['page'];
-        $param['limit'] = intval($param['limit']) < 1 ? $this->_pagesize : $param['limit'];
+        $param['page'] = intval($param['page'] ?? 0) < 1 ? 1 : $param['page'];
+        $param['limit'] = intval($param['limit'] ?? 0) < 1 ? $this->_pagesize : $param['limit'];
 
         $where = [];
         if (!empty($param['type'])) {
@@ -26,7 +26,7 @@ class Actor extends Base
         if (!empty($param['level'])) {
             $where['actor_level'] = $param['level'];
         }
-        if (in_array($param['status'], ['0', '1'])) {
+        if (in_array($param['status'] ?? '', ['0', '1'])) {
             $where['actor_status'] = $param['status'];
         }
         if(!empty($param['pic'])){

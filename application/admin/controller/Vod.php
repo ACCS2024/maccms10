@@ -26,7 +26,7 @@ class Vod extends Base
         if(!empty($param['level'])){
             $where['vod_level'] = $param['level'];
         }
-        if(in_array($param['status'],['0','1'])){
+        if(in_array($param['status'] ?? '',['0','1'])){
             $where['vod_status'] = $param['status'];
         }
         if(in_array($param['copyright'],['0','1'])){

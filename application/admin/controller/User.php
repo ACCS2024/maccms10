@@ -20,7 +20,7 @@ class User extends Base
         }
 
         $where=[];
-        if(in_array($param['status'],['0','1'],true)){
+        if(in_array($param['status'] ?? '',['0','1'],true)){
             $where['user_status'] = $param['status'];
         }
         if(!empty($param['group'])){

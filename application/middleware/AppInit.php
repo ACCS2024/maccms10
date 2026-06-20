@@ -85,10 +85,13 @@ class AppInit
         $GLOBALS['http_type'] = $https ? 'https://' : 'http://';
 
         // view_path — TP8: Config::set(array $config, string $name)
+        // 后台始终使用应用自身视图目录(application/admin/view/,view_path 置空由
+        // 多应用解析),不套前台主题路径;前台才用主题路径。
         $viewPath = 'template/' . $TMP_TEMPLATEDIR . '/' . $TMP_HTMLDIR . '/';
-        \think\facade\Config::set(['view_path' => $viewPath], 'view');
-        if (ENTRANCE === 'admin' && !file_exists('./' . $viewPath)) {
+        if (ENTRANCE === 'admin') {
             \think\facade\Config::set(['view_path' => ''], 'view');
+        } else {
+            \think\facade\Config::set(['view_path' => $viewPath], 'view');
         }
 
         if (intval($config['app']['search_len']) < 1) {

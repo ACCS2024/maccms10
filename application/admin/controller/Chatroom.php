@@ -12,13 +12,13 @@ class Chatroom extends Base
     public function data()
     {
         $param = \think\facade\Request::param();
-        $param['page'] = intval($param['page']) < 1 ? 1 : $param['page'];
-        $param['limit'] = intval($param['limit']) < 1 ? $this->_pagesize : $param['limit'];
+        $param['page'] = intval($param['page'] ?? 0) < 1 ? 1 : $param['page'];
+        $param['limit'] = intval($param['limit'] ?? 0) < 1 ? $this->_pagesize : $param['limit'];
         // 分页硬上限，防止单次查询返回过多数据
         $param['limit'] = min(intval($param['limit']), 100);
 
         $where = [];
-        if (isset($param['status']) && in_array($param['status'], ['0', '1'], true)) {
+        if (isset($param['status']) && in_array($param['status'] ?? '', ['0', '1'], true)) {
             $where['chat_status'] = $param['status'];
         }
         if (!empty($param['vod_id'])) {

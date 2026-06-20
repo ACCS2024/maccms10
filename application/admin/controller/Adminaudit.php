@@ -15,8 +15,8 @@ class Adminaudit extends Base
     public function index()
     {
         $param = \think\facade\Request::param();
-        $param['page'] = intval($param['page']) < 1 ? 1 : intval($param['page']);
-        $param['limit'] = intval($param['limit']) < 1 ? $this->_pagesize : intval($param['limit']);
+        $param['page'] = intval($param['page'] ?? 0) < 1 ? 1 : intval($param['page']);
+        $param['limit'] = intval($param['limit'] ?? 0) < 1 ? $this->_pagesize : intval($param['limit']);
         $where = [];
 
         if (!empty($param['admin_id'])) {

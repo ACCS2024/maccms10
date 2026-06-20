@@ -14,7 +14,7 @@ class Group extends Base
         $param = \think\facade\Request::param();
         $where=[];
 
-        if(in_array($param['status'],['0','1'],true)){
+        if(in_array($param['status'] ?? '',['0','1'],true)){
             $where['group_status'] = $param['status'];
         }
         if(!empty($param['wd'])){

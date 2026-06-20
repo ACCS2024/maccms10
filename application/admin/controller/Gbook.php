@@ -16,7 +16,7 @@ class Gbook extends Base
         $param['limit'] = intval($param['limit'] ?? 0) <1 ? $this->_pagesize : $param['limit'];
 
         $where=[];
-        if(in_array($param['status'],['0','1'],true)){
+        if(in_array($param['status'] ?? '',['0','1'],true)){
             $where['gbook_status'] = $param['status'];
         }
         if(in_array($param['type'],['1','2'])){

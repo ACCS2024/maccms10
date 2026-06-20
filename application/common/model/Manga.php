@@ -84,7 +84,7 @@ class Manga extends Base {
             if($addition==1){
 	            if(!empty($v['type_id'])) {
 	                $list[$k]['type'] = $type_list[$v['type_id']];
-                    $list[$k]['type_1'] = $type_list[$list[$k]['type']['type_pid']];
+                    $list[$k]['type_1'] = $type_list[$list[$k]['type']['type_pid'] ?? 0] ?? $list[$k]['type'];
 	            }
 	            if(!empty($v['group_id'])) {
 	                $list[$k]['group'] = $group_list[$v['group_id']];
@@ -132,7 +132,7 @@ class Manga extends Base {
             if($addition==1){
                 if(!empty($v['type_id'])) {
                     $list[$k]['type'] = $type_list[$v['type_id']];
-                    $list[$k]['type_1'] = $type_list[$list[$k]['type']['type_pid']];
+                    $list[$k]['type_1'] = $type_list[$list[$k]['type']['type_pid'] ?? 0] ?? $list[$k]['type'];
                 }
                 if(!empty($v['group_id'])) {
                     $list[$k]['group'] = $group_list[$v['group_id']];
