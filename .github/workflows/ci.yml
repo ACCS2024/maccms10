@@ -130,6 +130,14 @@ jobs:
           php -S 127.0.0.1:8813 madmin_ci.php >/tmp/admin_srv.log 2>&1 &
           for i in $(seq 1 30); do curl -s -o /dev/null "http://127.0.0.1:8813/index/login" && break; sleep 1; done
           bash tests/admin_smoke.sh "http://127.0.0.1:8813"
+      - name: Admin write smoke (CRUD 写入真正生效)
+        env:
+          MAC_MYSQL: "mysql -h127.0.0.1 -uroot -proot maccms"
+        run: |
+          set -uo pipefail
+          # 复用上一步启动的后台服务器(:8813),验证字段切换/保存/删除/配置保存
+          # 经 CSRF 与会话真正写入数据库(含 CSRF 负例)。
+          python3 tests/admin_write_smoke.py "http://127.0.0.1:8813"
 
   shellcheck:
     name: ShellCheck (deploy/ + tests/ shell scripts)
