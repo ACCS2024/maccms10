@@ -45,7 +45,7 @@ if (!is_writable('./runtime')) {
 }
 
 require __DIR__ . '/vendor/autoload.php';
-$app = new \think\App(ROOT_PATH);
+$app = new \app\MacApp(ROOT_PATH);
 $app->setAppPath(APP_PATH);
 $http     = $app->http;
 $response = $http->name('install')->path(APP_PATH . 'install/')->run();

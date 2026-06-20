@@ -49,7 +49,7 @@ if (isset($_SERVER['PATH_INFO']) && !mb_check_encoding($_SERVER['PATH_INFO'], 'u
 }
 
 require __DIR__ . '/vendor/autoload.php';
-$app      = new \think\App(ROOT_PATH);
+$app      = new \app\MacApp(ROOT_PATH);
 $app->setAppPath(APP_PATH);
 $http     = $app->http;
 $response = $http->name('admin')->path(APP_PATH . 'admin/')->run();
