@@ -2,7 +2,7 @@
 namespace app\common\behavior;
 
 use think\facade\Cache;
-use think\Exception;
+use think\facade\Config;
 
 class Init
 {
@@ -84,54 +84,40 @@ class Init
 
         $GLOBALS['http_type'] = ((isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] == 'on') || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] == 'https')) ? 'https://' : 'http://';
 
-        if(ENTRANCE=='index'){
-            config('dispatch_success_tmpl','public/jump');
-            config('dispatch_error_tmpl','public/jump');
-        }
-
-        config('template.view_path', 'template/' . $TMP_TEMPLATEDIR .'/' . $TMP_HTMLDIR .'/');
+        Config::set(['view_path' => 'template/' . $TMP_TEMPLATEDIR .'/' . $TMP_HTMLDIR .'/'], 'template');
 
         if(ENTRANCE=='admin'){
             if(!file_exists('./template/' . $TMP_TEMPLATEDIR .'/' . $TMP_HTMLDIR .'/')){
-                config('template.view_path','');
+                Config::set(['view_path' => ''], 'template');
             }
         }
         if(intval($config['app']['search_len'])<1){
             $config['app']['search_len'] = 50;
         }
-        config('url_route_on',$config['rewrite']['route_status']);
-        if(empty($config['app']['pathinfo_depr'])){
-            $config['app']['pathinfo_depr'] = '/';
-        }
-        config('pathinfo_depr',$config['app']['pathinfo_depr']);
-
         if(intval($config['app']['cache_time'])<1){
             $config['app']['cache_time'] = 60;
         }
-        config('cache.expire', $config['app']['cache_time'] );
+        Config::set(['expire' => $config['app']['cache_time']], 'cache');
 
 
         if(!in_array($config['app']['cache_type'],['file','memcache','memcached','redis'])){
             $config['app']['cache_type'] = 'file';
         }
         if(!empty($config['app']['lang'])){
-            config('default_lang', $config['app']['lang']);
+            Config::set(['default_lang' => $config['app']['lang']], 'lang');
         }
 
-        config('cache.type', $config['app']['cache_type']);
+        Config::set(['type' => $config['app']['cache_type']], 'cache');
         // 连接超时(秒):TP5 redis/memcache 驱动把该值作为 connect() 的秒级超时。
         // 历史硬编码 1000(=1000 秒)会在 Redis/Memcache 不可达时,让每个请求在 connect 上
         // 阻塞十几分钟 → 整站挂死。改为秒级快速失败(可经 maccms.php 的 cache_timeout 覆盖),
         // 使"缓存切 Redis"在后端故障时安全降级而非拖垮站点。
         $cacheTimeout = (isset($config['app']['cache_timeout']) && (float)$config['app']['cache_timeout'] > 0)
             ? (float)$config['app']['cache_timeout'] : 1.5;
-        config('cache.timeout', $cacheTimeout);
-        config('cache.host',$config['app']['cache_host']);
-        config('cache.port',$config['app']['cache_port']);
-        config('cache.username',$config['app']['cache_username']);
-        config('cache.password',$config['app']['cache_password']);
+        Config::set(['timeout' => $cacheTimeout], 'cache');
+        Config::set(['host' => $config['app']['cache_host'], 'port' => $config['app']['cache_port'], 'username' => $config['app']['cache_username'], 'password' => $config['app']['cache_password']], 'cache');
         if($config['app']['cache_type'] == 'redis' && isset($config['app']['cache_db']) && intval($config['app']['cache_db']) > 0){
-            config('cache.select', intval($config['app']['cache_db']));
+            Config::set(['select' => intval($config['app']['cache_db'])], 'cache');
         }
         if($config['app']['cache_type'] != 'file'){
             $opt = config('cache');
@@ -144,13 +130,15 @@ class Init
         // 本桥接在 app_init 执行,早于首次 session 访问(CsrfGuard 等在 app_begin),故配置及时生效。
         $sessionType = isset($config['app']['session_type']) ? strtolower(trim((string)$config['app']['session_type'])) : '';
         if ($sessionType === 'redis') {
-            config('session.type', 'redis');
-            config('session.host', $config['app']['cache_host']);
-            config('session.port', $config['app']['cache_port']);
-            config('session.password', $config['app']['cache_password']);
-            config('session.select', isset($config['app']['cache_db']) ? intval($config['app']['cache_db']) : 0);
-            config('session.timeout', $cacheTimeout);
-            config('session.persistent', true);
+            Config::set([
+                'type'       => 'redis',
+                'host'       => $config['app']['cache_host'],
+                'port'       => $config['app']['cache_port'],
+                'password'   => $config['app']['cache_password'],
+                'select'     => isset($config['app']['cache_db']) ? intval($config['app']['cache_db']) : 0,
+                'timeout'    => $cacheTimeout,
+                'persistent' => true,
+            ], 'session');
         }
 
         $GLOBALS['config'] = $config;
