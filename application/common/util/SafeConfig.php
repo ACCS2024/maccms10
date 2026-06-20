@@ -26,12 +26,13 @@ class SafeConfig extends \ArrayObject
             $v = parent::offsetGet($key);
             return is_array($v) ? new self($v) : $v;
         }
+        $arr = 0; $scalar = 0;
         foreach ($this as $sibling) {
-            if (is_array($sibling)) {
-                return new self([]);
-            }
+            is_array($sibling) ? $arr++ : $scalar++;
         }
-        return '';
+        // 多数兄弟为数组 → 本段是「段下有子段」,缺失键按中间段返回可下标空容器;
+        // 否则(混合段中以标量为主,如 upload 的 keep_local/mode)按叶子返回空串。
+        return $arr > $scalar ? new self([]) : '';
     }
 
     public function __toString(): string
