@@ -581,7 +581,7 @@ function mac_extends_list($flag)
             $c = new $cp;
             $res['ext_list'][$cl] = $c->name;
             if(file_exists( './application/admin/view/extend/'.$flag.'/'.strtolower($cl) .'.html')) {
-                $res['ext_html'] .= \think\facade\View::fetch('admin@extend/'.$flag.'/' . strtolower($cl), ['editor' => strtolower($cl), 'cl' => $cl, 'config' => $GLOBALS['config'] ?? []]);
+                $res['ext_html'] .= \think\facade\View::fetch('admin@extend/'.$flag.'/' . strtolower($cl), ['editor' => strtolower($cl), 'cl' => $cl, 'config' => new \app\common\util\SafeConfig($GLOBALS['config'] ?? [])]);
             }
         }
     }

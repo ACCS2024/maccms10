@@ -82,6 +82,9 @@ class Base extends All
     {
         if (($name === 'param' || $name === 'info') && is_array($value)) {
             $value = new \app\common\util\SafeParam($value);
+        } elseif ($name === 'config' && is_array($value)) {
+            // 设置页 {$config.section.key} 嵌套访问:用递归容器兜底未配置的段
+            $value = new \app\common\util\SafeConfig($value);
         }
         parent::assign($name, $value);
     }
