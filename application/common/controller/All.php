@@ -1061,7 +1061,7 @@ polyfill;
         if (\think\facade\Request::isAjax()) {
             return json(['code' => 1, 'msg' => $msg, 'data' => $data]);
         }
-        $this->assign(['msg' => $msg, 'url' => $url ?? 'javascript:history.back();', 'wait' => $wait, 'type' => 'success']);
+        $this->assign(['code' => 1, 'msg' => $msg, 'url' => $url ?? 'javascript:history.back();', 'wait' => $wait, 'type' => 'success']);
         throw new \think\exception\HttpResponseException(\think\Response::create(\think\facade\View::fetch('public/jump')));
     }
 
@@ -1070,7 +1070,7 @@ polyfill;
         if (\think\facade\Request::isAjax()) {
             return json(['code' => 0, 'msg' => $msg, 'data' => $data]);
         }
-        $this->assign(['msg' => $msg, 'url' => $url ?? 'javascript:history.back();', 'wait' => $wait, 'type' => 'error']);
+        $this->assign(['code' => 0, 'msg' => $msg, 'url' => $url ?? 'javascript:history.back();', 'wait' => $wait, 'type' => 'error']);
         throw new \think\exception\HttpResponseException(\think\Response::create(\think\facade\View::fetch('public/jump')));
     }
 

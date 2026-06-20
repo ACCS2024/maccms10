@@ -44,18 +44,21 @@ class Base extends All
         else {
             $res = (new \app\common\model\Admin())->checkLogin();
             if ($res['code'] > 1) {
+                // TP8:构造函数的返回值会被忽略,必须 throw HttpResponseException 才能真正
+                // 中断请求。否则 `return redirect()` 仅退出构造、动作仍会执行 → 鉴权被绕过。
                 if(ENTRANCE=='api'){
-                    echo json_encode(['code'=>1009,'msg'=>'not login']);
-                    exit;
+                    throw new \think\exception\HttpResponseException(json(['code'=>1009,'msg'=>'not login']));
                 }
-                return redirect((string) url('index/login'));
+                throw new \think\exception\HttpResponseException(redirect((string) url('index/login')));
             }
             $this->_admin = $res['info'];
             $this->_pagesize = $GLOBALS['config']['app']['pagesize'];
             $this->_makesize = $GLOBALS['config']['app']['makesize'];
 
             if($this->_cl!='Update' && !$this->check_auth($this->_cl,$this->_ac)){
-                return $this->error(lang('permission_denied'));
+                // 同理:error() 在非 AJAX 下已 throw;AJAX 下返回 json,需显式 throw 才能中断,
+                // 避免无权限的 AJAX 请求继续执行动作。
+                throw new \think\exception\HttpResponseException($this->error(lang('permission_denied')));
             }
         }
         $this->assign('cl',$this->_cl);

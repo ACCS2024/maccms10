@@ -420,7 +420,7 @@ class PublishPage
      */
     public static function htmlLangAttr()
     {
-        $lang = strtolower(trim((string) config('default_lang')));
+        $lang = strtolower(trim((string) \think\facade\Lang::getLangSet()));
         if ($lang === '') {
             $lang = 'zh-cn';
         }

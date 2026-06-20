@@ -162,7 +162,7 @@ class SeoAi
     {
         $sysLang = strtolower((string)config('maccms.app.lang'));
         if ($sysLang === '') {
-            $sysLang = strtolower((string)config('default_lang'));
+            $sysLang = strtolower((string)\think\facade\Lang::getLangSet());
         }
         if ($sysLang === '' && !empty($payload['lang'])) {
             $sysLang = strtolower((string)$payload['lang']);

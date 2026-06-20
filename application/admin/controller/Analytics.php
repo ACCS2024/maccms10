@@ -471,7 +471,7 @@ class Analytics extends Base
             strtolower((string)(string)\think\facade\Request::param('lang', '')),
             strtolower((string)cookie('admin_lang')),
             strtolower((string)cookie('think_var')),
-            strtolower((string)config('default_lang')),
+            strtolower((string)\think\facade\Lang::getLangSet()),
             strtolower((string)config('lang.default_lang')),
             strtolower((string)($GLOBALS['config']['app']['lang'] ?? '')),
         ];

@@ -101,7 +101,7 @@ class Index extends Base
             $country_code = "其它";
         }
         $this->assign('ip_location', $country_code);
-        $this->assign('mac_lang', config('default_lang'));
+        $this->assign('mac_lang', \think\facade\Lang::getLangSet());
         return $this->fetch('admin@index/index');
     }
 
@@ -131,7 +131,7 @@ class Index extends Base
         $this->assign('os_data', $os_data);
         $this->assign('version', $version);
         $this->assign('update_sql', $update_sql);
-        $this->assign('mac_lang', config('default_lang'));
+        $this->assign('mac_lang', \think\facade\Lang::getLangSet());
         $this->assign('dashboard_data', $this->getAdminDashboardData());
 
         $this->assign('admin', $this->_admin);
@@ -855,8 +855,8 @@ class Index extends Base
 
         //近七日用户访问总量
         $result['seven_day_visit_total_count'] = 0;
-        foreach ($result['seven_day_visit_data'] as $k => $value) {
-            $result['seven_day_visit_total_count'] = $result['seven_day_visit_total_count'] + $value['count'];
+        foreach ($tmp_arr as $k => $value) {
+            $result['seven_day_visit_total_count'] = $result['seven_day_visit_total_count'] + ($value['count'] ?? 0);
         }
 
         $result['seven_day_visit_total_count'] = number_format($result['seven_day_visit_total_count'], 0, '.', ',');

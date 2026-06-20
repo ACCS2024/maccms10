@@ -318,7 +318,7 @@ class AdminAssistantService
      */
     private function buildMenuI18nBlock()
     {
-        $raw = strtolower(trim((string)config('default_lang')));
+        $raw = strtolower(trim((string)\think\facade\Lang::getLangSet()));
         $langId = preg_replace('/[^a-z0-9_-]/', '', $raw);
         if ($langId === '') {
             $langId = 'zh-cn';
