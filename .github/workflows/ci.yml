@@ -87,7 +87,8 @@ jobs:
             INSERT INTO mac_vod (vod_id,type_id,vod_name,vod_status,vod_time,vod_letter,vod_play_from,vod_play_url,vod_content) VALUES (1,6,"CI Smoke Vod",1,UNIX_TIMESTAMP(),"C","mac_test","01$http://example.com/1.m3u8","desc");
             INSERT INTO mac_art (art_id,type_id,art_name,art_status,art_time,art_letter,art_content) VALUES (1,2,"CI Smoke Art",1,UNIX_TIMESTAMP(),"C","content");
             INSERT INTO mac_actor (actor_id,type_id,actor_name,actor_status,actor_time,actor_letter,actor_content) VALUES (1,8,"CI Actor",1,UNIX_TIMESTAMP(),"C","bio");
-            INSERT INTO mac_topic (topic_id,topic_name,topic_status,topic_time,topic_en,topic_content) VALUES (1,"CI Topic",1,UNIX_TIMESTAMP(),"ci","content");'
+            INSERT INTO mac_topic (topic_id,topic_name,topic_status,topic_time,topic_en,topic_content) VALUES (1,"CI Topic",1,UNIX_TIMESTAMP(),"ci","content");
+            INSERT INTO mac_admin (admin_id,admin_name,admin_pwd,admin_status,admin_auth) VALUES (1,"admin",MD5("admin888"),1,"");'
       - name: Configure .env + install lock
         run: |
           set -euo pipefail
@@ -119,6 +120,16 @@ jobs:
             php tests/http_smoke.php api "$u" || fail=1
           done
           if [ "$fail" = 0 ]; then echo "All HTTP smoke OK"; else echo "HTTP smoke FAILED"; exit 1; fi
+      - name: Admin HTTP smoke (login + assert non-5xx)
+        run: |
+          set -uo pipefail
+          # 关验证码(仅 CI 临时环境),以便脚本化登录
+          sed -i "s/'admin_login_verify' => '1'/'admin_login_verify' => '0'/" application/extra/maccms.php
+          # admin.php 自带改名守卫,复制为改名入口后启动后台服务器
+          cp admin.php madmin_ci.php
+          php -S 127.0.0.1:8813 madmin_ci.php >/tmp/admin_srv.log 2>&1 &
+          for i in $(seq 1 30); do curl -s -o /dev/null "http://127.0.0.1:8813/index/login" && break; sleep 1; done
+          bash tests/admin_smoke.sh "http://127.0.0.1:8813"
 
   shellcheck:
     name: ShellCheck (deploy/ + tests/ shell scripts)
