@@ -676,7 +676,8 @@ class Make extends Base
             $type_name =lang('no_make_data');
             $start=1;
             $data_count=0;
-            $where[$this->_param['tab'].'_time_make'] = ['exp',  Db::raw(' < '. $this->_param['tab'].'_time')];
+            $_tab = $this->_param['tab'];
+            $where[] = [$_tab.'_time_make', '<', Db::raw($_tab.'_time')];
             if($start > $page_count){
                 $this->echoLink(lang('admin/make/info_make_complete').'4');
                 if(ENTRANCE=='admin'){

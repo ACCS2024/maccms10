@@ -320,7 +320,9 @@ class AiSearch
         $rows = Db::name('Vod')
             ->field('vod_id,vod_name,vod_pic')
             ->where('vod_status', 1)
-            ->where('vod_name|vod_sub|vod_actor|vod_tag', 'like', $kw)
+            ->where(function($q) use ($kw) {
+                $q->where('vod_name', 'like', $kw)->whereOr('vod_sub', 'like', $kw)->whereOr('vod_actor', 'like', $kw)->whereOr('vod_tag', 'like', $kw);
+            })
             ->order('vod_hits desc,vod_id desc')
             ->limit(8)
             ->select();
@@ -345,7 +347,9 @@ class AiSearch
         $rows = Db::name('Art')
             ->field('art_id,art_name,art_pic')
             ->where('art_status', 1)
-            ->where('art_name|art_sub|art_tag', 'like', $kw)
+            ->where(function($q) use ($kw) {
+                $q->where('art_name', 'like', $kw)->whereOr('art_sub', 'like', $kw)->whereOr('art_tag', 'like', $kw);
+            })
             ->order('art_hits desc,art_id desc')
             ->limit(8)
             ->select();
@@ -484,7 +488,9 @@ class AiSearch
         $rows = Db::name('Manga')
             ->field('manga_id,manga_name,manga_en,manga_pic,manga_author')
             ->where('manga_status', 1)
-            ->where('manga_name|manga_sub|manga_tag|manga_blurb|manga_author', 'like', $kw)
+            ->where(function($q) use ($kw) {
+                $q->where('manga_name', 'like', $kw)->whereOr('manga_sub', 'like', $kw)->whereOr('manga_tag', 'like', $kw)->whereOr('manga_blurb', 'like', $kw)->whereOr('manga_author', 'like', $kw);
+            })
             ->order('manga_hits desc,manga_id desc')
             ->limit(8)
             ->select();
@@ -530,7 +536,9 @@ class AiSearch
         $rows = Db::name('Topic')
             ->field('topic_id,topic_name,topic_en,topic_pic')
             ->where('topic_status', 1)
-            ->where('topic_name|topic_sub|topic_tag|topic_blurb', 'like', $kw)
+            ->where(function($q) use ($kw) {
+                $q->where('topic_name', 'like', $kw)->whereOr('topic_sub', 'like', $kw)->whereOr('topic_tag', 'like', $kw)->whereOr('topic_blurb', 'like', $kw);
+            })
             ->order('topic_hits desc,topic_id desc')
             ->limit(8)
             ->select();
@@ -555,7 +563,9 @@ class AiSearch
         $rows = Db::name('Actor')
             ->field('actor_id,actor_name,actor_en,actor_pic')
             ->where('actor_status', 1)
-            ->where('actor_name|actor_alias|actor_tag|actor_works', 'like', $kw)
+            ->where(function($q) use ($kw) {
+                $q->where('actor_name', 'like', $kw)->whereOr('actor_alias', 'like', $kw)->whereOr('actor_tag', 'like', $kw)->whereOr('actor_works', 'like', $kw);
+            })
             ->order('actor_hits desc,actor_id desc')
             ->limit(8)
             ->select();
@@ -580,7 +590,9 @@ class AiSearch
         $rows = Db::name('Role')
             ->field('role_id,role_name,role_en,role_pic')
             ->where('role_status', 1)
-            ->where('role_name|role_actor|role_remarks', 'like', $kw)
+            ->where(function($q) use ($kw) {
+                $q->where('role_name', 'like', $kw)->whereOr('role_actor', 'like', $kw)->whereOr('role_remarks', 'like', $kw);
+            })
             ->order('role_hits desc,role_id desc')
             ->limit(8)
             ->select();
@@ -605,7 +617,9 @@ class AiSearch
         $rows = Db::name('Website')
             ->field('website_id,website_name,website_en,website_pic')
             ->where('website_status', 1)
-            ->where('website_name|website_sub|website_tag|website_blurb', 'like', $kw)
+            ->where(function($q) use ($kw) {
+                $q->where('website_name', 'like', $kw)->whereOr('website_sub', 'like', $kw)->whereOr('website_tag', 'like', $kw)->whereOr('website_blurb', 'like', $kw);
+            })
             ->order('website_hits desc,website_id desc')
             ->limit(8)
             ->select();
@@ -631,7 +645,9 @@ class AiSearch
         $rows = Db::name('Vod')
             ->field('vod_id,vod_name,vod_pic')
             ->where('vod_status', 1)
-            ->where('vod_plot_name|vod_plot_detail', 'like', $kw)
+            ->where(function($q) use ($kw) {
+                $q->where('vod_plot_name', 'like', $kw)->whereOr('vod_plot_detail', 'like', $kw);
+            })
             ->order('vod_hits desc,vod_id desc')
             ->limit(8)
             ->select();
