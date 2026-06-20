@@ -542,7 +542,7 @@ class Vod extends Base
 
         //地区、语言
         $config = config('maccms.app');
-        $area_list = explode(',',$config['vod_area']);
+        $area_list = explode(',',$config['vod_area'] ?? '');
         $lang_list = explode(',',$config['vod_lang']);
         $this->assign('area_list',$area_list);
         $this->assign('lang_list',$lang_list);

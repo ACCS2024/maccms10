@@ -102,7 +102,7 @@
                 <li class="side-panel__item">
                     <a class="admin-nav-item" data-id="{$key}{$kk}" href="{$vv['url']}" title="{$vv['name']}">
                         <span class="admin-nav-item__glyph" aria-hidden="true"></span>
-                        <i class="{$vv['icon']}"></i>
+                        <i class="{$vv['icon']|default=''}"></i>
                         <span class="admin-nav-item__label">{$vv['name']}</span>
                     </a>
                 </li>
@@ -220,7 +220,7 @@
     })();
 </script>
 <script>
-    var MAC_VERSION='{$version.code}',PHP_VERSION='{php}echo PHP_VERSION{/php}',THINK_VERSION='{php}echo THINK_VERSION{/php}';MAC_LANG='{$mac_lang}';
+    var MAC_VERSION='{$version.code}',PHP_VERSION='{php}echo PHP_VERSION{/php}',THINK_VERSION='{php}echo \think\App::VERSION{/php}';MAC_LANG='{$mac_lang}';
 </script>
 <script type="text/javascript">
     window.ADMIN_LANG_META = {

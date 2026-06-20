@@ -91,7 +91,7 @@ class Type extends Base
         $resp = (new \app\common\model\Type())->infoData($where);
 
         $this->assign('info',$res['info'] ?? []);
-        $this->assign('infop',$resp['info']);
+        $this->assign('infop',$resp['info'] ?? []);
         $this->assign('pid',$pid);
 
         $where=[];
