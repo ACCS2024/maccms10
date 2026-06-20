@@ -2284,8 +2284,8 @@ function mac_art_list($art_title,$art_note,$art_content)
     foreach($art_content_list as $k=>$v){
         $res_list[$k+1] = [
             'page'=> $k+1,
-            'title'=>$art_title_list[$k],
-            'note'=>$art_note_list[$k],
+            'title'=>$art_title_list[$k] ?? '',
+            'note'=>$art_note_list[$k] ?? '',
             'content'=>$v,
         ];
     }

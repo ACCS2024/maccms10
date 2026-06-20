@@ -861,7 +861,7 @@ polyfill;
             $points = mac_content_read_points_amount($pre, $info);
         } elseif (in_array($pre, ['vod', 'actor', 'website'], true)) {
             $points = (int) ($info[$pre . '_points_' . $col] ?? 0);
-            if ($GLOBALS['config']['user'][$pre . '_points_type'] == '1') {
+            if (($GLOBALS['config']['user'][$pre . '_points_type'] ?? '') == '1') {
                 $points = (int) ($info[$pre . '_points'] ?? 0);
             }
         }
@@ -902,7 +902,7 @@ polyfill;
                         $where['ulog_nid'] = ($pre == 'manga') ? ($param['nid'] ?? 0) : 0;
                         $where['user_id'] = $user['user_id'];
                         $where['ulog_points'] = $points;
-                        if ($GLOBALS['config']['user'][$pre . '_points_type'] == '1') {
+                        if (($GLOBALS['config']['user'][$pre . '_points_type'] ?? '') == '1') {
                             $where['ulog_sid'] = 0;
                             $where['ulog_nid'] = 0;
                         }
@@ -926,7 +926,7 @@ polyfill;
                 $where['ulog_nid'] = ($pre == 'manga') ? ($param['nid'] ?? 0) : 0;
                 $where['user_id'] = $user['user_id'];
                 $where['ulog_points'] = $points;
-                if ($GLOBALS['config']['user'][$pre . '_points_type'] == '1') {
+                if (($GLOBALS['config']['user'][$pre . '_points_type'] ?? '') == '1') {
                     $where['ulog_sid'] = 0;
                     $where['ulog_nid'] = 0;
                 }

@@ -494,8 +494,8 @@ class Art extends Base {
             //分类
             if (!empty($info['type_id'])) {
                 $type_list = (new \app\common\model\Type())->getCache('type_list');
-                $info['type'] = $type_list[$info['type_id']];
-                $info['type_1'] = $type_list[$info['type']['type_pid']];
+                $info['type'] = $type_list[$info['type_id']] ?? [];
+                $info['type_1'] = $type_list[$info['type']['type_pid'] ?? 0] ?? $info['type'];
             }
 
             //用户组
