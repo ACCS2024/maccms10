@@ -2374,7 +2374,7 @@ function mac_play_list($vod_play_from,$vod_play_url,$vod_play_server,$vod_play_n
         }
     }
 
-    if( (ENTRANCE!='admin' && MAC_PLAYER_SORT=='1') ||  $GLOBALS['ismake']=='1' ){
+    if( (ENTRANCE!='admin' && MAC_PLAYER_SORT=='1') ||  ($GLOBALS['ismake'] ?? '')=='1' ){
         array_multisort($sort, SORT_DESC, SORT_FLAG_CASE , $res_list);
         $tmp=[];
         foreach($res_list as $k=>$v){

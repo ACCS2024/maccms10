@@ -21,7 +21,8 @@
             "addons\\": "addons/",
             "think\\": "application/common/addons/",
             "Qiniu\\": "extend/qiniu/src/Qiniu/",
-            "Upyun\\": "extend/upyun/src/Upyun/"
+            "Upyun\\": "extend/upyun/src/Upyun/",
+            "ip_limit\\": "extend/ip_limit/"
         },
         "files": [
             "application/common/addons/common.php"
