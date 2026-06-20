@@ -12,7 +12,7 @@ class Template extends Base
     public function index()
     {
         $param = \think\facade\Request::param();
-        $path = $param['path'];
+        $path = $param['path'] ?? '';
         $path = str_replace('\\','',$path);
         $path = str_replace('/','',$path);
 
@@ -33,19 +33,19 @@ class Template extends Base
         }
 
         $config = config('maccms.site');
-        if($param['current']==1){
+        if(($param['current'] ?? '')==1){
             $path = '.@template@' . $config['template_dir'] .'@' . $config['html_dir'] ;
             $ischild = 0;
             $pp = str_replace('@','/',$path);
             $filters = $pp.'/*';
         }
-        elseif($param['label']==1){
+        elseif(($param['label'] ?? '')==1){
             $path = '.@template@' . $config['template_dir'] .'@' . $config['html_dir'] ;
             $ischild = 0;
             $pp = str_replace('@','/',$path);
             $filters = $pp.'/label/*';
         }
-        elseif($param['ads']==1){
+        elseif(($param['ads'] ?? '')==1){
             $path = '.@template@' . $config['template_dir'] .'@' . $config['html_dir'] ;
             $ischild = 0;
             $pp = str_replace('@','/',$path);
@@ -150,8 +150,8 @@ class Template extends Base
     {
         $param = \think\facade\Request::param();
 
-        $fname = $param['fname'];
-        $fpath = $param['fpath'];
+        $fname = ($param['fname'] ?? '');
+        $fpath = ($param['fpath'] ?? '');
 
         if( empty($fpath)){
             $this->error(lang('param_err').'1');
@@ -188,7 +188,7 @@ class Template extends Base
                 return $this->error($validate->getError());
             }
 
-            $fcontent = $param['fcontent'];
+            $fcontent = ($param['fcontent'] ?? '');
             $r = mac_reg_replace($fcontent,$filter,"*");
             if($fcontent !== $r){
                 $this->error(lang('admin/template/php_safe_tip'));
@@ -214,7 +214,7 @@ class Template extends Base
     public function del()
     {
         $param = \think\facade\Request::param();
-        $fname = $param['fname'];
+        $fname = ($param['fname'] ?? '');
         if(!empty($fname)){
             if(!is_array($fname)){
                 $fname = [$fname];

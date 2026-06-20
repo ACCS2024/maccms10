@@ -19,6 +19,7 @@ class Addon extends Base
     {
         $param = \think\facade\Request::param();
 
+        $this->assign('param',$param);
         $this->assign('title',lang('admin/addon/title'));
         return $this->fetch('admin@addon/index');
     }

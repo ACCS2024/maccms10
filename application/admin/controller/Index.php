@@ -20,7 +20,13 @@ class Index extends Base
             if ($res['code'] > 1) {
                 return $this->error($res['msg']);
             }
-            return $this->success($res['msg']);
+            // AJAX 登录返回 json(前端跳转);非 AJAX 表单登录返回真重定向。
+            // 不能用会 throw HttpResponseException 的 success():抛出会跳过 SessionInit
+            // 在 $next() 之后的会话保存/换发 cookie,导致刚写入的 admin_auth 不被持久化。
+            if (\think\facade\Request::isAjax()) {
+                return $this->success($res['msg']);
+            }
+            return redirect((string) url('index/index'));
         }
         event('admin_login_init', $this->request);
         return $this->fetch('admin@index/login');
