@@ -754,8 +754,9 @@ polyfill;
         if($param['nid'] < $info['vod_'.$flag.'_list'][$param['sid']]['url_count']){
             $player_info['link_next'] = $urlfun($info,['sid'=>$param['sid'],'nid'=>$param['nid']+1]);
         }
-        $player_info['url'] = (string)$info[$listfun][$param['sid']]['urls'][$param['nid']]['url'];
-        $player_info['url_next'] = (string)$info[$listfun][$param['sid']]['urls'][$param['nid']+1]['url'];
+        // ?? '' 兜底:最后一集无「下一集」(urls[nid+1] 不存在),PHP8 下未定义键会被 TP8 升级为异常 → 500
+        $player_info['url'] = (string)($info[$listfun][$param['sid']]['urls'][$param['nid']]['url'] ?? '');
+        $player_info['url_next'] = (string)($info[$listfun][$param['sid']]['urls'][$param['nid']+1]['url'] ?? '');
 
         if(substr($player_info['url'],0,6) == 'upload'){
             $player_info['url'] = MAC_PATH . $player_info['url'];
