@@ -21,3 +21,5 @@ node_modules/
 thinkphp_legacy_*/
 # 安装锁:每个部署在安装时生成,不应入库(否则全新克隆会误判「已安装」)
 application/data/install/install.lock
+# 后台安全schema更新锁(运行时生成)
+application/data/update/sec_schema.lock
