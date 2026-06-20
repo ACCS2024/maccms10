@@ -101,6 +101,7 @@ class Index extends Base
             $country_code = "其它";
         }
         $this->assign('ip_location', $country_code);
+        $this->assign('mac_lang', config('default_lang'));
         return $this->fetch('admin@index/index');
     }
 
@@ -832,7 +833,7 @@ class Index extends Base
         $result['today_money_get'] = (new \app\common\model\Order())->where('order_time', 'between', $today_start . ',' . $today_end)->where('order_status', 1)->sum('order_price');
         $result['today_money_get'] = number_format($result['today_money_get'], 2, '.', ',');
         //前七天 每日用户访问数
-        $tmp_arr = Db::query("select FROM_UNIXTIME(visit_time, '%Y-%c-%d' ) days,count(*) count from (SELECT * from ".config('database.prefix')."visit where visit_time >= (unix_timestamp(CURDATE())-604800)) as temp group by days");
+        $tmp_arr = Db::query("select FROM_UNIXTIME(visit_time, '%Y-%c-%d' ) days,count(*) count from (SELECT * from ".config('database.connections.mysql.prefix')."visit where visit_time >= (unix_timestamp(CURDATE())-604800)) as temp group by days");
         $result['seven_day_visit_day'] = [];
         $result['seven_day_visit_count'] = [];
 
@@ -860,7 +861,7 @@ class Index extends Base
 
         $result['seven_day_visit_total_count'] = number_format($result['seven_day_visit_total_count'], 0, '.', ',');
         //前七天 每日用户注册数
-        $result['seven_day_reg_data'] = Db::query("select FROM_UNIXTIME(user_reg_time, '%Y-%c-%d' ) days,count(*) count from (SELECT * from ".config('database.prefix')."user where user_reg_time >= (unix_timestamp(CURDATE())-604800)) as tmp group by days");
+        $result['seven_day_reg_data'] = Db::query("select FROM_UNIXTIME(user_reg_time, '%Y-%c-%d' ) days,count(*) count from (SELECT * from ".config('database.connections.mysql.prefix')."user where user_reg_time >= (unix_timestamp(CURDATE())-604800)) as tmp group by days");
 
         //近七日用户注册总量
         $result['seven_day_reg_total_count'] = 0;
@@ -895,7 +896,7 @@ class Index extends Base
         $endTs = strtotime(isset($_POST['endDate']) ? $_POST['endDate'] : '');
         $startTs = ($startTs !== false) ? (int)$startTs : 0;
         $endTs = ($endTs !== false) ? (int)$endTs : 0;
-        $visitTable = config('database.prefix') . 'visit';
+        $visitTable = config('database.connections.mysql.prefix') . 'visit';
         $visitTable = '`' . str_replace('`', '``', $visitTable) . '`';
         $range_daily_visit_data = Db::query(
             "select FROM_UNIXTIME(visit_time, '%Y-%c-%d' ) days,count(*) count from (SELECT * from {$visitTable} where visit_time >= ? and visit_time <= ? ) as temp group by days",

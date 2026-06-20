@@ -122,7 +122,7 @@ class Cj extends Base
         if($res['info']['mid'] =='2'){
             $table='art';
         }
-        $column_list = Db::query('SHOW COLUMNS FROM '.config('database.prefix').$table);
+        $column_list = Db::query('SHOW COLUMNS FROM '.config('database.connections.mysql.prefix').$table);
         $this->assign('column_list',$column_list);
         $this->assign('param',$param);
         return $this->fetch('admin@cj/program');

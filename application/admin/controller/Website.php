@@ -50,9 +50,9 @@ class Website extends Base
 
         if(!empty($param['repeat'])){
             if($param['page'] ==1){
-                Db::execute('DROP TABLE IF EXISTS '.config('database.prefix').'tmpwebsite');
-                Db::execute('CREATE TABLE `'.config('database.prefix').'tmpwebsite` (`id1` int unsigned DEFAULT NULL, `name1` varchar(1024) NOT NULL DEFAULT \'\') ENGINE=MyISAM');
-                Db::execute('INSERT INTO `'.config('database.prefix').'tmpwebsite` (SELECT min(website_id)as id1,website_name as name1 FROM '.config('database.prefix').'website GROUP BY name1 HAVING COUNT(name1)>1)');
+                Db::execute('DROP TABLE IF EXISTS '.config('database.connections.mysql.prefix').'tmpwebsite');
+                Db::execute('CREATE TABLE `'.config('database.connections.mysql.prefix').'tmpwebsite` (`id1` int unsigned DEFAULT NULL, `name1` varchar(1024) NOT NULL DEFAULT \'\') ENGINE=MyISAM');
+                Db::execute('INSERT INTO `'.config('database.connections.mysql.prefix').'tmpwebsite` (SELECT min(website_id)as id1,website_name as name1 FROM '.config('database.connections.mysql.prefix').'website GROUP BY name1 HAVING COUNT(name1)>1)');
             }
             $order='website_name asc';
             $res = (new \app\common\model\Website())->listRepeatData($where,$order,$param['page'],$param['limit']);
@@ -240,7 +240,7 @@ class Website extends Base
             if($param['retain']=='max'){
                 $st=' in ';
             }
-            $sql = 'delete from '.config('database.prefix').'website where website_name in(select name1 from '.config('database.prefix').'tmpwebsite) and website_id '.$st.'(select id1 from '.config('database.prefix').'tmpwebsite)';
+            $sql = 'delete from '.config('database.connections.mysql.prefix').'website where website_name in(select name1 from '.config('database.connections.mysql.prefix').'tmpwebsite) and website_id '.$st.'(select id1 from '.config('database.connections.mysql.prefix').'tmpwebsite)';
             $res = (new \app\common\model\Website())->execute($sql);
             if($res===false){
                 return $this->success(lang('del_err'));

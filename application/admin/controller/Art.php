@@ -54,9 +54,9 @@ class Art extends Base
 
         if(!empty($param['repeat'])){
             if($param['page'] ==1){
-                Db::execute('DROP TABLE IF EXISTS '.config('database.prefix').'tmpart');
-                Db::execute('CREATE TABLE `'.config('database.prefix').'tmpart` (`id1` int unsigned DEFAULT NULL, `name1` varchar(1024) NOT NULL DEFAULT \'\') ENGINE=MyISAM');
-                Db::execute('INSERT INTO `'.config('database.prefix').'tmpart` (SELECT min(art_id)as id1,art_name as name1 FROM '.config('database.prefix').'art WHERE art_recycle_time = 0 GROUP BY name1 HAVING COUNT(name1)>1)');
+                Db::execute('DROP TABLE IF EXISTS '.config('database.connections.mysql.prefix').'tmpart');
+                Db::execute('CREATE TABLE `'.config('database.connections.mysql.prefix').'tmpart` (`id1` int unsigned DEFAULT NULL, `name1` varchar(1024) NOT NULL DEFAULT \'\') ENGINE=MyISAM');
+                Db::execute('INSERT INTO `'.config('database.connections.mysql.prefix').'tmpart` (SELECT min(art_id)as id1,art_name as name1 FROM '.config('database.connections.mysql.prefix').'art WHERE art_recycle_time = 0 GROUP BY name1 HAVING COUNT(name1)>1)');
             }
             $order='art_name asc';
             $res = (new \app\common\model\Art())->listRepeatData($where,$order,$param['page'],$param['limit']);
@@ -342,7 +342,7 @@ class Art extends Base
             if($param['retain']=='max'){
                 $st=' in ';
             }
-            $sql = 'delete from '.config('database.prefix').'art where art_name in(select name1 from '.config('database.prefix').'tmpart) and art_id '.$st.'(select id1 from '.config('database.prefix').'tmpart)';
+            $sql = 'delete from '.config('database.connections.mysql.prefix').'art where art_name in(select name1 from '.config('database.connections.mysql.prefix').'tmpart) and art_id '.$st.'(select id1 from '.config('database.connections.mysql.prefix').'tmpart)';
             $res = (new \app\common\model\Art())->execute($sql);
             if($res===false){
                 return $this->success(lang('del_err'));

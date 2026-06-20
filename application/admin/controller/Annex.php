@@ -235,7 +235,7 @@ class Annex extends Base
                 $start=1;
             }
 
-            $pre = config('database.prefix');
+            $pre = config('database.connections.mysql.prefix');
             $schema = Db::query('select * from information_schema.columns where table_schema = ?', [config('database.database')]);
             $col_list = [];
             foreach ($schema as $k => $v) {

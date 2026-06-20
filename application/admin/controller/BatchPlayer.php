@@ -167,7 +167,7 @@ class BatchPlayer extends Base
             return json(['code' => 0, 'msg' => lang('param_err')]);
         }
 
-        $prefix = config('database.prefix');
+        $prefix = config('database.connections.mysql.prefix');
 
         // 替换 vod_play_from（参数化查询防止 SQL 注入）
         $count = Db::execute(

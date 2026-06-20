@@ -51,7 +51,7 @@ class DataReplace extends Base
         }
 
         // 验证字段是否存在于表中
-        $prefix = config('database.prefix');
+        $prefix = config('database.connections.mysql.prefix');
         try {
             $columns = Db::query("SHOW COLUMNS FROM `{$prefix}{$table}`");
             $validFields = array_column($columns, 'Field');
@@ -99,7 +99,7 @@ class DataReplace extends Base
             return json(['code' => 0, 'msg' => lang('admin/datareplace/table_not_allowed')]);
         }
 
-        $prefix = config('database.prefix');
+        $prefix = config('database.connections.mysql.prefix');
         try {
             $fields = Db::query("SHOW COLUMNS FROM `{$prefix}{$table}`");
             $result = [];

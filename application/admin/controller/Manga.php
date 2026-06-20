@@ -65,9 +65,9 @@ class Manga extends Base
 
         if(!empty($param['repeat'])){
             if($param['page'] ==1){
-                Db::execute('DROP TABLE IF EXISTS '.config('database.prefix').'tmpmanga');
-                Db::execute('CREATE TABLE `'.config('database.prefix').'tmpmanga` (`id1` int unsigned DEFAULT NULL, `name1` varchar(1024) NOT NULL DEFAULT \'\') ENGINE=MyISAM');
-                Db::execute('INSERT INTO `'.config('database.prefix').'tmpmanga` (SELECT min(manga_id)as id1,manga_name as name1 FROM '.config('database.prefix').'manga WHERE manga_recycle_time = 0 GROUP BY name1 HAVING COUNT(name1)>1)');
+                Db::execute('DROP TABLE IF EXISTS '.config('database.connections.mysql.prefix').'tmpmanga');
+                Db::execute('CREATE TABLE `'.config('database.connections.mysql.prefix').'tmpmanga` (`id1` int unsigned DEFAULT NULL, `name1` varchar(1024) NOT NULL DEFAULT \'\') ENGINE=MyISAM');
+                Db::execute('INSERT INTO `'.config('database.connections.mysql.prefix').'tmpmanga` (SELECT min(manga_id)as id1,manga_name as name1 FROM '.config('database.connections.mysql.prefix').'manga WHERE manga_recycle_time = 0 GROUP BY name1 HAVING COUNT(name1)>1)');
             }
             $order='manga_name asc';
             $res = (new \app\common\model\Manga())->listRepeatData($where,$order,$param['page'],$param['limit']);
@@ -310,7 +310,7 @@ class Manga extends Base
             if($param['retain']=='max'){
                 $st=' in ';
             }
-            $sql = 'delete from '.config('database.prefix').'manga where manga_name in(select name1 from '.config('database.prefix').'tmpmanga) and manga_id '.$st.'(select id1 from '.config('database.prefix').'tmpmanga)';
+            $sql = 'delete from '.config('database.connections.mysql.prefix').'manga where manga_name in(select name1 from '.config('database.connections.mysql.prefix').'tmpmanga) and manga_id '.$st.'(select id1 from '.config('database.connections.mysql.prefix').'tmpmanga)';
             $res = (new \app\common\model\Manga())->execute($sql);
             if($res===false){
                 return $this->success(lang('del_err'));

@@ -42,7 +42,7 @@ class MeilisearchService
         $db = (string)config('database.database');
         $host = (string)config('database.hostname');
         $port = (string)config('database.hostport');
-        $prefix = (string)config('database.prefix');
+        $prefix = (string)config('database.connections.mysql.prefix');
         // Meili 索引名仅允许 [A-Za-z0-9_-]
         $name = preg_replace('/[^A-Za-z0-9_-]/', '_', $db);
         $name = trim((string)$name, '_');

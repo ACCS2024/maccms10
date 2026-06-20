@@ -673,7 +673,7 @@ function mac_security_auto_migrate()
         return;
     }
     try {
-        $prefix = config('database.prefix');
+        $prefix = config('database.connections.mysql.prefix');
         // 迁移 v1:扩宽口令列以容纳 bcrypt(60+字符),旧 char(32)/varchar(32) 存不下
         $cols = ['admin' => 'admin_pwd', 'user' => 'user_pwd'];
         foreach ($cols as $t => $c) {
@@ -818,7 +818,7 @@ function mac_perf_env_checks()
 
     // 4) 数据库引擎(MyISAM 表锁)
     try {
-        $prefix = (string)config('database.prefix');
+        $prefix = (string)config('database.connections.mysql.prefix');
         $like = str_replace('_', '\\_', $prefix) . '%';
         $rows = \think\facade\Db::query(
             "SELECT COUNT(*) AS c FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND ENGINE = 'MyISAM' AND TABLE_NAME LIKE ?",

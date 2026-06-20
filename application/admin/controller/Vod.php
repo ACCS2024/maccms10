@@ -701,21 +701,21 @@ class Vod extends Base
         elseif(!empty($param['repeat'])){
             if($param['retain']=='max') {
                 // 保留最大ID - 先用子查询找出要保留的ID
-                $sql = 'DELETE FROM '.config('database.prefix').'vod WHERE vod_id IN (
+                $sql = 'DELETE FROM '.config('database.connections.mysql.prefix').'vod WHERE vod_id IN (
                 SELECT * FROM (
                     SELECT v1.vod_id
-                    FROM '.config('database.prefix').'vod v1
-                    INNER JOIN '.config('database.prefix').'vod v2 
+                    FROM '.config('database.connections.mysql.prefix').'vod v1
+                    INNER JOIN '.config('database.connections.mysql.prefix').'vod v2 
                     ON v1.vod_name = v2.vod_name AND v1.vod_id < v2.vod_id
                 ) tmp
             )';
             } else {
                 // 保留最小ID - 先用子查询找出要保留的ID
-                $sql = 'DELETE FROM '.config('database.prefix').'vod WHERE vod_id IN (
+                $sql = 'DELETE FROM '.config('database.connections.mysql.prefix').'vod WHERE vod_id IN (
                 SELECT * FROM (
                     SELECT v1.vod_id
-                    FROM '.config('database.prefix').'vod v1
-                    INNER JOIN '.config('database.prefix').'vod v2 
+                    FROM '.config('database.connections.mysql.prefix').'vod v1
+                    INNER JOIN '.config('database.connections.mysql.prefix').'vod v2 
                     ON v1.vod_name = v2.vod_name AND v1.vod_id > v2.vod_id
                 ) tmp
             )';

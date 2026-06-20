@@ -45,7 +45,7 @@ class SensitiveDataCrypto
         $flag = isset($app['cache_flag']) ? (string)$app['cache_flag'] : 'mac';
         $pfx = '';
         if (function_exists('config')) {
-            $pfx = (string)(config('database.prefix') ?: '');
+            $pfx = (string)(config('database.connections.mysql.prefix') ?: '');
         }
 
         return hash('sha256', 'maccms.sensitive_crypto.v1|' . $flag . '|' . $pfx, true);

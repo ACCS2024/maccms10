@@ -10,7 +10,7 @@ class SeoAiResult extends Base
 
     public function createTableIfNotExists()
     {
-        $table = config('database.prefix') . $this->name;
+        $table = config('database.connections.mysql.prefix') . $this->name;
         // MySQL SHOW 语句在 PDO 原生预处理下不支持占位符，必须拼接字面量
         $exists = Db::query("SHOW TABLES LIKE '" . addslashes($table) . "'");
         if (!empty($exists)) {
@@ -123,7 +123,7 @@ class SeoAiResult extends Base
             return;
         }
 
-        $table = config('database.prefix') . $this->name;
+        $table = config('database.connections.mysql.prefix') . $this->name;
         $tq = '`' . str_replace('`', '``', $table) . '`';
         // MySQL SHOW 语句在 PDO 原生预处理下不支持占位符，必须拼接字面量
         $cols = Db::query("SHOW COLUMNS FROM {$tq} LIKE 'seo_obj_uuid'");

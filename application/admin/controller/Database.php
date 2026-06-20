@@ -383,7 +383,7 @@ class Database extends Base
                         return $this->error(lang('format_err'));
                     }
                 }
-                $sql = str_replace('{pre}',config('database.prefix'),$sql);
+                $sql = str_replace('{pre}',config('database.connections.mysql.prefix'),$sql);
                 // 高危操作留痕:SQL 控制台无论全局审计开关如何,始终记录 执行人/IP/SQL,便于事后追溯
                 @file_put_contents(
                     RUNTIME_PATH . 'sql_console.log',
