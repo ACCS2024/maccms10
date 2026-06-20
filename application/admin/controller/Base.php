@@ -107,9 +107,9 @@ class Base extends All
             return true;
         }
 
-        $auths = $this->_admin['admin_auth'] . ',index/index,index/welcome,index/logout,';
+        $auths = ($this->_admin['admin_auth'] ?? '') . ',index/index,index/welcome,index/logout,';
         $cur = ','.$c.'/'.$a.',';
-        if($this->_admin['admin_id'] =='1'){
+        if(($this->_admin['admin_id'] ?? '') =='1'){
             return true;
         }
         elseif(strpos($auths,$cur)===false){

@@ -235,7 +235,7 @@ class User extends Base
         $where=[];
         $where['user_id'] = $id;
         $res = (new \app\common\model\User())->infoData($where);
-        $info = $res['info'];
+        $info = $res['info'] ?? [];
 
         $group_list = (new \app\common\model\Group())->getCache('group_list');
         $group_ids = isset($info['group_id']) ? explode(',', $info['group_id']) : [];

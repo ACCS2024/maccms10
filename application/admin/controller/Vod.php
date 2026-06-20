@@ -524,7 +524,7 @@ class Vod extends Base
         $res = (new \app\common\model\Vod())->infoData($where);
 
 
-        $info = $res['info'];
+        $info = $res['info'] ?? [];
         $this->assign('info',$info);
         $seoAiStatus = 0;
         if (!empty($info['vod_id'])) {
@@ -653,7 +653,7 @@ class Vod extends Base
         $res = (new \app\common\model\Vod())->infoData($where);
 
 
-        $info = $res['info'];
+        $info = $res['info'] ?? [];
         $this->assign('info',$info);
         $this->assign('vod_plot_list',$info['vod_plot_list']);
 

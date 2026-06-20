@@ -263,7 +263,7 @@ class Art extends Base
         $where['_recycle'] = 'all';
         $res = (new \app\common\model\Art())->infoData($where);
 
-        $info = $res['info'];
+        $info = $res['info'] ?? [];
         $this->assign('info',$info);
         $this->assign('art_page_list',(array)$info['art_page_list']);
         $seoAiStatus = 0;
