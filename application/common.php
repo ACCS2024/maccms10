@@ -1225,7 +1225,7 @@ function mac_list_to_tree($list, $pk='id',$pid = 'pid',$child = 'child',$root=0)
 
 function mac_str_correct($str,$from,$to)
 {
-    return str_replace($from,$to,(string)$str);
+    return str_replace($from,$to,$str ?? '');
 }
 
 function mac_buildregx($regstr,$regopt)
