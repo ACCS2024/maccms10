@@ -25,6 +25,9 @@
         },
         "files": [
             "application/common/addons/common.php"
+        ],
+        "classmap": [
+            "application/common/util/Qrcode.php"
         ]
     },
     "config": {

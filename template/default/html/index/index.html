@@ -56,7 +56,7 @@
                         </div>
                         <ul class="txt-list">
                             {maccms:vod num="12" type="1" start="6" level="1,2,3,4,5,6,7,8,9" order="desc" by="hits_month"}
-                            <li><span>{$vo.vod_time|date='m-d',###}.</span><a {if condition="$mac_vod_playlink eq 1"}href="{:mac_url_vod_play($vo,['sid'=>$vo.sid,'nid'=>1])}"{else/}href="{:mac_url_vod_detail($vo)}"{/if} title="{$vo.vod_name}">{$vo.vod_name}</a>/ {$vo.vod_remarks}</li>
+                            <li><span>{$vo.vod_time|date='m-d'}.</span><a {if condition="$mac_vod_playlink eq 1"}href="{:mac_url_vod_play($vo,['sid'=>$vo.sid,'nid'=>1])}"{else/}href="{:mac_url_vod_detail($vo)}"{/if} title="{$vo.vod_name}">{$vo.vod_name}</a>/ {$vo.vod_remarks}</li>
                             {/maccms:vod}
                         </ul>
                     </div>

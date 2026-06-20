@@ -23,7 +23,7 @@
 			</div>
 			<div class="cmt-text comm_content">{$vo.comment_content|mac_em_replace}</div>
 			<div class="cmt-footer">
-				<time class="cmt-time part_tips" datetime="{php}echo date('c', isset($vo['comment_time']) ? (int)$vo['comment_time'] : time());{/php}" data-ts="{$vo.comment_time}" title="{$vo.comment_time|date='Y-m-d H:i:s',###}">{$vo.comment_time|date='Y-m-d H:i:s',###}</time>
+				<time class="cmt-time part_tips" datetime="{php}echo date('c', isset($vo['comment_time']) ? (int)$vo['comment_time'] : time());{/php}" data-ts="{$vo.comment_time}" title="{$vo.comment_time|date='Y-m-d H:i:s'}">{$vo.comment_time|date='Y-m-d H:i:s'}</time>
 				<div class="gw_action cmt-actions">
 				<a class="digg_link" data-id="{$vo.comment_id}" data-mid="4" data-type="up" href="javascript:;" aria-label="赞"><i class="iconfont" aria-hidden="true">&#xe64e;</i><em class="digg_num icon-num">{$vo.comment_up}</em></a>
 				<a class="digg_link" data-id="{$vo.comment_id}" data-mid="4" data-type="down" href="javascript:;" aria-label="踩"><i class="iconfont" aria-hidden="true">&#xe64f;</i><em class="digg_num icon-num">{$vo.comment_down}</em></a>
@@ -46,7 +46,7 @@
 					</div>
 					<div class="cmt-text comm_content">{$child.comment_content|mac_em_replace}</div>
 					<div class="cmt-footer">
-						<time class="cmt-time part_tips" datetime="{php}echo date('c', isset($child['comment_time']) ? (int)$child['comment_time'] : time());{/php}" data-ts="{$child.comment_time}" title="{$child.comment_time|date='Y-m-d H:i:s',###}">{$child.comment_time|date='H:i',###}</time>
+						<time class="cmt-time part_tips" datetime="{php}echo date('c', isset($child['comment_time']) ? (int)$child['comment_time'] : time());{/php}" data-ts="{$child.comment_time}" title="{$child.comment_time|date='Y-m-d H:i:s'}">{$child.comment_time|date='H:i'}</time>
 						<div class="gw_action cmt-actions">
 						<a class="digg_link" data-id="{$child.comment_id}" data-mid="4" data-type="up" href="javascript:;" aria-label="赞"><i class="iconfont" aria-hidden="true">&#xe64e;</i><em class="digg_num icon-num">{$child.comment_up}</em></a>
 						<a class="digg_link" data-id="{$child.comment_id}" data-mid="4" data-type="down" href="javascript:;" aria-label="踩"><i class="iconfont" aria-hidden="true">&#xe64f;</i><em class="digg_num icon-num">{$child.comment_down}</em></a>

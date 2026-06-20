@@ -9,7 +9,7 @@
 	</div>	
     <div class="ranklist_txt">
 	     <div class="pannel_head clearfix">
-              <span class="vod_tname text_muted pull_right">{$vo.type.type_name}&nbsp;/&nbsp;<em>{$vo.vod_time|date='m-d',###}</em></span>
+              <span class="vod_tname text_muted pull_right">{$vo.type.type_name}&nbsp;/&nbsp;<em>{$vo.vod_time|date='m-d'}</em></span>
               <h4 class="title">{$vo.vod_name}</h4>	
          </div>
 	     <p class="vodlist_sub"><span data-lang="string_vod_jj">简介：</span>{if $vo['vod_content']}{:mac_filter_html($vo['vod_content'])}{else}<span data-lang='string_no_have'>暂无</span>{/if}</p>

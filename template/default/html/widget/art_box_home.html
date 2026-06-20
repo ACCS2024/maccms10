@@ -2,10 +2,10 @@
 <li class="arthom_item no_pic num_{$key}">
 	<a class="artlist_thumb lazyload" href="{:mac_url_art_detail($vo)}" title="{$vo.art_name}" data-original="{$vo.art_pic|mac_url_img}">
 		<div class="art_date">
-			<span class="day_date">{$vo.art_time|date='d',###}</span>
+			<span class="day_date">{$vo.art_time|date='d'}</span>
 			<span class="split_line"></span>
 			<span class="year_month">
-			<p>{$vo.type.type_name}</p><p>{$vo.art_time|date='Y-m',###}</p>
+			<p>{$vo.type.type_name}</p><p>{$vo.art_time|date='Y-m'}</p>
 			</span>
 		</div>
 		<div class="art_from"><i class="iconfont">&#xe62b;</i>&nbsp;

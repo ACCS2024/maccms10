@@ -82,7 +82,7 @@ $curChapterTitle = !empty($curPageInfo['title']) ? $curPageInfo['title'] : '第'
             <div class="novel-meta-line">
                 <span>{$obj.art_from|default='网络'}</span>
                 <span><span data-lang="read">阅读</span> {$obj.art_hits|default='0'}</span>
-                <span>{$obj.art_time|date='Y-m-d',###}</span>
+                <span>{$obj.art_time|date='Y-m-d'}</span>
             </div>
             <article class="novel-content" id="novelContent">
                 {if condition="$popedom.code eq 1"}

@@ -16,7 +16,7 @@
 									{if condition="$obj.group_id lt 3"}
 									<span class="user-info-stats__val user-info-stats__val--accent" data-lang="user_valid">永久有效</span>
 									{else/}
-									<span class="user-info-stats__val user-info-stats__val--metric member-profile-form__metric">{$obj.user_end_time|date='m-d',###}</span>
+									<span class="user-info-stats__val user-info-stats__val--metric member-profile-form__metric">{$obj.user_end_time|date='m-d'}</span>
 									{/if}
 								</div>
 								<div class="user-info-stats__card">

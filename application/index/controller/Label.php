@@ -76,9 +76,9 @@ class Label extends Base
     {
         parent::__construct();
 
-        $dispatch = request()->dispatch();
-        if (isset($dispatch['module'])) {
-            $file = $dispatch['module'][2];
+        // TP8 已移除 Request::dispatch();当前 action 名即原 dispatch['module'][2]
+        $file = (string) request()->action();
+        if ($file !== '') {
             $param = mac_param_url();
             if (!empty($param['file'])) {
                 $file = $param['file'];
