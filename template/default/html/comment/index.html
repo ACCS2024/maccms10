@@ -15,7 +15,7 @@
 		<div class="cmt-row">
 		{php}$avatar_src = mac_get_user_portrait(isset($vo['user_id']) ? $vo['user_id'] : 0); $avatar_alt = isset($vo['comment_name']) ? (string)$vo['comment_name'] : ''; $avatar_user_id = isset($vo['user_id']) ? (int)$vo['user_id'] : 0;{/php}
 		<div class="cmt-avatar-wrap">
-		{include file="widget/user_avatar" avatar_user_id="$avatar_user_id" avatar_size="xs" avatar_variant="list" avatar_class="comm_avat part_roun" /}
+		{include file="widget/user_avatar" avatar_size="xs" avatar_variant="list" avatar_class="comm_avat part_roun" /}
 		</div>
 		<div class="cmt-body">
 			<div class="cmt-meta">
@@ -38,7 +38,7 @@
 				<div class="cmt-row cmt-row--reply">
 				{php}$avatar_src = mac_get_user_portrait(isset($child['user_id']) ? $child['user_id'] : 0); $avatar_alt = isset($child['comment_name']) ? (string)$child['comment_name'] : ''; $avatar_user_id = isset($child['user_id']) ? (int)$child['user_id'] : 0;{/php}
 				<div class="cmt-avatar-wrap">
-				{include file="widget/user_avatar" avatar_user_id="$avatar_user_id" avatar_size="xs" avatar_variant="list" avatar_class="comm_avat part_roun" /}
+				{include file="widget/user_avatar" avatar_size="xs" avatar_variant="list" avatar_class="comm_avat part_roun" /}
 				</div>
 				<div class="cmt-body">
 					<div class="cmt-meta">

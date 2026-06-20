@@ -1240,7 +1240,9 @@ function mac_page_param($record_total, $page_size, $page_current, $page_url,$pag
     $page_num = array();
 
     if ($record_total == 0) {
-        return ['record_total'=>0];
+        // 补全键位,避免空结果列表页模板引用 page_current/page_total 时
+        // 在 PHP8 下触发「未定义数组键」→ 被 TP8 升级为异常 → 500
+        return ['record_total'=>0, 'page_current'=>$page_current, 'page_total'=>0];
     }
     if(empty($page_half)){
         $page_half=5;

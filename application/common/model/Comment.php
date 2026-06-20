@@ -106,7 +106,7 @@ class Comment extends Base {
     public function listCacheData($lp)
     {
         if (!is_array($lp)) {
-            $lp = json_decode($lp, true);
+            $lp = json_decode((string) $lp, true);
         }
         $lp = $lp ?? [];
 
