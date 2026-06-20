@@ -2871,7 +2871,7 @@ function mac_url($model,$param=[],$info=[])
                         $id = $info['type_id'];
                         break;
                 }
-                $url = url($model,['id'=>$id,'page'=>$param['page']]);
+                $url = url($model,['id'=>$id,'page'=>($param['page'] ?? 1)]);
             }
             break;
         case 'vod/detail':
@@ -3106,7 +3106,7 @@ function mac_url($model,$param=[],$info=[])
                         $id = $info['vod_id'];
                         break;
                 }
-                $url = url($model,['id'=>$id,'page'=>$param['page']]);
+                $url = url($model,['id'=>$id,'page'=>($param['page'] ?? 1)]);
             }
             $replace_to = array_merge($replace_to,[date('Y',$info['vod_time']),date('m',$info['vod_time']),date('d',$info['vod_time'])]);
             break;
@@ -3139,7 +3139,7 @@ function mac_url($model,$param=[],$info=[])
                         $id = $info['type_id'];
                         break;
                 }
-                $url = url($model,['id'=>$id,'page'=>$param['page']]);
+                $url = url($model,['id'=>$id,'page'=>($param['page'] ?? 1)]);
             }
             break;
         case 'art/detail':
@@ -3170,7 +3170,7 @@ function mac_url($model,$param=[],$info=[])
                         $id = $info['art_id'];
                         break;
                 }
-                $url = url($model,['id'=>$id,'page'=>$param['page']]);
+                $url = url($model,['id'=>$id,'page'=>($param['page'] ?? 1)]);
             }
             $replace_to = array_merge($replace_to,[date('Y',$info['art_time']),date('m',$info['art_time']),date('d',$info['art_time'])]);
             break;
@@ -3185,7 +3185,7 @@ function mac_url($model,$param=[],$info=[])
                 }
             }
             else{
-                $url = url($model,['page'=>$param['page']]);
+                $url = url($model,['page'=>($param['page'] ?? 1)]);
             }
             break;
         case 'topic/detail':
@@ -3226,7 +3226,7 @@ function mac_url($model,$param=[],$info=[])
                 }
             }
             else{
-                $url = url($model,['page'=>$param['page']]);
+                $url = url($model,['page'=>($param['page'] ?? 1)]);
             }
             break;
         case 'actor/type':
@@ -3258,7 +3258,7 @@ function mac_url($model,$param=[],$info=[])
                         $id = $info['type_id'];
                         break;
                 }
-                $url = url($model,['id'=>$id,'page'=>$param['page']]);
+                $url = url($model,['id'=>$id,'page'=>($param['page'] ?? 1)]);
             }
             break;
         case 'actor/detail':
@@ -3299,7 +3299,7 @@ function mac_url($model,$param=[],$info=[])
                 }
             }
             else{
-                $url = url($model,['page'=>$param['page']]);
+                $url = url($model,['page'=>($param['page'] ?? 1)]);
             }
             break;
         case 'role/detail':
@@ -3340,7 +3340,7 @@ function mac_url($model,$param=[],$info=[])
                 }
             }
             else{
-                $url = url($model,['page'=>$param['page']]);
+                $url = url($model,['page'=>($param['page'] ?? 1)]);
             }
             break;
         case 'plot/detail':
@@ -3373,7 +3373,7 @@ function mac_url($model,$param=[],$info=[])
                         $id = $info['vod_id'];
                         break;
                 }
-                $url = url($model,['id'=>$id,'page'=>$param['page']]);
+                $url = url($model,['id'=>$id,'page'=>($param['page'] ?? 1)]);
             }
             $replace_to = array_merge($replace_to,[date('Y',$info['vod_time']),date('m',$info['vod_time']),date('d',$info['vod_time'])]);
             break;
@@ -3388,7 +3388,7 @@ function mac_url($model,$param=[],$info=[])
                 }
             }
             else{
-                $url = url($model,['page'=>$param['page']]);
+                $url = url($model,['page'=>($param['page'] ?? 1)]);
             }
             break;
         case 'website/type':
@@ -3420,7 +3420,7 @@ function mac_url($model,$param=[],$info=[])
                         $id = $info['type_id'];
                         break;
                 }
-                $url = url($model,['id'=>$id,'page'=>$param['page']]);
+                $url = url($model,['id'=>$id,'page'=>($param['page'] ?? 1)]);
             }
             break;
         case 'website/detail':
@@ -3451,10 +3451,10 @@ function mac_url($model,$param=[],$info=[])
             }
             break;
         case 'gbook/index':
-            $url = url($model,['page'=>$param['page']]);
+            $url = url($model,['page'=>($param['page'] ?? 1)]);
             break;
         case 'comment/index':
-            $url = url($model,['page'=>$param['page']]);
+            $url = url($model,['page'=>($param['page'] ?? 1)]);
             break;
         default:
             $url = url($model,$param);
@@ -3595,7 +3595,7 @@ function mac_url_type($info,$param=[],$flag='type')
 
 function mac_url_topic_index($param=[])
 {
-    return mac_url('topic/index',['page'=>$param['page']]);
+    return mac_url('topic/index',['page'=>($param['page'] ?? 1)]);
 }
 
 function mac_url_topic_detail($info)
@@ -3605,7 +3605,7 @@ function mac_url_topic_detail($info)
 
 function mac_url_role_index($param=[])
 {
-    return mac_url('role/index',['page'=>$param['page']]);
+    return mac_url('role/index',['page'=>($param['page'] ?? 1)]);
 }
 
 function mac_url_role_detail($info)
@@ -3614,7 +3614,7 @@ function mac_url_role_detail($info)
 }
 function mac_url_actor_index($param=[])
 {
-    return mac_url('actor/index',['page'=>$param['page']]);
+    return mac_url('actor/index',['page'=>($param['page'] ?? 1)]);
 }
 function mac_url_actor_detail($info)
 {
@@ -3626,11 +3626,11 @@ function mac_url_actor_search($param)
 }
 function mac_url_plot_index($param=[])
 {
-    return mac_url('plot/index',['page'=>$param['page']]);
+    return mac_url('plot/index',['page'=>($param['page'] ?? 1)]);
 }
 function mac_url_plot_detail($info,$param=[])
 {
-    return mac_url('plot/detail',['page'=>$param['page']],$info);
+    return mac_url('plot/detail',['page'=>($param['page'] ?? 1)],$info);
 }
 function mac_url_vod_plot($info,$param=[])
 {
@@ -3642,7 +3642,7 @@ function mac_url_vod_role($info,$param=[])
 }
 function mac_url_website_index($param=[])
 {
-    return mac_url('website/index',['page'=>$param['page']]);
+    return mac_url('website/index',['page'=>($param['page'] ?? 1)]);
 }
 function mac_url_website_detail($info)
 {
@@ -3654,11 +3654,11 @@ function mac_url_website_search($param)
 }
 function mac_url_art_index($param=[])
 {
-    return mac_url('art/index',['page'=>$param['page']]);
+    return mac_url('art/index',['page'=>($param['page'] ?? 1)]);
 }
 function mac_url_art_detail($info,$param=[])
 {
-    return mac_url('art/detail',['page'=>$param['page']],$info);
+    return mac_url('art/detail',['page'=>($param['page'] ?? 1)],$info);
 }
 function mac_url_art_search($param)
 {
@@ -3666,7 +3666,7 @@ function mac_url_art_search($param)
 }
 function mac_url_vod_index($param=[])
 {
-    return mac_url('vod/index',['page'=>$param['page']]);
+    return mac_url('vod/index',['page'=>($param['page'] ?? 1)]);
 }
 function mac_url_vod_detail($info)
 {

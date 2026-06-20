@@ -53,6 +53,73 @@ jobs:
           echo "tables=$total, MyISAM=$myisam"
           if [ "$myisam" != "0" ]; then echo "ERROR: expected all InnoDB"; exit 1; fi
 
+  http-smoke:
+    name: HTTP smoke (PHP 8.2 + MySQL, assert non-5xx)
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:5.7
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: maccms
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -proot"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: pdo, pdo_mysql, mbstring, gd, curl, json, fileinfo, tokenizer
+          coverage: none
+      - name: composer install
+        run: composer install --no-interaction --no-progress --prefer-dist
+      - name: Load schema + seed minimal content
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 30); do mysql -h127.0.0.1 -uroot -proot -e "SELECT 1" >/dev/null 2>&1 && break; sleep 3; done
+          mysql -h127.0.0.1 -uroot -proot maccms < application/install/sql/install.sql
+          mysql -h127.0.0.1 -uroot -proot maccms < application/install/sql/initdata.sql
+          # 种最小内容(sql_mode 置空,缺省列回落默认),覆盖详情/播放页
+          mysql -h127.0.0.1 -uroot -proot maccms -e 'SET SESSION sql_mode="";
+            INSERT INTO mac_vod (vod_id,type_id,vod_name,vod_status,vod_time,vod_letter,vod_play_from,vod_play_url,vod_content) VALUES (1,6,"CI Smoke Vod",1,UNIX_TIMESTAMP(),"C","mac_test","01$http://example.com/1.m3u8","desc");
+            INSERT INTO mac_art (art_id,type_id,art_name,art_status,art_time,art_letter,art_content) VALUES (1,2,"CI Smoke Art",1,UNIX_TIMESTAMP(),"C","content");
+            INSERT INTO mac_actor (actor_id,type_id,actor_name,actor_status,actor_time,actor_letter,actor_content) VALUES (1,8,"CI Actor",1,UNIX_TIMESTAMP(),"C","bio");
+            INSERT INTO mac_topic (topic_id,topic_name,topic_status,topic_time,topic_en,topic_content) VALUES (1,"CI Topic",1,UNIX_TIMESTAMP(),"ci","content");'
+      - name: Configure .env + install lock
+        run: |
+          set -euo pipefail
+          printf 'APP_DEBUG = false\nDB_HOST = 127.0.0.1\nDB_NAME = maccms\nDB_USER = root\nDB_PASS = root\n' > .env
+          mkdir -p application/data/install
+          date '+%Y-%m-%d %H:%M:%S' > application/data/install/install.lock
+      - name: HTTP smoke (front + API, fail on any 5xx)
+        run: |
+          set -uo pipefail
+          fail=0
+          for u in \
+            "/" \
+            "/vod/type/id/6.html" \
+            "/vod/detail/id/1.html" \
+            "/vod/play/id/1/sid/1/nid/1.html" \
+            "/vod/search.html?wd=CI" \
+            "/art/detail/id/1.html" \
+            "/actor/detail/id/1.html" \
+            "/topic/detail/id/1.html" \
+            "/label/1.html" \
+            "/rss/index.html" \
+            "/user/index.html" \
+            "/map.html" \
+            "/comment/index/rid/1/tab/vod" \
+            "/gbook/index.html" ; do
+            php tests/http_smoke.php index "$u" || fail=1
+          done
+          for u in "/type" "/vod" "/provide/vod" ; do
+            php tests/http_smoke.php api "$u" || fail=1
+          done
+          if [ "$fail" = 0 ]; then echo "All HTTP smoke OK"; else echo "HTTP smoke FAILED"; exit 1; fi
+
   shellcheck:
     name: ShellCheck (deploy/ + tests/ shell scripts)
     runs-on: ubuntu-latest
