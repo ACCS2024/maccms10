@@ -37,7 +37,7 @@ class AnalyticsAggregator
 
         $base = Db::name('AnalyticsPageview')
             ->alias('p')
-            ->join('__ANALYTICS_SESSION__ s', 's.session_id = p.session_id', 'left')
+            ->join(config('database.connections.mysql.prefix').'analytics_session s', 's.session_id = p.session_id', 'left')
             ->field('count(*) as pv,count(distinct p.visitor_id) as uv,count(distinct p.session_id) as session_cnt')
             ->where('p.ts', 'between', [$start, $end])
             ->find();
@@ -46,7 +46,7 @@ class AnalyticsAggregator
 
         $deviceRows = Db::name('AnalyticsPageview')
             ->alias('p')
-            ->join('__ANALYTICS_SESSION__ s', 's.session_id = p.session_id', 'left')
+            ->join(config('database.connections.mysql.prefix').'analytics_session s', 's.session_id = p.session_id', 'left')
             ->field("ifnull(nullif(s.device_type,''),'other') as dim_key,count(*) as pv,count(distinct p.visitor_id) as uv,count(distinct p.session_id) as session_cnt")
             ->where('p.ts', 'between', [$start, $end])
             ->group('dim_key')
@@ -179,7 +179,7 @@ class AnalyticsAggregator
     {
         $rows = Db::name('AnalyticsPageview')
             ->alias('p')
-            ->join('__ANALYTICS_SESSION__ s', 's.session_id = p.session_id', 'left')
+            ->join(config('database.connections.mysql.prefix').'analytics_session s', 's.session_id = p.session_id', 'left')
             ->field("ifnull(nullif(s.`{$field}`,''),'other') as dim_key,count(*) as pv,count(distinct p.visitor_id) as uv,count(distinct p.session_id) as session_cnt")
             ->where('p.ts', 'between', [$start, $end])
             ->group('dim_key')
@@ -232,7 +232,7 @@ class AnalyticsAggregator
     {
         $query = Db::name('AnalyticsPageview')
             ->alias('p')
-            ->join('__ANALYTICS_SESSION__ s', 's.session_id = p.session_id', 'left')
+            ->join(config('database.connections.mysql.prefix').'analytics_session s', 's.session_id = p.session_id', 'left')
             ->where('p.stat_date', $statDate);
         if ($device === 'other') {
             $query->whereRaw("coalesce(nullif(s.device_type,''),'other') not in ('web','h5','android','ios')");
@@ -284,7 +284,7 @@ class AnalyticsAggregator
 
         $returned = intval(Db::name('User')
             ->alias('u')
-            ->join('__ANALYTICS_SESSION__ s', 's.user_id = u.user_id', 'inner')
+            ->join(config('database.connections.mysql.prefix').'analytics_session s', 's.user_id = u.user_id', 'inner')
             ->where('u.user_reg_time', 'between', [$cohortStart, $cohortEnd])
             ->where('s.started_at', 'between', [$targetStart, $targetEnd])
             ->count('distinct u.user_id'));

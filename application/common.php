@@ -1199,6 +1199,10 @@ function mac_list_to_tree($list, $pk='id',$pid = 'pid',$child = 'child',$root=0)
     if(is_array($list)) {
         $refer = array();
         foreach ($list as $key => $data) {
+            // 确保每个节点都有 child 键(叶子节点为空数组),避免模板 {volist name="x.child"} 在 PHP8 下未定义键 → 500
+            if (!isset($list[$key][$child])) {
+                $list[$key][$child] = [];
+            }
             $refer[$data[$pk]] =& $list[$key];
         }
 

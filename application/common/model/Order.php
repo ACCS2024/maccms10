@@ -28,7 +28,7 @@ class Order extends Base {
         $total = $this->alias('o')->where($where)->count();
         $list = Db::name('Order')->alias('o')
             ->field('o.*,u.user_name')
-            ->join('__USER__ u','o.user_id = u.user_id','left')
+            ->join(config('database.connections.mysql.prefix').'user u','o.user_id = u.user_id','left')
             ->where($where)
             ->order($order)
             ->limit($offset, $limit)

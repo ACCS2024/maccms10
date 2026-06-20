@@ -53,8 +53,8 @@ class Type extends Base
         //重新整合
         foreach($res['list'] as $k=>$v){
             $res['list'][$k]['cc'] = intval($list_count[$v['type_id']] ?? 0);
-            foreach($v['child'] as $k2=>$v2){
-                $res['list'][$k]['child'][$k2]['cc'] = intval($list_count[$v2['type_id']]);
+            foreach(($v['child'] ?? []) as $k2=>$v2){
+                $res['list'][$k]['child'][$k2]['cc'] = intval($list_count[$v2['type_id']] ?? 0);
             }
         }
 
