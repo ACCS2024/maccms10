@@ -7,7 +7,7 @@
 
     <form id="form_config_user" class="layui-form layui-form-pane" method="post" action=""
         style="position:absolute;width:0;height:0;overflow:hidden;clip:rect(0,0,0,0);">
-        <input type="hidden" name="__token__" value="{$Request.token}" form="form_config_user" />
+        <input type="hidden" name="__token__" value="{:mac_token()}" form="form_config_user" />
     </form>
 
     <div class="layui-tab" lay-filter="tb_user">
@@ -340,7 +340,7 @@
 
             <div class="layui-tab-item" id="config_tab_comment">
                 <form class="layui-form layui-form-pane" method="post" action="{$form_action_configcomment|default=''}">
-                    <input type="hidden" name="__token__" value="{$Request.token}" />
+                    <input type="hidden" name="__token__" value="{:mac_token()}" />
                     {include file="application/admin/view/system/config_embed_comment.html" /}
                     <div class="layui-form-item center">
                         <div class="layui-input-block">

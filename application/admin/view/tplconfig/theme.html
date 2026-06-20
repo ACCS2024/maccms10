@@ -20,7 +20,7 @@ $hotvod_tabs_list = (!empty($tplconfig['theme']['hotvod']['tabs']) && is_array($
     <form class="layui-form" method="post" action="">
         <div class="mainBox">
             <div class="main-container">
-                <input type="hidden" name="__token__" value="{$Request.token}" />
+                <input type="hidden" name="__token__" value="{:mac_token()}" />
                 <div class="layui-tab layui-tab-brief" lay-filter="tb1">
                     <ul class="layui-tab-title">
                         <li class="layui-this">{:lang('admin/tpl/config/desc1')}</li>

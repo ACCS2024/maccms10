@@ -1,7 +1,7 @@
 {include file="../../../application/admin/view/public/head" /}
 <div class="page-container p10">
     <form class="layui-form layui-form-pane" method="post" action="" id="movementTable">
-        <input type="hidden" name="__token__" value="{$Request.token}" />
+        <input type="hidden" name="__token__" value="{:mac_token()}" />
         <div class="layui-form-item">
             <label class="layui-form-label">{:lang('status')}：</label>
             <div class="layui-input-block">

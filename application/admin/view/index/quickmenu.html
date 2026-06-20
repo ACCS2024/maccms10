@@ -10,7 +10,7 @@
     </blockquote>
 
     <form class="layui-form" action="">
-        <input type="hidden" name="__token__" value="{$Request.token}" />
+        <input type="hidden" name="__token__" value="{:mac_token()}" />
         <div class="layui-form-item layui-form-text">
             <textarea name="quickmenu" placeholder="{:lang('filed_empty')}" class="layui-textarea" style="height:600px; resize:none">{$quickmenu}</textarea>
         </div>

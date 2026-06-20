@@ -97,7 +97,7 @@ class Card extends Base
         $where['card_id'] = $id;
         $res = (new \app\common\model\Card())->infoData($where);
 
-        $this->assign('info',$res['info']);
+        $this->assign('info',$res['info'] ?? []);
 
         return $this->fetch('admin@card/info');
     }

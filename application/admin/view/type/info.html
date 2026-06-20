@@ -5,7 +5,7 @@
     
     <form class="layui-form layui-form-pane" method="post" action="" id="movementTable">
         <input type="hidden" name="type_id" value="{$info.type_id}">
-        <input type="hidden" name="__token__" value="{$Request.token}" />
+        <input type="hidden" name="__token__" value="{:mac_token()}" />
         <blockquote class="layui-elem-quote layui-quote-nm">
             {:lang('admin/type/tip')}
         </blockquote>

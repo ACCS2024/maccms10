@@ -11,7 +11,7 @@
     </blockquote>
     {/if}
     <form id="meiliConfigForm">
-        <input type="hidden" name="__token__" value="{$Request.token}" />
+        <input type="hidden" name="__token__" value="{:mac_token()}" />
         <table class="layui-table">
             <tr>
                 <td width="160">{:lang('admin/meilisearch/switch')}</td>

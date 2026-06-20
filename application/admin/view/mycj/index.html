@@ -50,7 +50,7 @@
     </div>
     <div class="page-container p10 collect-list">
         <div class="layui-form mb10">
-			<input type="hidden" name="__token__" id="token" value="{$Request.token}" />
+			<input type="hidden" name="__token__" id="token" value="{:mac_token()}" />
 			<div id="my-collect">
             <p class="layui-btn layui-btn-primary layuiBtn" data-type="duandian" {if condition="$collect_break_vod neq ''" }data-href="{:url('collect/load')}?flag=vod" {/if}>视频断点采集</p>
             <div class="layui-input-inline" style="width:130px">

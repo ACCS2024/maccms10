@@ -6,7 +6,7 @@
             referrerPolicy="no-referrer"></div>
 
     <form class="layui-form layui-form-pane" action="">
-        <input type="hidden" name="__token__" value="{$Request.token}" />
+        <input type="hidden" name="__token__" value="{:mac_token()}" />
                     <div class="layui-form-item">
                         <label class="layui-form-label">{:lang('admin/system/configcomment/gbook')}：</label>
                         <div class="layui-input-inline">

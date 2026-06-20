@@ -10,7 +10,7 @@
         <div class="layui-tab-content">
             <div class="layui-tab-item layui-show" id="config_tab_connect">
     <form class="layui-form layui-form-pane" action="">
-        <input type="hidden" name="__token__" value="{$Request.token}" />
+        <input type="hidden" name="__token__" value="{:mac_token()}" />
                     <blockquote class="layui-elem-quote layui-quote-nm">
                         {:lang('admin/system/configconnect/tip')}
                     </blockquote>
@@ -90,13 +90,13 @@
             </div>
             <div class="layui-tab-item" id="config_tab_weixin">
                 <form class="layui-form layui-form-pane" method="post" action="{$form_action_configweixin|default=''}">
-                    <input type="hidden" name="__token__" value="{$Request.token}" />
+                    <input type="hidden" name="__token__" value="{:mac_token()}" />
                     {include file="application/admin/view/system/config_embed_weixin.html" /}
                 </form>
             </div>
             <div class="layui-tab-item" id="config_tab_pay">
                 <form class="layui-form layui-form-pane" method="post" action="{$form_action_configpay|default=''}">
-                    <input type="hidden" name="__token__" value="{$Request.token}" />
+                    <input type="hidden" name="__token__" value="{:mac_token()}" />
                     {include file="application/admin/view/system/config_embed_pay.html" /}
                 </form>
             </div>

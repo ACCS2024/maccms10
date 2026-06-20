@@ -72,7 +72,7 @@ class Comment extends Base
         $where['comment_id'] = $id;
         $res = (new \app\common\model\Comment())->infoData($where);
 
-        $this->assign('info',$res['info']);
+        $this->assign('info',$res['info'] ?? []);
         $this->assign('title',lang('admin/comment/title'));
         return $this->fetch('admin@comment/info');
     }

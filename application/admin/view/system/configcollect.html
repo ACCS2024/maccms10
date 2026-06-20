@@ -18,7 +18,7 @@
         <div class="layui-tab-content">
             <div class="layui-tab-item layui-show" id="config_tab_collect">
     <form class="layui-form layui-form-pane" action="">
-        <input type="hidden" name="__token__" value="{$Request.token}" />
+        <input type="hidden" name="__token__" value="{:mac_token()}" />
         <div class="layui-tab maccms-inner-tab-vertical" lay-filter="tb1">
             <ul class="layui-tab-title">
                 <li class="layui-this" lay-id="configcollect_1">{:lang('admin/system/configcollect/vod')}</li>
@@ -1048,13 +1048,13 @@
             </div>
             <div class="layui-tab-item" id="config_tab_if">
                 <form class="layui-form layui-form-pane" method="post" action="{$form_action_configinterface|default=''}">
-                    <input type="hidden" name="__token__" value="{$Request.token}" />
+                    <input type="hidden" name="__token__" value="{:mac_token()}" />
                     {include file="application/admin/view/system/config_embed_interface.html" /}
                 </form>
             </div>
             <div class="layui-tab-item" id="config_tab_api">
                 <form class="layui-form layui-form-pane" method="post" action="{$form_action_configapi|default=''}">
-                    <input type="hidden" name="__token__" value="{$Request.token}" />
+                    <input type="hidden" name="__token__" value="{:mac_token()}" />
                     {include file="application/admin/view/system/config_embed_api.html" /}
                 </form>
             </div>

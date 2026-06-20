@@ -243,7 +243,7 @@
     </fieldset>
 
     <form class="layui-form mt10" method="post" action="{:url('manga/importData')}" enctype="multipart/form-data">
-        <input type="hidden" name="__token__" value="{$Request.token}" />
+        <input type="hidden" name="__token__" value="{:mac_token()}" />
         <fieldset class="layui-elem-field">
             <legend>{:lang('admin/batch/io_import')}</legend>
             <div class="layui-field-box">

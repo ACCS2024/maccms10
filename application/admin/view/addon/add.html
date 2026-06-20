@@ -10,7 +10,7 @@
             <blockquote class="layui-elem-quote layui-quote-nm">
                 {:lang('admin/addon/add_tip')}
             </blockquote>
-            <input type="hidden" id="token" name="__token__" value="{$Request.token}" />
+            <input type="hidden" id="token" name="__token__" value="{:mac_token()}" />
             <button type="button" class="layui-btn layui-upload" id="upload1">{:lang('upload')}</button>
         </div>
     </div>

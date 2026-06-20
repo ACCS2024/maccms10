@@ -5,7 +5,7 @@
 </style>
 <div class="page-container">
     <form class="layui-form layui-form-pane" action="">
-        <input type="hidden" name="__token__" value="{$Request.token}" />
+        <input type="hidden" name="__token__" value="{:mac_token()}" />
         <div class="layui-tab">
             <ul class="layui-tab-title">
                 <li class="layui-this">{:lang('admin/database/batch_replace')}</li>

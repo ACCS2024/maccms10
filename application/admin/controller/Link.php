@@ -52,7 +52,7 @@ class Link extends Base
         $res = (new \app\common\model\Link())->infoData($where);
 
 
-        $this->assign('info',$res['info']);
+        $this->assign('info',$res['info'] ?? []);
         $this->assign('title',lang('admin/link/title'));
         return $this->fetch('admin@link/info');
     }

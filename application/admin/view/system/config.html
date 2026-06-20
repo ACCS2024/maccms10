@@ -8,7 +8,7 @@
 
     <form id="form_config_main" class="layui-form layui-form-pane" method="post" action=""
         style="position:absolute;width:0;height:0;overflow:hidden;clip:rect(0,0,0,0);">
-        <input type="hidden" name="__token__" value="{$Request.token}" form="form_config_main" />
+        <input type="hidden" name="__token__" value="{:mac_token()}" form="form_config_main" />
         <input type="text" name="site[new_version]" value="{$config['site']['new_version']}" class="layui-input" hidden
             autocomplete="off" form="form_config_main">
     </form>
@@ -1036,7 +1036,7 @@
 
                 <div class="layui-tab-item" id="config_tab_seo">
                     <form class="layui-form layui-form-pane" method="post" action="{$form_action_configseo|default=''}">
-                        <input type="hidden" name="__token__" value="{$Request.token}" />
+                        <input type="hidden" name="__token__" value="{:mac_token()}" />
                         {include file="application/admin/view/system/config_embed_seo.html" /}
                         <div class="layui-form-item center">
                             <div class="layui-input-block">
@@ -1048,7 +1048,7 @@
                 </div>
                 <div class="layui-tab-item" id="config_tab_aiseo">
                     <form class="layui-form layui-form-pane" method="post" action="{$form_action_configaiseo|default=''}">
-                        <input type="hidden" name="__token__" value="{$Request.token}" />
+                        <input type="hidden" name="__token__" value="{:mac_token()}" />
                         {include file="application/admin/view/system/config_embed_aiseo.html" /}
                         <div class="layui-form-item center">
                             <div class="layui-input-block">
@@ -1060,7 +1060,7 @@
                 </div>
                 <div class="layui-tab-item" id="config_tab_aicover">
                     <form class="layui-form layui-form-pane" method="post" action="{$form_action_configaicover|default=''}">
-                        <input type="hidden" name="__token__" value="{$Request.token}" />
+                        <input type="hidden" name="__token__" value="{:mac_token()}" />
                         {include file="application/admin/view/system/config_embed_aicover.html" /}
                         <div class="layui-form-item center">
                             <div class="layui-input-block">

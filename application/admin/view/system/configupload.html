@@ -7,7 +7,7 @@
 
     <form id="form_config_upload" class="layui-form layui-form-pane" method="post" action=""
         style="position:absolute;width:0;height:0;overflow:hidden;clip:rect(0,0,0,0);">
-        <input type="hidden" name="__token__" value="{$Request.token}" form="form_config_upload" />
+        <input type="hidden" name="__token__" value="{:mac_token()}" form="form_config_upload" />
     </form>
 
     <div class="layui-tab" lay-filter="tb_upload">
@@ -209,7 +209,7 @@
 
             <div class="layui-tab-item" id="config_tab_url">
                 <form class="layui-form layui-form-pane" method="post" action="{$form_action_configurl|default=''}">
-                    <input type="hidden" name="__token__" value="{$Request.token}" />
+                    <input type="hidden" name="__token__" value="{:mac_token()}" />
                     {include file="application/admin/view/system/config_embed_url.html" /}
                     <div class="layui-form-item center">
                         <div class="layui-input-block">
@@ -222,7 +222,7 @@
 
             <div class="layui-tab-item" id="config_tab_play">
                 <form class="layui-form layui-form-pane" method="post" action="{$form_action_configplay|default=''}">
-                    <input type="hidden" name="__token__" value="{$Request.token}" />
+                    <input type="hidden" name="__token__" value="{:mac_token()}" />
                     {include file="application/admin/view/system/config_embed_play_fields.html" /}
                     <div class="layui-form-item center">
                         <div class="layui-input-block">

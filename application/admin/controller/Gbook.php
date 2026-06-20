@@ -73,7 +73,7 @@ class Gbook extends Base
         $where['gbook_id'] = $id;
         $res = (new \app\common\model\Gbook())->infoData($where);
 
-        $this->assign('info',$res['info']);
+        $this->assign('info',$res['info'] ?? []);
         $this->assign('title',lang('admin/gbook/title'));
         return $this->fetch('admin@gbook/info');
     }

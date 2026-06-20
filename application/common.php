@@ -1225,7 +1225,7 @@ function mac_list_to_tree($list, $pk='id',$pid = 'pid',$child = 'child',$root=0)
 
 function mac_str_correct($str,$from,$to)
 {
-    return str_replace($from,$to,$str);
+    return str_replace($from,$to,(string)$str);
 }
 
 function mac_buildregx($regstr,$regopt)
@@ -4385,6 +4385,22 @@ if (!function_exists('url')) {
         // iterable:兼容 SafeParam 等 ArrayObject(后台 {$param} 既回显又建链),转纯数组传入
         $vars = is_array($vars) ? $vars : iterator_to_array($vars);
         return (string) \think\facade\Route::buildUrl($url, $vars)->suffix($suffix)->domain($domain);
+    }
+}
+if (!function_exists('mac_token')) {
+    /**
+     * 表单 CSRF token:写入并返回 Session('__token__'),供 CsrfGuard 校验。
+     * TP8 的 token()/Request::buildToken() 依赖未绑定到 request 的 session(本项目未注册
+     * SessionInit),会「Call to a member function set() on null」;此处直接用 Session facade。
+     * 同一请求内复用,保证一页多表单 token 一致且均有效。
+     */
+    function mac_token(): string {
+        $token = (string) \think\facade\Session::get('__token__');
+        if ($token === '') {
+            $token = md5(uniqid('', true));
+            \think\facade\Session::set('__token__', $token);
+        }
+        return $token;
     }
 }
 if (!function_exists('mac_validate')) {
