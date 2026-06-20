@@ -21,7 +21,7 @@ class Update extends Base
 
     public function index()
     {
-        return $this->fetch('admin@test/index');
+        return $this->fetch('admin@update/index');
     }
 
     public function step1($file='')
