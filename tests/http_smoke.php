@@ -47,8 +47,12 @@ try {
     $application->setAppPath(APP_PATH);
     $response = $application->http->name($app)->path(APP_PATH . $app . '/')->run();
     $code = $response->getCode();
-    printf("[%s] %-44s -> HTTP %d\n", $app, $url, $code);
-    exit($code >= 500 ? 1 : 0);
+    // 不只看状态码:完整性守卫/部分异常会以 HTTP 200 返回错误内容,需按内容兜底。
+    $content    = (string) $response->getContent();
+    $contentErr = (strpos($content, '<title>系统发生错误</title>') !== false)
+        || (strlen($content) < 300 && strpos($content, '系统核心功能异常') !== false);
+    printf("[%s] %-44s -> HTTP %d%s\n", $app, $url, $code, $contentErr ? ' (内容错误页)' : '');
+    exit(($code >= 500 || $contentErr) ? 1 : 0);
 } catch (\Throwable $e) {
     printf("[%s] %-44s -> EXC %s: %s @ %s:%d\n",
         $app, $url, get_class($e), $e->getMessage(),
