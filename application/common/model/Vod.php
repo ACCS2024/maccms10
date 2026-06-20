@@ -792,10 +792,10 @@ class Vod extends Base {
             $data['vod_down_url']='';
         }
         
-        if($data['uptime']==1){
+        if(($data['uptime'] ?? '')==1){
             $data['vod_time'] = time();
         }
-        if($data['uptag']==1){
+        if(($data['uptag'] ?? '')==1){
             $data['vod_tag'] = mac_get_tag($data['vod_name'], $data['vod_content']);
         }
         unset($data['uptime']);
