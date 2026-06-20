@@ -12,8 +12,8 @@ class User extends Base
     public function data()
     {
         $param = \think\facade\Request::param();
-        $param['page'] = intval($param['page']) <1 ? 1 : $param['page'];
-        $param['limit'] = intval($param['limit']) <1 ? $this->_pagesize : $param['limit'];
+        $param['page'] = intval($param['page'] ?? 0) <1 ? 1 : $param['page'];
+        $param['limit'] = intval($param['limit'] ?? 0) <1 ? $this->_pagesize : $param['limit'];
 
         if($param['page'] ==1){
             (new \app\common\model\User())->expire();
@@ -64,8 +64,8 @@ class User extends Base
     public function reward()
     {
         $param = \think\facade\Request::param();
-        $param['page'] = intval($param['page']) <1 ? 1 : $param['page'];
-        $param['limit'] = intval($param['limit']) <1 ? $this->_pagesize : $param['limit'];
+        $param['page'] = intval($param['page'] ?? 0) <1 ? 1 : $param['page'];
+        $param['limit'] = intval($param['limit'] ?? 0) <1 ? $this->_pagesize : $param['limit'];
         $param['uid'] = intval($param['uid']);
         $where=[];
         if(!empty($param['level'])){
@@ -145,8 +145,8 @@ class User extends Base
     public function invite()
     {
         $param = \think\facade\Request::param();
-        $param['page'] = intval($param['page']) <1 ? 1 : $param['page'];
-        $param['limit'] = intval($param['limit']) <1 ? $this->_pagesize : $param['limit'];
+        $param['page'] = intval($param['page'] ?? 0) <1 ? 1 : $param['page'];
+        $param['limit'] = intval($param['limit'] ?? 0) <1 ? $this->_pagesize : $param['limit'];
 
         $where = [];
         

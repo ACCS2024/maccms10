@@ -1173,9 +1173,9 @@ class User extends Base
         if($param['ac']=='email'){
             $title = $GLOBALS['config']['email']['tpl']['user_'.$type_flag.'_title'];
             $msg = $GLOBALS['config']['email']['tpl']['user_'.$type_flag.'_body'];
-            View::instance()->assign(['code'=>$code,'time'=>$GLOBALS['config']['email']['time']]);
-            $title =  View::instance()->display($title);
-            $msg =  View::instance()->display($msg);
+            \think\facade\View::assign(['code'=>$code,'time'=>$GLOBALS['config']['email']['time']]);
+            $title =  \think\facade\View::display($title);
+            $msg =  \think\facade\View::display($msg);
             $msg = htmlspecialchars_decode($msg);
             $res_send = mac_send_mail($to, $title, $msg);
             $res_code = $res_send['code'];
