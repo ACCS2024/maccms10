@@ -31,8 +31,8 @@
             <label class="layui-form-label">{:lang('genre')}：</label>
             <div class="layui-input-inline">
                 <select class="w100" name="link_type">
-                    <option value="0" {if condition="$vo['link_type'] eq 0"}selected {/if}>{:lang('admin/link/text_link')}</option>
-                    <option value="1" {if condition="$vo['link_type'] eq 1"}selected {/if}>{:lang('admin/link/pic_link')}</option>
+                    <option value="0" {if condition="$info['link_type'] eq 0"}selected {/if}>{:lang('admin/link/text_link')}</option>
+                    <option value="1" {if condition="$info['link_type'] eq 1"}selected {/if}>{:lang('admin/link/pic_link')}</option>
                 </select>
             </div>
         </div>
