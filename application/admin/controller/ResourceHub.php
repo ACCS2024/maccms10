@@ -2,6 +2,7 @@
 namespace app\admin\controller;
 use think\facade\Db;
 use think\facade\Cache;
+use think\facade\Config;
 use app\common\util\Pinyin;
 
 /**
@@ -13,7 +14,7 @@ class ResourceHub extends Base
     public function __construct()
     {
         parent::__construct();
-        $this->view->config('view_path', APP_PATH . 'admin/view/');
+        Config::set(['view_path' => APP_PATH . 'admin/view/'], 'template');
     }
 
     /**

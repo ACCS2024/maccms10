@@ -1,6 +1,7 @@
 <?php
 namespace app\admin\controller;
 use think\facade\Db;
+use think\facade\Config;
 
 /**
  * 数据替换控制器
@@ -16,7 +17,7 @@ class DataReplace extends Base
     public function __construct()
     {
         parent::__construct();
-        $this->view->config('view_path', APP_PATH . 'admin/view/');
+        Config::set(['view_path' => APP_PATH . 'admin/view/'], 'template');
     }
 
     public function index()

@@ -1,7 +1,7 @@
 <?php
 namespace app\admin\controller;
 use think\facade\Db;
-use think\View;
+use think\facade\Config;
 
 class Make extends Base
 {
@@ -21,7 +21,7 @@ class Make extends Base
             $GLOBALS['MAC_PATH_TEMPLATE'] = MAC_PATH.'template/'.$TMP_TEMPLATEDIR.'/';
             $GLOBALS['MAC_PATH_TPL'] = $GLOBALS['MAC_PATH_TEMPLATE']. $TMP_HTMLDIR  .'/';
             $GLOBALS['MAC_PATH_ADS'] = $GLOBALS['MAC_PATH_TEMPLATE']. $TMP_ADSDIR  .'/';
-            config('template.view_path', 'template/' . $TMP_TEMPLATEDIR .'/' . $TMP_HTMLDIR .'/');
+            Config::set(['view_path' => 'template/' . $TMP_TEMPLATEDIR .'/' . $TMP_HTMLDIR .'/'], 'template');
         }
         parent::__construct();
     }
