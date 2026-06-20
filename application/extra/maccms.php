@@ -105,7 +105,7 @@ return array (
     'collect_timespan' => '3',
     'pagesize' => '20',
     'makesize' => '30',
-    'admin_login_verify' => '0',
+    'admin_login_verify' => '1',
     'editor' => 'Ueditor',
     'lang' => 'zh-cn',
     'security_xss_input' => '1',
