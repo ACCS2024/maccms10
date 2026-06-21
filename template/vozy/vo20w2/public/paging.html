@@ -1,7 +1,7 @@
 
 <span class="disabled">共{$__PAGING__.record_total}条数据,当前{$__PAGING__.page_current}/{$__PAGING__.page_total}页</span>
-        <a href="{$__PAGING__.page_url|mac_url_page=1}" title="首页">首页</a></li>
-        <a href="{$__PAGING__.page_url|mac_url_page=$__PAGING__.page_prev}" title="上一页">上一页</a></li>
+        <a href="{$__PAGING__.page_url|mac_url_page=1}" title="首页">首页</a>
+        <a href="{$__PAGING__.page_url|mac_url_page=$__PAGING__.page_prev}" title="上一页">上一页</a>
                {maccms:foreach name="$__PAGING__.page_num" id="num"}
         {if condition="$__PAGING__['page_current'] eq $num"}
 			  <span class="active">{$num}</span>

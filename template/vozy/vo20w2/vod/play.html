@@ -3,13 +3,13 @@
 <head>
   <meta charset="utf-8">
   <meta name="renderer" content="webkit">
-  <link rel="shortcut icon" href="/template/default/img/favicon.png" type="image/x-icon" />
+  <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon" />
   <title>{$obj.vod_name} - {$obj['vod_play_list'][$param['sid']]['urls'][$param['nid']]['name']} - {$maccms.site_name}</title>
   <meta name="keywords" content="{$obj.vod_name}在线观看,{$obj.vod_name}高清" />
   <meta name="description" content="{$obj.vod_name}:{$obj.vod_blurb}" />
   {include file="public/include"}
   <link href="{$maccms.path}static/css/home.css" rel="stylesheet" type="text/css" />
-  <script src="{$maccms.path}static/js/ldg.js"></script>
+  <script src="{$maccms.path_tpl}static/js/ldg.js"></script>
   <style>
     .play-wrap { max-width:960px; margin:0 auto; padding:10px; }
     .player-box { width:100%; background:#000; aspect-ratio:16/9; }

@@ -4,7 +4,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="renderer" content="webkit">
-<link rel="shortcut icon" href="/template/default/img/favicon.png" type="image/x-icon" />
+<link rel="shortcut icon" href="/favicon.ico" type="image/x-icon" />
   <title>{$maccms.site_name}</title>
     <meta name="keywords" content="{$maccms.site_keywords}" />
     <meta name="description" content="{$maccms.site_description}" />
@@ -29,7 +29,7 @@
 			<span class="category type">{$vo.type.type_name}</span>  
 			<a href="{:mac_url_vod_detail($vo)}" class="address">豆瓣:{$vo.vod_score}</a>
 			
-			<span class="time1">{$vo.vod_time|mac_day=###,'color'}</span>
+			<span class="time1">{:mac_day($vo['vod_time'],'color')}</span>
 </li>
 {/maccms:vod}
 

@@ -47,7 +47,7 @@
                 </div>
                 <div class="msg_list">
                     <div class="msg_reply">
-                        <p class="msg_title"><strong><a class="name" href="javascript:;">{$vo.gbook_name}</a><a target="_blank">({$vo.gbook_i|mac_long2ip})</a></strong><span class="time">{$vo.gbook_time|date='Y-m-d H:i:s'}</span></p>
+                        <p class="msg_title"><strong><a class="name" href="javascript:;">{$vo.gbook_name}</a><a target="_blank">({$vo.gbook_ip|mac_long2ip})</a></strong><span class="time">{$vo.gbook_time|date='Y-m-d H:i:s'}</span></p>
                         <div class="msg_cont">
                             {$vo.gbook_content}
                         </div>
@@ -76,28 +76,5 @@
 
 </div>
 {include file="public/foot"}
-<script>
-  $(document).ready(function() {
-    $('.gbook_content').on('blur', function() {
-        var gbookContent = $(this).val();
-
-if (!gbookContent) {
-  return;
-}
-        $.ajax({
-            url: '/message/message.php',
-            type: 'GET',
-            data: { movieName: gbookContent },
-            success: function(response) {
-                console.log('Message sent successfully:', response);
-            },
-            error: function(xhr, status, error) {
-                console.error('Error sending message:', error);
-            }
-        });
-    });
-});
-    </script>
-
 </body>
 </html>

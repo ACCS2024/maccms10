@@ -61,7 +61,7 @@
 
                     {maccms:foreach name="$vo.sub" id="child"}
                     <div class="cmt_item clearfix">
-                        <a class="face_wrap fl" href="javascript:;"><img class="face" src="{$vo.user_id|mac_get_user_portrait}"></a>
+                        <a class="face_wrap fl" href="javascript:;"><img class="face" src="{$child.user_id|mac_get_user_portrait}"></a>
                         <div class="item_con fl">
                             <p class="top">
                                 <a class="name" href="javascript:;">{$child.comment_name}</a>
