@@ -7,10 +7,7 @@
   <title>{$param.wd}{$param.actor}{$param.director}{$param.area}{$param.lang}{$param.year}{$param.class}搜索结果 - {$maccms.site_name}</title>
     <meta name="keywords" content="{$param.wd}{$param.actor}{$param.director}{$param.area}{$param.lang}{$param.year}{$param.class}搜索结果" />
     <meta name="description" content="{$param.wd}{$param.actor}{$param.director}{$param.area}{$param.lang}{$param.year}{$param.class}搜索结果" />
-<script>
-    const  search='{$param.wd}'
 
-</script>
  {include file="public/include"}
 </head>
 <body>{include file="public/head"}
@@ -21,86 +18,32 @@
 <div class="addition-content">
 	<p class="videotitle">
 		<span class="videoName" style="width:370px;">影片名称</span>
-		<span class="region" style="width:200px;"></span>
-		<span class="category">影片类别</span>  
+		<span class="region" style="width:200px;">影片地区</span>
+		<span class="category">影片类别</span>
 		<span class="address">获取地址</span>
-		<span class="time">更新时间</span>  
+		<span class="time">更新时间</span>
 	</p>
 <ul class="videoContent">
-稍等 正在请求
+ {maccms:vod num="24" paging="yes" pageurl="vod/search" order="desc" by="time"}
+
+<li>
+<a class="videoName" target="_blank" href="{:mac_url_vod_detail($vo)}" style="width:370px;">{$vo.vod_name}<i>{if condition="$vo.vod_serial gt 0"}第{$vo.vod_serial}集{else/}{$vo.vod_remarks}{/if}</i></a>
+			<span class="region" style="width:200px;">{$vo.vod_area}</span>
+			<span class="category type">{$vo['type']['type_name']??''}</span>
+			<a href="{:mac_url_vod_detail($vo)}" class="address">点击进入</a>
+			<span class="time1">{:mac_day($vo['vod_time'],'color')}</span>
+</li>
+{/maccms:vod}
 </ul>
 </div>
 <div class="clear"></div>
 <div class="kscont">
 	<div class="pages">
-	</div>  
+		{include file="public/paging"}
+	</div>
 </div>
 </div>
 <div class="clear"></div>
-
-<script>
-    function timestampToDateTime(timestamp) {
-        var date = new Date(timestamp);
-        var year = date.getFullYear();
-        var month = ("0" + (date.getMonth() + 1)).slice(-2);
-        var day = ("0" + date.getDate()).slice(-2);
-        var hour = ("0" + date.getHours()).slice(-2);
-        var minute = ("0" + date.getMinutes()).slice(-2);
-
-        var dateTime = year + "-" + month + "-" + day + " " + hour + ":" + minute;
-        return dateTime;
-    }
-
-
-    $(document).ready(function (){
-
-        initview()
-    })
-  function  initview(){
-
-      $.ajax({
-          url: "https://search.bfzyapi.com/json-api/",
-          data: {
-              dname: "baofeng",
-              key:search,
-              count:50
-          },
-          dataType: "json",
-          success: function(response) {
-              // 请求成功后的处理逻辑
-              console.log(response);
-              $(".videoContent").empty();
-              $.each(response.posts, function (idx, val) {
-                  console.error(val);
-                  $(".videoContent").append(`
-        <li>
-            <a class="videoName" target="_blank" href="/index.php/vod/detail/id/${val.vod_id}.html" style="width:370px;">${val.vod_name}</a>
-            <span class="region" style="width:200px;"></span>
-            <span class="category type">${val.type_name}</span>
-            <a href="/index.php/vod/detail/id/${val.vod_id}.html" class="address">点击进入</a>
-            <span class="time1">${timestampToDateTime(parseInt(val.vod_time.$date.$numberLong))}</span>
-        </li>
-    `);
-              });
-
-          },
-          error: function(xhr, status, error) {
-              // 请求失败后的处理逻辑
-              console.log("请求失败：" + error);
-          }
-      });
-
-
-  }
-    initview()
-</script>
-
-
-
-
-
-
-
 {include file="public/foot"}
 </body>
 </html>
