@@ -745,7 +745,7 @@ class Provide extends Base
                 $where[] = ['manga_name', 'like', '%' . ($this->_param['wd'] ?? null) . '%'];
             }
             if (!empty($GLOBALS['config']['api']['manga']['datafilter'])) {
-                $where['_string'] .= ' ' . $GLOBALS['config']['api']['manga']['datafilter'];
+                $where['_string'] = ($where['_string'] ?? '') . ' ' . $GLOBALS['config']['api']['manga']['datafilter'];
             }
             if (empty(($this->_param['pg'] ?? null))) {
                 $this->_param['pg'] = 1;

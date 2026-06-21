@@ -2,10 +2,6 @@
 
 use think\facade\Route;
 
-// Front-end (index app) routes — converted from application/route.php (TP5 array format)
-// to ThinkPHP 8 Route::any() calls. TP8 auto-route handles simple controller/action
-// but parameterised patterns must be declared explicitly.
-
 Route::any('sitehome', 'index/home');
 Route::any('publish-<id>', 'index/publish_group');
 

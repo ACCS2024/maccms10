@@ -125,7 +125,7 @@ class Admin extends Base {
         }
 
         if($GLOBALS['config']['app']['admin_login_verify'] !='0'){
-            if(!captcha_check($data['verify'])){
+            if(!captcha_check($data['verify'] ?? '')){
                 return ['code'=>1002,'msg'=>lang('verify_err')];
             }
         }
