@@ -1,2 +1,4 @@
 <?php
-return [];
+return [
+    'think\exception\Handle' => \app\ExceptionHandle::class,
+];
