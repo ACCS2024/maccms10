@@ -12,6 +12,7 @@ class All
     var $_url;
     protected $_page_sf_lock = false; // 整页缓存单飞:本请求持有的锁键(产出后释放)
     protected $request;
+    protected $_maccms = [];
 
     public function __construct()
     {
@@ -152,6 +153,7 @@ polyfill;
         else{
             $maccms['aid'] = mac_get_aid($this->_cl,$this->_ac);
         }
+        $this->_maccms = $maccms;
         $this->assign( ['maccms'=>$maccms] );
         // 默认模板主题配置
         $this->assign('tplconfig', $GLOBALS['mctheme']);
@@ -243,13 +245,10 @@ polyfill;
         if (empty($cfg['template_inject']) || (string)$cfg['template_inject'] !== '1') {
             return;
         }
-        if (!isset($this->view->maccms)) {
+        if (empty($this->_maccms)) {
             return;
         }
-        $mac = $this->view->maccms;
-        if (!is_array($mac)) {
-            return;
-        }
+        $mac = $this->_maccms;
         $row = [];
         if ($seoAi) {
             if (is_object($seoAi) && method_exists($seoAi, 'toArray')) {
