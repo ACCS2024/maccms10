@@ -60,10 +60,18 @@
     <div class="header_right">
         <div class="header_submit">
             <div class="header_submit_b">  
-			<form id="search" name="search" method="get" action="/s/" onSubmit="return qrsearch();">
-                <input type="text" name="keys" class="search-input mac_wd" placeholder="请在此处输入影片名或演员名称"/>
+			<form id="search" name="search" method="get" action="{:mac_url('vod/search')}" onSubmit="return qrsearch();">
+                <input type="text" id="mac_wd" name="wd" class="search-input mac_wd" placeholder="请在此处输入影片名或演员名称"/>
                 <input type="submit" id="searchbutton" class="search-button mac_search" value="搜索"/>
             </form>
+            <script>
+            function qrsearch(){
+                var wd=document.getElementById('mac_wd').value.trim();
+                if(!wd) return false;
+                location.href='/vodsearch/'+encodeURIComponent(wd)+'.html';
+                return false;
+            }
+            </script>
             </div>
         </div>
         <div class="header_list">
