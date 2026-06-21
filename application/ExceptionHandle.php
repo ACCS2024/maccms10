@@ -80,6 +80,14 @@ class ExceptionHandle extends Handle
      * 降级原因：异常处理器本身不能抛出异常，若主题模板损坏（语法错误、
      * include 缺失等）会触发新的异常，导致白屏。try/catch 在此是必要的防御。
      *
+     * 为什么要手动 assign $maccms
+     * ----------------------------
+     * 正常请求中，$maccms 由 common/controller/All::label_maccms() 在
+     * controller initialize() 阶段 assign 到 View。404 路由不命中时，
+     * controller 从未实例化，$maccms 缺失导致 View::fetch 抛 ErrorException。
+     * AppInit 中间件已在 ExceptionHandle 之前运行，$GLOBALS['config'] 可用，
+     * 故在此手动补齐 View 所需的最小 $maccms 字段集。
+     *
      * @param int    $status   HTTP 状态码
      * @param string $tpl      相对于主题目录的模板路径，如 'error/404'
      * @param string $title    降级页标题
@@ -88,6 +96,28 @@ class ExceptionHandle extends Handle
     private function themeErrorPage(int $status, string $tpl, string $title, string $message): Response
     {
         try {
+            // 从 AppInit 已初始化的 $GLOBALS['config'] 中提取 $maccms 模板变量。
+            // 仅补 error 模板（head/foot）实际依赖的字段；如遇其他缺失字段
+            // 可在此追加，不影响主流程，异常时仍 fallback 到 plainPage。
+            $cfg = $GLOBALS['config'] ?? [];
+            $site = $cfg['site'] ?? [];
+            $maccms = array_merge($site, [
+                'path'      => defined('MAC_PATH') ? MAC_PATH : '',
+                'path_tpl'  => $GLOBALS['MAC_PATH_TEMPLATE'] ?? '',
+                'date'      => date('Y-m-d'),
+                'http_type' => $GLOBALS['http_type'] ?? 'http://',
+                'seo'       => $cfg['seo'] ?? [],
+                // head/include 模板需要的字段；error 页无实际菜单/会员语境，置 0。
+                'mid'       => 0,
+                'aid'       => 0,
+                'controller_action' => 'error/404',
+                'user_status' => $cfg['user']['status'] ?? 0,
+                'search_hot'  => $cfg['app']['search_hot'] ?? '',
+            ]);
+            View::assign('maccms', $maccms);
+            View::assign('param', []);
+            View::assign('popedom', ['code' => 1, 'msg' => '', 'trysee' => 0, 'confirm' => 0]);
+
             $content = View::fetch($tpl);
             return Response::create($content, 'html', $status);
         } catch (Throwable $t) {
