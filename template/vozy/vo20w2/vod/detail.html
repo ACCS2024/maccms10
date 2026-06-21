@@ -34,7 +34,7 @@
       <p>地区：{$obj.vod_area}</p>
       <p>语言：{$obj.vod_lang}</p>
       <p>TAG标签：{$obj.vod_tag}</p>
-      <p>更新时间：{$obj.vod_time|date='Y-m-d'}</p>
+      <p>更新时间：{:date('Y-m-d', is_numeric($obj['vod_time']) ? (int)$obj['vod_time'] : strtotime($obj['vod_time']))}</p>
     </div>
     <div class="clear"></div>
   </div>

@@ -52,7 +52,7 @@
   <div class="play-list">
     <strong>{$sid_item.from}</strong><br>
     {maccms:foreach name="sid_item.urls" id="nid_item" key="nid_key"}
-    <a href="{:mac_url_vod_play($obj,$sid_key,$nid_key)}" {if condition="$sid_key eq $param['sid'] && $nid_key eq $param['nid']"}class="cur"{/if}>{$nid_item.name}</a>
+    <a href="{:mac_url_vod_play($obj,['sid'=>$sid_key,'nid'=>$nid_key])}" {if condition="$sid_key eq $param['sid'] && $nid_key eq $param['nid']"}class="cur"{/if}>{$nid_item.name}</a>
     {/maccms:foreach}
   </div>
   {/maccms:foreach}

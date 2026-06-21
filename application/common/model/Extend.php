@@ -11,6 +11,8 @@ class Extend extends Base {
         $key = $GLOBALS['config']['app']['cache_flag']. '_'.'data_count';
         $data = Cache::get($key);
         if(empty($data)){
+            $data = ['vod_all' => 0, 'vod_today' => 0, 'art_all' => 0, 'art_today' => 0];
+            $list = [];
             $totay = strtotime(date('Y-m-d'));
 
             //视频
@@ -51,10 +53,10 @@ class Extend extends Base {
                 $data[$k]=$v['cc'];
 
                 if(strpos($k,'type_all')!==false){
-                    $data['type_all_' . $v['type_id_1']] += $v['cc'];
+                    $data['type_all_' . $v['type_id_1']] = ($data['type_all_' . $v['type_id_1']] ?? 0) + $v['cc'];
                 }
                 if(strpos($k,'type_today')!==false){
-                    $data['type_today_' . $v['type_id_1']] += $v['cc'];
+                    $data['type_today_' . $v['type_id_1']] = ($data['type_today_' . $v['type_id_1']] ?? 0) + $v['cc'];
                 }
             }
 

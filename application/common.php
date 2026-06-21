@@ -1244,9 +1244,8 @@ function mac_page_param($record_total, $page_size, $page_current, $page_url,$pag
     $page_num = array();
 
     if ($record_total == 0) {
-        // 补全键位,避免空结果列表页模板引用 page_current/page_total 时
-        // 在 PHP8 下触发「未定义数组键」→ 被 TP8 升级为异常 → 500
-        return ['record_total'=>0, 'page_current'=>$page_current, 'page_total'=>0];
+        return ['record_total'=>0,'page_current'=>$page_current,'page_total'=>0,
+                'page_url'=>$page_url,'page_prev'=>1,'page_next'=>1,'page_num'=>[],'page_sp'=>''];
     }
     if(empty($page_half)){
         $page_half=5;
@@ -3533,6 +3532,7 @@ function mac_url($model,$param=[],$info=[])
 }
 function mac_url_page($url,$num)
 {
+    if(!is_string($url)){ $url = (string)($url ?? ''); }
     $url = str_replace(MAC_PAGE_SP.'PAGELINK',($num>1 ? MAC_PAGE_SP.$num : ''),$url);
     $url = str_replace('PAGELINK',$num,$url);
     return $url;
@@ -3571,20 +3571,21 @@ function mac_url_search($param=[],$flag='vod')
 
 function mac_url_type($info,$param=[],$flag='type')
 {
+    if(empty($info) || !is_array($info)){ return ''; }
     $tab = 'vod';
-    if($info['type_mid'] == 1){
+    if(($info['type_mid'] ?? 0) == 1){
 
     }
-    else if($info['type_mid'] == 2) {
+    else if(($info['type_mid'] ?? 0) == 2) {
         $tab ='art';
     }
-    else if($info['type_mid'] == 8) {
+    else if(($info['type_mid'] ?? 0) == 8) {
         $tab ='actor';
     }
-    else if($info['type_mid'] == 11) {
+    else if(($info['type_mid'] ?? 0) == 11) {
         $tab ='website';
     }
-    else if($info['type_mid'] == 12) {
+    else if(($info['type_mid'] ?? 0) == 12) {
         if(empty($param['id'])){
             $param['id'] = $info['type_id'];
         }
