@@ -12,15 +12,14 @@ body {
    平板 ≤ 1024px
    ================================================================ */
 @media (max-width: 1024px) {
-  .width1200      { width: 96%; }
-  .list-nav       { width: auto; }
+  .width1200       { width: 96% !important; }
+  .list-nav        { width: auto !important; }
   .banner_img,
-  .banner_img img { width: 100%; height: auto; }
-  .people         { width: 96%; }
-  .right p        { width: auto; }
-  .index-card     { width: 90%; }
-  .nav            { height: auto; min-height: 42px; }
-  .nav > .width1200 { width: 100%; }
+  .banner_img img  { width: 100% !important; height: auto !important; }
+  .people          { width: 96% !important; }
+  .right p         { width: auto !important; }
+  .index-card      { width: 90% !important; }
+  .nav             { height: auto; }
 }
 
 /* ================================================================
@@ -28,85 +27,144 @@ body {
    ================================================================ */
 @media (max-width: 768px) {
 
-  /* --- 页头 --- */
-  .head_box { overflow: hidden; }
+  /* ---- 页头容器 ---- */
+  .head_box { overflow: visible; }
 
   .header {
-    height: auto;
-    padding: 8px 4%;
+    height: auto !important;
+    padding: 8px 3% !important;
     box-sizing: border-box;
+    overflow: hidden;
   }
 
-  /* logo 独占一行，左对齐 */
+  /* logo 独占一行 */
   .header_left {
-    float: none;
-    display: block;
-    width: auto;
-    margin-bottom: 8px;
+    float: none !important;
+    display: block !important;
+    width: 100% !important;
+    margin-bottom: 6px;
   }
-  .header_left a  { width: auto; height: 50px; }
-  .header_left img { width: 160px; height: auto; margin-top: 0; }
+  .header_left a   { width: auto !important; height: auto !important; }
+  .header_left img { width: 140px !important; height: auto !important; margin-top: 0 !important; }
 
-  /* 搜索框独占一行 */
+  /* 右侧列独占一行 */
   .header_right {
-    float: none;
-    display: block;
-    height: auto;
-    margin-left: 0;
-    width: 100%;
+    float: none !important;
+    display: block !important;
+    width: 100% !important;
+    height: auto !important;
+    margin-left: 0 !important;
   }
-  .header_submit { width: 100%; margin: 4px 0; }
-  .header_submit_b { width: 100%; }
-  .header_submit_b input[type=text]  { width: calc(100% - 80px); }
-  .header_submit_b input[type=submit]{ width: 80px; }
 
-  /* 辅助链接折叠 */
-  .header_list { margin-top: 4px; }
-  .header_list ul li { font-size: 11px; margin-right: 6px; padding-right: 6px; }
+  /* 搜索行 */
+  .header_submit {
+    float: none !important;
+    width: 100% !important;
+    height: auto !important;
+    margin: 4px 0 !important;
+  }
+  .header_submit_b {
+    float: none !important;
+    display: flex !important;
+    width: 100% !important;
+  }
+  .header_submit_b input[type=text] {
+    float: none !important;
+    flex: 1 !important;
+    width: auto !important;
+    min-width: 0;
+  }
+  .header_submit_b input[type=submit] {
+    float: none !important;
+    width: 70px !important;
+    flex-shrink: 0;
+  }
 
-  /* QQ 群/频道链接移出右侧 */
-  .header_fl { float: none; text-align: left; margin-top: 4px; }
+  /* 辅助链接行 */
+  .header_list {
+    clear: none !important;
+    margin-top: 4px !important;
+    width: 100% !important;
+  }
+  .header_list ul li {
+    float: left;
+    font-size: 11px !important;
+    margin-right: 6px !important;
+    padding-right: 6px !important;
+    height: auto !important;
+    line-height: 18px !important;
+  }
 
-  /* --- 导航 --- */
+  /* QQ 群/Telegram 按钮 */
+  .header_fl {
+    float: none !important;
+    display: block !important;
+    text-align: left;
+    margin-top: 4px;
+  }
+
+  /* ---- 导航：横向滚动 ---- */
   .nav {
-    height: auto;
+    height: auto !important;
     overflow-x: auto;
     overflow-y: hidden;
     -webkit-overflow-scrolling: touch;
     white-space: nowrap;
-    margin-top: 6px;
+    margin-top: 4px !important;
   }
-  .nav > .width1200 { width: max-content; min-width: 100%; }
-  .nav ul { display: inline-flex; flex-wrap: nowrap; width: max-content; }
+  /* 隐藏滚动条（视觉更干净） */
+  .nav::-webkit-scrollbar { display: none; }
+  .nav { -ms-overflow-style: none; scrollbar-width: none; }
+
+  .nav .width1200 {
+    width: max-content !important;
+    min-width: 100%;
+  }
+  .nav ul {
+    display: inline-flex !important;
+    flex-wrap: nowrap;
+    width: max-content;
+  }
   .nav ul li {
-    float: none;
-    display: inline-block;
-    width: auto;
-    min-width: 60px;
-    padding: 0 8px;
-    margin-right: 0;
-    height: 38px;
-    line-height: 38px;
+    float: none !important;
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    width: auto !important;
+    min-width: 56px;
+    padding: 0 10px !important;
+    margin-right: 0 !important;
+    height: 42px !important;
+    line-height: 42px !important;
+  }
+  /* 手机端禁用下拉（hover 触屏无效，改成不展示） */
+  .nav ul li .dropdown-content { display: none !important; }
+
+  /* ---- 公告卡片 ---- */
+  .index-header {
+    padding: 6px 3% !important;
+    box-sizing: border-box;
+  }
+  .index-card {
+    width: 100% !important;
+    box-sizing: border-box !important;
+    font-size: 13px;
   }
 
-  /* --- 公告卡片 --- */
-  .index-header { padding: 8px 4%; box-sizing: border-box; }
-  .index-card   { width: 100%; box-sizing: border-box; font-size: 13px; }
-
-  /* --- 列表页 (.videoContent) --- */
-  /* 保持 ul > li > a.videoName 等 XPath 不变，仅改布局 */
-  .videotitle { display: none; }            /* 隐藏桌面版表头 */
+  /* ---- 视频列表 (保留所有 class/XPath，仅改布局) ---- */
+  .videotitle { display: none !important; }
 
   ul.videoContent li {
-    display: flex;
+    display: flex !important;
     flex-wrap: wrap;
     align-items: center;
-    padding: 8px 4%;
+    padding: 10px 3%;
     border-bottom: 1px solid #eee;
     box-sizing: border-box;
-    width: 100%;
+    width: 100% !important;
   }
 
+  /* 行内 style="width:370px" 用 !important 覆盖 */
   ul.videoContent li a.videoName {
     width: 100% !important;
     font-size: 14px;
@@ -115,9 +173,17 @@ body {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    display: block;
   }
 
-  ul.videoContent li span.region,
+  /* 行内 style="width:200px" 覆盖 */
+  ul.videoContent li span.region {
+    width: auto !important;
+    font-size: 12px;
+    color: #888;
+    margin-right: 8px;
+  }
+
   ul.videoContent li span.category,
   ul.videoContent li span.category.type {
     width: auto !important;
@@ -126,88 +192,94 @@ body {
     margin-right: 8px;
   }
 
-  ul.videoContent li span.time1   { font-size: 12px; color: #aaa; margin-left: auto; }
-  ul.videoContent li a.address    { display: none; }  /* 手机端隐藏"点击进入"重复链接 */
+  ul.videoContent li span.time1 {
+    font-size: 12px;
+    color: #aaa;
+    margin-left: auto;
+  }
 
-  /* --- 面包屑 --- */
-  .list-nav { width: auto; margin: 0 4% 5px; }
+  /* "点击进入" 链接手机端重复，隐藏 */
+  ul.videoContent li a.address { display: none !important; }
 
-  /* --- 详情页 (.people) --- */
-  .people { width: 96%; margin: 0 auto; }
+  /* ---- 面包屑 ---- */
+  .list-nav {
+    width: auto !important;
+    margin-left: 3% !important;
+    margin-right: 3% !important;
+  }
 
+  /* ---- 详情页 people ---- */
+  .people {
+    width: 96% !important;
+    margin: 0 auto !important;
+  }
   .people .left {
-    float: none;
-    width: 120px;
-    height: 168px;
-    margin: 0 auto 10px;
+    float: none !important;
+    width: 110px !important;
+    height: 154px !important;
+    margin: 0 auto 10px !important;
+    display: block;
   }
-  .people .left img { width: 120px; height: 168px; }
-
+  .people .left img {
+    width: 110px !important;
+    height: 154px !important;
+  }
   .right {
-    float: none;
-    margin-left: 0;
-    width: 100%;
+    float: none !important;
+    margin-left: 0 !important;
+    width: 100% !important;
   }
-  .right p { width: 100%; font-size: 13px; line-height: 24px; }
+  .right p {
+    width: 100% !important;
+    font-size: 13px;
+    line-height: 24px;
+  }
 
-  /* --- 播放列表 --- */
-  .playlist.wbox li { font-size: 12px; }
+  /* ---- 播放列表 ---- */
+  .playlist.wbox li { font-size: 12px; word-break: break-all; }
 
-  /* --- 分页 --- */
+  /* ---- 分页 ---- */
   .pages a,
   .pages span,
-  .pages em { padding: 0 8px; font-size: 13px; }
+  .pages em,
+  .pages label { padding: 0 8px !important; font-size: 12px !important; }
 
-  .kscont { margin: 0 4%; }
+  .kscont { margin: 0 3%; }
 
-  /* --- 留言板 --- */
+  /* ---- 留言板 ---- */
   .reply_box .mac_msg_l,
-  .reply_box .mac_msg_r { width: 100% !important; float: none; margin: 4px 0; }
+  .reply_box .mac_msg_r {
+    float: none !important;
+    width: 96% !important;
+    margin: 6px auto !important;
+  }
 
-  /* --- 播放页 --- */
-  .play-wrap { padding: 4px; }
+  /* ---- 播放页 ---- */
+  .play-wrap { padding: 4px !important; }
 
-  /* --- 底部 --- */
-  .footer       { height: auto; }
-  .footer h2    { display: none; }           /* 隐藏底部 logo（手机无需） */
-  .footer_right { width: 100%; float: none; text-align: center; }
-  .footer_right ul li { font-size: 12px; }
-  .footer_right p     { font-size: 12px; line-height: 20px; }
+  /* ---- 底部 ---- */
+  .footer       { height: auto !important; }
+  .footer h2    { display: none !important; }
+  .footer_right { width: 100% !important; float: none !important; text-align: center; }
+  .footer_right ul li { font-size: 12px !important; }
+  .footer_right p     { font-size: 12px !important; line-height: 20px !important; }
 
-  /* --- 通用 container --- */
-  .container { width: 100%; }
-  .addition-content { padding: 0; }
-
-  /* 白色卡片 */
+  /* ---- 通用白卡片 ---- */
   .white { padding-bottom: 10px; }
-  .width1200.white { width: 100%; }
+  .width1200.white { width: 100% !important; }
+  .addition-content { padding: 0; }
+  .container { width: 100% !important; }
 
-  /* vod_content 正文 */
-  .vod_content { padding: 0 12px; font-size: 13px; line-height: 22px; }
-
-  /* 下拉菜单绝对定位 */
-  .nav ul li .dropdown-content {
-    position: fixed;
-    left: 0;
-    width: 100%;
-    z-index: 9999;
-    background: #fff;
-    border: 1px solid #ddd;
-    display: none;
-  }
-  .nav ul li .dropdown-content li {
-    width: 100%;
-    height: 36px;
-    line-height: 36px;
-  }
+  /* ---- 正文 ---- */
+  .vod_content { padding: 0 12px !important; font-size: 13px; line-height: 22px; }
 }
 
 /* ================================================================
-   超小屏 ≤ 360px
+   超小屏 ≤ 400px
    ================================================================ */
-@media (max-width: 360px) {
-  .header_submit_b input[type=text]  { width: calc(100% - 64px); }
-  .header_submit_b input[type=submit]{ width: 64px; font-size: 12px; }
-  .header_list ul li                 { display: none; }
-  .header_list ul li:first-child     { display: list-item; }
+@media (max-width: 400px) {
+  /* 辅助链接太多，只保留前两项 */
+  .header_list ul li:nth-child(n+3) { display: none; }
+
+  .footer_right p { word-break: break-all; }
 }
