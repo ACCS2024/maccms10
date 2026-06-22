@@ -155,39 +155,50 @@ body {
     font-size: 13px;
   }
 
+  /* ---- 视频列表容器 (plugin.css 写死 960px) ---- */
+  .addition-content {
+    width: 100% !important;
+    box-sizing: border-box;
+  }
+
   /* ---- 视频列表 (保留所有 class/XPath，仅改布局) ---- */
   .videotitle { display: none !important; }
 
+  /* li: 改回 block，清除 float + 消除 plugin.css 两侧 20px margin */
   ul.videoContent li {
-    display: flex !important;
-    flex-wrap: wrap;
-    align-items: center;
-    padding: 10px 3%;
-    border-bottom: 1px solid #eee;
-    box-sizing: border-box;
-    width: 100% !important;
-  }
-
-  /* 行内 style="width:370px" 用 !important 覆盖
-     <i> 徽章绝对定位到右侧，标题留 padding-right 避免文字压到徽章 */
-  ul.videoContent li a.videoName {
-    position: relative !important;
     display: block !important;
     float: none !important;
-    width: 100% !important;
+    width: auto !important;       /* block 元素自然撑满父级，不需要 100% */
+    height: auto !important;
+    line-height: normal !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    padding: 10px 3% !important;
+    border-bottom: 1px solid #eee !important;
+    box-sizing: border-box;
+    overflow: hidden;             /* clearfix for inner float (time1) */
+  }
+
+  /* a.videoName: block 元素自然撑满 li，无需 width:100% !important
+     padding-right 为右侧徽章留空间，<i> 绝对定位贴右 */
+  ul.videoContent li a.videoName {
+    display: block !important;
+    float: none !important;
+    position: relative !important;
+    width: auto !important;       /* block 自然全宽，不强制 100% */
     height: auto !important;
     line-height: 1.5 !important;
     padding: 2px 76px 2px 0 !important;
     box-sizing: border-box !important;
+    overflow: hidden !important;
+    white-space: nowrap;
+    text-overflow: ellipsis;
     font-size: 14px;
     font-weight: 500;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
     text-align: left !important;
   }
 
-  /* 徽章绝对定位：右边贴齐，竖直居中，不参与文本截断 */
+  /* 徽章绝对定位：右侧贴齐，不参与文本截断 */
   ul.videoContent li a.videoName i {
     position: absolute !important;
     right: 0 !important;
@@ -198,9 +209,13 @@ body {
     line-height: 1 !important;
   }
 
-  /* 行内 style="width:200px" 覆盖 */
+  /* 地区 / 分类：inline-block 小标签 */
   ul.videoContent li span.region {
+    display: inline-block !important;
+    float: none !important;
     width: auto !important;
+    height: auto !important;
+    line-height: 1.6 !important;
     font-size: 12px;
     color: #888;
     margin-right: 8px;
@@ -208,16 +223,24 @@ body {
 
   ul.videoContent li span.category,
   ul.videoContent li span.category.type {
+    display: inline-block !important;
+    float: none !important;
     width: auto !important;
+    height: auto !important;
+    line-height: 1.6 !important;
     font-size: 12px;
     color: #888;
     margin-right: 8px;
   }
 
+  /* 更新时间：右浮，不影响 block 布局 */
   ul.videoContent li span.time1 {
+    float: right !important;
+    width: auto !important;
+    height: auto !important;
+    line-height: 1.6 !important;
     font-size: 12px;
     color: #aaa;
-    margin-left: auto;
   }
 
   /* "点击进入" 链接手机端重复，隐藏 */
@@ -266,7 +289,7 @@ body {
   .pages em,
   .pages label { padding: 0 8px !important; font-size: 12px !important; }
 
-  .kscont { margin: 0 3%; }
+  .kscont { width: auto !important; margin: 0 3% !important; box-sizing: border-box; }
 
   /* ---- 留言板 ---- */
   .reply_box .mac_msg_l,
