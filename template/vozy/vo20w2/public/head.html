@@ -87,7 +87,7 @@
              <div class="dropdown">
 			  <a href="{:mac_url_type($vo2)}" title="{$vo2.type_name}">{$vo2.type_name}</a>
 			  			  <div class="dropdown-content">
-			  	<ul>{maccms:type parent="'.$vo2['type_id'].'" order="asc" by="sort"}
+			  	<ul>{maccms:type parent="$vo2['type_id']" order="asc" by="sort"}
                                   <li><a href="{:mac_url_type($vo)}" title="{$vo.type_name}">{$vo.type_name}</a></li>{/maccms:type}
                 			    </ul>
 			  </div>

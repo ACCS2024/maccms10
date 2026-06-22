@@ -61,7 +61,7 @@ class Type extends Base {
                 }
             }
             else {
-                $list[$k]['type_1'] = $list[$v['type_pid']];
+                $list[$k]['type_1'] = $list[$v['type_pid']] ?? null;
             }
         }
         if($mid>0){
@@ -151,7 +151,7 @@ class Type extends Base {
                 $where['type_id'] = $childs;
             }
             else{
-                $where['type_id'] = $ids;
+                $where['type_id'] = array_map('intval', explode(',', $ids));
             }
         }
         if(!empty($parent)){

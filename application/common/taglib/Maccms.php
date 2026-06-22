@@ -358,8 +358,33 @@ class Maccms extends Taglib {
             $tag['key'] = 'key';
         }
 
+        // 检测 parent 属性是否为运行期 PHP 表达式（如 $var、{$var}、'.$var.'）
+        // 若是，则在生成代码中动态赋值，避免被 json_encode 固化为字面字符串
+        $dynamic_parent = null;
+        if (!empty($tag['parent'])) {
+            $pv = trim($tag['parent']);
+            if (preg_match("/^'\.(.+)\.'$/", $pv, $m)) {
+                // 旧式 PHP 拼接写法：'.$var.'
+                $dynamic_parent = $m[1];
+            } elseif (preg_match('/^\{(\$.+)\}$/', $pv, $m)) {
+                // 模板变量写法：{$var}
+                $dynamic_parent = $m[1];
+            } elseif (str_starts_with($pv, '$')) {
+                // 直接 PHP 变量写法：$var
+                $dynamic_parent = $pv;
+            }
+            if ($dynamic_parent !== null) {
+                $tag['parent'] = '';   // 清空静态值，由运行期覆盖
+            }
+        }
+
         $parse = '<?php ';
-        $parse .= '$__TAG__ = \'' . addslashes(json_encode($tag)) . '\';';
+        // var_export 直接生成 PHP 数组字面量，避免 addslashes+json 双重转义破坏引号
+        $parse .= '$__TAG__ = ' . var_export($tag, true) . ';';
+        if ($dynamic_parent !== null) {
+            // 运行期注入实际 parent ID（intval 保证类型安全）
+            $parse .= '$__TAG__[\'parent\'] = intval(' . $dynamic_parent . ');';
+        }
         $parse .= '$__LIST__ = (new \\app\\common\\model\\Type())->listCacheData($__TAG__);';
         $parse .= ' ?>';
         $parse .= '{volist name="__LIST__[\'list\']" id="'.$tag['id'].'" key="'.$tag['key'].'"';
