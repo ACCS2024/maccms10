@@ -4414,6 +4414,12 @@ if (!function_exists('mac_validate')) {
         return new $class();
     }
 }
+if (!function_exists('mac_help_url')) {
+    function mac_help_url(): string {
+        $path = \app\common\model\HelpCfg::get('help_path', 'help');
+        return '/' . ltrim($path ?: 'help', '/');
+    }
+}
 // ========= /TP8 global helpers =========
 
 

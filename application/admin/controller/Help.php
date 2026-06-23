@@ -50,8 +50,8 @@ class Help extends Base
         }
 
         $fields = ['site_name', 'player_flag', 'site_host', 'site_back_tip', 'api_host',
-                   'api_host_backup', 'player_host', 'tg_url', 'player_code', 'notice'];
-        $optionalFields = ['player_code', 'notice', 'site_back_tip', 'tg_url', 'api_host_backup'];
+                   'api_host_backup', 'player_host', 'tg_url', 'player_code', 'notice', 'help_path'];
+        $optionalFields = ['player_code', 'notice', 'site_back_tip', 'tg_url', 'api_host_backup', 'help_path'];
 
         $data = [];
         foreach ($fields as $field) {

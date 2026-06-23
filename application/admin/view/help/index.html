@@ -108,6 +108,21 @@
                         </div>
 
                         <div class="layui-form-item">
+                            <label class="layui-form-label">前台访问路径</label>
+                            <div class="layui-input-block">
+                                <div style="display:flex;gap:8px;align-items:center;">
+                                    <span style="color:#999;font-size:14px;">/</span>
+                                    <input type="text" name="help_path" id="helpPathInput" class="layui-input"
+                                        value="{$cfg.help_path|default='help'|htmlspecialchars}"
+                                        placeholder="help" autocomplete="off" style="flex:1;">
+                                    <a id="btnPreviewHelp" href="/{$cfg.help_path|default='help'|htmlspecialchars}" target="_blank"
+                                        class="layui-btn layui-btn-xs layui-btn-warm" style="white-space:nowrap;">预览</a>
+                                </div>
+                                <div class="layui-form-mid layui-word-aux">修改路径后保存即生效，原路径将失效</div>
+                            </div>
+                        </div>
+
+                        <div class="layui-form-item">
                             <div class="layui-input-block">
                                 <input type="checkbox" name="auto_regen" lay-skin="primary"
                                     title="保存后自动重新生成文件" value="1" checked>
@@ -151,7 +166,7 @@
                                 <td>MacCMS v10播放器</td>
                                 <td>
                                     {if isset($file_list['mac10.zip'])}
-                                        <a href="/upload/help/mac10.zip" target="_blank" class="layui-btn layui-btn-xs layui-btn-normal">下载</a>
+                                        <a href="/upload/help/mac10.zip?v={$file_list['mac10.zip']}" target="_blank" class="layui-btn layui-btn-xs layui-btn-normal">下载</a>
                                     {else/}
                                         <span class="layui-badge layui-bg-gray">未生成</span>
                                     {/if}
@@ -162,7 +177,7 @@
                                 <td>MacCMS v8播放器</td>
                                 <td>
                                     {if isset($file_list['maccms.zip'])}
-                                        <a href="/upload/help/maccms.zip" target="_blank" class="layui-btn layui-btn-xs layui-btn-normal">下载</a>
+                                        <a href="/upload/help/maccms.zip?v={$file_list['maccms.zip']}" target="_blank" class="layui-btn layui-btn-xs layui-btn-normal">下载</a>
                                     {else/}
                                         <span class="layui-badge layui-bg-gray">未生成</span>
                                     {/if}
@@ -173,7 +188,7 @@
                                 <td>SeaCMS播放器</td>
                                 <td>
                                     {if isset($file_list['seacms.zip'])}
-                                        <a href="/upload/help/seacms.zip" target="_blank" class="layui-btn layui-btn-xs layui-btn-normal">下载</a>
+                                        <a href="/upload/help/seacms.zip?v={$file_list['seacms.zip']}" target="_blank" class="layui-btn layui-btn-xs layui-btn-normal">下载</a>
                                     {else/}
                                         <span class="layui-badge layui-bg-gray">未生成</span>
                                     {/if}
@@ -184,7 +199,7 @@
                                 <td>SeaCMS 8.7播放器</td>
                                 <td>
                                     {if isset($file_list['seacms87.zip'])}
-                                        <a href="/upload/help/seacms87.zip" target="_blank" class="layui-btn layui-btn-xs layui-btn-normal">下载</a>
+                                        <a href="/upload/help/seacms87.zip?v={$file_list['seacms87.zip']}" target="_blank" class="layui-btn layui-btn-xs layui-btn-normal">下载</a>
                                     {else/}
                                         <span class="layui-badge layui-bg-gray">未生成</span>
                                     {/if}
@@ -195,7 +210,7 @@
                                 <td>飞飞5.0播放器</td>
                                 <td>
                                     {if isset($file_list['ff50player.zip'])}
-                                        <a href="/upload/help/ff50player.zip" target="_blank" class="layui-btn layui-btn-xs layui-btn-normal">下载</a>
+                                        <a href="/upload/help/ff50player.zip?v={$file_list['ff50player.zip']}" target="_blank" class="layui-btn layui-btn-xs layui-btn-normal">下载</a>
                                     {else/}
                                         <span class="layui-badge layui-bg-gray">未生成</span>
                                     {/if}
@@ -206,7 +221,7 @@
                                 <td>通用播放器</td>
                                 <td>
                                     {if isset($file_list['player.zip'])}
-                                        <a href="/upload/help/player.zip" target="_blank" class="layui-btn layui-btn-xs layui-btn-normal">下载</a>
+                                        <a href="/upload/help/player.zip?v={$file_list['player.zip']}" target="_blank" class="layui-btn layui-btn-xs layui-btn-normal">下载</a>
                                     {else/}
                                         <span class="layui-badge layui-bg-gray">未生成</span>
                                     {/if}
@@ -323,6 +338,16 @@ layui.use(['layer', 'form'], function () {
             });
         });
     });
+
+    // ── 前台路径预览链接实时同步 ─────────────────────────────────────────────
+    var helpPathInput = document.getElementById('helpPathInput');
+    var btnPreview    = document.getElementById('btnPreviewHelp');
+    if (helpPathInput && btnPreview) {
+        helpPathInput.addEventListener('input', function () {
+            var p = this.value.replace(/^\/+/, '') || 'help';
+            btnPreview.href = '/' + p;
+        });
+    }
 
 });
 </script>

@@ -262,7 +262,7 @@
         <li>前台播放任意视频，验证播放正常</li>
       </ol>
       {if $files.mac10}
-      <a class="help-dl-btn" href="/upload/help/mac10.zip">下载播放器文件 mac10.zip</a>
+      <a class="help-dl-btn" href="/upload/help/mac10.zip{if $cfg.file_regen_time gt 0}?v={$cfg.file_regen_time}{/if}">下载播放器文件 mac10.zip</a>
       {else/}
       <div class="help-warn">播放器文件尚未生成，请联系管理员在后台点击「重新生成文件」。</div>
       {/if}
@@ -324,7 +324,7 @@
         <li>前台播放验证</li>
       </ol>
       {if $files.maccms}
-      <a class="help-dl-btn" href="/upload/help/maccms.zip">下载播放器文件 maccms.zip</a>
+      <a class="help-dl-btn" href="/upload/help/maccms.zip{if $cfg.file_regen_time gt 0}?v={$cfg.file_regen_time}{/if}">下载播放器文件 maccms.zip</a>
       {else/}
       <div class="help-warn">播放器文件尚未生成，请联系管理员生成。</div>
       {/if}
@@ -378,7 +378,7 @@
         <li>绑定分类 → 清缓存 → 验证播放</li>
       </ol>
       {if $files.seacms}
-      <a class="help-dl-btn" href="/upload/help/seacms.zip">下载 seacms.zip（v9.0+）</a>
+      <a class="help-dl-btn" href="/upload/help/seacms.zip{if $cfg.file_regen_time gt 0}?v={$cfg.file_regen_time}{/if}">下载 seacms.zip（v9.0+）</a>
       {else/}
       <div class="help-warn">seacms.zip 尚未生成，请联系管理员。</div>
       {/if}
@@ -392,7 +392,7 @@
         <li>清缓存后验证播放</li>
       </ol>
       {if $files.seacms87}
-      <a class="help-dl-btn" href="/upload/help/seacms87.zip">下载 seacms87.zip（v8.7-）</a>
+      <a class="help-dl-btn" href="/upload/help/seacms87.zip{if $cfg.file_regen_time gt 0}?v={$cfg.file_regen_time}{/if}">下载 seacms87.zip（v8.7-）</a>
       {else/}
       <div class="help-warn">seacms87.zip 尚未生成，请联系管理员。</div>
       {/if}
@@ -436,7 +436,7 @@
         <li>在分类绑定该播放器 → 清缓存 → 验证播放</li>
       </ol>
       {if $files.ff50player}
-      <a class="help-dl-btn" href="/upload/help/ff50player.zip">下载插件文件 ff50player.zip</a>
+      <a class="help-dl-btn" href="/upload/help/ff50player.zip{if $cfg.file_regen_time gt 0}?v={$cfg.file_regen_time}{/if}">下载插件文件 ff50player.zip</a>
       {else/}
       <div class="help-warn">ff50player.zip 尚未生成，请联系管理员。</div>
       {/if}

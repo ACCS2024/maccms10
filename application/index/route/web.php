@@ -66,4 +66,5 @@ Route::any('liveshow', 'live/show');
 Route::any('liveplay/<id>', 'live/play');
 
 Route::any('macrep', 'rep/index');
-Route::any('help', 'help/index');
+$_helpPath = \app\common\model\HelpCfg::get('help_path', 'help') ?: 'help';
+Route::any($_helpPath, 'help/index');
