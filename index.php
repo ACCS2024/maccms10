@@ -46,7 +46,9 @@ if (isset($_SERVER['PATH_INFO']) && !mb_check_encoding($_SERVER['PATH_INFO'], 'u
 require __DIR__ . '/vendor/autoload.php';
 $app      = new \app\MacApp(ROOT_PATH);
 $app->setAppPath(APP_PATH);
-$app->debug(false); // 前台永不开 debug：防止 .env / 系统环境变量意外泄露堆栈
+// debug 模式由 config/app.php（app_debug=false，已提交）控制生产默认值；
+// 开发者可在本地 .env（gitignore）写 APP_DEBUG=true 覆盖，用于前台调试。
+// ExceptionHandle 本身已是安全边界：无论 debug 开关，对外永不泄露堆栈/路径。
 $http     = $app->http;
 $response = $http->name('index')->path(APP_PATH . 'index/')->run();
 $response->send();

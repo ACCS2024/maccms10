@@ -46,7 +46,7 @@ if (isset($_SERVER['PATH_INFO']) && !mb_check_encoding($_SERVER['PATH_INFO'], 'u
 require __DIR__ . '/vendor/autoload.php';
 $app      = new \app\MacApp(ROOT_PATH);
 $app->setAppPath(APP_PATH);
-$app->debug(false); // API 入口永不开 debug：JSON 客户端绝不应收到 PHP 堆栈
+// 同 index.php：生产默认由 config/app.php 保证 false，本地 .env 可覆盖调试。
 $http     = $app->http;
 $response = $http->name('api')->path(APP_PATH . 'api/')->run();
 $response->send();
