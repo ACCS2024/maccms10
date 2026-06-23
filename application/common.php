@@ -1350,17 +1350,18 @@ function mac_is_official_url($url)
     return false;
 }
 
-function mac_curl_post($url,$data,$heads=array(),$cookie='')
+function mac_curl_post($url,$data,$heads=array(),$cookie='',$timeout=10)
 {
     // 安全加固:切断与官方服务器的通信(防止下发病毒)
     if (mac_is_official_url($url)) { return ''; }
+    $timeout = max(1, (int)$timeout);
     $ch = @curl_init();
     curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/45.0.2454.101 Safari/537.36');
     curl_setopt($ch, CURLOPT_URL, $url);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
     curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
-    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 15);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, min(5, $timeout));  // 连接超时 ≤5s
+    curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
     curl_setopt($ch, CURLOPT_HEADER,0);
     curl_setopt($ch, CURLOPT_REFERER, $url);
     curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
@@ -1393,10 +1394,11 @@ function mac_curl_post($url,$data,$heads=array(),$cookie='')
  * 但该常量在部分 PHP 构建缺失,且本函数被支付/推送/上传/采集广泛调用,改动爆炸半径大,
  * 故暂不在此公共函数实施;如需收口,优先在 Image/Collect 处做"关闭自动重定向 + 逐跳重校验"。
  */
-function mac_curl_get($url,$heads=array(),$cookie='')
+function mac_curl_get($url,$heads=array(),$cookie='',$timeout=10)
 {
     // 安全加固:切断与官方服务器的通信(防止下发病毒)
     if (mac_is_official_url($url)) { return ''; }
+    $timeout = max(1, (int)$timeout);
     $ch = @curl_init();
     curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/45.0.2454.101 Safari/537.36');
 
@@ -1409,8 +1411,8 @@ function mac_curl_get($url,$heads=array(),$cookie='')
         curl_setopt($ch, CURLOPT_REDIR_PROTOCOLS, CURLPROTO_HTTP | CURLPROTO_HTTPS);
     }
     curl_setopt($ch, CURLOPT_MAXREDIRS, 5);
-    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 15);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, min(5, $timeout));  // 连接超时 ≤5s
+    curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
     curl_setopt($ch, CURLOPT_HEADER,0);
     curl_setopt($ch, CURLOPT_REFERER, $url);
     curl_setopt($ch, CURLOPT_POST, 0);

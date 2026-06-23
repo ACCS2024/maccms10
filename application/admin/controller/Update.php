@@ -53,7 +53,7 @@ class Update extends Base
 
         $save_file = $version.'.zip';
         
-        $html = mac_curl_get($url);
+        $html = mac_curl_get($url, [], '', 120);  // ZIP 下载给足时间
         @fwrite(@fopen($this->_save_path.$save_file,'wb'),$html);
         if(!is_file($this->_save_path.$save_file)){
             echo lang('admin/update/download_err')."\n";
@@ -68,7 +68,7 @@ class Update extends Base
 
         // SHA1校验：.sha1文件进行比对防篡改
         $sha1_url = $this->_url . $file . '.zip.sha1?t=' . time();
-        $remote_sha1 = trim(mac_curl_get($sha1_url));
+        $remote_sha1 = trim(mac_curl_get($sha1_url, [], '', 10));
         $local_sha1 = sha1_file($this->_save_path . $save_file);
         if (empty($remote_sha1) || strpos($remote_sha1, $local_sha1) !== 0) {
             @unlink($this->_save_path . $save_file);
