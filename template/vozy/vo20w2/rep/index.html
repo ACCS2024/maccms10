@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>替换助手 - {$site_name}</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
+
+<div class="container mx-auto px-4 py-8 max-w-4xl">
+
+  <!-- Header -->
+  <div class="bg-white rounded-2xl shadow-lg p-6 mb-6">
+    <div class="flex items-center justify-between flex-wrap gap-4">
+      <div class="flex items-center space-x-4">
+        <div class="w-12 h-12 bg-indigo-600 rounded-xl flex items-center justify-center">
+          <i class="fas fa-exchange-alt text-white text-xl"></i>
+        </div>
+        <div>
+          <h1 class="text-2xl font-bold text-gray-800">替换助手</h1>
+          <p class="text-gray-500 text-sm">MacCMS 数据批量替换记录</p>
+        </div>
+      </div>
+      <div class="flex gap-4 text-center">
+        <div class="bg-indigo-50 rounded-xl px-4 py-2">
+          <div class="text-2xl font-bold text-indigo-600" id="newRecordsCount">0</div>
+          <div class="text-xs text-gray-500">新记录</div>
+        </div>
+        <div class="bg-green-50 rounded-xl px-4 py-2">
+          <div class="text-2xl font-bold text-green-600" id="viewedCount">0</div>
+          <div class="text-xs text-gray-500">已查看</div>
+        </div>
+        <div class="bg-gray-50 rounded-xl px-4 py-2">
+          <div class="text-2xl font-bold text-gray-600">{$list|count}</div>
+          <div class="text-xs text-gray-500">总记录</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Smart Tip -->
+  <div id="smartTip" class="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
+    <div class="flex items-start justify-between">
+      <div class="flex items-start space-x-3">
+        <i class="fas fa-lightbulb text-blue-500 mt-0.5"></i>
+        <div id="tipContent" class="text-sm text-blue-700">
+          <p>正在加载提示信息...</p>
+        </div>
+      </div>
+      <button onclick="hideTip()" class="text-blue-400 hover:text-blue-600 ml-4 flex-shrink-0">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- Records -->
+  <div class="space-y-4">
+    {if empty($list)}
+    <div class="bg-white rounded-lg shadow-md p-8 text-center">
+      <i class="fas fa-inbox text-6xl text-gray-300 mb-4"></i>
+      <h3 class="text-xl font-semibold text-gray-600 mb-2">暂无替换记录</h3>
+      <p class="text-gray-500">管理员暂未添加替换内容，请稍后查看</p>
+    </div>
+    {else/}
+    {foreach $list as $index => $item}
+    <div class="replacement-item bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow cursor-pointer"
+         data-id="{$item.rep_id}"
+         data-time="{$item.rep_create_time}"
+         onclick="markAsViewed(this)">
+      <div class="p-6">
+        <div class="flex justify-between items-start mb-4">
+          <div class="flex-1">
+            <div class="flex items-center flex-wrap gap-2 mb-3">
+              <span class="new-badge hidden inline-block px-2 py-1 bg-green-500 text-white text-xs rounded-full">
+                <i class="fas fa-star mr-1"></i>新
+              </span>
+              <span class="viewed-badge hidden inline-block px-2 py-1 bg-gray-400 text-white text-xs rounded-full">
+                <i class="fas fa-check mr-1"></i>已看
+              </span>
+              {if $item.rep_applied eq 1}
+              <span class="inline-block px-2 py-1 bg-emerald-100 text-emerald-700 text-xs rounded-full">
+                <i class="fas fa-database mr-1"></i>已执行
+              </span>
+              {/if}
+              <span class="inline-block px-3 py-1 bg-indigo-100 text-indigo-800 text-sm rounded-full">
+                {$item.rep_type}
+              </span>
+              <span class="text-gray-500 text-sm">
+                <i class="fas fa-calendar mr-1"></i>
+                {:date('Y-m-d H:i', $item['rep_create_time'])}
+              </span>
+            </div>
+            <div class="grid md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">原内容：</label>
+                <div class="bg-red-50 p-3 rounded border text-sm text-red-800 break-all">{$item.rep_original|htmlspecialchars}</div>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">替换为：</label>
+                <div class="bg-green-50 p-3 rounded border text-sm text-green-800 break-all">{$item.rep_replacement|htmlspecialchars}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="flex justify-between items-center flex-wrap gap-3">
+          <div class="flex gap-2 flex-wrap">
+            {if $item.rep_type eq '播放器替换'}
+            <button onclick="event.stopPropagation();showTutorial('{$item.rep_type|htmlspecialchars}')"
+                    class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition text-sm">
+              <i class="fas fa-cog mr-2"></i>后台设置（推荐）
+            </button>
+            {else/}
+            <button onclick="event.stopPropagation();showTutorial('{$item.rep_type|htmlspecialchars}')"
+                    class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition text-sm">
+              <i class="fas fa-book mr-2"></i>后台操作（推荐）
+            </button>
+            <button onclick="event.stopPropagation();generateSQL({$index}, replacements)"
+                    class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition text-sm">
+              <i class="fas fa-database mr-2"></i>SQL 命令（进阶）
+            </button>
+            {/if}
+          </div>
+          {if !empty($item.rep_note)}
+          <div class="text-sm text-gray-500 italic">
+            <i class="fas fa-sticky-note mr-1"></i>{$item.rep_note|htmlspecialchars}
+          </div>
+          {/if}
+        </div>
+      </div>
+    </div>
+    {/foreach}
+    {/if}
+  </div>
+
+</div>
+
+<!-- SQL Modal -->
+<div id="sqlModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl">
+    <div class="p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-bold text-gray-800"><i class="fas fa-database mr-2 text-blue-600"></i>SQL 命令</h3>
+        <button onclick="hideSQLModal()" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times text-xl"></i></button>
+      </div>
+      <div class="bg-gray-900 rounded-lg p-4 mb-4">
+        <pre id="sqlContent" class="text-green-400 text-sm overflow-x-auto whitespace-pre-wrap"></pre>
+      </div>
+      <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4 text-sm text-yellow-800">
+        <i class="fas fa-exclamation-triangle mr-2"></i>
+        执行前请备份数据库。直接在 phpMyAdmin 或 MacCMS 后台数据库管理中执行。
+      </div>
+      <div class="flex gap-3">
+        <button onclick="copySQLToClipboard()" class="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition">
+          <i class="fas fa-copy mr-2"></i>复制 SQL
+        </button>
+        <button onclick="hideSQLModal()" class="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg hover:bg-gray-300 transition">关闭</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tutorial Modal -->
+<div id="tutorialModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-screen overflow-y-auto">
+    <div class="p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-bold text-gray-800"><i class="fas fa-book mr-2 text-green-600"></i>操作教程</h3>
+        <button onclick="hideTutorialModal()" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times text-xl"></i></button>
+      </div>
+      <div id="tutorialContent"></div>
+      <button onclick="hideTutorialModal()" class="w-full mt-4 bg-gray-200 text-gray-700 py-2 rounded-lg hover:bg-gray-300 transition">关闭</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const replacements = {$list|json_encode};
+
+function hideSQLModal() { document.getElementById('sqlModal').classList.add('hidden'); }
+function showSQLModal() { document.getElementById('sqlModal').classList.remove('hidden'); }
+function hideTutorialModal() { document.getElementById('tutorialModal').classList.add('hidden'); }
+function showTutorialModal() { document.getElementById('tutorialModal').classList.remove('hidden'); }
+
+function generateSQL(index, list) {
+    const item = list[index];
+    const typeMap = {
+        '文章图片替换': [
+            `UPDATE mac_art SET art_pic = REPLACE(art_pic, '${escSQL(item.rep_original)}', '${escSQL(item.rep_replacement)}');`,
+            `UPDATE mac_art SET art_content = REPLACE(art_content, '${escSQL(item.rep_original)}', '${escSQL(item.rep_replacement)}');`
+        ],
+        '视频封面替换': [
+            `UPDATE mac_vod SET vod_pic = REPLACE(vod_pic, '${escSQL(item.rep_original)}', '${escSQL(item.rep_replacement)}');`
+        ],
+        '视频播放地址': [
+            `UPDATE mac_vod SET vod_play_url = REPLACE(vod_play_url, '${escSQL(item.rep_original)}', '${escSQL(item.rep_replacement)}');`
+        ],
+        '播放器替换': [
+            `UPDATE mac_vod SET vod_play_from = REPLACE(vod_play_from, '${escSQL(item.rep_original)}', '${escSQL(item.rep_replacement)}');`,
+            `UPDATE mac_vod SET vod_play_server = REPLACE(vod_play_server, '${escSQL(item.rep_original)}', '${escSQL(item.rep_replacement)}');`
+        ],
+        '域名替换': [
+            `UPDATE mac_vod SET vod_play_url = REPLACE(vod_play_url, '${escSQL(item.rep_original)}', '${escSQL(item.rep_replacement)}');`,
+            `UPDATE mac_vod SET vod_pic = REPLACE(vod_pic, '${escSQL(item.rep_original)}', '${escSQL(item.rep_replacement)}');`,
+            `UPDATE mac_art SET art_content = REPLACE(art_content, '${escSQL(item.rep_original)}', '${escSQL(item.rep_replacement)}');`,
+            `UPDATE mac_art SET art_pic = REPLACE(art_pic, '${escSQL(item.rep_original)}', '${escSQL(item.rep_replacement)}');`
+        ]
+    };
+    const sqls = typeMap[item.rep_type] || [`-- 自定义替换: UPDATE 表名 SET 字段 = REPLACE(字段, '${escSQL(item.rep_original)}', '${escSQL(item.rep_replacement)}');`];
+    document.getElementById('sqlContent').textContent = sqls.join('\n');
+    showSQLModal();
+}
+
+function escSQL(s) { return s.replace(/'/g, "\\'"); }
+
+function copySQLToClipboard() {
+    const sql = document.getElementById('sqlContent').textContent;
+    navigator.clipboard.writeText(sql).then(() => alert('SQL 已复制到剪贴板！'));
+}
+
+function showTutorial(type) {
+    const tutorials = {
+        '文章图片替换': '<h4 class="font-bold mb-3">文章图片替换</h4><ol class="list-decimal list-inside space-y-2 text-sm"><li>登录 MacCMS 管理后台</li><li>后台 → 数据库 → 数据批量替换</li><li>选择表 <code class="bg-gray-100 px-1 rounded">mac_art</code>，字段 <code class="bg-gray-100 px-1 rounded">art_pic</code>，填入原内容和新内容，执行</li><li>重复上步，字段改为 <code class="bg-gray-100 px-1 rounded">art_content</code></li></ol>',
+        '视频封面替换': '<h4 class="font-bold mb-3">视频封面替换</h4><ol class="list-decimal list-inside space-y-2 text-sm"><li>登录 MacCMS 管理后台</li><li>后台 → 数据库 → 数据批量替换</li><li>选择表 <code class="bg-gray-100 px-1 rounded">mac_vod</code>，字段 <code class="bg-gray-100 px-1 rounded">vod_pic</code>，填入原内容和新内容，执行</li></ol>',
+        '视频播放地址': '<h4 class="font-bold mb-3">视频播放地址替换</h4><ol class="list-decimal list-inside space-y-2 text-sm"><li>登录 MacCMS 管理后台</li><li>后台 → 数据库 → 数据批量替换</li><li>选择表 <code class="bg-gray-100 px-1 rounded">mac_vod</code>，字段 <code class="bg-gray-100 px-1 rounded">vod_play_url</code>，填入原内容和新内容，执行</li></ol>',
+        '播放器替换': '<h4 class="font-bold mb-3">播放器接口替换</h4><ol class="list-decimal list-inside space-y-2 text-sm"><li>登录 MacCMS 管理后台</li><li>视频 → 播放器，找到对应播放器</li><li>编辑播放器，修改解析接口地址</li><li>保存</li></ol>',
+        '域名替换': '<h4 class="font-bold mb-3">域名批量替换</h4><ol class="list-decimal list-inside space-y-2 text-sm"><li>登录 MacCMS 管理后台</li><li>后台 → 数据库 → 数据批量替换</li><li>依次替换 mac_vod 的 vod_play_url / vod_pic 和 mac_art 的 art_content / art_pic</li></ol>'
+    };
+    document.getElementById('tutorialContent').innerHTML = tutorials[type] || '<p class="text-sm text-gray-600">请根据类型在后台进行相应操作。</p>';
+    showTutorialModal();
+}
+
+function hideTip() { document.getElementById('smartTip').style.display = 'none'; }
+
+const STORAGE_KEY = 'macrep_viewed';
+const LAST_VISIT_KEY = 'macrep_last_visit';
+
+function getViewed() { try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); } catch(e) { return []; } }
+function saveViewed(id) {
+    const v = getViewed();
+    if (!v.includes(String(id))) { v.push(String(id)); localStorage.setItem(STORAGE_KEY, JSON.stringify(v)); }
+}
+
+function markAsViewed(el) {
+    saveViewed(el.dataset.id);
+    el.querySelector('.new-badge').classList.add('hidden');
+    el.querySelector('.viewed-badge').classList.remove('hidden');
+    el.classList.add('opacity-75');
+    updateStats();
+}
+
+function updateStats() {
+    const items = document.querySelectorAll('.replacement-item');
+    const viewed = document.querySelectorAll('.replacement-item.opacity-75').length;
+    document.getElementById('newRecordsCount').textContent = items.length - viewed;
+    document.getElementById('viewedCount').textContent = viewed;
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const lastVisit = localStorage.getItem(LAST_VISIT_KEY);
+    const viewed = getViewed();
+    let newCount = 0, viewedCount = 0;
+
+    document.querySelectorAll('.replacement-item').forEach(el => {
+        const id = el.dataset.id;
+        const ts = parseInt(el.dataset.time) * 1000;
+        if (viewed.includes(String(id))) {
+            el.querySelector('.new-badge').classList.add('hidden');
+            el.querySelector('.viewed-badge').classList.remove('hidden');
+            el.classList.add('opacity-75');
+            viewedCount++;
+        } else if (!lastVisit || ts > parseInt(lastVisit)) {
+            el.querySelector('.new-badge').classList.remove('hidden');
+            newCount++;
+        }
+    });
+
+    document.getElementById('newRecordsCount').textContent = newCount;
+    document.getElementById('viewedCount').textContent = viewedCount;
+
+    const tip = document.getElementById('tipContent');
+    if (newCount > 0) {
+        tip.innerHTML = `<p><strong>💡 提示：</strong>发现 <strong class="text-green-600">${newCount}</strong> 条新记录，只需执行这些新增替换，无需重复执行已完成的操作。<br><span class="text-xs">点击记录可标记为已查看。</span></p>`;
+    } else if (viewedCount === replacements.length && replacements.length > 0) {
+        tip.innerHTML = '<p><strong>✅ 已查看全部记录</strong>，当前没有需要执行的新操作。</p>';
+    } else {
+        tip.innerHTML = '<p><strong>💡 提示：</strong>只需执行未查看的替换记录，无需重复执行已完成的操作。<span class="text-xs ml-2">点击记录可标记为已查看。</span></p>';
+    }
+
+    localStorage.setItem(LAST_VISIT_KEY, Date.now().toString());
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,250 @@
+{include file="../../../application/admin/view/public/head" /}
+
+<div class="page-container p10">
+
+  <!-- 工具栏 -->
+  <div class="my-toolbar-box" style="margin-bottom:15px;">
+    <div class="flex gap-5 flex-wrap">
+      <button class="layui-btn layui-btn-sm layui-btn-normal" id="btnAdd">
+        <i class="layui-icon">&#xe654;</i> 添加替换记录
+      </button>
+      <button class="layui-btn layui-btn-sm layui-btn-danger" id="btnDel">
+        <i class="layui-icon">&#xe640;</i> 删除选中
+      </button>
+      <button class="layui-btn layui-btn-sm {if $rep_enabled eq '1'}layui-btn-normal{else/}layui-btn-primary{/if}" id="btnToggleEnabled">
+        <i class="layui-icon">&#xe66e;</i>
+        前台显示：<strong>{if $rep_enabled eq '1'}已开启{else/}已关闭{/if}</strong>
+      </button>
+    </div>
+  </div>
+
+  <!-- 记录列表 -->
+  <div class="layui-card">
+    <div class="layui-card-header">替换记录管理</div>
+    <div class="layui-card-body p0">
+      <form class="layui-form" id="repListForm">
+        <table class="layui-table" lay-size="sm">
+          <thead>
+            <tr>
+              <th width="30"><input type="checkbox" lay-skin="primary" lay-filter="allChoose"></th>
+              <th width="50">ID</th>
+              <th width="110">类型</th>
+              <th>原内容</th>
+              <th>替换为</th>
+              <th width="120">备注</th>
+              <th width="90">状态</th>
+              <th width="90">已执行</th>
+              <th width="180">操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            {volist name="list" id="vo"}
+            <tr id="row-{$vo.rep_id}">
+              <td><input type="checkbox" name="ids[]" value="{$vo.rep_id}" class="layui-checkbox checkbox-ids" lay-skin="primary"></td>
+              <td>{$vo.rep_id}</td>
+              <td><span class="layui-badge-rim">{$vo.rep_type}</span></td>
+              <td style="word-break:break-all;max-width:200px">{$vo.rep_original|htmlspecialchars}</td>
+              <td style="word-break:break-all;max-width:200px">{$vo.rep_replacement|htmlspecialchars}</td>
+              <td>{$vo.rep_note|htmlspecialchars}</td>
+              <td>
+                <button type="button" class="layui-btn layui-btn-xs {if $vo.rep_status eq 1}layui-btn-normal{else/}layui-btn-primary{/if} btn-toggle"
+                        data-id="{$vo.rep_id}">
+                  {if $vo.rep_status eq 1}显示{else/}隐藏{/if}
+                </button>
+              </td>
+              <td>
+                {if $vo.rep_applied eq 1}
+                <span class="layui-badge layui-bg-green">已执行</span>
+                <div class="layui-font-12" style="color:#888">{:date('m-d H:i',$vo['rep_applied_time'])}</div>
+                {else/}
+                <span class="layui-badge layui-bg-gray">未执行</span>
+                {/if}
+              </td>
+              <td>
+                <button type="button" class="layui-btn layui-btn-xs layui-btn-danger btn-execute"
+                        data-id="{$vo.rep_id}"
+                        data-type="{$vo.rep_type|htmlspecialchars}"
+                        data-orig="{$vo.rep_original|htmlspecialchars}"
+                        data-repl="{$vo.rep_replacement|htmlspecialchars}">
+                  <i class="layui-icon">&#xe63b;</i> 执行
+                </button>
+                <button type="button" class="layui-btn layui-btn-xs layui-btn-primary btn-single-del" data-id="{$vo.rep_id}">
+                  <i class="layui-icon">&#xe640;</i>
+                </button>
+              </td>
+            </tr>
+            {/volist}
+            {if empty($list)}
+            <tr><td colspan="9" class="text-center" style="padding:30px;color:#999">暂无记录，点击「添加替换记录」开始</td></tr>
+            {/if}
+          </tbody>
+        </table>
+      </form>
+    </div>
+  </div>
+
+</div>
+
+<!-- 添加弹窗 -->
+<div id="addModal" class="layui-hide">
+  <div style="padding:20px;">
+    <form class="layui-form" id="addForm">
+      <div class="layui-form-item">
+        <label class="layui-form-label">类型</label>
+        <div class="layui-input-block">
+          <select name="rep_type" lay-verify="required">
+            <option value="">-- 选择类型 --</option>
+            {volist name="types" id="t"}
+            <option value="{$t}">{$t}</option>
+            {/volist}
+          </select>
+        </div>
+      </div>
+      <div class="layui-form-item">
+        <label class="layui-form-label">原内容</label>
+        <div class="layui-input-block">
+          <input type="text" name="rep_original" class="layui-input" lay-verify="required" placeholder="例：sl.sl155cf.com">
+        </div>
+      </div>
+      <div class="layui-form-item">
+        <label class="layui-form-label">替换为</label>
+        <div class="layui-input-block">
+          <input type="text" name="rep_replacement" class="layui-input" lay-verify="required" placeholder="例：s.newdomain.com">
+        </div>
+      </div>
+      <div class="layui-form-item">
+        <label class="layui-form-label">备注</label>
+        <div class="layui-input-block">
+          <input type="text" name="rep_note" class="layui-input" placeholder="可选，说明替换原因">
+        </div>
+      </div>
+      <div class="layui-form-item">
+        <div class="layui-input-block">
+          <button class="layui-btn" lay-submit lay-filter="addSubmit">确认添加</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+{include file="../../../application/admin/view/public/foot" /}
+<script>
+layui.use(['layer', 'form', 'table'], function () {
+    var layer = layui.layer, form = layui.form, $ = layui.$;
+
+    // 全选
+    form.on('checkbox(allChoose)', function (data) {
+        $('input[name="ids[]"]').each(function () { this.checked = data.elem.checked; });
+    });
+
+    // 添加弹窗
+    $('#btnAdd').on('click', function () {
+        layer.open({
+            type: 1,
+            title: '添加替换记录',
+            area: ['560px', 'auto'],
+            content: $('#addModal'),
+            success: function () { form.render(); }
+        });
+    });
+
+    // 提交添加
+    form.on('submit(addSubmit)', function (data) {
+        $.post('{:url("add")}', data.field, function (res) {
+            if (res.code === 1) {
+                layer.msg(res.msg, { icon: 1 }, function () { location.reload(); });
+            } else {
+                layer.msg(res.msg, { icon: 2 });
+            }
+        }, 'json');
+        return false;
+    });
+
+    // 批量删除
+    $('#btnDel').on('click', function () {
+        var ids = [];
+        $('input[name="ids[]"]:checked').each(function () { ids.push(this.value); });
+        if (!ids.length) { layer.msg('请先选择记录', { icon: 3 }); return; }
+        layer.confirm('确定删除选中的 ' + ids.length + ' 条记录？', { icon: 3 }, function (idx) {
+            $.post('{:url("del")}', { ids: ids }, function (res) {
+                layer.close(idx);
+                layer.msg(res.msg, { icon: res.code === 1 ? 1 : 2 }, function () { location.reload(); });
+            }, 'json');
+        });
+    });
+
+    // 单条删除
+    $(document).on('click', '.btn-single-del', function () {
+        var id = $(this).data('id');
+        layer.confirm('确定删除该记录？', { icon: 3 }, function (idx) {
+            $.post('{:url("del")}', { ids: [id] }, function (res) {
+                layer.close(idx);
+                layer.msg(res.msg, { icon: res.code === 1 ? 1 : 2 }, function () { location.reload(); });
+            }, 'json');
+        });
+    });
+
+    // 显示/隐藏切换
+    $(document).on('click', '.btn-toggle', function () {
+        var $btn = $(this), id = $btn.data('id');
+        $.post('{:url("toggle")}', { id: id }, function (res) {
+            if (res.code === 1) {
+                if (res.status == 1) {
+                    $btn.removeClass('layui-btn-primary').addClass('layui-btn-normal').text('显示');
+                } else {
+                    $btn.removeClass('layui-btn-normal').addClass('layui-btn-primary').text('隐藏');
+                }
+                layer.msg(res.msg, { icon: 1, time: 1000 });
+            } else {
+                layer.msg(res.msg, { icon: 2 });
+            }
+        }, 'json');
+    });
+
+    // 前台开关
+    $('#btnToggleEnabled').on('click', function () {
+        var $btn = $(this);
+        layer.confirm('确认切换前台替换助手页面的显示状态？', { icon: 3 }, function (idx) {
+            $.post('{:url("toggleEnabled")}', {}, function (res) {
+                layer.close(idx);
+                if (res.code === 1) {
+                    layer.msg(res.msg, { icon: 1, time: 1000 }, function () { location.reload(); });
+                } else {
+                    layer.msg(res.msg, { icon: 2 });
+                }
+            }, 'json');
+        });
+    });
+
+    // 执行 SQL 替换
+    $(document).on('click', '.btn-execute', function () {
+        var $btn = $(this);
+        var id   = $btn.data('id');
+        var type = $btn.data('type');
+        var orig = $btn.data('orig');
+        var repl = $btn.data('repl');
+
+        var msg = '⚠️ 确认对数据库执行以下替换？<br><br>'
+            + '<strong>类型：</strong>' + type + '<br>'
+            + '<strong>原内容：</strong><code>' + orig + '</code><br>'
+            + '<strong>替换为：</strong><code>' + repl + '</code><br><br>'
+            + '<span style="color:#ff5722">此操作直接修改数据库，建议提前备份！</span>';
+
+        layer.confirm(msg, {
+            icon: 3,
+            title: '执行数据库替换',
+            btn: ['确认执行', '取消'],
+            btnclass: ['layui-btn layui-btn-danger', 'layui-btn layui-btn-primary']
+        }, function (idx) {
+            layer.close(idx);
+            var loading = layer.load(1);
+            $.post('{:url("execute")}', { id: id }, function (res) {
+                layer.close(loading);
+                layer.alert(res.msg, { icon: res.code === 1 ? 1 : 2 }, function () {
+                    if (res.code === 1) { location.reload(); }
+                });
+            }, 'json');
+        });
+    });
+});
+</script>

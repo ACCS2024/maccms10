@@ -1663,16 +1663,58 @@ return array (
         'controller' => 'data_replace',
         'action' => 'index',
       ),
-      9701 => 
+      9701 =>
       array (
         'show' => 0,
         'name' => lang('admin/datareplace/do_replace_menu'),
         'controller' => 'data_replace',
         'action' => 'doReplace',
       ),
+      98 =>
+      array (
+        'show' => 1,
+        'name' => '替换助手',
+        'controller' => 'rep',
+        'action' => 'index',
+      ),
+      9801 =>
+      array (
+        'show' => 0,
+        'name' => '添加替换记录',
+        'controller' => 'rep',
+        'action' => 'add',
+      ),
+      9802 =>
+      array (
+        'show' => 0,
+        'name' => '删除替换记录',
+        'controller' => 'rep',
+        'action' => 'del',
+      ),
+      9803 =>
+      array (
+        'show' => 0,
+        'name' => '切换替换显示',
+        'controller' => 'rep',
+        'action' => 'toggle',
+      ),
+      9804 =>
+      array (
+        'show' => 0,
+        'name' => '执行替换SQL',
+        'controller' => 'rep',
+        'action' => 'execute',
+      ),
+      9805 =>
+      array (
+        'show' => 0,
+        'name' => '替换助手开关',
+        'controller' => 'rep',
+        'action' => 'toggleEnabled',
+      ),
     ),
   ),
-  10 => 
+  10 =>
   array (
     'name' => lang('menu/db'),
     'icon' => 'xe621',

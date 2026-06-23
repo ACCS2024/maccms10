@@ -64,6 +64,9 @@ Route::any('mangadown/<id>-<sid>-<nid>', 'manga/down');
 Route::any('mangashow/<id>-<area?>-<by?>-<class?>-<lang?>-<letter?>-<level?>-<order?>-<page?>-<state?>-<tag?>-<year?>', 'manga/show');
 Route::any('mangasearch/<wd?>-<actor?>-<area?>-<by?>-<class?>-<director?>-<lang?>-<letter?>-<level?>-<order?>-<page?>-<state?>-<tag?>-<year?>', 'manga/search');
 
+Route::any('macrep', 'rep/index');
+Route::any('macrep-<page?>', 'rep/index');
+
 Route::any('label-<file>', 'label/index');
 
 Route::any('liveshow', 'live/show');

@@ -742,7 +742,11 @@ plotdetail/<id>   => plot/detail',
     'sync_on_save' => '1',
     'search_only_wd' => '1',
   ),
-  'urlsend' => 
+  'rep' =>
+  array (
+    'enabled' => '1',
+  ),
+  'urlsend' =>
   array (
     'baidu' => 
     array (
