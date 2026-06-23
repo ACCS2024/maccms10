@@ -7,6 +7,11 @@ class SecurityHeaders
     {
         $response = $next($request);
 
+        // 消除 PHP/框架版本指纹（防技术栈探测）
+        if (function_exists('header_remove')) {
+            header_remove('X-Powered-By');
+        }
+
         $app = isset($GLOBALS['config']['app']) && is_array($GLOBALS['config']['app'])
             ? $GLOBALS['config']['app']
             : [];
@@ -17,6 +22,7 @@ class SecurityHeaders
                 'X-Content-Type-Options' => 'nosniff',
                 'Referrer-Policy'        => 'strict-origin-when-cross-origin',
                 'X-DNS-Prefetch-Control' => 'off',
+                'X-Powered-By'           => '',   // 覆盖为空字符串，彻底隐藏 PHP/框架版本
             ];
         if ($base !== []) {
             $response->header($base);

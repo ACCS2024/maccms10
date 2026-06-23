@@ -46,6 +46,7 @@ if (isset($_SERVER['PATH_INFO']) && !mb_check_encoding($_SERVER['PATH_INFO'], 'u
 require __DIR__ . '/vendor/autoload.php';
 $app      = new \app\MacApp(ROOT_PATH);
 $app->setAppPath(APP_PATH);
+$app->debug(false); // 前台永不开 debug：防止 .env / 系统环境变量意外泄露堆栈
 $http     = $app->http;
 $response = $http->name('index')->path(APP_PATH . 'index/')->run();
 $response->send();

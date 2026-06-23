@@ -5,166 +5,292 @@ namespace app;
 
 use think\exception\Handle;
 use think\exception\HttpException;
+use think\facade\Log;
 use think\facade\View;
 use think\Request;
 use think\Response;
 use Throwable;
 
 /**
- * 全局异常处理 —— 注册于 application/provider.php。
- *
- * 解决的问题
- * ----------
- * TP8 默认的错误页（think_exception.html）在任何 HTTP 状态下都携带框架指纹：
- * "系统发生错误 / ThinkPHP" 等字样，随机 URL 扫描即可探知后端技术栈。
+ * 商业级全局异常处理器
  *
  * 设计原则
  * --------
- * 1. 404（路由缺失）：无论 debug 模式是否开启，始终返回主题适配的错误页。
- *    优先渲染当前主题的 error/404.html（带 header/footer，风格与整站一致）；
- *    若主题模板本身损坏，降级为内联纯 HTML 兜底，确保 404 页不会再次 500。
+ * 1. 永不向外部暴露：堆栈、文件路径、SQL片段、类名、框架版本、PHP版本。
+ *    无论 app_debug 取值如何，对外只输出 HTTP 状态码 + 通用描述 + error_id。
  *
- * 2. 其他异常 + debug=true（开发环境）：透传给 TP8 默认处理器，保留完整
- *    stack trace，方便开发调试。
+ * 2. 防御纵深：ExceptionHandle 本身不依赖 app_debug 决定是否显示细节；
+ *    细节只写日志，由运维人员通过 runtime/{app}/log 目录查看。
  *
- * 3. 其他异常 + debug=false（生产环境）：返回简洁错误页，不暴露框架/路径/
- *    SQL 片段等内部信息。
- *    扩展点：可为常见状态码（403/500 等）添加对应主题模板（error/5xx.html）。
+ * 3. API 请求返回 JSON，浏览器请求返回主题 HTML 页；
+ *    均含 error_id 供用户提供给客服定位。
  *
- * debug 模式开关
- * ---------------
- * 仅通过 config/app.php 的 app_debug 控制，不应在后台 UI 提供切换入口。
- * 原因：admin 凭证泄漏 → 开启 debug → 任意报错页暴露完整 stack。
- * 生产排查问题请使用日志（runtime/index/log），而非开 debug。
+ * 4. 分级日志：
+ *    - 404：不记录（扫描器噪音）
+ *    - 403/429 等客户端错误：warning 级别
+ *    - 5xx 服务端错误：error 级别，含完整 trace
  *
- * 主题模板目录约定
- * -----------------
- * template/{template_dir}/{html_dir}/error/404.html
- * 当前主题（vozy/vo20w2）已提供该模板。
- * 其他主题适配时，在对应 error/ 子目录下按需添加即可。
+ * 5. 多层降级：themed template → plain HTML → 最小 inline HTML，
+ *    确保异常处理器本身不会再次抛出异常。
+ *
+ * 主题模板约定（新增 error/5xx.html）
+ * --------------------------------------
+ * template/{tpl_dir}/{html_dir}/error/404.html  — 已有
+ * template/{tpl_dir}/{html_dir}/error/5xx.html  — 新增，用于 403/429/500/503
+ * 模板可读 {$error_code} {$error_title} {$error_message} {$error_id}
  */
 class ExceptionHandle extends Handle
 {
+    /** 对用户展示的状态码 → [标题, 描述] 映射 */
+    private const STATUS_MAP = [
+        400 => ['请求格式有误',   '您的请求格式有误，请检查参数后重试'],
+        403 => ['禁止访问',       '您没有权限访问此页面'],
+        404 => ['页面不存在',     '您访问的页面不存在或已被删除'],
+        405 => ['请求方式不允许', '当前请求方式不被支持'],
+        429 => ['请求过于频繁',   '您的请求太频繁，请稍后再试'],
+        500 => ['服务器错误',     '服务器发生了一点小问题，我们已记录，请稍后重试'],
+        503 => ['服务暂时不可用', '系统正在维护中，请稍后再试'],
+    ];
+
     /**
-     * 将异常转换为 HTTP 响应。
-     *
-     * 覆盖父类 render()，优先处理 404，再区分 debug/生产模式。
+     * 将异常转为 HTTP 响应（覆盖父类，无论 debug 状态均不透传内部信息）
      */
     public function render(Request $request, Throwable $e): Response
     {
-        // ── 1. 路由 404 ──────────────────────────────────────────────────────
-        // HttpException 404 = 路由找不到，与 debug 模式无关，始终返回主题化页。
-        // 先尝试渲染主题模板；若主题文件本身有问题则降级为纯 HTML 兜底。
-        if ($e instanceof HttpException && $e->getStatusCode() === 404) {
-            return $this->themeErrorPage(404, 'error/404', '页面不存在', '您访问的页面不存在');
+        $status  = $this->resolveStatus($e);
+        $errorId = $this->generateErrorId();
+
+        $this->writeLog($e, $status, $errorId, $request);
+
+        // API 请求（ENTRANCE=api 或 Accept/X-Requested-With 标识 JSON 客户端）→ JSON
+        if ($this->isApiRequest($request)) {
+            return $this->jsonError($status, $errorId);
         }
 
-        // ── 2. debug=true（开发环境）─────────────────────────────────────────
-        // 保留 TP8 完整 debug 页（文件/行号/堆栈/SQL），方便开发调试。
-        // 注意：此分支不应在生产服务器触达，请确保 config/app.php app_debug=false。
-        if ($this->app->isDebug()) {
-            return parent::render($request, $e);
-        }
+        // 浏览器请求 → 主题 HTML 页
+        return $this->htmlError($status, $errorId);
+    }
 
-        // ── 3. 生产环境其他异常 ───────────────────────────────────────────────
-        // 取 HTTP 状态码（HttpException 携带语义码，其余 PHP 异常统一 500）。
-        // 不向客户端暴露 message/file/trace，错误细节只写日志。
-        // 扩展点：可仿照 404 为 403/500 增加主题模板（themeErrorPage(500, 'error/5xx', ...)）。
-        $status = ($e instanceof HttpException) ? $e->getStatusCode() : 500;
-        return $this->plainPage($status, '页面错误', '服务器发生错误，请稍后重试');
+    // ──────────────────────────────────────────────────────────────────────────
+    // 私有：工具方法
+    // ──────────────────────────────────────────────────────────────────────────
+
+    /**
+     * 从异常推导 HTTP 状态码
+     */
+    private function resolveStatus(Throwable $e): int
+    {
+        if ($e instanceof HttpException) {
+            $s = $e->getStatusCode();
+            // 仅放行合法的 4xx/5xx；其他奇怪状态码归 500
+            return ($s >= 400 && $s < 600) ? $s : 500;
+        }
+        return 500;
     }
 
     /**
-     * 优先渲染主题 error 模板，失败时降级为内联纯 HTML。
-     *
-     * 降级原因：异常处理器本身不能抛出异常，若主题模板损坏（语法错误、
-     * include 缺失等）会触发新的异常，导致白屏。try/catch 在此是必要的防御。
-     *
-     * 为什么要手动 assign $maccms
-     * ----------------------------
-     * 正常请求中，$maccms 由 common/controller/All::label_maccms() 在
-     * controller initialize() 阶段 assign 到 View。404 路由不命中时，
-     * controller 从未实例化，$maccms 缺失导致 View::fetch 抛 ErrorException。
-     * AppInit 中间件已在 ExceptionHandle 之前运行，$GLOBALS['config'] 可用，
-     * 故在此手动补齐 View 所需的最小 $maccms 字段集。
-     *
-     * @param int    $status   HTTP 状态码
-     * @param string $tpl      相对于主题目录的模板路径，如 'error/404'
-     * @param string $title    降级页标题
-     * @param string $message  降级页描述
+     * 生成短 error ID：E-{微秒时间戳后6位}-{4位随机十六进制}
+     * 足够唯一，且对用户友好（不需暴露精确时间戳）
      */
-    private function themeErrorPage(int $status, string $tpl, string $title, string $message): Response
+    private function generateErrorId(): string
     {
+        $ts  = substr((string)(int)(microtime(true) * 1000), -6);
+        $rnd = sprintf('%04x', random_int(0, 0xffff));
+        return 'E-' . $ts . '-' . $rnd;
+    }
+
+    /**
+     * 按严重程度写日志
+     * - 404：静默（扫描器/误输 URL 噪音太多）
+     * - 4xx：warning（客户端错误，记录 URL+IP 便于排查恶意行为）
+     * - 5xx：error（服务端错误，记录完整 trace）
+     */
+    private function writeLog(Throwable $e, int $status, string $errorId, Request $request): void
+    {
+        if ($status === 404) {
+            return;
+        }
+
         try {
-            // 从 AppInit 已初始化的 $GLOBALS['config'] 中提取 $maccms 模板变量。
-            // 仅补 error 模板（head/foot）实际依赖的字段；如遇其他缺失字段
-            // 可在此追加，不影响主流程，异常时仍 fallback 到 plainPage。
-            $cfg = $GLOBALS['config'] ?? [];
-            $site = $cfg['site'] ?? [];
-            $maccms = array_merge($site, [
-                'path'      => defined('MAC_PATH') ? MAC_PATH : '',
-                'path_tpl'  => $GLOBALS['MAC_PATH_TEMPLATE'] ?? '',
-                'date'      => date('Y-m-d'),
-                'http_type' => $GLOBALS['http_type'] ?? 'http://',
-                'seo'       => $cfg['seo'] ?? [],
-                // head/include 模板需要的字段；error 页无实际菜单/会员语境，置 0。
-                'mid'       => 0,
-                'aid'       => 0,
-                'controller_action' => 'error/404',
-                'user_status' => $cfg['user']['status'] ?? 0,
-                'search_hot'  => $cfg['app']['search_hot'] ?? '',
-            ]);
-            View::assign('maccms', $maccms);
-            View::assign('param', []);
-            View::assign('popedom', ['code' => 1, 'msg' => '', 'trysee' => 0, 'confirm' => 0]);
+            $url    = (string)$request->url(true);
+            $ip     = (string)$request->ip();
+            $method = (string)$request->method();
 
-            $content = View::fetch($tpl);
-            return Response::create($content, 'html', $status);
-        } catch (Throwable $t) {
-            // 主题模板不存在或渲染失败，降级为纯 HTML，保证页面可访问。
-            // 此处故意不 rethrow，避免 404 处理器本身造成 500。
-            return $this->plainPage($status, $title, $message);
+            if ($status >= 500) {
+                Log::error('[' . $errorId . '] ' . $status . ' ' . $method . ' ' . $url
+                    . ' IP:' . $ip
+                    . ' | ' . get_class($e) . ': ' . $e->getMessage()
+                    . ' in ' . $e->getFile() . ':' . $e->getLine()
+                    . "\n" . $e->getTraceAsString());
+            } else {
+                Log::warning('[' . $errorId . '] ' . $status . ' ' . $method . ' ' . $url
+                    . ' IP:' . $ip
+                    . ' | ' . get_class($e) . ': ' . $e->getMessage());
+            }
+        } catch (Throwable $logEx) {
+            // 日志失败不能让异常处理器本身崩溃
         }
     }
 
     /**
-     * 最终兜底：无任何框架/主题依赖的内联 HTML。
-     *
-     * 仅在以下情况使用：
-     * - 主题模板渲染失败（降级自 themeErrorPage）
-     * - 生产环境非 404 异常（500 等，尚无对应主题模板时）
-     *
-     * @param int    $status  HTTP 状态码
-     * @param string $title   页面标题
-     * @param string $message 副标题描述
+     * 判断是否为 API / JSON 请求
      */
-    private function plainPage(int $status, string $title, string $message): Response
+    private function isApiRequest(Request $request): bool
     {
+        // 入口文件标识优先（api.php 定义 ENTRANCE=api）
+        if (defined('ENTRANCE') && ENTRANCE === 'api') {
+            return true;
+        }
+        // Accept 头包含 json
+        $accept = strtolower((string)$request->header('accept', ''));
+        if (strpos($accept, 'application/json') !== false) {
+            return true;
+        }
+        // Ajax 请求（前端 fetch/axios 通常带此头）
+        if ($request->isAjax()) {
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * JSON 错误响应（API 专用）
+     */
+    private function jsonError(int $status, string $errorId): Response
+    {
+        [$title, $desc] = $this->statusText($status);
+        $body = json_encode([
+            'code'     => 0,
+            'msg'      => $title,
+            'detail'   => $desc,
+            'error_id' => $errorId,
+        ], JSON_UNESCAPED_UNICODE);
+
+        return Response::create($body, 'json', $status)
+            ->header(['Content-Type' => 'application/json; charset=utf-8']);
+    }
+
+    /**
+     * HTML 错误响应：尝试主题模板 → 纯 HTML 降级 → 最小内联 HTML
+     */
+    private function htmlError(int $status, string $errorId): Response
+    {
+        [$title, $desc] = $this->statusText($status);
+
+        // 第一层：尝试渲染主题模板
+        try {
+            $tpl = ($status === 404) ? 'error/404' : 'error/5xx';
+            $this->prepareViewVars($status, $title, $desc, $errorId);
+            $content = View::fetch($tpl);
+            return Response::create($content, 'html', $status)
+                ->header(['Cache-Control' => 'no-store, no-cache, must-revalidate']);
+        } catch (Throwable $t1) {
+            // 模板渲染失败（主题缺少 5xx.html 等情况），降级
+        }
+
+        // 第二层：纯 HTML（无任何框架依赖）
+        try {
+            return $this->plainPage($status, $title, $desc, $errorId);
+        } catch (Throwable $t2) {
+            // 极端情况下 plainPage 也失败（不应发生），最终兜底
+        }
+
+        // 第三层：最小内联 HTML，绝不失败
+        return Response::create(
+            '<!DOCTYPE html><html><head><meta charset="utf-8"><title>' . $status . '</title></head>'
+            . '<body><h1>' . $status . '</h1><p>' . htmlspecialchars($title, ENT_QUOTES) . '</p>'
+            . '<p><small>' . htmlspecialchars($errorId, ENT_QUOTES) . '</small></p></body></html>',
+            'html',
+            $status
+        );
+    }
+
+    /**
+     * 为主题模板注入所需变量（404/5xx 共用）
+     */
+    private function prepareViewVars(int $status, string $title, string $desc, string $errorId): void
+    {
+        // 补全 $maccms 以防 error 模板 include head/foot 时缺字段
+        $cfg  = $GLOBALS['config'] ?? [];
+        $site = $cfg['site'] ?? [];
+        $maccms = array_merge($site, [
+            'path'               => defined('MAC_PATH') ? MAC_PATH : '',
+            'path_tpl'           => $GLOBALS['MAC_PATH_TEMPLATE'] ?? '',
+            'date'               => date('Y-m-d'),
+            'http_type'          => $GLOBALS['http_type'] ?? 'http://',
+            'seo'                => $cfg['seo'] ?? [],
+            'mid'                => 0,
+            'aid'                => 0,
+            'controller_action'  => 'error/' . $status,
+            'user_status'        => $cfg['user']['status'] ?? 0,
+            'search_hot'         => $cfg['app']['search_hot'] ?? '',
+        ]);
+        View::assign('maccms',       $maccms);
+        View::assign('param',        []);
+        View::assign('popedom',      ['code' => 1, 'msg' => '', 'trysee' => 0, 'confirm' => 0]);
+        View::assign('error_code',   $status);
+        View::assign('error_title',  $title);
+        View::assign('error_message', $desc);
+        View::assign('error_id',     $errorId);
+    }
+
+    /**
+     * 无任何框架/主题依赖的纯 HTML 降级页
+     */
+    private function plainPage(int $status, string $title, string $desc, string $errorId): Response
+    {
+        $s   = htmlspecialchars((string)$status,  ENT_QUOTES);
+        $t   = htmlspecialchars($title,            ENT_QUOTES);
+        $d   = htmlspecialchars($desc,             ENT_QUOTES);
+        $eid = htmlspecialchars($errorId,          ENT_QUOTES);
+
         $html = <<<HTML
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 <head>
 <meta charset="utf-8">
-<title>{$title}</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>{$s} - {$t}</title>
 <style>
-body{margin:0;padding:0;font-family:Arial,sans-serif;background:#f5f5f5;color:#333;}
-.w{max-width:600px;margin:120px auto;text-align:center;}
-h1{font-size:80px;margin:0;color:#ccc;}
-h2{font-size:24px;margin:10px 0 20px;}
-p{color:#888;}
-a{color:#e6004d;text-decoration:none;}
-a:hover{text-decoration:underline;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f7f7f7;color:#333;min-height:100vh;display:flex;align-items:center;justify-content:center}
+.w{max-width:520px;width:90%;text-align:center;padding:40px 0}
+.code{font-size:96px;font-weight:700;color:#e0e0e0;line-height:1}
+.title{font-size:22px;font-weight:600;margin:12px 0 8px}
+.desc{color:#888;line-height:1.6;margin-bottom:24px}
+.actions a{display:inline-block;margin:0 8px;padding:10px 22px;border-radius:6px;text-decoration:none;font-size:14px}
+.btn-home{background:#e6004d;color:#fff}
+.btn-back{background:#f0f0f0;color:#555}
+.btn-home:hover{background:#c40041}
+.btn-back:hover{background:#e0e0e0}
+.eid{margin-top:32px;color:#bbb;font-size:12px;font-family:monospace}
 </style>
 </head>
 <body>
 <div class="w">
-  <h1>{$status}</h1>
-  <h2>{$title}</h2>
-  <p>{$message}，<a href="/">返回首页</a></p>
+  <div class="code">{$s}</div>
+  <div class="title">{$t}</div>
+  <p class="desc">{$d}</p>
+  <div class="actions">
+    <a href="/" class="btn-home">返回首页</a>
+    <a href="javascript:history.back();" class="btn-back">返回上页</a>
+  </div>
+  <div class="eid">错误参考码：{$eid}</div>
 </div>
 </body>
 </html>
 HTML;
-        return Response::create($html, 'html', $status);
+        return Response::create($html, 'html', $status)
+            ->header(['Cache-Control' => 'no-store, no-cache, must-revalidate']);
+    }
+
+    /**
+     * 返回状态码对应的 [title, description]
+     */
+    private function statusText(int $status): array
+    {
+        return self::STATUS_MAP[$status]
+            ?? ['服务器错误', '服务器发生了一点小问题，我们已记录，请稍后重试'];
     }
 }
