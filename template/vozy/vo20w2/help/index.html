@@ -1,0 +1,479 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>帮助中心 - {$site_name}</title>
+{include file="public/include"}
+<style>
+.help-wrap { padding: 20px 0 40px; }
+.help-tabs { display: flex; flex-wrap: wrap; background: #2c3e50; border-radius: 4px 4px 0 0; overflow: hidden; margin-bottom: 0; }
+.help-tabs a { display: inline-block; color: #cdd3d9; padding: 12px 18px; text-decoration: none; font-size: 14px; border-right: 1px solid #3d5166; transition: background .2s, color .2s; white-space: nowrap; }
+.help-tabs a:last-child { border-right: none; }
+.help-tabs a:hover { background: #3d5166; color: #fff; }
+.help-tabs a.active { background: #0b87e7; color: #fff; }
+.help-tab { display: none; padding: 24px 0 0; }
+.help-tab.active { display: block; }
+.help-card { background: #fff; border: 1px solid #e5e9ef; border-radius: 6px; padding: 20px 24px; margin-bottom: 20px; }
+.help-card h3 { font-size: 16px; font-weight: 600; color: #2c3e50; margin: 0 0 16px; padding-bottom: 10px; border-bottom: 2px solid #0b87e7; }
+.help-card h4 { font-size: 14px; font-weight: 600; color: #34495e; margin: 16px 0 8px; }
+.help-step { counter-reset: step; margin: 0; padding: 0; list-style: none; }
+.help-step li { counter-increment: step; display: flex; align-items: flex-start; margin-bottom: 10px; font-size: 14px; color: #555; line-height: 1.6; }
+.help-step li::before { content: counter(step); display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; border-radius: 50%; background: #0b87e7; color: #fff; font-size: 12px; font-weight: 700; margin-right: 10px; margin-top: 1px; flex-shrink: 0; }
+.api-box { display: inline-block; background: #f4f6f8; border: 1px solid #dde2e8; border-radius: 4px; padding: 6px 12px; font-family: 'Courier New', Courier, monospace; font-size: 13px; color: #2c3e50; word-break: break-all; max-width: 100%; box-sizing: border-box; }
+.api-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+.api-label { font-size: 13px; color: #666; min-width: 110px; flex-shrink: 0; }
+.copy-btn { display: inline-block; padding: 4px 10px; background: #0b87e7; color: #fff; font-size: 12px; border-radius: 3px; cursor: pointer; border: none; outline: none; transition: background .2s; vertical-align: middle; }
+.copy-btn:hover { background: #0971c7; }
+.copy-btn.copied { background: #27ae60; }
+.help-dl-btn { display: inline-block; padding: 8px 20px; background: #27ae60; color: #fff; border-radius: 4px; text-decoration: none; font-size: 14px; margin-top: 8px; transition: background .2s; }
+.help-dl-btn:hover { background: #1e9451; color: #fff; }
+.help-dl-btn + .help-dl-btn { margin-left: 10px; }
+.help-warn { background: #fff8e1; border-left: 4px solid #f9a825; border-radius: 4px; padding: 12px 16px; font-size: 14px; color: #7b5800; margin-bottom: 16px; line-height: 1.7; }
+.help-info { background: #e3f2fd; border-left: 4px solid #0b87e7; border-radius: 4px; padding: 12px 16px; font-size: 14px; color: #0d47a1; margin-bottom: 16px; line-height: 1.7; }
+.help-kv { display: flex; align-items: flex-start; padding: 10px 0; border-bottom: 1px solid #f0f2f5; font-size: 14px; }
+.help-kv:last-child { border-bottom: none; }
+.help-kv .kv-label { color: #888; min-width: 130px; flex-shrink: 0; }
+.help-kv .kv-val { color: #2c3e50; word-break: break-all; flex: 1; }
+.help-code { background: #f4f6f8; border: 1px solid #dde2e8; border-radius: 4px; padding: 12px 16px; font-family: 'Courier New', Courier, monospace; font-size: 13px; color: #2c3e50; margin-bottom: 12px; white-space: pre-wrap; word-break: break-all; }
+@media (max-width: 640px) {
+  .help-tabs a { padding: 10px 12px; font-size: 13px; }
+  .help-card { padding: 14px 14px; }
+  .api-label { min-width: 80px; font-size: 12px; }
+  .api-box { font-size: 12px; }
+  .help-kv .kv-label { min-width: 90px; font-size: 13px; }
+}
+</style>
+</head>
+{include file="public/head"}
+<div class="width1200 white">
+<div class="help-wrap">
+
+  <!-- Tab navigation -->
+  <div class="help-tabs">
+    <a href="#" data-tab="home" class="active">主页</a>
+    <a href="#" data-tab="update">域名更新</a>
+    <a href="#" data-tab="mac10">MacCMS v10</a>
+    <a href="#" data-tab="maccms">MacCMS v8</a>
+    <a href="#" data-tab="seacms">SeaCMS</a>
+    <a href="#" data-tab="ff50">飞飞5</a>
+    <a href="#" data-tab="maxcms">MaxCMS</a>
+    <a href="#" data-tab="zanpian">赞片CMS</a>
+    <a href="#" data-tab="iycms">爱影CMS</a>
+    <a href="#" data-tab="newart">新闻演员</a>
+  </div>
+
+  <!-- Tab 1: 主页 -->
+  <div class="help-tab active" id="tab-home">
+    <div class="help-card">
+      <h3>欢迎使用 {$cfg.site_name} 帮助中心</h3>
+      <div class="help-kv"><span class="kv-label">站点地址</span><span class="kv-val"><a href="{$cfg.site_host}" target="_blank">{$cfg.site_host}</a></span></div>
+      {if !empty($cfg.site_back_tip)}
+      <div class="help-kv"><span class="kv-label">备用提示</span><span class="kv-val">{$cfg.site_back_tip}</span></div>
+      {/if}
+      {if !empty($cfg.tg_url)}
+      <div class="help-kv"><span class="kv-label">Telegram群组</span><span class="kv-val"><a href="{$cfg.tg_url}" target="_blank">{$cfg.tg_url}</a></span></div>
+      {/if}
+    </div>
+
+    <div class="help-card">
+      <h3>接口信息</h3>
+      <div class="api-row">
+        <span class="api-label">M3U8解析接口</span>
+        <span class="api-box" id="api-player">{$cfg.player_host}</span>
+        <button class="copy-btn" data-text="{$cfg.player_host}">复制</button>
+      </div>
+      <div class="api-row">
+        <span class="api-label">XML采集接口</span>
+        <span class="api-box" id="api-xml">{$cfg.api_host}api.php/provide/vod/at/xml</span>
+        <button class="copy-btn" data-text="{$cfg.api_host}api.php/provide/vod/at/xml">复制</button>
+      </div>
+      <div class="api-row">
+        <span class="api-label">JSON采集接口</span>
+        <span class="api-box" id="api-json">{$cfg.api_host}api.php/provide/vod/</span>
+        <button class="copy-btn" data-text="{$cfg.api_host}api.php/provide/vod/">复制</button>
+      </div>
+      <div class="api-row">
+        <span class="api-label">新闻接口</span>
+        <span class="api-box">https://news.bfzyapi.com/api.php/provide/art/</span>
+        <button class="copy-btn" data-text="https://news.bfzyapi.com/api.php/provide/art/">复制</button>
+      </div>
+      <div class="api-row">
+        <span class="api-label">演员接口</span>
+        <span class="api-box">http://news.bfzyapi.com/api.php/provide/actor/</span>
+        <button class="copy-btn" data-text="http://news.bfzyapi.com/api.php/provide/actor/">复制</button>
+      </div>
+    </div>
+
+    {if !empty($cfg.notice)}
+    <div class="help-card">
+      <h3>公告</h3>
+      <div class="help-warn">{$cfg.notice|nl2br}</div>
+    </div>
+    {/if}
+  </div>
+
+  <!-- Tab 2: 域名更新 -->
+  <div class="help-tab" id="tab-update">
+    <div class="help-card">
+      <h3>域名批量更新教程（MacCMS v10）</h3>
+      <div class="help-info">当站点域名更换后，需将旧域名替换为新域名，否则视频将无法播放。</div>
+      <ol class="help-step">
+        <li>登录 MacCMS v10 后台管理系统</li>
+        <li>在左侧菜单找到 <strong>数据库</strong> → <strong>数据批量替换</strong></li>
+        <li>数据表选择 <strong>mac_vod</strong></li>
+        <li>替换字段选择 <strong>vod_play_url</strong></li>
+        <li>在「查找内容」填写 <strong>旧域名</strong>（如 <code>http://old.example.com</code>）</li>
+        <li>在「替换为」填写 <strong>新域名</strong>（如下方所示）</li>
+        <li>点击「执行替换」，完成后清除网站缓存</li>
+      </ol>
+      <h4>当前解析地址（新域名）</h4>
+      <div class="api-row">
+        <span class="api-box" id="update-player">{$cfg.player_host}</span>
+        <button class="copy-btn" data-text="{$cfg.player_host}">复制</button>
+      </div>
+      <div class="help-warn">注意：批量替换操作不可逆，建议操作前先备份数据库！</div>
+    </div>
+  </div>
+
+  <!-- Tab 3: MacCMS v10 -->
+  <div class="help-tab" id="tab-mac10">
+    <div class="help-card">
+      <h3>MacCMS v10 配置教程</h3>
+      <h4>接口信息</h4>
+      <div class="api-row">
+        <span class="api-label">XML采集接口</span>
+        <span class="api-box">{$cfg.api_host}api.php/provide/vod/at/xml</span>
+        <button class="copy-btn" data-text="{$cfg.api_host}api.php/provide/vod/at/xml">复制</button>
+      </div>
+      <div class="api-row">
+        <span class="api-label">JSON采集接口</span>
+        <span class="api-box">{$cfg.api_host}api.php/provide/vod/</span>
+        <button class="copy-btn" data-text="{$cfg.api_host}api.php/provide/vod/">复制</button>
+      </div>
+      <div class="api-row">
+        <span class="api-label">M3U8解析接口</span>
+        <span class="api-box">{$cfg.player_host}</span>
+        <button class="copy-btn" data-text="{$cfg.player_host}">复制</button>
+      </div>
+    </div>
+    <div class="help-card">
+      <h3>播放器安装步骤</h3>
+      <ol class="help-step">
+        <li>点击下方按钮下载播放器文件压缩包（mac10.zip）</li>
+        <li>解压后得到 <code>mac10/bfzym3u8.txt</code> 文件</li>
+        <li>登录 MacCMS v10 后台 → <strong>系统</strong> → <strong>播放器管理</strong></li>
+        <li>点击「导入」，选择解压得到的 txt 文件</li>
+        <li>导入成功后，前往 <strong>系统</strong> → <strong>缓存管理</strong> 清除所有缓存</li>
+        <li>刷新网站前台，验证视频能否正常播放</li>
+      </ol>
+      {if $files.mac10}
+      <a class="help-dl-btn" href="/upload/help/mac10.zip">下载播放器文件 mac10.zip</a>
+      {else}
+      <div class="help-warn">播放器文件尚未生成，请联系管理员在后台生成。</div>
+      {/if}
+    </div>
+  </div>
+
+  <!-- Tab 4: MacCMS v8 -->
+  <div class="help-tab" id="tab-maccms">
+    <div class="help-card">
+      <h3>MacCMS v8 配置教程</h3>
+      <h4>接口信息</h4>
+      <div class="api-row">
+        <span class="api-label">XML采集接口</span>
+        <span class="api-box">{$cfg.api_host}api.php/provide/vod/at/xml</span>
+        <button class="copy-btn" data-text="{$cfg.api_host}api.php/provide/vod/at/xml">复制</button>
+      </div>
+      <div class="api-row">
+        <span class="api-label">JSON采集接口</span>
+        <span class="api-box">{$cfg.api_host}api.php/provide/vod/</span>
+        <button class="copy-btn" data-text="{$cfg.api_host}api.php/provide/vod/">复制</button>
+      </div>
+      <div class="api-row">
+        <span class="api-label">M3U8解析接口</span>
+        <span class="api-box">{$cfg.player_host}</span>
+        <button class="copy-btn" data-text="{$cfg.player_host}">复制</button>
+      </div>
+    </div>
+    <div class="help-card">
+      <h3>播放器安装步骤</h3>
+      <ol class="help-step">
+        <li>点击下方按钮下载播放器文件压缩包（maccms.zip）</li>
+        <li>解压后得到 <code>maccms/vodplay_bfm3u8.txt</code> 文件</li>
+        <li>登录 MacCMS v8 后台 → <strong>系统设置</strong> → <strong>播放器管理</strong></li>
+        <li>点击「导入」，上传解压得到的 txt 文件</li>
+        <li>导入成功后清除网站缓存，刷新前台验证播放</li>
+      </ol>
+      {if $files.maccms}
+      <a class="help-dl-btn" href="/upload/help/maccms.zip">下载播放器文件 maccms.zip</a>
+      {else}
+      <div class="help-warn">播放器文件尚未生成，请联系管理员在后台生成。</div>
+      {/if}
+    </div>
+  </div>
+
+  <!-- Tab 5: SeaCMS -->
+  <div class="help-tab" id="tab-seacms">
+    <div class="help-card">
+      <h3>SeaCMS 配置教程</h3>
+      <div class="help-warn">SeaCMS 采集接口与 MacCMS 格式不同，请注意使用正确的接口地址。导入播放器后还需手动对应绑定分类，否则部分分类视频无法正常播放。</div>
+      <h4>采集接口（SeaCMS 专用）</h4>
+      <div class="api-row">
+        <span class="api-label">采集接口</span>
+        <span class="api-box">{$cfg.api_host}api.php/Seacms/vod/</span>
+        <button class="copy-btn" data-text="{$cfg.api_host}api.php/Seacms/vod/">复制</button>
+      </div>
+      <div class="api-row">
+        <span class="api-label">M3U8解析接口</span>
+        <span class="api-box">{$cfg.player_host}</span>
+        <button class="copy-btn" data-text="{$cfg.player_host}">复制</button>
+      </div>
+    </div>
+    <div class="help-card">
+      <h3>播放器安装步骤（SeaCMS v9.0+）</h3>
+      <ol class="help-step">
+        <li>下载下方 seacms.zip 文件并解压</li>
+        <li>将解压得到的 <code>seacms/bfzym3u8.html</code> 上传至 SeaCMS 网站根目录下对应播放器目录</li>
+        <li>登录 SeaCMS 后台 → <strong>系统设置</strong> → <strong>播放器管理</strong> → 新增播放器</li>
+        <li>播放器文件路径填写 <code>bfzym3u8.html</code>，名称自定义</li>
+        <li>在分类管理中将对应分类绑定到此播放器</li>
+        <li>清除缓存，验证播放</li>
+      </ol>
+      {if $files.seacms}
+      <a class="help-dl-btn" href="/upload/help/seacms.zip">下载 seacms.zip（v9.0+）</a>
+      {else}
+      <div class="help-warn">seacms.zip 尚未生成，请联系管理员。</div>
+      {/if}
+    </div>
+    <div class="help-card">
+      <h3>播放器安装步骤（SeaCMS v8.7 及以下）</h3>
+      <ol class="help-step">
+        <li>下载下方 seacms87.zip 文件并解压</li>
+        <li>将 <code>seacms87/bfzym3u8.html</code> 上传至网站播放器目录</li>
+        <li>后台配置方式同 v9.0+ 教程</li>
+        <li>清除缓存，验证播放</li>
+      </ol>
+      {if $files.seacms87}
+      <a class="help-dl-btn" href="/upload/help/seacms87.zip">下载 seacms87.zip（v8.7-）</a>
+      {else}
+      <div class="help-warn">seacms87.zip 尚未生成，请联系管理员。</div>
+      {/if}
+    </div>
+  </div>
+
+  <!-- Tab 6: 飞飞5 -->
+  <div class="help-tab" id="tab-ff50">
+    <div class="help-card">
+      <h3>飞飞影视系统 v5 配置教程</h3>
+      <div class="api-row">
+        <span class="api-label">M3U8解析接口</span>
+        <span class="api-box">{$cfg.player_host}</span>
+        <button class="copy-btn" data-text="{$cfg.player_host}">复制</button>
+      </div>
+      <div class="api-row">
+        <span class="api-label">XML采集接口</span>
+        <span class="api-box">{$cfg.api_host}api.php/provide/vod/at/xml</span>
+        <button class="copy-btn" data-text="{$cfg.api_host}api.php/provide/vod/at/xml">复制</button>
+      </div>
+    </div>
+    <div class="help-card">
+      <h3>播放器插件安装步骤</h3>
+      <ol class="help-step">
+        <li>下载下方 ff50player.zip 文件并解压</li>
+        <li>将解压得到的 <code>bfzym3u8.js</code> 和 <code>bfzym3u8.min.js</code> 上传至飞飞5网站根目录下 <code>player/</code> 目录</li>
+        <li>登录飞飞5后台 → <strong>系统</strong> → <strong>播放器管理</strong> → 新增播放器</li>
+        <li>播放器文件选择 <code>bfzym3u8</code>，名称自定义</li>
+        <li>保存后在分类中绑定该播放器</li>
+        <li>清除缓存，刷新前台验证播放效果</li>
+      </ol>
+      {if $files.ff50player}
+      <a class="help-dl-btn" href="/upload/help/ff50player.zip">下载插件文件 ff50player.zip</a>
+      {else}
+      <div class="help-warn">ff50player.zip 尚未生成，请联系管理员在后台生成。</div>
+      {/if}
+    </div>
+  </div>
+
+  <!-- Tab 7: MaxCMS -->
+  <div class="help-tab" id="tab-maxcms">
+    <div class="help-card">
+      <h3>MaxCMS 配置教程</h3>
+      <div class="help-info">MaxCMS 需手动修改两个文件来添加解析播放器，相关文件需联系站长获取。</div>
+      <div class="api-row">
+        <span class="api-label">M3U8解析接口</span>
+        <span class="api-box">{$cfg.player_host}</span>
+        <button class="copy-btn" data-text="{$cfg.player_host}">复制</button>
+      </div>
+      <div class="api-row">
+        <span class="api-label">播放器标识</span>
+        <span class="api-box">{$cfg.player_flag}</span>
+        <button class="copy-btn" data-text="{$cfg.player_flag}">复制</button>
+      </div>
+    </div>
+    <div class="help-card">
+      <h3>修改 admin/imgs/main.js</h3>
+      <p style="font-size:14px;color:#555;margin-bottom:10px;">在 <code>main.js</code> 中找到播放器列表数组，添加如下条目（name 与 value 保持一致）：</p>
+      <div class="help-code">{literal}{"name": "{$cfg.player_flag}", "value": "{$cfg.player_flag}"}{/literal}</div>
+      <div class="help-warn">注意 JSON 格式，最后一项不加逗号，否则旧版 IE 会报错。</div>
+    </div>
+    <div class="help-card">
+      <h3>修改 inc/playerKinds.xml</h3>
+      <p style="font-size:14px;color:#555;margin-bottom:10px;">在 <code>playerKinds.xml</code> 的 <code>&lt;players&gt;</code> 节点内追加：</p>
+      <div class="help-code">&lt;player&gt;
+  &lt;kind&gt;{$cfg.player_flag}&lt;/kind&gt;
+  &lt;parse&gt;{$cfg.player_host}&lt;/parse&gt;
+&lt;/player&gt;</div>
+      <ol class="help-step">
+        <li>修改并保存以上两个文件后，上传覆盖服务器对应文件</li>
+        <li>登录 MaxCMS 后台清除缓存</li>
+        <li>刷新前台，选择对应播放器验证播放</li>
+      </ol>
+      <div class="help-warn">文件修改有风险，建议操作前备份原文件。如需原始模板文件请联系站长手动获取。</div>
+    </div>
+  </div>
+
+  <!-- Tab 8: 赞片CMS -->
+  <div class="help-tab" id="tab-zanpian">
+    <div class="help-card">
+      <h3>赞片CMS v8 配置教程</h3>
+      <div class="api-row">
+        <span class="api-label">XML采集接口</span>
+        <span class="api-box">{$cfg.api_host}api.php/provide/vod/at/xml/</span>
+        <button class="copy-btn" data-text="{$cfg.api_host}api.php/provide/vod/at/xml/">复制</button>
+      </div>
+      <div class="api-row">
+        <span class="api-label">M3U8解析接口</span>
+        <span class="api-box">{$cfg.player_host}</span>
+        <button class="copy-btn" data-text="{$cfg.player_host}">复制</button>
+      </div>
+      <div class="api-row">
+        <span class="api-label">播放器标识</span>
+        <span class="api-box">{$cfg.player_flag}</span>
+        <button class="copy-btn" data-text="{$cfg.player_flag}">复制</button>
+      </div>
+    </div>
+    <div class="help-card">
+      <h3>配置步骤</h3>
+      <ol class="help-step">
+        <li>登录赞片CMS v8 后台</li>
+        <li>进入 <strong>系统设置</strong> → <strong>采集设置</strong>，添加采集源，接口地址填写上方 XML采集接口</li>
+        <li>进入 <strong>播放器管理</strong>，新增播放器</li>
+        <li>播放器标识填写上方「播放器标识」的值（{$cfg.player_flag}）</li>
+        <li>解析地址填写上方「M3U8解析接口」的值</li>
+        <li>保存后在分类设置中绑定该播放器</li>
+        <li>清除缓存，刷新前台验证播放</li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- Tab 9: 爱影CMS -->
+  <div class="help-tab" id="tab-iycms">
+    <div class="help-card">
+      <h3>爱影CMS 配置教程</h3>
+      <div class="api-row">
+        <span class="api-label">XML采集接口</span>
+        <span class="api-box">{$cfg.api_host}api.php/provide/vod/at/xml/</span>
+        <button class="copy-btn" data-text="{$cfg.api_host}api.php/provide/vod/at/xml/">复制</button>
+      </div>
+      <div class="api-row">
+        <span class="api-label">M3U8解析接口</span>
+        <span class="api-box">{$cfg.player_host}</span>
+        <button class="copy-btn" data-text="{$cfg.player_host}">复制</button>
+      </div>
+      <div class="api-row">
+        <span class="api-label">播放器标识</span>
+        <span class="api-box">{$cfg.player_flag}</span>
+        <button class="copy-btn" data-text="{$cfg.player_flag}">复制</button>
+      </div>
+    </div>
+    <div class="help-card">
+      <h3>配置步骤</h3>
+      <ol class="help-step">
+        <li>登录爱影CMS后台管理面板</li>
+        <li>进入 <strong>采集管理</strong> → <strong>采集源设置</strong>，新增采集源</li>
+        <li>采集接口地址填写上方 XML采集接口，选择 XML 格式</li>
+        <li>进入 <strong>播放管理</strong> → <strong>播放器管理</strong>，新增播放器</li>
+        <li>播放器名称/标识填写 <strong>{$cfg.player_flag}</strong>，解析地址填写 M3U8解析接口</li>
+        <li>保存后绑定分类与播放器的对应关系</li>
+        <li>清除网站全部缓存，刷新前台测试视频播放</li>
+      </ol>
+      <div class="help-info">如果视频播放异常，请检查播放器标识是否与采集来的 flag 字段一致。</div>
+    </div>
+  </div>
+
+  <!-- Tab 10: 新闻演员 -->
+  <div class="help-tab" id="tab-newart">
+    <div class="help-card">
+      <h3>新闻 &amp; 演员接口说明</h3>
+      <div class="help-info">以下接口为独立新闻和演员数据接口，可在支持自定义接口的 CMS 中配置使用。</div>
+      <h4>新闻接口</h4>
+      <div class="api-row">
+        <span class="api-box">https://news.bfzyapi.com/api.php/provide/art/</span>
+        <button class="copy-btn" data-text="https://news.bfzyapi.com/api.php/provide/art/">复制</button>
+      </div>
+      <h4>演员接口</h4>
+      <div class="api-row">
+        <span class="api-box">http://news.bfzyapi.com/api.php/provide/actor/</span>
+        <button class="copy-btn" data-text="http://news.bfzyapi.com/api.php/provide/actor/">复制</button>
+      </div>
+    </div>
+    <div class="help-card">
+      <h3>接口使用说明</h3>
+      <ol class="help-step">
+        <li>登录 CMS 后台，进入采集或内容源设置</li>
+        <li>新增数据源，接口格式选择 <strong>XML</strong></li>
+        <li>新闻内容使用「新闻接口」地址；演员数据使用「演员接口」地址</li>
+        <li>设置采集频率（建议每日一次），保存后执行首次采集</li>
+        <li>采集完成后在前台验证新闻列表和演员页面是否正常展示</li>
+      </ol>
+      <div class="help-warn">注意：演员接口为 HTTP 协议，若网站为 HTTPS，浏览器可能因混合内容策略阻止加载，建议在服务器端进行数据同步而非前端直接调用。</div>
+    </div>
+  </div>
+
+</div><!-- /.help-wrap -->
+</div><!-- /.width1200.white -->
+{include file="public/foot"}
+<script>
+$(function () {
+    // Tab switching
+    $('.help-tabs a').on('click', function (e) {
+        e.preventDefault();
+        var target = $(this).data('tab');
+        $('.help-tabs a').removeClass('active');
+        $(this).addClass('active');
+        $('.help-tab').hide();
+        $('#tab-' + target).show();
+    });
+
+    // Copy to clipboard
+    $(document).on('click', '.copy-btn', function () {
+        var $btn = $(this);
+        var text = $btn.data('text') || $btn.prev('.api-box').text().trim();
+        if (!text) { return; }
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(text).then(function () {
+                $btn.text('已复制').addClass('copied');
+                setTimeout(function () { $btn.text('复制').removeClass('copied'); }, 2000);
+            }).catch(function () { fallbackCopy(text, $btn); });
+        } else {
+            fallbackCopy(text, $btn);
+        }
+    });
+
+    function fallbackCopy(text, $btn) {
+        var ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        try { document.execCommand('copy'); } catch (e) {}
+        document.body.removeChild(ta);
+        $btn.text('已复制').addClass('copied');
+        setTimeout(function () { $btn.text('复制').removeClass('copied'); }, 2000);
+    }
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,316 @@
+{include file="../../../application/admin/view/public/head" /}
+<div class="page-container p10">
+
+    <!-- 工具栏 -->
+    <div class="my-toolbar-box mb-2">
+        <button class="layui-btn layui-btn-normal" id="btnSave">保存配置</button>
+        <button class="layui-btn layui-btn-warning" id="btnRegen">立即重新生成文件</button>
+        <button class="layui-btn {if $cfg.enabled eq '1'}layui-btn-danger{else/}layui-btn-primary{/if}" id="btnToggle">
+            {if $cfg.enabled eq '1'}已开启（点击关闭）{else/}已关闭（点击开启）{/if}
+        </button>
+    </div>
+
+    <div class="layui-row layui-col-space15">
+
+        <!-- 左侧：配置表单（约 70%） -->
+        <div class="layui-col-md7">
+            <div class="layui-card">
+                <div class="layui-card-header">基础配置</div>
+                <div class="layui-card-body">
+                    <form class="layui-form layui-form-pane" id="formHelp">
+
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">站点名称</label>
+                            <div class="layui-input-block">
+                                <input type="text" name="site_name" class="layui-input"
+                                    value="{$cfg.site_name|htmlspecialchars}" autocomplete="off">
+                            </div>
+                        </div>
+
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">播放器标志</label>
+                            <div class="layui-input-block">
+                                <input type="text" name="player_flag" class="layui-input"
+                                    value="{$cfg.player_flag|htmlspecialchars}"
+                                    placeholder="例：bfzym3u8" autocomplete="off">
+                            </div>
+                        </div>
+
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">主站地址</label>
+                            <div class="layui-input-block">
+                                <input type="text" name="site_host" class="layui-input"
+                                    value="{$cfg.site_host|htmlspecialchars}"
+                                    placeholder="含末尾斜杠，例：https://www.example.com/" autocomplete="off">
+                            </div>
+                        </div>
+
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">API采集接口地址</label>
+                            <div class="layui-input-block">
+                                <input type="text" name="api_host" class="layui-input"
+                                    value="{$cfg.api_host|htmlspecialchars}" autocomplete="off">
+                            </div>
+                        </div>
+
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">M3U8解析地址</label>
+                            <div class="layui-input-block">
+                                <input type="text" name="player_host" class="layui-input"
+                                    value="{$cfg.player_host|htmlspecialchars}"
+                                    placeholder="含参数，例：https://jx.example.com/?url=" autocomplete="off">
+                            </div>
+                        </div>
+
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">备用提示</label>
+                            <div class="layui-input-block">
+                                <input type="text" name="site_back_tip" class="layui-input"
+                                    value="{$cfg.site_back_tip|htmlspecialchars}" autocomplete="off">
+                            </div>
+                        </div>
+
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">Telegram群组</label>
+                            <div class="layui-input-block">
+                                <input type="text" name="tg_url" class="layui-input"
+                                    value="{$cfg.tg_url|htmlspecialchars}"
+                                    placeholder="https://t.me/yourgroup" autocomplete="off">
+                            </div>
+                        </div>
+
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">首页公告</label>
+                            <div class="layui-input-block">
+                                <textarea name="notice" class="layui-textarea"
+                                    rows="3">{$cfg.notice|htmlspecialchars}</textarea>
+                            </div>
+                        </div>
+
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">播放器自定义代码</label>
+                            <div class="layui-input-block">
+                                <textarea name="player_code" class="layui-textarea"
+                                    rows="4" placeholder="选填">{$cfg.player_code|htmlspecialchars}</textarea>
+                            </div>
+                        </div>
+
+                        <div class="layui-form-item">
+                            <div class="layui-input-block">
+                                <input type="checkbox" name="auto_regen" lay-skin="primary"
+                                    title="保存后自动重新生成文件" value="1" checked>
+                            </div>
+                        </div>
+
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右侧：文件状态面板（约 30%） -->
+        <div class="layui-col-md5">
+            <div class="layui-card">
+                <div class="layui-card-header">生成的资源文件</div>
+                <div class="layui-card-body">
+                    <p class="layui-text-em" style="margin-bottom:10px;font-size:12px;color:#999;">
+                        最后生成时间：
+                        {if $cfg.file_regen_time gt 0}
+                            {:date('Y-m-d H:i:s', $cfg['file_regen_time'])}
+                        {else/}
+                            从未生成
+                        {/if}
+                    </p>
+                    <table class="layui-table" lay-size="sm">
+                        <colgroup>
+                            <col width="50%">
+                            <col width="30%">
+                            <col width="20%">
+                        </colgroup>
+                        <thead>
+                            <tr>
+                                <th>文件名</th>
+                                <th>说明</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>mac10.zip</td>
+                                <td>MacCMS v10播放器</td>
+                                <td>
+                                    {if isset($file_list['mac10.zip'])}
+                                        <a href="/upload/help/mac10.zip" target="_blank" class="layui-btn layui-btn-xs layui-btn-normal">下载</a>
+                                    {else/}
+                                        <span class="layui-badge layui-bg-gray">未生成</span>
+                                    {/if}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>maccms.zip</td>
+                                <td>MacCMS v8播放器</td>
+                                <td>
+                                    {if isset($file_list['maccms.zip'])}
+                                        <a href="/upload/help/maccms.zip" target="_blank" class="layui-btn layui-btn-xs layui-btn-normal">下载</a>
+                                    {else/}
+                                        <span class="layui-badge layui-bg-gray">未生成</span>
+                                    {/if}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>seacms.zip</td>
+                                <td>SeaCMS播放器</td>
+                                <td>
+                                    {if isset($file_list['seacms.zip'])}
+                                        <a href="/upload/help/seacms.zip" target="_blank" class="layui-btn layui-btn-xs layui-btn-normal">下载</a>
+                                    {else/}
+                                        <span class="layui-badge layui-bg-gray">未生成</span>
+                                    {/if}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>seacms87.zip</td>
+                                <td>SeaCMS 8.7播放器</td>
+                                <td>
+                                    {if isset($file_list['seacms87.zip'])}
+                                        <a href="/upload/help/seacms87.zip" target="_blank" class="layui-btn layui-btn-xs layui-btn-normal">下载</a>
+                                    {else/}
+                                        <span class="layui-badge layui-bg-gray">未生成</span>
+                                    {/if}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>ff50player.zip</td>
+                                <td>飞飞5.0播放器</td>
+                                <td>
+                                    {if isset($file_list['ff50player.zip'])}
+                                        <a href="/upload/help/ff50player.zip" target="_blank" class="layui-btn layui-btn-xs layui-btn-normal">下载</a>
+                                    {else/}
+                                        <span class="layui-badge layui-bg-gray">未生成</span>
+                                    {/if}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>player.zip</td>
+                                <td>通用播放器</td>
+                                <td>
+                                    {if isset($file_list['player.zip'])}
+                                        <a href="/upload/help/player.zip" target="_blank" class="layui-btn layui-btn-xs layui-btn-normal">下载</a>
+                                    {else/}
+                                        <span class="layui-badge layui-bg-gray">未生成</span>
+                                    {/if}
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </div><!-- /layui-row -->
+</div><!-- /page-container -->
+
+{include file="../../../application/admin/view/public/foot" /}
+
+<script>
+layui.use(['layer', 'form'], function () {
+    var layer = layui.layer;
+    var form  = layui.form;
+
+    form.render();
+
+    // ── 保存配置 ──────────────────────────────────────────────────────────
+    document.getElementById('btnSave').addEventListener('click', function () {
+        var formEl  = document.getElementById('formHelp');
+        var data    = {};
+        var inputs  = formEl.querySelectorAll('input[name], textarea[name]');
+        inputs.forEach(function (el) {
+            if (el.type === 'checkbox') {
+                data[el.name] = el.checked ? el.value : '';
+            } else {
+                data[el.name] = el.value;
+            }
+        });
+
+        // 序列化为 FormData
+        var fd = new FormData();
+        Object.keys(data).forEach(function (k) { fd.append(k, data[k]); });
+
+        fetch('{:url("save")}', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            body: fd
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (res) {
+            if (res.code === 1) {
+                layer.msg(res.msg || '保存成功', { icon: 1, time: 2000 }, function () {
+                    location.reload();
+                });
+            } else {
+                layer.msg(res.msg || '保存失败', { icon: 2 });
+            }
+        })
+        .catch(function () {
+            layer.msg('网络错误，请重试', { icon: 2 });
+        });
+    });
+
+    // ── 立即重新生成文件 ──────────────────────────────────────────────────
+    document.getElementById('btnRegen').addEventListener('click', function () {
+        layer.confirm('确认重新生成所有资源文件？', { icon: 3, title: '提示' }, function (idx) {
+            layer.close(idx);
+            var loadIdx = layer.load(1);
+            fetch('{:url("regen")}', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(function (r) { return r.json(); })
+            .then(function (res) {
+                layer.close(loadIdx);
+                if (res.code === 1) {
+                    layer.msg(res.msg || '生成成功', { icon: 1, time: 2000 }, function () {
+                        location.reload();
+                    });
+                } else {
+                    layer.msg(res.msg || '生成失败', { icon: 2 });
+                }
+            })
+            .catch(function () {
+                layer.close(loadIdx);
+                layer.msg('网络错误，请重试', { icon: 2 });
+            });
+        });
+    });
+
+    // ── 切换启用/禁用 ──────────────────────────────────────────────────────
+    document.getElementById('btnToggle').addEventListener('click', function () {
+        var btn    = this;
+        var isOn   = btn.classList.contains('layui-btn-danger');
+        var label  = isOn ? '确认关闭帮助中心？' : '确认开启帮助中心？';
+        layer.confirm(label, { icon: 3, title: '提示' }, function (idx) {
+            layer.close(idx);
+            fetch('{:url("toggleEnabled")}', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(function (r) { return r.json(); })
+            .then(function (res) {
+                if (res.code === 1) {
+                    layer.msg(res.msg || '操作成功', { icon: 1, time: 1500 }, function () {
+                        location.reload();
+                    });
+                } else {
+                    layer.msg(res.msg || '操作失败', { icon: 2 });
+                }
+            })
+            .catch(function () {
+                layer.msg('网络错误，请重试', { icon: 2 });
+            });
+        });
+    });
+
+});
+</script>

@@ -1712,6 +1712,34 @@ return array (
         'controller' => 'rep',
         'action' => 'toggleEnabled',
       ),
+      99 =>
+      array (
+        'show' => 1,
+        'name' => '帮助中心',
+        'controller' => 'help',
+        'action' => 'index',
+      ),
+      9901 =>
+      array (
+        'show' => 0,
+        'name' => '帮助配置保存',
+        'controller' => 'help',
+        'action' => 'save',
+      ),
+      9902 =>
+      array (
+        'show' => 0,
+        'name' => '帮助文件生成',
+        'controller' => 'help',
+        'action' => 'regen',
+      ),
+      9903 =>
+      array (
+        'show' => 0,
+        'name' => '帮助中心开关',
+        'controller' => 'help',
+        'action' => 'toggleEnabled',
+      ),
     ),
   ),
   10 =>
