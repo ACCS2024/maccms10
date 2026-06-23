@@ -879,6 +879,36 @@ function mac_perf_env_checks()
     $push('API 限流', $apiRl, $apiRl ? '已开启' : '未开启',
         $apiRl ? '' : '「系统配置」开启 API 防爬/限流:公开 JSON 接口按 IP 限频,防被高频请求刷爆 CPU(采集 provide/推送 receive 已默认免限,不影响)。');
 
+    // 12) 关键性能索引(高频查询的覆盖索引)
+    try {
+        $prefix = (string)config('database.connections.mysql.prefix');
+        $perfIndexes = [
+            [$prefix . 'type',    'idx_type_pid_sort'],
+            [$prefix . 'vod',     'idx_vod_type_status_time'],
+            [$prefix . 'vod',     'idx_vod_type1_status_time'],
+            [$prefix . 'vod',     'idx_vod_status_time'],
+            [$prefix . 'visit',   'idx_visit_time'],
+            [$prefix . 'user',    'idx_user_reg_time'],
+            [$prefix . 'comment', 'idx_comment_lookup'],
+            [$prefix . 'comment', 'idx_comment_sub'],
+        ];
+        $missing = 0;
+        foreach ($perfIndexes as [$tbl, $idx]) {
+            $rows = \think\facade\Db::query(
+                "SELECT COUNT(*) AS c FROM information_schema.STATISTICS
+                 WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND INDEX_NAME = ?",
+                [$tbl, $idx]
+            );
+            if ((int)($rows[0]['c'] ?? 0) === 0) {
+                $missing++;
+            }
+        }
+        $total = count($perfIndexes);
+        $push('性能索引', $missing === 0,
+            $missing === 0 ? '全部已建(' . $total . '个)' : '缺少 ' . $missing . '/' . $total . ' 个',
+            $missing === 0 ? '' : '「数据库」页点"补充性能索引"自动创建缺失索引(幂等，可重复执行)，创建后高频查询速度显著提升。');
+    } catch (\Throwable $e) {}
+
     return $checks;
 }
 

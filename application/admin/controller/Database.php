@@ -350,6 +350,184 @@ class Database extends Base
         return $this->success($msg);
     }
 
+    /**
+     * 补充性能索引
+     *
+     * 幂等：已存在的索引跳过，不存在的创建。
+     * 设计原则：每条索引只针对已知高频查询，覆盖列按「等值列在前、范围/排序列在后」原则排序。
+     * 可安全多次执行：重复运行不产生副作用。
+     */
+    public function add_perf_indexes()
+    {
+        $prefix = (string)config('database.connections.mysql.prefix');
+        $q = function (string $sql, array $bind = []) {
+            return Db::query($sql, $bind);
+        };
+        $e = function (string $sql) {
+            Db::execute($sql);
+        };
+
+        // 检查索引是否存在
+        $indexExists = function (string $table, string $indexName) use ($q) {
+            $rows = $q(
+                "SELECT COUNT(*) AS c FROM information_schema.STATISTICS
+                 WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND INDEX_NAME = ?",
+                [$table, $indexName]
+            );
+            return (int)($rows[0]['c'] ?? 0) > 0;
+        };
+
+        // 检查表是否存在
+        $tableExists = function (string $table) use ($q) {
+            $rows = $q(
+                "SELECT COUNT(*) AS c FROM information_schema.TABLES
+                 WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?",
+                [$table]
+            );
+            return (int)($rows[0]['c'] ?? 0) > 0;
+        };
+
+        /*
+         * 待补充的索引清单：
+         * [table, index_name, create_sql]
+         * create_sql 中表名用 {T} 占位（已含 prefix）。
+         *
+         * 覆盖索引选择依据：
+         *   mac_type.type_pid      — 分类树查询 WHERE type_pid=? ORDER BY type_sort
+         *   mac_vod.idx_type_status_time — 视频列表 WHERE type_id=? AND vod_status=1 ORDER BY vod_time
+         *   mac_vod.idx_type1_status_time — 视频列表 WHERE type_id_1=? AND vod_status=1 ORDER BY vod_time
+         *   mac_vod.idx_status_time  — 全局时间线 WHERE vod_status=1 ORDER BY vod_time
+         *   mac_visit.visit_time   — 后台统计 WHERE visit_time BETWEEN ? AND ?
+         *   mac_user.user_reg_time — 后台注册统计 WHERE user_reg_time BETWEEN ? AND ?
+         *   mac_comment.idx_comment_lookup — 评论列表 WHERE comment_rid=? AND comment_mid=? AND comment_pid=0 AND comment_status=1
+         *   mac_comment.idx_comment_sub    — 子评论 WHERE comment_pid IN(...)  AND comment_status=1
+         */
+        $plan = [
+            [
+                'table' => $prefix . 'type',
+                'name'  => 'idx_type_pid_sort',
+                'sql'   => "ALTER TABLE `{T}` ADD INDEX `idx_type_pid_sort` (`type_pid`, `type_sort`)",
+            ],
+            [
+                'table' => $prefix . 'vod',
+                'name'  => 'idx_vod_type_status_time',
+                'sql'   => "ALTER TABLE `{T}` ADD INDEX `idx_vod_type_status_time` (`type_id`, `vod_status`, `vod_time`)",
+            ],
+            [
+                'table' => $prefix . 'vod',
+                'name'  => 'idx_vod_type1_status_time',
+                'sql'   => "ALTER TABLE `{T}` ADD INDEX `idx_vod_type1_status_time` (`type_id_1`, `vod_status`, `vod_time`)",
+            ],
+            [
+                'table' => $prefix . 'vod',
+                'name'  => 'idx_vod_status_time',
+                'sql'   => "ALTER TABLE `{T}` ADD INDEX `idx_vod_status_time` (`vod_status`, `vod_time`)",
+            ],
+            [
+                'table' => $prefix . 'visit',
+                'name'  => 'idx_visit_time',
+                'sql'   => "ALTER TABLE `{T}` ADD INDEX `idx_visit_time` (`visit_time`)",
+            ],
+            [
+                'table' => $prefix . 'user',
+                'name'  => 'idx_user_reg_time',
+                'sql'   => "ALTER TABLE `{T}` ADD INDEX `idx_user_reg_time` (`user_reg_time`)",
+            ],
+            [
+                'table' => $prefix . 'comment',
+                'name'  => 'idx_comment_lookup',
+                'sql'   => "ALTER TABLE `{T}` ADD INDEX `idx_comment_lookup` (`comment_rid`, `comment_mid`, `comment_pid`, `comment_status`, `comment_time`)",
+            ],
+            [
+                'table' => $prefix . 'comment',
+                'name'  => 'idx_comment_sub',
+                'sql'   => "ALTER TABLE `{T}` ADD INDEX `idx_comment_sub` (`comment_pid`, `comment_status`)",
+            ],
+        ];
+
+        $created = [];
+        $skipped = [];
+        $failed  = [];
+
+        foreach ($plan as $item) {
+            $table = $item['table'];
+            $name  = $item['name'];
+
+            if (!$tableExists($table)) {
+                $skipped[] = $table . '.' . $name . '(表不存在)';
+                continue;
+            }
+
+            if ($indexExists($table, $name)) {
+                $skipped[] = $table . '.' . $name . '(已存在)';
+                continue;
+            }
+
+            try {
+                $sql = str_replace('{T}', str_replace('`', '``', $table), $item['sql']);
+                $e($sql);
+                $created[] = $table . '.' . $name;
+            } catch (\Throwable $ex) {
+                $failed[] = $table . '.' . $name . ': ' . $ex->getMessage();
+            }
+        }
+
+        $msg = '性能索引补充完成 — 新建:' . count($created) . '，跳过:' . count($skipped) . '，失败:' . count($failed);
+        if (!empty($created)) {
+            $msg .= ' | 新建:' . implode(', ', $created);
+        }
+        if (!empty($failed)) {
+            return $this->error($msg . ' | 错误:' . implode('; ', $failed));
+        }
+        return $this->success($msg);
+    }
+
+    /**
+     * 返回当前性能索引状态（JSON，供 welcome 页和 AJAX 使用）
+     */
+    public function perf_index_status()
+    {
+        $prefix = (string)config('database.connections.mysql.prefix');
+        $q = function (string $sql, array $bind = []) {
+            return Db::query($sql, $bind);
+        };
+        $tableExists = function (string $table) use ($q) {
+            $rows = $q(
+                "SELECT COUNT(*) AS c FROM information_schema.TABLES
+                 WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?",
+                [$table]
+            );
+            return (int)($rows[0]['c'] ?? 0) > 0;
+        };
+        $indexExists = function (string $table, string $indexName) use ($q) {
+            $rows = $q(
+                "SELECT COUNT(*) AS c FROM information_schema.STATISTICS
+                 WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND INDEX_NAME = ?",
+                [$table, $indexName]
+            );
+            return (int)($rows[0]['c'] ?? 0) > 0;
+        };
+
+        $plan = [
+            ['table' => $prefix . 'type',    'name' => 'idx_type_pid_sort',          'label' => 'type: type_pid+sort'],
+            ['table' => $prefix . 'vod',     'name' => 'idx_vod_type_status_time',   'label' => 'vod: type_id+status+time'],
+            ['table' => $prefix . 'vod',     'name' => 'idx_vod_type1_status_time',  'label' => 'vod: type_id_1+status+time'],
+            ['table' => $prefix . 'vod',     'name' => 'idx_vod_status_time',        'label' => 'vod: status+time'],
+            ['table' => $prefix . 'visit',   'name' => 'idx_visit_time',             'label' => 'visit: visit_time'],
+            ['table' => $prefix . 'user',    'name' => 'idx_user_reg_time',          'label' => 'user: reg_time'],
+            ['table' => $prefix . 'comment', 'name' => 'idx_comment_lookup',         'label' => 'comment: 列表查询'],
+            ['table' => $prefix . 'comment', 'name' => 'idx_comment_sub',            'label' => 'comment: 子评论'],
+        ];
+
+        $result = [];
+        foreach ($plan as $item) {
+            $exists = $tableExists($item['table']) && $indexExists($item['table'], $item['name']);
+            $result[] = ['label' => $item['label'], 'exists' => $exists];
+        }
+        $missing = count(array_filter($result, function ($r) { return !$r['exists']; }));
+        return json(['code' => 1, 'missing' => $missing, 'items' => $result]);
+    }
+
     public function del($id = '')
     {
         if (empty($id)) {
