@@ -50,8 +50,10 @@ class Help extends Base
         }
 
         $fields = ['site_name', 'player_flag', 'site_host', 'site_back_tip', 'api_host',
-                   'api_host_backup', 'player_host', 'tg_url', 'player_code', 'notice', 'help_path'];
-        $optionalFields = ['player_code', 'notice', 'site_back_tip', 'tg_url', 'api_host_backup', 'help_path'];
+                   'api_host_backup', 'player_host', 'parse_host', 'newart_api_host',
+                   'tg_url', 'player_code', 'notice', 'help_path'];
+        $optionalFields = ['player_code', 'notice', 'site_back_tip', 'tg_url', 'api_host_backup',
+                           'help_path', 'parse_host', 'newart_api_host'];
 
         $data = [];
         foreach ($fields as $field) {
@@ -61,6 +63,8 @@ class Help extends Base
             }
             $data[$field] = $val;
         }
+        // checkbox: '1' if checked, '0' if unchecked (no value sent)
+        $data['newart_enabled'] = Request::post('newart_enabled', '') === '1' ? '1' : '0';
 
         HelpCfg::setMulti($data);
 

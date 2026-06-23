@@ -71,6 +71,36 @@
                                 <input type="text" name="player_host" class="layui-input"
                                     value="{$cfg.player_host|htmlspecialchars}"
                                     placeholder="含参数，例：https://jx.example.com/?url=" autocomplete="off">
+                                <div class="layui-form-mid layui-word-aux">用于生成 ZIP 播放器文件，不对外展示</div>
+                            </div>
+                        </div>
+
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">帮助页解析接口</label>
+                            <div class="layui-input-block">
+                                <input type="text" name="parse_host" class="layui-input"
+                                    value="{$cfg.parse_host|htmlspecialchars}"
+                                    placeholder="留空则同上方M3U8解析地址，例：https://vip.vipuuvip.com/?url=" autocomplete="off">
+                                <div class="layui-form-mid layui-word-aux">帮助页向用户展示的公开解析接口地址</div>
+                            </div>
+                        </div>
+
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">新闻/演员接口</label>
+                            <div class="layui-input-block">
+                                <input type="checkbox" name="newart_enabled" lay-skin="primary"
+                                    title="在帮助页显示新闻/演员接口" value="1"
+                                    {if ($cfg.newart_enabled ?? '1') neq '0'}checked{/if}>
+                            </div>
+                        </div>
+
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">新闻/演员API域名</label>
+                            <div class="layui-input-block">
+                                <input type="text" name="newart_api_host" class="layui-input"
+                                    value="{$cfg.newart_api_host|htmlspecialchars}"
+                                    placeholder="留空则使用上方主API域名" autocomplete="off">
+                                <div class="layui-form-mid layui-word-aux">含协议和末尾斜杠，如 https://art.example.com/</div>
                             </div>
                         </div>
 

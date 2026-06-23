@@ -67,7 +67,7 @@
     <a href="#" data-tab="maxcms">MaxCMS</a>
     <a href="#" data-tab="zanpian">赞片CMS</a>
     <a href="#" data-tab="iycms">爱影CMS</a>
-    <a href="#" data-tab="newart">新闻演员</a>
+    {if $newart_show}<a href="#" data-tab="newart">新闻演员</a>{/if}
   </div>
 
   <!-- Tab 1: 主页 -->
@@ -95,8 +95,8 @@
       <div class="api-group">
         <div class="api-group-title">M3U8 解析接口</div>
         <div class="api-row">
-          <span class="api-box primary">{$cfg.player_host|htmlspecialchars}</span>
-          <button class="copy-btn" data-text="{$cfg.player_host|htmlspecialchars}">复制</button>
+          <span class="api-box primary">{$parse_host_eff|htmlspecialchars}</span>
+          <button class="copy-btn" data-text="{$parse_host_eff|htmlspecialchars}">复制</button>
         </div>
       </div>
 
@@ -132,20 +132,22 @@
         {/if}
       </div>
 
+      {if $newart_show}
       <hr class="divider">
       <div class="api-group">
         <div class="api-group-title">新闻 / 演员接口</div>
         <div class="api-row">
           <span class="api-label">新闻接口</span>
-          <span class="api-box">{$cfg.api_host|htmlspecialchars}api.php/provide/art/</span>
-          <button class="copy-btn" data-text="{$cfg.api_host|htmlspecialchars}api.php/provide/art/">复制</button>
+          <span class="api-box">{$newart_api_host_eff|htmlspecialchars}api.php/provide/art/</span>
+          <button class="copy-btn" data-text="{$newart_api_host_eff|htmlspecialchars}api.php/provide/art/">复制</button>
         </div>
         <div class="api-row">
           <span class="api-label">演员接口</span>
-          <span class="api-box">{$cfg.api_host|htmlspecialchars}api.php/provide/actor/</span>
-          <button class="copy-btn" data-text="{$cfg.api_host|htmlspecialchars}api.php/provide/actor/">复制</button>
+          <span class="api-box">{$newart_api_host_eff|htmlspecialchars}api.php/provide/actor/</span>
+          <button class="copy-btn" data-text="{$newart_api_host_eff|htmlspecialchars}api.php/provide/actor/">复制</button>
         </div>
       </div>
+      {/if}
     </div>
   </div>
 
@@ -190,8 +192,8 @@
       <div class="api-group">
         <div class="api-group-title">M3U8 解析接口</div>
         <div class="api-row">
-          <span class="api-box primary">{$cfg.player_host|htmlspecialchars}</span>
-          <button class="copy-btn" data-text="{$cfg.player_host|htmlspecialchars}">复制</button>
+          <span class="api-box primary">{$parse_host_eff|htmlspecialchars}</span>
+          <button class="copy-btn" data-text="{$parse_host_eff|htmlspecialchars}">复制</button>
         </div>
       </div>
 
@@ -308,8 +310,8 @@
       <div class="api-group">
         <div class="api-group-title">M3U8 解析接口</div>
         <div class="api-row">
-          <span class="api-box primary">{$cfg.player_host|htmlspecialchars}</span>
-          <button class="copy-btn" data-text="{$cfg.player_host|htmlspecialchars}">复制</button>
+          <span class="api-box primary">{$parse_host_eff|htmlspecialchars}</span>
+          <button class="copy-btn" data-text="{$parse_host_eff|htmlspecialchars}">复制</button>
         </div>
       </div>
 
@@ -373,8 +375,8 @@
       <div class="api-group">
         <div class="api-group-title">M3U8 解析接口</div>
         <div class="api-row">
-          <span class="api-box primary">{$cfg.player_host|htmlspecialchars}</span>
-          <button class="copy-btn" data-text="{$cfg.player_host|htmlspecialchars}">复制</button>
+          <span class="api-box primary">{$parse_host_eff|htmlspecialchars}</span>
+          <button class="copy-btn" data-text="{$parse_host_eff|htmlspecialchars}">复制</button>
         </div>
       </div>
     </div>
@@ -419,8 +421,8 @@
       <div class="api-group">
         <div class="api-group-title">M3U8 解析接口</div>
         <div class="api-row">
-          <span class="api-box primary">{$cfg.player_host|htmlspecialchars}</span>
-          <button class="copy-btn" data-text="{$cfg.player_host|htmlspecialchars}">复制</button>
+          <span class="api-box primary">{$parse_host_eff|htmlspecialchars}</span>
+          <button class="copy-btn" data-text="{$parse_host_eff|htmlspecialchars}">复制</button>
         </div>
       </div>
     </div>
@@ -465,8 +467,8 @@
       <div class="api-group">
         <div class="api-group-title">M3U8 解析接口</div>
         <div class="api-row">
-          <span class="api-box primary">{$cfg.player_host|htmlspecialchars}</span>
-          <button class="copy-btn" data-text="{$cfg.player_host|htmlspecialchars}">复制</button>
+          <span class="api-box primary">{$parse_host_eff|htmlspecialchars}</span>
+          <button class="copy-btn" data-text="{$parse_host_eff|htmlspecialchars}">复制</button>
         </div>
       </div>
       <div class="api-row">
@@ -509,8 +511,8 @@
       <div class="api-group">
         <div class="api-group-title">M3U8 解析接口</div>
         <div class="api-row">
-          <span class="api-box primary">{$cfg.player_host|htmlspecialchars}</span>
-          <button class="copy-btn" data-text="{$cfg.player_host|htmlspecialchars}">复制</button>
+          <span class="api-box primary">{$parse_host_eff|htmlspecialchars}</span>
+          <button class="copy-btn" data-text="{$parse_host_eff|htmlspecialchars}">复制</button>
         </div>
       </div>
       <div class="api-row">
@@ -533,6 +535,7 @@
     </div>
   </div>
 
+  {if $newart_show}
   <!-- Tab 10: 新闻演员 -->
   <div class="help-tab" id="tab-newart">
     <div class="help-card">
@@ -543,8 +546,8 @@
         <div class="api-group-title">新闻接口 <span class="api-tag tag-json">JSON</span></div>
         <div class="api-row">
           <span class="api-label">主接口</span>
-          <span class="api-box primary">{$cfg.api_host|htmlspecialchars}api.php/provide/art/</span>
-          <button class="copy-btn" data-text="{$cfg.api_host|htmlspecialchars}api.php/provide/art/">复制</button>
+          <span class="api-box primary">{$newart_api_host_eff|htmlspecialchars}api.php/provide/art/</span>
+          <button class="copy-btn" data-text="{$newart_api_host_eff|htmlspecialchars}api.php/provide/art/">复制</button>
         </div>
         {if !empty($cfg.api_host_backup)}
         <div class="api-row">
@@ -559,8 +562,8 @@
         <div class="api-group-title">演员接口 <span class="api-tag tag-json">JSON</span></div>
         <div class="api-row">
           <span class="api-label">主接口</span>
-          <span class="api-box primary">{$cfg.api_host|htmlspecialchars}api.php/provide/actor/</span>
-          <button class="copy-btn" data-text="{$cfg.api_host|htmlspecialchars}api.php/provide/actor/">复制</button>
+          <span class="api-box primary">{$newart_api_host_eff|htmlspecialchars}api.php/provide/actor/</span>
+          <button class="copy-btn" data-text="{$newart_api_host_eff|htmlspecialchars}api.php/provide/actor/">复制</button>
         </div>
         {if !empty($cfg.api_host_backup)}
         <div class="api-row">
@@ -581,6 +584,7 @@
       </ol>
     </div>
   </div>
+  {/if}
 
 </div>
 </div>
