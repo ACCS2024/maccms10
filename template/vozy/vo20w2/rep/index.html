@@ -1,294 +1,262 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
+<!doctype html>
+<html>
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="utf-8">
 <title>替换助手 - {$site_name}</title>
-<script src="https://cdn.tailwindcss.com"></script>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+{include file="public/include"}
+<style>
+.rep-wrap{padding:20px 0 40px;}
+.rep-toolbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;background:#fff;border:1px solid #e8e8e8;border-radius:4px;padding:14px 18px;margin-bottom:16px;}
+.rep-toolbar h1{font-size:18px;color:#333;font-weight:bold;margin:0;}
+.rep-toolbar p{color:#888;font-size:13px;margin:2px 0 0;}
+.rep-stats{display:flex;gap:16px;}
+.rep-stat{text-align:center;background:#f5f5f5;border-radius:4px;padding:8px 16px;min-width:64px;}
+.rep-stat strong{display:block;font-size:20px;font-weight:bold;color:#0b87e7;}
+.rep-stat span{font-size:12px;color:#999;}
+.rep-stat.stat-new strong{color:#e74c3c;}
+.rep-stat.stat-ok strong{color:#27ae60;}
+.rep-tip{background:#fffbe6;border:1px solid #ffe58f;border-radius:4px;padding:10px 16px;margin-bottom:16px;font-size:13px;color:#795500;display:flex;align-items:flex-start;justify-content:space-between;gap:10px;}
+.rep-tip-close{background:none;border:none;cursor:pointer;font-size:16px;color:#aaa;line-height:1;padding:0;flex-shrink:0;}
+.rep-tip-close:hover{color:#666;}
+.rep-empty{background:#fff;border:1px solid #e8e8e8;border-radius:4px;padding:60px 20px;text-align:center;color:#aaa;}
+.rep-empty .rep-empty-icon{font-size:48px;display:block;margin-bottom:12px;}
+.rep-card{background:#fff;border:1px solid #e8e8e8;border-radius:4px;margin-bottom:12px;transition:box-shadow .2s;cursor:pointer;}
+.rep-card:hover{box-shadow:0 2px 8px rgba(0,0,0,.1);}
+.rep-card.is-viewed{opacity:.65;}
+.rep-card-body{padding:16px 18px;}
+.rep-card-meta{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px;}
+.rep-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:12px;line-height:18px;}
+.rep-badge.b-new{background:#e74c3c;color:#fff;}
+.rep-badge.b-viewed{background:#bbb;color:#fff;}
+.rep-badge.b-applied{background:#27ae60;color:#fff;}
+.rep-badge.b-type{background:#e8f4ff;color:#0b87e7;border:1px solid #bde0ff;}
+.rep-badge.b-hidden{display:none;}
+.rep-date{color:#999;font-size:12px;}
+.rep-fields{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;}
+@media(max-width:640px){.rep-fields{grid-template-columns:1fr;}}
+.rep-field label{display:block;font-size:12px;color:#666;margin-bottom:4px;font-weight:bold;}
+.rep-field-val{background:#fff5f5;border:1px solid #ffd6d6;border-radius:3px;padding:8px 10px;font-size:13px;color:#c0392b;word-break:break-all;line-height:1.5;}
+.rep-field-val.rep-repl{background:#f0fff4;border-color:#b7ebc8;color:#1a7340;}
+.rep-card-foot{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+.rep-actions{display:flex;gap:8px;flex-wrap:wrap;}
+.rep-btn{display:inline-block;padding:5px 14px;border-radius:3px;font-size:13px;cursor:pointer;border:none;line-height:1.6;transition:opacity .15s;}
+.rep-btn:hover{opacity:.85;}
+.rep-btn.btn-green{background:#27ae60;color:#fff;}
+.rep-btn.btn-blue{background:#0b87e7;color:#fff;}
+.rep-note{font-size:12px;color:#999;font-style:italic;}
+.rep-modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9000;align-items:center;justify-content:center;}
+.rep-modal-bg.show{display:flex;}
+.rep-modal{background:#fff;border-radius:6px;width:90%;max-width:600px;max-height:90vh;overflow-y:auto;box-shadow:0 4px 20px rgba(0,0,0,.2);}
+.rep-modal-head{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid #eee;}
+.rep-modal-head h3{font-size:16px;font-weight:bold;color:#333;margin:0;}
+.rep-modal-close{background:none;border:none;font-size:20px;color:#aaa;cursor:pointer;line-height:1;}
+.rep-modal-close:hover{color:#333;}
+.rep-modal-body{padding:16px 18px;}
+.rep-sql-block{background:#1a1a2e;border-radius:4px;padding:14px;margin-bottom:12px;overflow-x:auto;}
+.rep-sql-block pre{color:#4ecca3;font-size:13px;font-family:Consolas,monospace;margin:0;white-space:pre-wrap;word-break:break-all;}
+.rep-warn{background:#fffbe6;border:1px solid #ffe58f;border-radius:3px;padding:8px 12px;font-size:12px;color:#795500;margin-bottom:12px;}
+.rep-modal-foot{display:flex;gap:10px;}
+.rep-modal-foot .rep-btn{flex:1;text-align:center;padding:8px;}
+.btn-gray{background:#e8e8e8;color:#555;}
+.rep-tutorial h4{font-size:15px;font-weight:bold;margin-bottom:12px;color:#333;}
+.rep-tutorial ol{padding-left:20px;color:#555;font-size:13px;line-height:2;}
+.rep-tutorial code{background:#f0f0f0;padding:1px 5px;border-radius:2px;font-size:12px;}
+.rep-tutorial .tip-box{background:#e8f4ff;border-left:3px solid #0b87e7;padding:8px 12px;border-radius:0 3px 3px 0;font-size:12px;color:#1a5fa8;margin:8px 0;}
+</style>
 </head>
-<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
+{include file="public/head"}
+<div class="width1200 rep-wrap">
 
-<div class="container mx-auto px-4 py-8 max-w-4xl">
-
-  <!-- Header -->
-  <div class="bg-white rounded-2xl shadow-lg p-6 mb-6">
-    <div class="flex items-center justify-between flex-wrap gap-4">
-      <div class="flex items-center space-x-4">
-        <div class="w-12 h-12 bg-indigo-600 rounded-xl flex items-center justify-center">
-          <i class="fas fa-exchange-alt text-white text-xl"></i>
-        </div>
-        <div>
-          <h1 class="text-2xl font-bold text-gray-800">替换助手</h1>
-          <p class="text-gray-500 text-sm">MacCMS 数据批量替换记录</p>
-        </div>
-      </div>
-      <div class="flex gap-4 text-center">
-        <div class="bg-indigo-50 rounded-xl px-4 py-2">
-          <div class="text-2xl font-bold text-indigo-600" id="newRecordsCount">0</div>
-          <div class="text-xs text-gray-500">新记录</div>
-        </div>
-        <div class="bg-green-50 rounded-xl px-4 py-2">
-          <div class="text-2xl font-bold text-green-600" id="viewedCount">0</div>
-          <div class="text-xs text-gray-500">已查看</div>
-        </div>
-        <div class="bg-gray-50 rounded-xl px-4 py-2">
-          <div class="text-2xl font-bold text-gray-600">{$list|count}</div>
-          <div class="text-xs text-gray-500">总记录</div>
-        </div>
-      </div>
+  <!-- 顶部信息栏 -->
+  <div class="rep-toolbar">
+    <div>
+      <h1>替换助手</h1>
+      <p>站长发布的 MacCMS 数据替换记录，按提示操作即可</p>
+    </div>
+    <div class="rep-stats">
+      <div class="rep-stat stat-new"><strong id="statNew">0</strong><span>新记录</span></div>
+      <div class="rep-stat stat-ok"><strong id="statViewed">0</strong><span>已查看</span></div>
+      <div class="rep-stat"><strong>{$list|count}</strong><span>全部</span></div>
     </div>
   </div>
 
-  <!-- Smart Tip -->
-  <div id="smartTip" class="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
-    <div class="flex items-start justify-between">
-      <div class="flex items-start space-x-3">
-        <i class="fas fa-lightbulb text-blue-500 mt-0.5"></i>
-        <div id="tipContent" class="text-sm text-blue-700">
-          <p>正在加载提示信息...</p>
-        </div>
-      </div>
-      <button onclick="hideTip()" class="text-blue-400 hover:text-blue-600 ml-4 flex-shrink-0">
-        <i class="fas fa-times"></i>
-      </button>
-    </div>
+  <!-- 温馨提示 -->
+  <div class="rep-tip" id="repTip">
+    <span id="repTipText">正在计算新记录数量…</span>
+    <button class="rep-tip-close" onclick="hideTip()">✕</button>
   </div>
 
-  <!-- Records -->
-  <div class="space-y-4">
-    {if empty($list)}
-    <div class="bg-white rounded-lg shadow-md p-8 text-center">
-      <i class="fas fa-inbox text-6xl text-gray-300 mb-4"></i>
-      <h3 class="text-xl font-semibold text-gray-600 mb-2">暂无替换记录</h3>
-      <p class="text-gray-500">管理员暂未添加替换内容，请稍后查看</p>
-    </div>
-    {else/}
-    {foreach $list as $index => $item}
-    <div class="replacement-item bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow cursor-pointer"
-         data-id="{$item.rep_id}"
-         data-time="{$item.rep_create_time}"
-         onclick="markAsViewed(this)">
-      <div class="p-6">
-        <div class="flex justify-between items-start mb-4">
-          <div class="flex-1">
-            <div class="flex items-center flex-wrap gap-2 mb-3">
-              <span class="new-badge hidden inline-block px-2 py-1 bg-green-500 text-white text-xs rounded-full">
-                <i class="fas fa-star mr-1"></i>新
-              </span>
-              <span class="viewed-badge hidden inline-block px-2 py-1 bg-gray-400 text-white text-xs rounded-full">
-                <i class="fas fa-check mr-1"></i>已看
-              </span>
-              {if $item.rep_applied eq 1}
-              <span class="inline-block px-2 py-1 bg-emerald-100 text-emerald-700 text-xs rounded-full">
-                <i class="fas fa-database mr-1"></i>已执行
-              </span>
-              {/if}
-              <span class="inline-block px-3 py-1 bg-indigo-100 text-indigo-800 text-sm rounded-full">
-                {$item.rep_type|htmlspecialchars}
-              </span>
-              <span class="text-gray-500 text-sm">
-                <i class="fas fa-calendar mr-1"></i>
-                {:date('Y-m-d H:i', $item['rep_create_time'])}
-              </span>
-            </div>
-            <div class="grid md:grid-cols-2 gap-4">
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">原内容：</label>
-                <div class="bg-red-50 p-3 rounded border text-sm text-red-800 break-all">{$item.rep_original|htmlspecialchars}</div>
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">替换为：</label>
-                <div class="bg-green-50 p-3 rounded border text-sm text-green-800 break-all">{$item.rep_replacement|htmlspecialchars}</div>
-              </div>
-            </div>
-          </div>
+  <!-- 记录列表 -->
+  {if empty($list)}
+  <div class="rep-empty">
+    <span class="rep-empty-icon">📭</span>
+    <strong>暂无替换记录</strong>
+    <p style="margin-top:8px;font-size:13px;">管理员暂未发布替换内容，请稍后查看</p>
+  </div>
+  {else/}
+  {foreach $list as $index => $item}
+  <div class="rep-card" id="rep-{$item.rep_id}" data-id="{$item.rep_id}" data-ts="{$item.rep_create_time}" onclick="markViewed(this)">
+    <div class="rep-card-body">
+      <div class="rep-card-meta">
+        <span class="rep-badge b-new b-hidden">★ 新</span>
+        <span class="rep-badge b-viewed b-hidden">✓ 已看</span>
+        {if $item.rep_applied eq 1}<span class="rep-badge b-applied">✔ 已执行</span>{/if}
+        <span class="rep-badge b-type">{$item.rep_type|htmlspecialchars}</span>
+        <span class="rep-date">{:date('Y-m-d H:i', $item['rep_create_time'])}</span>
+      </div>
+      <div class="rep-fields">
+        <div class="rep-field">
+          <label>原内容</label>
+          <div class="rep-field-val">{$item.rep_original|htmlspecialchars}</div>
         </div>
-        <div class="flex justify-between items-center flex-wrap gap-3">
-          <div class="flex gap-2 flex-wrap">
-            {if $item.rep_type eq '播放器替换'}
-            <button onclick="event.stopPropagation();showTutorial('{$item.rep_type|htmlspecialchars}')"
-                    class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition text-sm">
-              <i class="fas fa-cog mr-2"></i>后台设置（推荐）
-            </button>
-            {else/}
-            <button onclick="event.stopPropagation();showTutorial('{$item.rep_type|htmlspecialchars}')"
-                    class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition text-sm">
-              <i class="fas fa-book mr-2"></i>后台操作（推荐）
-            </button>
-            <button onclick="event.stopPropagation();generateSQL({$index}, replacements)"
-                    class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition text-sm">
-              <i class="fas fa-database mr-2"></i>SQL 命令（进阶）
-            </button>
-            {/if}
-          </div>
-          {if !empty($item.rep_note)}
-          <div class="text-sm text-gray-500 italic">
-            <i class="fas fa-sticky-note mr-1"></i>{$item.rep_note|htmlspecialchars}
-          </div>
+        <div class="rep-field">
+          <label>替换为</label>
+          <div class="rep-field-val rep-repl">{$item.rep_replacement|htmlspecialchars}</div>
+        </div>
+      </div>
+      <div class="rep-card-foot">
+        <div class="rep-actions">
+          {if $item.rep_type eq '播放器替换'}
+          <button class="rep-btn btn-green" onclick="event.stopPropagation();showTutorial('{$item.rep_type|htmlspecialchars}')">后台设置（推荐）</button>
+          {else/}
+          <button class="rep-btn btn-green" onclick="event.stopPropagation();showTutorial('{$item.rep_type|htmlspecialchars}')">后台操作（推荐）</button>
+          <button class="rep-btn btn-blue" onclick="event.stopPropagation();showSQL({$index})">复制 SQL（进阶）</button>
           {/if}
         </div>
+        {if !empty($item.rep_note)}
+        <span class="rep-note">备注：{$item.rep_note|htmlspecialchars}</span>
+        {/if}
       </div>
     </div>
-    {/foreach}
-    {/if}
   </div>
+  {/foreach}
+  {/if}
 
 </div>
 
-<!-- SQL Modal -->
-<div id="sqlModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl">
-    <div class="p-6">
-      <div class="flex items-center justify-between mb-4">
-        <h3 class="text-lg font-bold text-gray-800"><i class="fas fa-database mr-2 text-blue-600"></i>SQL 命令</h3>
-        <button onclick="hideSQLModal()" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times text-xl"></i></button>
-      </div>
-      <div class="bg-gray-900 rounded-lg p-4 mb-4">
-        <pre id="sqlContent" class="text-green-400 text-sm overflow-x-auto whitespace-pre-wrap"></pre>
-      </div>
-      <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4 text-sm text-yellow-800">
-        <i class="fas fa-exclamation-triangle mr-2"></i>
-        执行前请备份数据库。直接在 phpMyAdmin 或 MacCMS 后台数据库管理中执行。
-      </div>
-      <div class="flex gap-3">
-        <button onclick="copySQLToClipboard()" class="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition">
-          <i class="fas fa-copy mr-2"></i>复制 SQL
-        </button>
-        <button onclick="hideSQLModal()" class="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg hover:bg-gray-300 transition">关闭</button>
+<!-- SQL 弹窗 -->
+<div class="rep-modal-bg" id="sqlModal">
+  <div class="rep-modal">
+    <div class="rep-modal-head">
+      <h3>SQL 命令</h3>
+      <button class="rep-modal-close" onclick="closeModal('sqlModal')">✕</button>
+    </div>
+    <div class="rep-modal-body">
+      <div class="rep-sql-block"><pre id="sqlContent"></pre></div>
+      <div class="rep-warn">⚠ 执行前请备份数据库。将 SQL 粘贴到 phpMyAdmin 或 MacCMS 后台「数据库」中执行。</div>
+      <div class="rep-modal-foot">
+        <button class="rep-btn btn-blue" onclick="copySQL()">复制 SQL</button>
+        <button class="rep-btn btn-gray" onclick="closeModal('sqlModal')">关闭</button>
       </div>
     </div>
   </div>
 </div>
 
-<!-- Tutorial Modal -->
-<div id="tutorialModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-screen overflow-y-auto">
-    <div class="p-6">
-      <div class="flex items-center justify-between mb-4">
-        <h3 class="text-lg font-bold text-gray-800"><i class="fas fa-book mr-2 text-green-600"></i>操作教程</h3>
-        <button onclick="hideTutorialModal()" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times text-xl"></i></button>
+<!-- 教程弹窗 -->
+<div class="rep-modal-bg" id="tutorialModal">
+  <div class="rep-modal">
+    <div class="rep-modal-head">
+      <h3>操作教程</h3>
+      <button class="rep-modal-close" onclick="closeModal('tutorialModal')">✕</button>
+    </div>
+    <div class="rep-modal-body">
+      <div class="rep-tutorial" id="tutorialContent"></div>
+      <div class="rep-modal-foot" style="margin-top:16px;">
+        <button class="rep-btn btn-gray" onclick="closeModal('tutorialModal')">关闭</button>
       </div>
-      <div id="tutorialContent"></div>
-      <button onclick="hideTutorialModal()" class="w-full mt-4 bg-gray-200 text-gray-700 py-2 rounded-lg hover:bg-gray-300 transition">关闭</button>
     </div>
   </div>
 </div>
 
+{include file="public/foot"}
 <script>
-const replacements = {php}echo json_encode($list, JSON_HEX_TAG|JSON_HEX_AMP|JSON_UNESCAPED_UNICODE);{/php};
+var repList = {php}echo json_encode($list, JSON_HEX_TAG|JSON_HEX_AMP|JSON_UNESCAPED_UNICODE);{/php};
 
-function hideSQLModal() { document.getElementById('sqlModal').classList.add('hidden'); }
-function showSQLModal() { document.getElementById('sqlModal').classList.remove('hidden'); }
-function hideTutorialModal() { document.getElementById('tutorialModal').classList.add('hidden'); }
-function showTutorialModal() { document.getElementById('tutorialModal').classList.remove('hidden'); }
+// Modal
+function closeModal(id){document.getElementById(id).classList.remove('show');}
+document.querySelectorAll('.rep-modal-bg').forEach(function(m){
+  m.addEventListener('click',function(e){if(e.target===m)m.classList.remove('show');});
+});
 
-function generateSQL(index, list) {
-    const item = list[index];
-    const typeMap = {
-        '文章图片替换': [
-            `UPDATE mac_art SET art_pic = REPLACE(art_pic, '${escSQL(item.rep_original)}', '${escSQL(item.rep_replacement)}');`,
-            `UPDATE mac_art SET art_content = REPLACE(art_content, '${escSQL(item.rep_original)}', '${escSQL(item.rep_replacement)}');`
-        ],
-        '视频封面替换': [
-            `UPDATE mac_vod SET vod_pic = REPLACE(vod_pic, '${escSQL(item.rep_original)}', '${escSQL(item.rep_replacement)}');`
-        ],
-        '视频播放地址': [
-            `UPDATE mac_vod SET vod_play_url = REPLACE(vod_play_url, '${escSQL(item.rep_original)}', '${escSQL(item.rep_replacement)}');`
-        ],
-        '播放器替换': [
-            `UPDATE mac_vod SET vod_play_from = REPLACE(vod_play_from, '${escSQL(item.rep_original)}', '${escSQL(item.rep_replacement)}');`,
-            `UPDATE mac_vod SET vod_play_server = REPLACE(vod_play_server, '${escSQL(item.rep_original)}', '${escSQL(item.rep_replacement)}');`
-        ],
-        '域名替换': [
-            `UPDATE mac_vod SET vod_play_url = REPLACE(vod_play_url, '${escSQL(item.rep_original)}', '${escSQL(item.rep_replacement)}');`,
-            `UPDATE mac_vod SET vod_pic = REPLACE(vod_pic, '${escSQL(item.rep_original)}', '${escSQL(item.rep_replacement)}');`,
-            `UPDATE mac_art SET art_content = REPLACE(art_content, '${escSQL(item.rep_original)}', '${escSQL(item.rep_replacement)}');`,
-            `UPDATE mac_art SET art_pic = REPLACE(art_pic, '${escSQL(item.rep_original)}', '${escSQL(item.rep_replacement)}');`
-        ]
-    };
-    const sqls = typeMap[item.rep_type] || [`-- 自定义替换: UPDATE 表名 SET 字段 = REPLACE(字段, '${escSQL(item.rep_original)}', '${escSQL(item.rep_replacement)}');`];
-    document.getElementById('sqlContent').textContent = sqls.join('\n');
-    showSQLModal();
+// SQL生成
+var typeSQL={
+  '文章图片替换':function(o,r){return"UPDATE mac_art SET art_pic=REPLACE(art_pic,'"+esc(o)+"','"+esc(r)+"');\nUPDATE mac_art SET art_content=REPLACE(art_content,'"+esc(o)+"','"+esc(r)+"');";},
+  '视频封面替换':function(o,r){return"UPDATE mac_vod SET vod_pic=REPLACE(vod_pic,'"+esc(o)+"','"+esc(r)+"');";},
+  '视频播放地址':function(o,r){return"UPDATE mac_vod SET vod_play_url=REPLACE(vod_play_url,'"+esc(o)+"','"+esc(r)+"');";},
+  '播放器替换':function(o,r){return"UPDATE mac_vod SET vod_play_from=REPLACE(vod_play_from,'"+esc(o)+"','"+esc(r)+"');\nUPDATE mac_vod SET vod_play_server=REPLACE(vod_play_server,'"+esc(o)+"','"+esc(r)+"');";},
+  '域名替换':function(o,r){return"UPDATE mac_vod SET vod_play_url=REPLACE(vod_play_url,'"+esc(o)+"','"+esc(r)+"');\nUPDATE mac_vod SET vod_pic=REPLACE(vod_pic,'"+esc(o)+"','"+esc(r)+"');\nUPDATE mac_art SET art_content=REPLACE(art_content,'"+esc(o)+"','"+esc(r)+"');\nUPDATE mac_art SET art_pic=REPLACE(art_pic,'"+esc(o)+"','"+esc(r)+"');";}
+};
+function esc(s){return s.replace(/\\/g,'\\\\').replace(/'/g,"\\'");}
+function showSQL(idx){
+  var item=repList[idx];
+  var fn=typeSQL[item.rep_type];
+  document.getElementById('sqlContent').textContent=fn?fn(item.rep_original,item.rep_replacement):"-- 自定义替换，请根据需求修改字段\nUPDATE 表名 SET 字段=REPLACE(字段,'"+esc(item.rep_original)+"','"+esc(item.rep_replacement)+"');";
+  document.getElementById('sqlModal').classList.add('show');
+}
+function copySQL(){
+  var t=document.getElementById('sqlContent').textContent;
+  if(navigator.clipboard){navigator.clipboard.writeText(t).then(function(){alert('SQL 已复制！');});}
+  else{var ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);alert('SQL 已复制！');}
 }
 
-function escSQL(s) { return s.replace(/'/g, "\\'"); }
-
-function copySQLToClipboard() {
-    const sql = document.getElementById('sqlContent').textContent;
-    navigator.clipboard.writeText(sql).then(() => alert('SQL 已复制到剪贴板！'));
+// 教程
+var tutorials={
+  '文章图片替换':'<h4>文章图片替换</h4><div class="tip-box">推荐使用 MacCMS 后台自带的数据批量替换功能</div><ol><li>登录 MacCMS 管理后台</li><li>后台 → 数据库 → 数据批量替换</li><li>选择表 <code>mac_art</code>，字段 <code>art_pic</code>，填入原内容和新内容，点执行</li><li>重复，字段改为 <code>art_content</code></li><li>清理缓存，前台验证图片正常</li></ol>',
+  '视频封面替换':'<h4>视频封面替换</h4><div class="tip-box">推荐使用 MacCMS 后台自带的数据批量替换功能</div><ol><li>登录 MacCMS 管理后台</li><li>后台 → 数据库 → 数据批量替换</li><li>选择表 <code>mac_vod</code>，字段 <code>vod_pic</code>，填入原内容和新内容，点执行</li><li>清理缓存，前台验证封面正常</li></ol>',
+  '视频播放地址':'<h4>视频播放地址替换</h4><div class="tip-box">推荐使用 MacCMS 后台自带的数据批量替换功能</div><ol><li>登录 MacCMS 管理后台</li><li>后台 → 数据库 → 数据批量替换</li><li>选择表 <code>mac_vod</code>，字段 <code>vod_play_url</code>，填入原内容和新内容，点执行</li><li>随机选几个视频播放测试</li></ol>',
+  '播放器替换':'<h4>播放器接口替换</h4><div class="tip-box">播放器替换通过后台播放器管理完成，无需操作数据库</div><ol><li>登录 MacCMS 管理后台</li><li>视频 → 播放器，找到当前使用的播放器</li><li>点编辑，修改解析接口地址为新地址</li><li>保存，前台播放测试</li></ol>',
+  '域名替换':'<h4>域名批量替换</h4><div class="tip-box">推荐使用 MacCMS 后台自带的数据批量替换功能</div><ol><li>登录 MacCMS 管理后台</li><li>后台 → 数据库 → 数据批量替换</li><li>依次替换：<code>mac_vod</code> 的 <code>vod_play_url</code>、<code>vod_pic</code>，以及 <code>mac_art</code> 的 <code>art_content</code>、<code>art_pic</code></li><li>清理缓存，全站验证</li></ol>'
+};
+function showTutorial(type){
+  document.getElementById('tutorialContent').innerHTML=tutorials[type]||'<p style="color:#999;font-size:13px;">请根据类型在后台进行相应操作。</p>';
+  document.getElementById('tutorialModal').classList.add('show');
 }
+function hideTip(){document.getElementById('repTip').style.display='none';}
 
-function showTutorial(type) {
-    const tutorials = {
-        '文章图片替换': '<h4 class="font-bold mb-3">文章图片替换</h4><ol class="list-decimal list-inside space-y-2 text-sm"><li>登录 MacCMS 管理后台</li><li>后台 → 数据库 → 数据批量替换</li><li>选择表 <code class="bg-gray-100 px-1 rounded">mac_art</code>，字段 <code class="bg-gray-100 px-1 rounded">art_pic</code>，填入原内容和新内容，执行</li><li>重复上步，字段改为 <code class="bg-gray-100 px-1 rounded">art_content</code></li></ol>',
-        '视频封面替换': '<h4 class="font-bold mb-3">视频封面替换</h4><ol class="list-decimal list-inside space-y-2 text-sm"><li>登录 MacCMS 管理后台</li><li>后台 → 数据库 → 数据批量替换</li><li>选择表 <code class="bg-gray-100 px-1 rounded">mac_vod</code>，字段 <code class="bg-gray-100 px-1 rounded">vod_pic</code>，填入原内容和新内容，执行</li></ol>',
-        '视频播放地址': '<h4 class="font-bold mb-3">视频播放地址替换</h4><ol class="list-decimal list-inside space-y-2 text-sm"><li>登录 MacCMS 管理后台</li><li>后台 → 数据库 → 数据批量替换</li><li>选择表 <code class="bg-gray-100 px-1 rounded">mac_vod</code>，字段 <code class="bg-gray-100 px-1 rounded">vod_play_url</code>，填入原内容和新内容，执行</li></ol>',
-        '播放器替换': '<h4 class="font-bold mb-3">播放器接口替换</h4><ol class="list-decimal list-inside space-y-2 text-sm"><li>登录 MacCMS 管理后台</li><li>视频 → 播放器，找到对应播放器</li><li>编辑播放器，修改解析接口地址</li><li>保存</li></ol>',
-        '域名替换': '<h4 class="font-bold mb-3">域名批量替换</h4><ol class="list-decimal list-inside space-y-2 text-sm"><li>登录 MacCMS 管理后台</li><li>后台 → 数据库 → 数据批量替换</li><li>依次替换 mac_vod 的 vod_play_url / vod_pic 和 mac_art 的 art_content / art_pic</li></ol>'
-    };
-    document.getElementById('tutorialContent').innerHTML = tutorials[type] || '<p class="text-sm text-gray-600">请根据类型在后台进行相应操作。</p>';
-    showTutorialModal();
+// 已读状态
+var SK='macrep_v3',LK='macrep_lv3';
+function getViewed(){try{return JSON.parse(localStorage.getItem(SK)||'[]');}catch(e){return[];}}
+function saveViewed(id){var v=getViewed();if(v.indexOf(String(id))<0){v.push(String(id));localStorage.setItem(SK,JSON.stringify(v));}}
+function markViewed(el){
+  saveViewed(el.dataset.id);
+  el.querySelector('.b-new').classList.add('b-hidden');
+  el.querySelector('.b-viewed').classList.remove('b-hidden');
+  el.classList.add('is-viewed');
+  updateStats();
 }
-
-function hideTip() { document.getElementById('smartTip').style.display = 'none'; }
-
-const STORAGE_KEY = 'macrep_viewed';
-const LAST_VISIT_KEY = 'macrep_last_visit';
-
-function getViewed() { try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); } catch(e) { return []; } }
-function saveViewed(id) {
-    const v = getViewed();
-    if (!v.includes(String(id))) { v.push(String(id)); localStorage.setItem(STORAGE_KEY, JSON.stringify(v)); }
+function updateStats(){
+  var t=document.querySelectorAll('.rep-card').length;
+  var v=document.querySelectorAll('.rep-card.is-viewed').length;
+  document.getElementById('statNew').textContent=t-v;
+  document.getElementById('statViewed').textContent=v;
 }
-
-function markAsViewed(el) {
-    saveViewed(el.dataset.id);
-    el.querySelector('.new-badge').classList.add('hidden');
-    el.querySelector('.viewed-badge').classList.remove('hidden');
-    el.classList.add('opacity-75');
-    updateStats();
-}
-
-function updateStats() {
-    const items = document.querySelectorAll('.replacement-item');
-    const viewed = document.querySelectorAll('.replacement-item.opacity-75').length;
-    document.getElementById('newRecordsCount').textContent = items.length - viewed;
-    document.getElementById('viewedCount').textContent = viewed;
-}
-
-document.addEventListener('DOMContentLoaded', function() {
-    const lastVisit = localStorage.getItem(LAST_VISIT_KEY);
-    const viewed = getViewed();
-    let newCount = 0, viewedCount = 0;
-
-    document.querySelectorAll('.replacement-item').forEach(el => {
-        const id = el.dataset.id;
-        const ts = parseInt(el.dataset.time) * 1000;
-        if (viewed.includes(String(id))) {
-            el.querySelector('.new-badge').classList.add('hidden');
-            el.querySelector('.viewed-badge').classList.remove('hidden');
-            el.classList.add('opacity-75');
-            viewedCount++;
-        } else if (!lastVisit || ts > parseInt(lastVisit)) {
-            el.querySelector('.new-badge').classList.remove('hidden');
-            newCount++;
-        }
-    });
-
-    document.getElementById('newRecordsCount').textContent = newCount;
-    document.getElementById('viewedCount').textContent = viewedCount;
-
-    const tip = document.getElementById('tipContent');
-    if (newCount > 0) {
-        tip.innerHTML = `<p><strong>💡 提示：</strong>发现 <strong class="text-green-600">${newCount}</strong> 条新记录，只需执行这些新增替换，无需重复执行已完成的操作。<br><span class="text-xs">点击记录可标记为已查看。</span></p>`;
-    } else if (viewedCount === replacements.length && replacements.length > 0) {
-        tip.innerHTML = '<p><strong>✅ 已查看全部记录</strong>，当前没有需要执行的新操作。</p>';
-    } else {
-        tip.innerHTML = '<p><strong>💡 提示：</strong>只需执行未查看的替换记录，无需重复执行已完成的操作。<span class="text-xs ml-2">点击记录可标记为已查看。</span></p>';
+$(function(){
+  var lastVisit=localStorage.getItem(LK);
+  var viewed=getViewed();
+  var newCnt=0,viewedCnt=0;
+  document.querySelectorAll('.rep-card').forEach(function(el){
+    var id=el.dataset.id,ts=parseInt(el.dataset.ts)*1000;
+    if(viewed.indexOf(String(id))>=0){
+      el.querySelector('.b-new').classList.add('b-hidden');
+      el.querySelector('.b-viewed').classList.remove('b-hidden');
+      el.classList.add('is-viewed');
+      viewedCnt++;
+    } else if(!lastVisit||ts>parseInt(lastVisit)){
+      el.querySelector('.b-new').classList.remove('b-hidden');
+      newCnt++;
     }
-
-    localStorage.setItem(LAST_VISIT_KEY, Date.now().toString());
+  });
+  document.getElementById('statNew').textContent=newCnt;
+  document.getElementById('statViewed').textContent=viewedCnt;
+  var tip=document.getElementById('repTipText');
+  if(newCnt>0){
+    tip.innerHTML='<strong>💡 提示：</strong>发现 <strong style="color:#e74c3c">'+newCnt+'</strong> 条新记录，只需执行这些新增替换，无需重复已完成的操作。点击记录可标记为已查看。';
+  } else if(repList.length>0&&viewedCnt===repList.length){
+    tip.innerHTML='<strong>✅ 全部已查看，</strong>当前没有需要执行的新操作。';
+  } else {
+    tip.innerHTML='<strong>💡 提示：</strong>点击记录可标记为已查看，只需执行未查看的替换记录。';
+  }
+  localStorage.setItem(LK,Date.now().toString());
 });
 </script>
 </body>
