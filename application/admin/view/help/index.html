@@ -46,10 +46,22 @@
                         </div>
 
                         <div class="layui-form-item">
-                            <label class="layui-form-label">API采集接口地址</label>
+                            <label class="layui-form-label">API主域名</label>
                             <div class="layui-input-block">
                                 <input type="text" name="api_host" class="layui-input"
-                                    value="{$cfg.api_host|htmlspecialchars}" autocomplete="off">
+                                    value="{$cfg.api_host|htmlspecialchars}"
+                                    placeholder="含协议和末尾斜杠，如 https://bfzyapi.com/" autocomplete="off">
+                                <div class="layui-form-mid layui-word-aux">相对路径固定（api.php/provide/vod/ 等），只需填域名部分</div>
+                            </div>
+                        </div>
+
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">API备用域名</label>
+                            <div class="layui-input-block">
+                                <input type="text" name="api_host_backup" class="layui-input"
+                                    value="{$cfg.api_host_backup|htmlspecialchars}"
+                                    placeholder="选填，如 https://by.bfzyapi.com/" autocomplete="off">
+                                <div class="layui-form-mid layui-word-aux">留空则前台不展示备用接口</div>
                             </div>
                         </div>
 
