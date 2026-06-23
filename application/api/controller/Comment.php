@@ -65,21 +65,26 @@ class Comment extends Base
         $list = [];
         if ($total > 0) {
             $list = (new \app\common\model\Comment())->getListByCond($offset, $limit, $where, $order, '*', []);
+
+            // 收集所有父评论 ID，一次查询批量加载子评论（防止 N+1）
+            $parentIds = array_column(is_array($list) ? $list : $list->toArray(), 'comment_id');
+            $subMap = [];
+            if (!empty($parentIds)) {
+                $subRows = Db::name('Comment')
+                    ->whereIn('comment_pid', $parentIds)
+                    ->where('comment_status', 1)
+                    ->order($order)
+                    ->limit(200)  // 单批父评论下子评论合计上限，防止超大结果集
+                    ->select();
+                foreach ($subRows as $row) {
+                    $rowArr = is_array($row) ? $row : $row->toArray();
+                    $subMap[(int)$rowArr['comment_pid']][] = $this->commentRowForApi($rowArr, true);
+                }
+            }
+
             foreach ($list as $k => $v) {
                 $list[$k] = $this->commentRowForApi($v, false);
-                $where2 = [
-                    'comment_pid'    => $v['comment_id'],
-                    'comment_status' => 1,
-                ];
-                $sub = Db::name('Comment')->where($where2)->order($order)->select();
-                $subArr = [];
-                if ($sub) {
-                    foreach ($sub as $row) {
-                        $rowArr = is_array($row) ? $row : $row->toArray();
-                        $subArr[] = $this->commentRowForApi($rowArr, true);
-                    }
-                }
-                $list[$k]['sub'] = $subArr;
+                $list[$k]['sub'] = $subMap[(int)$v['comment_id']] ?? [];
             }
         }
 

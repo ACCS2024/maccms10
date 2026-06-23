@@ -54,12 +54,23 @@ class Type extends Base
             $order = "type_sort DESC";
             $field = '*';
             $list = (new \app\common\model\Type())->getListByCond(0, PHP_INT_MAX, $where, $order, $field, []);
-            foreach ($list as $index => $item) {
-                $child_total = Db::table('mac_type')->where(['type_pid' => $item['type_id']])->count();
-                if ($child_total > 0) {
-                    $child = Db::table('mac_type')->where(['type_pid' => $item['type_id']])->select();
-                    $list[$index]['child'] = $child;
+
+            // 批量加载所有子分类（一次查询替代 N 次 count+select）
+            $parentIds = array_column(is_array($list) ? $list : $list->toArray(), 'type_id');
+            $childrenMap = [];
+            if (!empty($parentIds)) {
+                $allChildren = Db::table('mac_type')
+                    ->whereIn('type_pid', $parentIds)
+                    ->order('type_sort DESC')
+                    ->select();
+                foreach ($allChildren as $child) {
+                    $pid = (int)$child['type_pid'];
+                    $childrenMap[$pid][] = $child;
                 }
+            }
+            foreach ($list as $index => $item) {
+                $pid = (int)$item['type_id'];
+                $list[$index]['child'] = $childrenMap[$pid] ?? [];
             }
         }
         // 返回
@@ -136,33 +147,35 @@ class Type extends Base
         }
         $list = $query->select();
 
+        // 批量加载所有子分类（一次查询替代 N 次）
+        $parentIds = array_column(is_array($list) ? $list : (array)$list, 'type_id');
+        $childrenMap = [];
+        if (!empty($parentIds)) {
+            $allChildren = Db::table('mac_type')
+                ->whereIn('type_pid', $parentIds)
+                ->order('type_sort asc')
+                ->select();
+            foreach ($allChildren as $child) {
+                if (!empty($child['type_extend'])) {
+                    $child['type_extend'] = is_string($child['type_extend'])
+                        ? json_decode($child['type_extend'], true) : $child['type_extend'];
+                } else {
+                    $child['type_extend'] = [];
+                }
+                $child['type_link'] = mac_url_type($child, [], $linkFlag);
+                $childrenMap[(int)$child['type_pid']][] = $child;
+            }
+        }
+
         // 为每个分类附加子分类和扩展信息
         foreach ($list as $k => &$v) {
             $v['type_link'] = mac_url_type($v, [], $linkFlag);
-            // 解析 type_extend JSON
             if (!empty($v['type_extend'])) {
                 $v['type_extend'] = is_string($v['type_extend']) ? json_decode($v['type_extend'], true) : $v['type_extend'];
             } else {
                 $v['type_extend'] = [];
             }
-
-            // 获取子分类
-            $children = Db::table('mac_type')
-                ->where(['type_pid' => $v['type_id']])
-                ->order('type_sort asc')
-                ->select();
-
-            foreach ($children as &$child) {
-                $child['type_link'] = mac_url_type($child, [], $linkFlag);
-                if (!empty($child['type_extend'])) {
-                    $child['type_extend'] = is_string($child['type_extend']) ? json_decode($child['type_extend'], true) : $child['type_extend'];
-                } else {
-                    $child['type_extend'] = [];
-                }
-            }
-            unset($child);
-
-            $v['children'] = $children;
+            $v['children'] = $childrenMap[(int)$v['type_id']] ?? [];
         }
         unset($v);
 
