@@ -84,6 +84,10 @@ class Collect extends Base {
 
     /**
      * 采集完成后自动清理缓存
+     *
+     * 同一请求内只清理一次（flag 防重入）。
+     * 使用 Cache::clear() 统一走 ThinkPHP 缓存层——对 Redis 直接 FLUSHDB，
+     * 对文件缓存由框架删除 cache/ 目录，不再手动 Dir::delDir（避免双重清理）。
      */
     private function collectCacheClear()
     {
@@ -93,9 +97,9 @@ class Collect extends Base {
         $this->_cacheClearedFlag = true;
 
         try {
-            Dir::delDir(RUNTIME_PATH . 'cache/');
-            Dir::delDir(RUNTIME_PATH . 'temp/');
             Cache::clear();
+            // 仅清理页面输出临时文件（非缓存目录），不影响 Redis 用户
+            Dir::delDir(RUNTIME_PATH . 'temp/');
             mac_echo('<font color="green">[cache] ' . lang('admin/index/clear_ok') . '</font>');
         } catch (\Exception $e) {
             mac_echo('<font color="red">[cache] ' . lang('admin/index/clear_err') . '</font>');
