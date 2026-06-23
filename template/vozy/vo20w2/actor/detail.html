@@ -1,0 +1,43 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>{$obj.actor_name} - {$maccms.site_name}</title>
+  {include file="public/include"}
+  {include file="public/head"}
+</head>
+<body>
+<div class="container">
+  <div class="module">
+    <div class="actor-profile" style="display:flex;gap:20px;padding:20px 0">
+      <div class="actor-avatar" style="flex-shrink:0">
+        <img src="{$obj.actor_logo}" alt="{$obj.actor_name}" style="width:120px;border-radius:8px">
+      </div>
+      <div class="actor-info">
+        <h1 style="font-size:22px;margin-bottom:10px">{$obj.actor_name}</h1>
+        <p>{$obj.actor_blurb}</p>
+      </div>
+    </div>
+    <div class="module-heading"><span>相关影视</span></div>
+    {maccms:vod num="20" order="desc" by="time" actor="$obj['actor_name']" id="vo" key="key"}
+    <ul class="module-list">
+      {foreach $list as $vo}
+      <li>
+        <div class="module-item">
+          <a href="{:mac_url_vod_detail($vo)}" title="{$vo.vod_name}">
+            <div class="module-poster">
+              <img src="{$vo.vod_pic}" alt="{$vo.vod_name}" loading="lazy">
+            </div>
+            <div class="module-text">{$vo.vod_name}</div>
+          </a>
+        </div>
+      </li>
+      {/foreach}
+    </ul>
+    {/maccms:vod}
+  </div>
+</div>
+{include file="public/foot"}
+</body>
+</html>

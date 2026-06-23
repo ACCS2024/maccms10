@@ -1,0 +1,35 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>演员列表 - {$maccms.site_name}</title>
+  {include file="public/include"}
+  {include file="public/head"}
+</head>
+<body>
+{maccms:actor num="40" order="desc" by="id" id="vo" key="key"}
+<div class="container">
+  <div class="module">
+    <div class="module-heading"><span>演员列表</span></div>
+    <ul class="module-list col-xs-6 col-sm-4 col-lg-3">
+      {foreach $list as $vo}
+      <li>
+        <div class="module-item">
+          <a href="{:mac_url_actor($vo)}" title="{$vo.actor_name}">
+            <div class="module-poster">
+              <img src="{$vo.actor_logo}" alt="{$vo.actor_name}" loading="lazy">
+            </div>
+            <div class="module-text">{$vo.actor_name}</div>
+          </a>
+        </div>
+      </li>
+      {/foreach}
+    </ul>
+    {include file="public/paging"}
+  </div>
+</div>
+{/maccms:actor}
+{include file="public/foot"}
+</body>
+</html>

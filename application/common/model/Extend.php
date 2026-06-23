@@ -5,6 +5,7 @@ use think\facade\Cache;
 
 class Extend extends Base {
 
+    protected $schema = [];
 
     public function dataCount()
     {

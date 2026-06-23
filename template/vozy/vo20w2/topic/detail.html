@@ -1,0 +1,40 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>{$obj.topic_name} - {$maccms.site_name}</title>
+  {include file="public/include"}
+  {include file="public/head"}
+</head>
+<body>
+<div class="container">
+  <div class="module">
+    <div class="topic-banner" style="margin-bottom:20px">
+      {if !empty($obj.topic_pic)}
+      <img src="{$obj.topic_pic}" alt="{$obj.topic_name}" style="width:100%;border-radius:8px;max-height:300px;object-fit:cover">
+      {/if}
+    </div>
+    <div class="module-heading"><span>{$obj.topic_name}</span></div>
+    <p style="padding:10px 0;color:#888">{$obj.topic_blurb}</p>
+    {maccms:vod num="24" order="desc" by="time" id="vo" key="key"}
+    <ul class="module-list col-xs-6 col-sm-4 col-lg-3">
+      {foreach $list as $vo}
+      <li>
+        <div class="module-item">
+          <a href="{:mac_url_vod_detail($vo)}" title="{$vo.vod_name}">
+            <div class="module-poster">
+              <img src="{$vo.vod_pic}" alt="{$vo.vod_name}" loading="lazy">
+            </div>
+            <div class="module-text">{$vo.vod_name}</div>
+          </a>
+        </div>
+      </li>
+      {/foreach}
+    </ul>
+    {/maccms:vod}
+  </div>
+</div>
+{include file="public/foot"}
+</body>
+</html>
