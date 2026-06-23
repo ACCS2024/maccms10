@@ -85,7 +85,7 @@
               </span>
               {/if}
               <span class="inline-block px-3 py-1 bg-indigo-100 text-indigo-800 text-sm rounded-full">
-                {$item.rep_type}
+                {$item.rep_type|htmlspecialchars}
               </span>
               <span class="text-gray-500 text-sm">
                 <i class="fas fa-calendar mr-1"></i>
@@ -176,7 +176,7 @@
 </div>
 
 <script>
-const replacements = {$list|json_encode};
+const replacements = {php}echo json_encode($list, JSON_HEX_TAG|JSON_HEX_AMP|JSON_UNESCAPED_UNICODE);{/php};
 
 function hideSQLModal() { document.getElementById('sqlModal').classList.add('hidden'); }
 function showSQLModal() { document.getElementById('sqlModal').classList.remove('hidden'); }

@@ -66,4 +66,3 @@ Route::any('liveshow', 'live/show');
 Route::any('liveplay/<id>', 'live/play');
 
 Route::any('macrep', 'rep/index');
-Route::any('macrep-<page?>', 'rep/index');

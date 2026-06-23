@@ -8,14 +8,6 @@ use think\facade\Request;
 
 class Rep extends Base
 {
-    private static $typeMap = [
-        '文章图片替换' => ['art'  => ['art_pic', 'art_content']],
-        '视频封面替换' => ['vod'  => ['vod_pic']],
-        '视频播放地址' => ['vod'  => ['vod_play_url']],
-        '播放器替换'   => ['vod'  => ['vod_play_from', 'vod_play_server']],
-        '域名替换'     => ['vod'  => ['vod_play_url', 'vod_pic'], 'art' => ['art_content', 'art_pic']],
-    ];
-
     public function __construct()
     {
         parent::__construct();
@@ -28,7 +20,7 @@ class Rep extends Base
         $enabled = $GLOBALS['config']['rep']['enabled'] ?? '1';
         $this->assign('list', $list);
         $this->assign('rep_enabled', $enabled);
-        $this->assign('types', array_keys(self::$typeMap));
+        $this->assign('types', array_keys(RepModel::$typeMap));
         return $this->fetch('rep/index');
     }
 
@@ -43,16 +35,19 @@ class Rep extends Base
         if (empty($type) || empty($orig) || empty($rep)) {
             return json(['code' => 0, 'msg' => '参数不完整']);
         }
+        if (!array_key_exists($type, RepModel::$typeMap)) {
+            return json(['code' => 0, 'msg' => '不支持的替换类型']);
+        }
 
         RepModel::create([
-            'rep_type'        => $type,
-            'rep_original'    => $orig,
-            'rep_replacement' => $rep,
-            'rep_note'        => $note,
-            'rep_status'      => 1,
-            'rep_applied'     => 0,
-            'rep_applied_time'=> 0,
-            'rep_create_time' => time(),
+            'rep_type'         => $type,
+            'rep_original'     => $orig,
+            'rep_replacement'  => $rep,
+            'rep_note'         => $note,
+            'rep_status'       => 1,
+            'rep_applied'      => 0,
+            'rep_applied_time' => 0,
+            'rep_create_time'  => time(),
         ]);
 
         return json(['code' => 1, 'msg' => '添加成功']);
@@ -67,7 +62,7 @@ class Rep extends Base
         if (!is_array($ids)) {
             $ids = explode(',', $ids);
         }
-        $ids = array_filter(array_map('intval', $ids));
+        $ids = array_values(array_filter(array_map('intval', $ids)));
         if (empty($ids)) {
             return json(['code' => 0, 'msg' => '参数错误']);
         }
@@ -93,12 +88,27 @@ class Rep extends Base
     public function toggleEnabled()
     {
         $configFile = APP_PATH . 'extra/maccms.php';
-        $config     = include $configFile;
-        $current    = $config['rep']['enabled'] ?? '1';
+
+        // Atomic read-modify-write with exclusive lock
+        $fp = fopen($configFile, 'r+');
+        if (!$fp) {
+            return json(['code' => 0, 'msg' => '配置文件不可写']);
+        }
+        flock($fp, LOCK_EX);
+        $config  = include $configFile;
+        $current = $config['rep']['enabled'] ?? '1';
         $config['rep']['enabled'] = ($current === '1') ? '0' : '1';
-        file_put_contents($configFile, '<?php' . "\nreturn " . var_export($config, true) . ";\n");
+        $content = '<?php' . "\nreturn " . var_export($config, true) . ";\n";
+        ftruncate($fp, 0);
+        rewind($fp);
+        fwrite($fp, $content);
+        fflush($fp);
+        flock($fp, LOCK_UN);
+        fclose($fp);
+
         $GLOBALS['config']['rep'] = $config['rep'];
-        return json(['code' => 1, 'enabled' => $config['rep']['enabled'], 'msg' => $config['rep']['enabled'] === '1' ? '已开启' : '已关闭']);
+        $newState = $config['rep']['enabled'];
+        return json(['code' => 1, 'enabled' => $newState, 'msg' => $newState === '1' ? '已开启' : '已关闭']);
     }
 
     public function execute()
@@ -112,10 +122,10 @@ class Rep extends Base
             return json(['code' => 0, 'msg' => '记录不存在']);
         }
 
-        $type  = $row->rep_type;
-        $orig  = $row->rep_original;
-        $repl  = $row->rep_replacement;
-        $map   = self::$typeMap[$type] ?? null;
+        $type = $row->rep_type;
+        $orig = $row->rep_original;
+        $repl = $row->rep_replacement;
+        $map  = RepModel::$typeMap[$type] ?? null;
 
         if (!$map) {
             return json(['code' => 0, 'msg' => "类型「{$type}」不支持自动执行，请手动处理"]);
@@ -126,16 +136,11 @@ class Rep extends Base
         try {
             foreach ($map as $table => $fields) {
                 foreach ($fields as $field) {
-                    $count = Db::name($table)->where($field, 'like', '%' . $orig . '%')->count();
-                    if ($count > 0) {
-                        Db::execute(
-                            "UPDATE `{$prefix}{$table}` SET `{$field}` = REPLACE(`{$field}`, ?, ?) WHERE `{$field}` LIKE ?",
-                            [$orig, $repl, '%' . $orig . '%']
-                        );
-                        $results[] = "mac_{$table}.{$field}: 替换 {$count} 条";
-                    } else {
-                        $results[] = "mac_{$table}.{$field}: 未找到匹配";
-                    }
+                    $affected = Db::execute(
+                        "UPDATE `{$prefix}{$table}` SET `{$field}` = REPLACE(`{$field}`, ?, ?) WHERE `{$field}` LIKE ?",
+                        [$orig, $repl, '%' . $orig . '%']
+                    );
+                    $results[] = "{$prefix}{$table}.{$field}: 替换 {$affected} 条";
                 }
             }
             $row->rep_applied      = 1;

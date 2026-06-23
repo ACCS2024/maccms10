@@ -42,7 +42,7 @@
             <tr id="row-{$vo.rep_id}">
               <td><input type="checkbox" name="ids[]" value="{$vo.rep_id}" class="layui-checkbox checkbox-ids" lay-skin="primary"></td>
               <td>{$vo.rep_id}</td>
-              <td><span class="layui-badge-rim">{$vo.rep_type}</span></td>
+              <td><span class="layui-badge-rim">{$vo.rep_type|htmlspecialchars}</span></td>
               <td style="word-break:break-all;max-width:200px">{$vo.rep_original|htmlspecialchars}</td>
               <td style="word-break:break-all;max-width:200px">{$vo.rep_replacement|htmlspecialchars}</td>
               <td>{$vo.rep_note|htmlspecialchars}</td>
