@@ -11,8 +11,8 @@ if (version_compare(PHP_VERSION, '8.0.0', '<')) {
     die('PHP >= 8.0 required');
 }
 
-ini_set('max_execution_time', '0');
-ini_set('memory_limit', '-1');
+ini_set('max_execution_time', '30');    // API 请求 30 秒上限，超时按超时处理而非永久占 worker
+ini_set('memory_limit', '256M');        // API 请求无需超大内存，256M 防泄漏
 
 define('ROOT_PATH',       __DIR__ . '/');
 define('APP_PATH',        __DIR__ . '/application/');

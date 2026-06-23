@@ -1847,8 +1847,12 @@ namespace app\common\util;
     if($last == 'k')
         $v_memory_limit = (int)$v_memory_limit*1024;
             
-    $p_options[PCLZIP_OPT_TEMP_FILE_THRESHOLD] = floor($v_memory_limit*PCLZIP_TEMPORARY_FILE_RATIO);
-    
+    // memory_limit=-1 表示无限制；取一个安全的固定阈值（128MB）避免 floor(-1*ratio) 产生负值
+    if ((int)$v_memory_limit <= 0) {
+        $p_options[PCLZIP_OPT_TEMP_FILE_THRESHOLD] = 134217728; // 128MB
+    } else {
+        $p_options[PCLZIP_OPT_TEMP_FILE_THRESHOLD] = floor($v_memory_limit*PCLZIP_TEMPORARY_FILE_RATIO);
+    }
 
     // ----- Sanity check : No threshold if value lower than 1M
     if ($p_options[PCLZIP_OPT_TEMP_FILE_THRESHOLD] < 1048576) {

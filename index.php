@@ -11,8 +11,8 @@ if (version_compare(PHP_VERSION, '8.0.0', '<')) {
     die('PHP >= 8.0 required');
 }
 
-ini_set('max_execution_time', '0');
-ini_set('memory_limit', '-1');
+ini_set('max_execution_time', '120');   // 前台请求 2 分钟上限，防慢查询耗尽 worker
+ini_set('memory_limit', '256M');        // 256M 足够前台页面渲染，防内存泄漏打垮 FPM
 
 define('ROOT_PATH',       __DIR__ . '/');
 define('APP_PATH',        __DIR__ . '/application/');
