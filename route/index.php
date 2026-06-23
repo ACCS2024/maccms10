@@ -68,3 +68,42 @@ Route::any('label-<file>', 'label/index');
 
 Route::any('liveshow', 'live/show');
 Route::any('liveplay/<id>', 'live/play');
+
+// TP5 pathinfo compatibility routes — accept /index.php/vod/detail/id/1.html style URLs
+// (火车头 users keep their existing URL templates without reconfiguration)
+Route::any('vod/detail/id/<id>', 'vod/detail');
+Route::any('vod/type/id/<id>/page/<page>', 'vod/type');
+Route::any('vod/type/id/<id>', 'vod/type');
+Route::any('vod/play/id/<id>/sid/<sid>/nid/<nid>', 'vod/play');
+Route::any('vod/down/id/<id>/sid/<sid>/nid/<nid>', 'vod/down');
+Route::any('manga/detail/id/<id>', 'manga/detail');
+Route::any('manga/play/id/<id>/sid/<sid>/nid/<nid>', 'manga/play');
+Route::any('art/detail/id/<id>', 'art/detail');
+Route::any('art/type/id/<id>/page/<page>', 'art/type');
+Route::any('art/type/id/<id>', 'art/type');
+Route::any('index/index/page/<page>', 'index/index');
+Route::any('index/index', 'index/index');
+
+// Generic TP5 pathinfo fallback: any /controller/action/key/val/... not matched above
+Route::miss(function () {
+    $pathinfo = request()->pathinfo();
+    $pathinfo = preg_replace('/\.(html?|xml|json)$/', '', $pathinfo);
+    $parts    = array_values(array_filter(explode('/', $pathinfo)));
+    if (count($parts) < 2) {
+        throw new \think\exception\HttpException(404, 'Not Found');
+    }
+    $controller = ucfirst(strtolower($parts[0]));
+    $action     = lcfirst(strtolower($parts[1]));
+    for ($i = 2; $i + 1 < count($parts); $i += 2) {
+        $_GET[$parts[$i]] = $parts[$i + 1];
+    }
+    $class = "\\app\\index\\controller\\$controller";
+    if (!class_exists($class)) {
+        throw new \think\exception\HttpException(404, 'Not Found');
+    }
+    try {
+        return app()->make($class)->{$action}();
+    } catch (\Throwable $e) {
+        throw new \think\exception\HttpException(404, 'Not Found');
+    }
+});
