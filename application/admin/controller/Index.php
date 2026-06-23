@@ -2,6 +2,7 @@
 
 namespace app\admin\controller;
 
+use think\facade\Cache;
 use think\facade\Db;
 use Exception;
 use ip_limit\IpLocationQuery;
@@ -822,76 +823,103 @@ class Index extends Base
 
     private function getAdminDashboardData()
     {
-        $result = [];
-        //已注册总用户数量
-        $result['user_count'] = (new \app\common\model\User())->count();
-        $result['user_count'] = number_format($result['user_count'], 0, '.', ',');
-        //已审核用户数量
-        $result['user_active_count'] = (new \app\common\model\User())->where('user_status', 1)->count();
-        $result['user_active_count'] = number_format($result['user_active_count'], 0, '.', ',');
-
+        // 今日数据（今日零点会变，TTL 短）
         $today_start = strtotime(date('Y-m-d 00:00:00'));
         $today_end = $today_start + 86399;
-        //本日来客量
-        $result['today_visit_count'] = (new \app\common\model\Visit())->where('visit_time', 'between', $today_start . ',' . $today_end)->count();
-        $result['today_visit_count'] = number_format($result['today_visit_count'], 0, '.', ',');
-        //本日总入金
-        $result['today_money_get'] = (new \app\common\model\Order())->where('order_time', 'between', $today_start . ',' . $today_end)->where('order_status', 1)->sum('order_price');
-        $result['today_money_get'] = number_format($result['today_money_get'], 2, '.', ',');
-        //前七天 每日用户访问数
-        $tmp_arr = Db::query("select FROM_UNIXTIME(visit_time, '%Y-%c-%d' ) days,count(*) count from (SELECT * from ".config('database.connections.mysql.prefix')."visit where visit_time >= (unix_timestamp(CURDATE())-604800)) as temp group by days");
-        $result['seven_day_visit_day'] = [];
-        $result['seven_day_visit_count'] = [];
+        $todayCacheKey  = 'admin_dashboard_today_' . date('Ymd');
+        $weekCacheKey   = 'admin_dashboard_week_' . date('YmdH');  // 按小时粒度
 
+        // 七日图表数据缓存 5 分钟（统计慢查询，5min 内无感知）
+        $weekData = Cache::get($weekCacheKey);
+        if ($weekData === null) {
+            $prefix = config('database.connections.mysql.prefix');
+            $sevenDaysAgo = strtotime(date('Y-m-d 00:00:00')) - 6 * 86400;
+
+            // 原 SELECT * 子查询改为直接 GROUP BY，让 visit_time 索引生效
+            $visitTable = '`' . str_replace('`', '``', $prefix . 'visit') . '`';
+            $tmp_arr = Db::query(
+                "SELECT FROM_UNIXTIME(visit_time, '%Y-%c-%d') days, COUNT(*) count
+                 FROM {$visitTable}
+                 WHERE visit_time >= ?
+                 GROUP BY days
+                 ORDER BY days ASC",
+                [$sevenDaysAgo]
+            );
+
+            $userTable = '`' . str_replace('`', '``', $prefix . 'user') . '`';
+            $reg_arr = Db::query(
+                "SELECT FROM_UNIXTIME(user_reg_time, '%Y-%c-%d') days, COUNT(*) count
+                 FROM {$userTable}
+                 WHERE user_reg_time >= ?
+                 GROUP BY days
+                 ORDER BY days ASC",
+                [$sevenDaysAgo]
+            );
+
+            $weekData = ['visit' => $tmp_arr, 'reg' => $reg_arr];
+            Cache::set($weekCacheKey, $weekData, 300);
+        }
+
+        $tmp_arr = $weekData['visit'];
+        $reg_arr = $weekData['reg'];
+
+        // 今日实时数据缓存 2 分钟
+        $todayData = Cache::get($todayCacheKey);
+        if ($todayData === null) {
+            $todayData = [
+                'user_count'        => (new \app\common\model\User())->count(),
+                'user_active_count' => (new \app\common\model\User())->where('user_status', 1)->count(),
+                'today_visit_count' => (new \app\common\model\Visit())->where('visit_time', 'between', $today_start . ',' . $today_end)->count(),
+                'today_money_get'   => (new \app\common\model\Order())->where('order_time', 'between', $today_start . ',' . $today_end)->where('order_status', 1)->sum('order_price'),
+            ];
+            Cache::set($todayCacheKey, $todayData, 120);
+        }
+
+        $result = [];
+        $result['user_count']        = number_format($todayData['user_count'], 0, '.', ',');
+        $result['user_active_count'] = number_format($todayData['user_active_count'], 0, '.', ',');
+        $result['today_visit_count'] = number_format($todayData['today_visit_count'], 0, '.', ',');
+        $result['today_money_get']   = number_format($todayData['today_money_get'], 2, '.', ',');
+
+        // 七日访问图表
+        $result['seven_day_visit_day']   = [];
+        $result['seven_day_visit_count'] = [];
         $result['raise_visit_user_today'] = 0;
         if (is_array($tmp_arr) && count($tmp_arr) > 1 && (strtotime(end($tmp_arr)['days']) == strtotime(date('Y-m-d')))) {
             $yesterday_visit_count = $tmp_arr[count($tmp_arr) - 2]['count'];
-            $lastday_visit_count = end($tmp_arr)['count'];
+            $lastday_visit_count   = end($tmp_arr)['count'];
             if ($yesterday_visit_count != 0) {
                 $result['raise_visit_user_today'] = number_format((($lastday_visit_count - $yesterday_visit_count) / $yesterday_visit_count) * 100, 2, '.', ',');
-            } else {
-                $result['raise_visit_user_today'] = 0;
             }
         }
-
-        foreach ($tmp_arr as $data) {
-            array_push($result['seven_day_visit_day'], $data['days']);
-            array_push($result['seven_day_visit_count'], $data['count']);
-        }
-
-        //近七日用户访问总量
         $result['seven_day_visit_total_count'] = 0;
-        foreach ($tmp_arr as $k => $value) {
-            $result['seven_day_visit_total_count'] = $result['seven_day_visit_total_count'] + ($value['count'] ?? 0);
+        foreach ($tmp_arr as $data) {
+            $result['seven_day_visit_day'][]   = $data['days'];
+            $result['seven_day_visit_count'][] = $data['count'];
+            $result['seven_day_visit_total_count'] += (int)$data['count'];
         }
-
         $result['seven_day_visit_total_count'] = number_format($result['seven_day_visit_total_count'], 0, '.', ',');
-        //前七天 每日用户注册数
-        $result['seven_day_reg_data'] = Db::query("select FROM_UNIXTIME(user_reg_time, '%Y-%c-%d' ) days,count(*) count from (SELECT * from ".config('database.connections.mysql.prefix')."user where user_reg_time >= (unix_timestamp(CURDATE())-604800)) as tmp group by days");
 
-        //近七日用户注册总量
+        // 七日注册图表
+        $result['seven_day_reg_data']        = $reg_arr;
+        $result['seven_day_reg_day']         = [];
+        $result['seven_day_reg_count']       = [];
         $result['seven_day_reg_total_count'] = 0;
-        $result['seven_day_reg_day'] = [];
-        $result['seven_day_reg_count'] = [];
-        foreach ($result['seven_day_reg_data'] as $k => $value) {
-            array_push($result['seven_day_reg_day'], $value['days']);
-            array_push($result['seven_day_reg_count'], $value['count']);
-            $result['seven_day_reg_total_count'] = $result['seven_day_reg_total_count'] + $value['count'];
+        $result['raise_reg_user_today']      = 0;
+        foreach ($reg_arr as $value) {
+            $result['seven_day_reg_day'][]   = $value['days'];
+            $result['seven_day_reg_count'][] = $value['count'];
+            $result['seven_day_reg_total_count'] += (int)$value['count'];
         }
-
-        //比較前一天的註冊量漲幅
-        $result['raise_reg_user_today'] = 0;
-        if (is_array($result['seven_day_reg_data']) && count($result['seven_day_reg_data']) > 1 && (strtotime(end($result['seven_day_reg_data'])['days']) == strtotime(date('Y-m-d')))) {
-            $yesterday_reg_count = $result['seven_day_reg_data'][count($result['seven_day_reg_data']) - 2]['count'];
-            $lastday_reg_count = end($result['seven_day_reg_data'])['count'];
+        if (is_array($reg_arr) && count($reg_arr) > 1 && (strtotime(end($reg_arr)['days']) == strtotime(date('Y-m-d')))) {
+            $yesterday_reg_count = $reg_arr[count($reg_arr) - 2]['count'];
+            $lastday_reg_count   = end($reg_arr)['count'];
             if ($yesterday_reg_count != 0) {
                 $result['raise_reg_user_today'] = number_format((($lastday_reg_count - $yesterday_reg_count) / $yesterday_reg_count) * 100, 2, '.', ',');
-            } else {
-                $result['raise_reg_user_today'] = 0;
             }
         }
-
         $result['seven_day_reg_total_count'] = number_format($result['seven_day_reg_total_count'], 0, '.', ',');
+
         return $result;
     }
 
@@ -904,8 +932,13 @@ class Index extends Base
         $endTs = ($endTs !== false) ? (int)$endTs : 0;
         $visitTable = config('database.connections.mysql.prefix') . 'visit';
         $visitTable = '`' . str_replace('`', '``', $visitTable) . '`';
+        // 去掉冗余子查询，直接 WHERE+GROUP BY 让 idx_visit_time 生效
         $range_daily_visit_data = Db::query(
-            "select FROM_UNIXTIME(visit_time, '%Y-%c-%d' ) days,count(*) count from (SELECT * from {$visitTable} where visit_time >= ? and visit_time <= ? ) as temp group by days",
+            "SELECT FROM_UNIXTIME(visit_time, '%Y-%c-%d') days, COUNT(*) count
+             FROM {$visitTable}
+             WHERE visit_time >= ? AND visit_time <= ?
+             GROUP BY days
+             ORDER BY days ASC",
             [$startTs, $endTs]
         );
         $result = [];
