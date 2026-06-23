@@ -291,12 +291,23 @@ class Vod extends Base
             ]);
         }
 
-        $result = Db::table('mac_vod')->distinct(true)->field('vod_year')->where(['type_id_1' => $param['type_id_1']])->select();
-        $return = [];
-        foreach ($result as $index => $item) {
-            if (!empty($item['vod_year'])){
-                array_push($return,$item['vod_year']);
+        $tid1 = (int)$param['type_id_1'];
+        $cacheKey = 'vod_meta_year_' . $tid1;
+        $return = Cache::get($cacheKey);
+        if ($return === null) {
+            $result = Db::table('mac_vod')
+                ->distinct(true)
+                ->field('vod_year')
+                ->where(['type_id_1' => $tid1, 'vod_status' => 1])
+                ->limit(200)
+                ->select();
+            $return = [];
+            foreach ($result as $item) {
+                if (!empty($item['vod_year'])) {
+                    $return[] = $item['vod_year'];
+                }
             }
+            Cache::set($cacheKey, $return, 600);
         }
         // 返回
         return json([
@@ -328,12 +339,23 @@ class Vod extends Base
             ]);
         }
 
-        $result = Db::table('mac_vod')->distinct(true)->field('vod_class')->where(['type_id_1' => $param['type_id_1']])->select();
-        $return = [];
-        foreach ($result as $index => $item) {
-            if (!empty($item['vod_class'])){
-                array_push($return,$item['vod_class']);
+        $tid1 = (int)$param['type_id_1'];
+        $cacheKey = 'vod_meta_class_' . $tid1;
+        $return = Cache::get($cacheKey);
+        if ($return === null) {
+            $result = Db::table('mac_vod')
+                ->distinct(true)
+                ->field('vod_class')
+                ->where(['type_id_1' => $tid1, 'vod_status' => 1])
+                ->limit(500)
+                ->select();
+            $return = [];
+            foreach ($result as $item) {
+                if (!empty($item['vod_class'])) {
+                    $return[] = $item['vod_class'];
+                }
             }
+            Cache::set($cacheKey, $return, 600);
         }
         // 返回
         return json([
@@ -365,12 +387,23 @@ class Vod extends Base
             ]);
         }
 
-        $result = Db::table('mac_vod')->distinct(true)->field('vod_area')->where(['type_id_1' => $param['type_id_1']])->select();
-        $return = [];
-        foreach ($result as $index => $item) {
-            if (!empty($item['vod_area'])){
-                array_push($return,$item['vod_area']);
+        $tid1 = (int)$param['type_id_1'];
+        $cacheKey = 'vod_meta_area_' . $tid1;
+        $return = Cache::get($cacheKey);
+        if ($return === null) {
+            $result = Db::table('mac_vod')
+                ->distinct(true)
+                ->field('vod_area')
+                ->where(['type_id_1' => $tid1, 'vod_status' => 1])
+                ->limit(200)
+                ->select();
+            $return = [];
+            foreach ($result as $item) {
+                if (!empty($item['vod_area'])) {
+                    $return[] = $item['vod_area'];
+                }
             }
+            Cache::set($cacheKey, $return, 600);
         }
         // 返回
         return json([
