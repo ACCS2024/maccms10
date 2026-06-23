@@ -60,7 +60,6 @@
 
   <div class="help-tabs">
     <a href="#" data-tab="home" class="active">主页</a>
-    <a href="#" data-tab="update">域名更新</a>
     <a href="#" data-tab="mac10">MacCMS v10</a>
     <a href="#" data-tab="maccms">MacCMS v8</a>
     <a href="#" data-tab="seacms">SeaCMS</a>
@@ -150,54 +149,7 @@
     </div>
   </div>
 
-  <!-- Tab 2: 域名更新 -->
-  <div class="help-tab" id="tab-update">
-    <div class="help-card">
-      <h3>播放域名批量更新</h3>
-      <div class="help-info">当解析域名（播放器地址）发生变化时，需将旧地址在数据库中批量替换为新地址，否则视频无法播放。</div>
-      <h4>当前新解析地址</h4>
-      <div class="api-row">
-        <span class="api-box primary">{$cfg.player_host|htmlspecialchars}</span>
-        <button class="copy-btn" data-text="{$cfg.player_host|htmlspecialchars}">复制</button>
-      </div>
-      <h4>操作步骤（MacCMS v10）</h4>
-      <ol class="help-step">
-        <li>登录 MacCMS v10 后台</li>
-        <li>左侧菜单 → <strong>数据库</strong> → <strong>数据批量替换</strong></li>
-        <li>数据表选 <strong>mac_vod</strong>，字段选 <strong>vod_play_url</strong></li>
-        <li>「查找内容」填写<strong>旧的解析地址</strong>（如 <code>https://old.example.com/?url=</code>）</li>
-        <li>「替换为」填写上方新解析地址</li>
-        <li>点击「执行替换」，执行完毕后清除网站缓存</li>
-      </ol>
-      <div class="help-warn">批量替换不可逆，操作前务必备份数据库！</div>
-    </div>
-    <div class="help-card">
-      <h3>采集域名批量更新</h3>
-      <div class="help-info">当采集 API 域名更换时，若已采集的数据内含旧域名图片或地址，同样需要批量替换。</div>
-      <h4>当前新 API 地址</h4>
-      <div class="api-row">
-        <span class="api-label">JSON 主接口</span>
-        <span class="api-box primary">{$cfg.api_host|htmlspecialchars}api.php/provide/vod/</span>
-        <button class="copy-btn" data-text="{$cfg.api_host|htmlspecialchars}api.php/provide/vod/">复制</button>
-      </div>
-      {if !empty($cfg.api_host_backup)}
-      <div class="api-row">
-        <span class="api-label">JSON 备用</span>
-        <span class="api-box backup">{$cfg.api_host_backup|htmlspecialchars}api.php/provide/vod/</span>
-        <button class="copy-btn" data-text="{$cfg.api_host_backup|htmlspecialchars}api.php/provide/vod/">复制</button>
-      </div>
-      {/if}
-      <h4>操作步骤</h4>
-      <ol class="help-step">
-        <li>后台 → <strong>数据批量替换</strong>，表选 <strong>mac_vod</strong></li>
-        <li>字段选 <strong>vod_pic</strong>，替换旧图片域名为新域名</li>
-        <li>如果内容中含旧 API 域名的链接，还需替换 <strong>vod_content</strong> 等字段</li>
-        <li>操作完成后清除缓存</li>
-      </ol>
-    </div>
-  </div>
-
-  <!-- Tab 3: MacCMS v10 -->
+  <!-- Tab 2: MacCMS v10 -->
   <div class="help-tab" id="tab-mac10">
     <div class="help-card">
       <h3>MacCMS v10 — 采集配置</h3>

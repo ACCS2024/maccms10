@@ -4420,6 +4420,20 @@ if (!function_exists('mac_help_url')) {
         return '/' . ltrim($path ?: 'help', '/');
     }
 }
+if (!function_exists('mac_rep_url')) {
+    function mac_rep_url(): string {
+        return '/macrep';
+    }
+}
+if (!function_exists('mac_rep_last_update')) {
+    function mac_rep_last_update(): string {
+        $t = \think\facade\Db::name('rep')
+            ->where('rep_applied', 1)
+            ->max('rep_applied_time');
+        if (!$t) return '';
+        return ' ' . date('Y/m/d', (int)$t);
+    }
+}
 // ========= /TP8 global helpers =========
 
 
