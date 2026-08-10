@@ -154,10 +154,19 @@ class SiteInstall extends Command
             ]);
             $installer->writeDbConfig($appCfg);
             // ★ 单进程关键:后续 Db/model 走新连接。
-            // TP8 的库配置是 database.connections.<name>,不能像 TP5 那样把扁平数组
-            // 直接 set 到 'database' —— 那样 Db 门面仍会去读 connections.mysql 的旧值
-            // (env 缺省为空账号),导致后面导 SQL 时报 Access denied for user ''@'localhost'。
-            Config::set($appCfg, 'database.connections.mysql');
+            // think\Config::set() 的第二参数是【配置组名】,不解析点号路径
+            // (Config.php:set → $this->config[$name] = ...)。传 'database.connections.mysql'
+            // 只会新建一个名字里带点的孤儿组,config('database.connections.mysql.username')
+            // 走的是 explode('.') 逐层下钻,永远读不到它 —— 注入是彻底的空操作,
+            // 于是第 8 步导 SQL 仍用 env 缺省的空账号,报
+            // Access denied for user ''@'localhost'(已实测复现:全新库上 site:install 必失败)。
+            // 正确做法是取出整个 database 组、改掉嵌套里的 mysql 连接、再整组写回。
+            $dbGroup = Config::get('database', []);
+            $dbGroup['connections']['mysql'] = array_merge(
+                $dbGroup['connections']['mysql'] ?? [],
+                $appCfg
+            );
+            Config::set($dbGroup, 'database');
             // 框架的 think\Db::getConfig() 每次都从 Config 对象实时读 database.*,
             // 所以改完 Config 就已生效,不要再调 Db::setConfig() ——
             // 那个方法收的是 think\Config 对象而非数组,传数组会把 Config 顶掉,
