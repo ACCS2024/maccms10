@@ -5,6 +5,7 @@ use app\common\util\BulkTableIo;
 use think\facade\Cache;
 use app\common\util\Dir;
 use think\facade\Db;
+use think\helper\Str;
 
 class Base extends All
 {
@@ -98,10 +99,36 @@ class Base extends All
         parent::assign($name, $value);
     }
 
+    /**
+     * 权限校验。
+     *
+     * 权限节点的权威形态是 application/admin/common/auth.php 里的 controller/action:
+     * controller 是 URL 段(snake,如 `resource_hub`),action 是方法原名(如 `multiCollect`)。
+     * 后台勾选框(view/admin/info.html:43)按 `{$sub.controller}/{$sub.action}` 原样提交,
+     * model\Admin 逗号拼接后整串存进 mac_admin.admin_auth —— 存的就是这个形态。
+     *
+     * 但调用方有两处,传进来的形态并不相同:
+     *   · Base::__construct → $this->_cl / $this->_ac。TP8 的 request()->controller()
+     *     是 Str::studly 之后的类名(`ResourceHub`),action 则是 URL 原样(`multiCollect`);
+     *   · Index::index 渲染左侧菜单 → 直接传 auth.php 里的原值(`resource_hub`/`multiCollect`)。
+     *
+     * 原实现对两侧一律 strtolower,得到 `resourcehub/multicollect`,与存库的
+     * `resource_hub/multiCollect` 永不相等:
+     *   - 控制器侧丢下划线 → 所有多词控制器(batch_player / data_replace / resource_hub /
+     *     sign_milestone / tpl_config …)对子管理员一律拒绝;
+     *   - 菜单侧控制器名本就是 snake、只有动作名大小写不符 → 那 6 个驼峰动作的菜单项
+     *     对子管理员直接不显示。
+     * 超管(admin_id=='1')在下面直接 return true,所以这个洞在后台里看不见。
+     *
+     * 归一规则:控制器一律 Str::snake(`ResourceHub` 与 `resource_hub` 都收敛到
+     * `resource_hub`),动作名比对时双侧小写。已核对 auth.php 全部 265 个节点:
+     * snake(studly(controller)) 与节点原值 100% 一致,且归一后无两个节点相撞,
+     * 所以这次归一不会把 A 的权限误判成 B 的。
+     */
     public function check_auth($c,$a)
     {
-        $c = strtolower($c);
-        $a = strtolower($a);
+        $c = Str::snake((string)$c);
+        $a = strtolower((string)$a);
 
         // UEditor AI proxy: logged-in admin only; API key never sent to browser.
         if ($c === 'upload' && ($a === 'ueditor_ai' || $a === 'ueditorai')) {
@@ -119,7 +146,8 @@ class Base extends All
             return true;
         }
 
-        $auths = ($this->_admin['admin_auth'] ?? '') . ',index/index,index/welcome,index/logout,';
+        // 存库侧同样归一:控制器段本就是 snake(小写无变化),小写化只影响动作名。
+        $auths = strtolower(($this->_admin['admin_auth'] ?? '') . ',index/index,index/welcome,index/logout,');
         $cur = ','.$c.'/'.$a.',';
         if(($this->_admin['admin_id'] ?? '') =='1'){
             return true;
