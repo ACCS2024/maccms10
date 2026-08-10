@@ -7,34 +7,18 @@ class Make extends Base
 {
     var $_param;
 
+    /** @var string 前台主题的视图根(绝对路径)，只在 buildHtml 渲染前台模板时套用 */
+    private $_themeViewPath = '';
+
     public function __construct()
     {
         //header('X-Accel-Buffering: no');
         $this->_param = \think\facade\Request::param();
         $GLOBALS['ismake'] = '1';
 
-        // 静态生成必须渲染【前台主题】,不是后台视图目录。
-        //
-        // 本类刻意用不带 admin@ 前缀的裸模板名去渲染前台页面
-        // ('index/index'、'topic/index'、mac_tpl_fetch() 返回的 'vod/type' 等),
-        // TP5 时代这些裸名落在 view_path = template/<主题>/<html>/ 下,是对的。
-        //
-        // TP8 下有两处让它失效,合起来造成过一次线上事故:
-        //   1. AppInit.php 对 ENTRANCE==='admin' 无条件把 view_path 置空,裸名于是
-        //      落到 application/admin/view/ —— 'index/index' 正好命中后台 layui
-        //      控制台外壳,被写进站点根 index.html。该文件公网可读,且内容里带着
-        //      ADMIN_PATH="/<改名后的后台入口>",等于把后台地址公开。其余裸名在
-        //      后台视图目录下不存在,直接 TemplateNotFoundException,生成中断。
-        //   2. 下面这行原本写的是 Config::set(..., 'template') —— TP5 的配置域名。
-        //      TP8 的视图配置域叫 'view',写 'template' 是彻底的空操作,连 wap 主题
-        //      切换也一并失效了。
-        //
-        // 这里按入口无关的方式显式指定主题目录:无论从 admin 还是 api 入口触发,
-        // 静态生成都渲染同一套前台模板(此前 api 入口正常、后台入口坏掉,
-        // 这种分入口不一致会让排查极其困难)。
-        // 注:不在 AppInit 里改 admin 分支,是因为 BatchPlayer/Help/DataReplace/Rep/
-        // ResourceHub 这几个后台控制器也用裸模板名,它们依赖 view_path 为空才能
-        // 落到 application/admin/view/。此处只影响静态生成自身。
+        // 解析本次生成要用的主题目录(PC / wap)。原先这里还写了一行
+        // Config::set(..., 'template') —— 那是 TP5 的配置域名,TP8 的视图域叫 'view',
+        // 写 'template' 是彻底的空操作,连 wap 主题切换也一并失效了。
         $isWap = ($this->_param['ac2'] ?? '') == 'wap';
         $TMP_TEMPLATEDIR = $GLOBALS['config']['site'][$isWap ? 'mob_template_dir' : 'template_dir'];
         $TMP_HTMLDIR     = $GLOBALS['config']['site'][$isWap ? 'mob_html_dir'     : 'html_dir'];
@@ -46,7 +30,17 @@ class Make extends Base
             $GLOBALS['MAC_PATH_TPL'] = $GLOBALS['MAC_PATH_TEMPLATE']. $TMP_HTMLDIR  .'/';
             $GLOBALS['MAC_PATH_ADS'] = $GLOBALS['MAC_PATH_TEMPLATE']. $TMP_ADSDIR  .'/';
         }
-        Config::set(['view_path' => 'template/' . $TMP_TEMPLATEDIR .'/' . $TMP_HTMLDIR .'/'], 'view');
+
+        // 只记下主题目录,【不在这里 Config::set】。
+        //
+        // TP8 反转了 view_path 与 '@app' 前缀的优先级:view_path 非空时 'admin@xxx'
+        // 前缀彻底失效。所以一旦在构造函数里全局设上主题路径,本类自己的后台界面
+        // opt() 里的 fetch('admin@make/opt') 也会被拖去主题目录找,直接 500
+        // (template not exists: template/<主题>/<html>/make/opt.html)。
+        // 因此把设置推迟到 buildHtml() —— 那里是本类唯一渲染前台模板的地方。
+        //
+        // 用绝对路径:FPM 与 CLI 的 CWD 不同,相对路径在命令行/定时触发时会解析到别处。
+        $this->_themeViewPath = ROOT_PATH . 'template/' . $TMP_TEMPLATEDIR . '/' . $TMP_HTMLDIR . '/';
 
         parent::__construct();
     }
@@ -55,6 +49,13 @@ class Make extends Base
         if(empty($htmlfile) || empty($htmlpath) || empty($templateFile)){
             return false;
         }
+        // 静态生成必须渲染【前台主题】。这里传的是不带 admin@ 前缀的裸模板名
+        // ('index/index'、'topic/index'、mac_tpl_fetch() 返回的 'vod/type' 等),
+        // 而 AppInit 对 ENTRANCE==='admin' 把 view_path 置空,裸名会落到
+        // application/admin/view/ —— 'index/index' 正好命中后台控制台外壳,
+        // 曾把它写进站点根 index.html(该文件公网可读,且内含后台入口路径)。
+        // 在此处而不是构造函数里设置,见构造函数中的说明。
+        Config::set(['view_path' => $this->_themeViewPath], 'view');
         $content    =   $this->label_fetch($templateFile);
         $htmlfile = reset_html_filename($htmlfile);
         $dir   =  dirname($htmlfile);

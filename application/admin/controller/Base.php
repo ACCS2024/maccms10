@@ -113,17 +113,46 @@ class Base extends All
             return true;
         }
 
-        $auths = ($this->_admin['admin_auth'] ?? '') . ',index/index,index/welcome,index/logout,';
-        $cur = ','.$c.'/'.$a.',';
         if(($this->_admin['admin_id'] ?? '') =='1'){
             return true;
         }
-        elseif(strpos($auths,$cur)===false){
-            return false;
+
+        // 权限比对必须两侧归一,不能拿运行期的值直接去权限串里 strpos。
+        //
+        // 运行期拿到的是 TP8 的形态:request()->controller() 返回 Str::studly 后的
+        // 类名(ResourceHub)、action() 返回 URL 里的原始动作名(multiCollect);
+        // 而 admin_auth 里存的是权限树 auth.php 的原始写法(resource_hub/multiCollect)。
+        // 下划线与大小写两个维度都对不上,于是**所有多词控制器与驼峰动作对子管理员
+        // 一律被拒**,且超管(admin_id==1)在上面就 return true 了,从超管视角永远看不见。
+        // 老写法还有个隐患:strpos 是子串匹配,'vod/del' 会被 'newvod/del' 误命中。
+        // 统一走 authKey() 归一 + 全等比较。
+        $want = self::authKey($c, $a);
+
+        $auths = ($this->_admin['admin_auth'] ?? '') . ',index/index,index/welcome,index/logout,';
+        foreach (explode(',', $auths) as $one) {
+            $one = trim($one);
+            if ($one === '' || strpos($one, '/') === false) {
+                continue;
+            }
+            [$oc, $oa] = explode('/', $one, 2);
+            if (self::authKey($oc, $oa) === $want) {
+                return true;
+            }
         }
-        else{
-            return true;
-        }
+        return false;
+    }
+
+    /**
+     * 权限项的规范形:控制器去下划线转小写 + 动作转小写。
+     * resource_hub/multiCollect 与 ResourceHub/multicollect 归一后都是
+     * resourcehub/multicollect,两侧才能比得上。
+     */
+    public static function authKey($c, $a): string
+    {
+        $c = strtolower(str_replace('_', '', (string)$c));
+        // 权限树里存在 'index?ac2=wap' 这种带参写法,比对时只取动作名
+        $a = strtolower((string)strtok((string)$a, '?'));
+        return $c . '/' . $a;
     }
 
     public function _cache_clear()
