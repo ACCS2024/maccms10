@@ -2835,6 +2835,47 @@ function mac_alphaID($in, $to_num=false, $pad_up=false, $passKey='')
     return $out;
 }
 
+/**
+ * 交给框架 url() 之前对参数做两件事,两件都是 TP8 下必须的:
+ *
+ * 1) 丢掉空值。TP8 的 route.url_common_param 默认 true,剩余参数走
+ *    http_build_query,而它【不跳过空值】—— TP5 那边是逐个拼且带
+ *    `'' !== trim($val)` 判断的。mac_url 自己又把"第 1 页"表达成
+ *    $param['page']='' 这个哨兵值,于是每条链接尾巴上都挂着 `?page=`,
+ *    筛选页更是 `?area=&by=time&class=&lang=&...` 一长串空参数。
+ *    对搜索引擎这是一堆彼此重复的 URL,对 CDN 是白白炸开的缓存键。
+ *
+ * 2) 对会落到【路径段】的变量做 rawurlencode。url_common_param=true 时
+ *    think\route\Url 对路由变量走的是 `(string)$vars[$key]`,不编码
+ *    (false 时才 urlencode)。于是演员名/标签/关键词里的空格、/ ? # 会原样
+ *    进入 href:实测 mac_url_search(['wd'=>'李四/王五']) 产出
+ *    `/vodsearch/李四/王五.html`(斜杠改变了路由),['wd'=>'C?D'] 产出
+ *    `/vodsearch/C?D.html`(问号之后被当查询串,关键词截断)。
+ *    这些值直接来自采集数据,含空格的演员名在影视站是常态。
+ *    用 rawurlencode 而不是 urlencode:路径段里空格必须是 %20,不是 +。
+ *    入站侧 mac_param_url() 会 urldecode,已实测往返一致:
+ *      /vodsearch/%E5%BC%A0%20%E4%B8%89.html => mac_param_url()['wd'] === '张 三'
+ */
+function mac_url_vars(array $param)
+{
+    // 会成为路由变量(路径段)的键。其余键留给 http_build_query 自己编码,
+    // 在这里预编码会导致双重编码。
+    static $pathVars = ['wd','id','en','name','tag','class','area','lang','letter','actor','director','year','state','level','by','order','page','file'];
+    $out = [];
+    foreach ($param as $k => $v) {
+        if ($v === '' || $v === null || $v === false) {
+            continue;
+        }
+        if (is_string($v) && in_array($k, $pathVars, true)
+            && preg_match('/[^A-Za-z0-9._~-]/', $v)
+            && rawurldecode($v) === $v) {   // 已经是编码过的值就不再编码,避免双重编码
+            $v = rawurlencode($v);
+        }
+        $out[$k] = $v;
+    }
+    return $out;
+}
+
 function mac_url($model,$param=[],$info=[])
 {
     foreach($param as $k=>$v){
@@ -2872,7 +2913,7 @@ function mac_url($model,$param=[],$info=[])
                 }
             }
             else{
-                $url = url($model,$param);
+                $url = url($model,mac_url_vars($param));
                 if($url=='/PAGELINK.html'){
                     $url = '/index-PAGELINK.html';
                 }
@@ -2886,7 +2927,7 @@ function mac_url($model,$param=[],$info=[])
                 }
             }
             else{
-                $url = url($model,$param);
+                $url = url($model,mac_url_vars($param));
             }
             break;
         case strpos($model,'rss/')!==false:
@@ -2899,7 +2940,7 @@ function mac_url($model,$param=[],$info=[])
                 $path .= '.xml';
             }
             else{
-                $url = url($model,$param,'xml');
+                $url = url($model,mac_url_vars($param),'xml');
             }
             break;
         case strpos($model,'label/')!==false:
@@ -2907,7 +2948,7 @@ function mac_url($model,$param=[],$info=[])
                 $path = $model;
             }
             else{
-                $url = url($model,$param);
+                $url = url($model,mac_url_vars($param));
             }
             break;
         case 'vod/show':
@@ -2929,7 +2970,7 @@ function mac_url($model,$param=[],$info=[])
             if(!empty($id)){
                 $param['id'] = $id;
             }
-            $url = url($model,$param);
+            $url = url($model,mac_url_vars($param));
             break;
         case 'vod/type':
             $replace_to = [$info['type_id'],$info['type_en'],$param['page'],
@@ -3544,7 +3585,7 @@ function mac_url($model,$param=[],$info=[])
             $url = url($model,['page'=>($param['page'] ?? 1)]);
             break;
         default:
-            $url = url($model,$param);
+            $url = url($model,mac_url_vars($param));
             break;
     }
     if(!empty($path)) {

@@ -41,7 +41,10 @@ class Base extends All
         }
         $limit = max(1, min(20, intval($param['limit'] ?? 10)));
         $res = ApiMeilisearchSuggest::suggestListDataRes($kind, $wd, $limit);
-        $res['url'] = mac_url_search(['wd' => urlencode($wd)], $urlFlag);
+        // 不要在这里预编码:mac_url() 现在会对落到路径段的变量统一 rawurlencode,
+        // 这里再 urlencode 一次会变成双重编码(% → %25),而且 urlencode 把空格编成 +,
+        // 在路径段里是字面量加号而不是空格。
+        $res['url'] = mac_url_search(['wd' => $wd], $urlFlag);
 
         return json($res);
     }
