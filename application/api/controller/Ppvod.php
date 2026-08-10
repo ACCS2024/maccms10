@@ -7,7 +7,8 @@ use app\common\util\Pinyin;
 /**
  * 转码机内容入库接口（站点侧对接组件）
  *
- *   POST /api.php/yzm/yzmauto?ac=yzm&pass=<interface.pass>
+ *   POST /api.php/ppvod/ingest?ac=yzm&pass=<interface.pass>      （规范入口）
+ *   POST /api.php/yzm/yzmauto?ac=yzm&pass=<interface.pass>       （历史入口，仍可用）
  *   body: 转码服务产出的 JSON（orgfile / suffix / rpath / category / shareid / metadata ...）
  *
  * 【本文件不包含任何站点或基础设施信息】
@@ -17,7 +18,7 @@ use app\common\util\Pinyin;
  * 未启用或配置不完整时接口直接拒绝服务并记日志，绝不使用内置默认值兜底，
  * 以免把某一个部署的地址变成所有部署的默认值。
  */
-class Yzm extends Base
+class Ppvod extends Base
 {
     private $_param;
 
@@ -39,17 +40,9 @@ class Yzm extends Base
         }
 
         // 配置来自后台「PPVOD 转码入库」页（$config['ppvod']，存于本站
-        // application/extra/maccms.php）。为兼容早期把配置放在独立文件的部署，
-        // ppvod 未启用时回退读 config('yzm')。
+        // application/extra/maccms.php —— 该文件在 Begin 中间件的 extra/ 白名单内）。
         $cfg = $GLOBALS['config']['ppvod'] ?? [];
         if (!is_array($cfg) || (string)($cfg['status'] ?? '0') !== '1') {
-            $legacy = config('yzm');
-            if (is_array($legacy) && !empty($legacy['play_domain'])) {
-                $cfg = $legacy;
-                $cfg['status'] = '1';
-            }
-        }
-        if ((string)($cfg['status'] ?? '0') !== '1') {
             $this->logError('PPVOD 入库接口未启用：请在后台「PPVOD 转码入库」中开启');
             exit;
         }
@@ -94,6 +87,16 @@ class Yzm extends Base
         }
     }
 
+    /** 新的规范入口 */
+    public function ingest()
+    {
+        return $this->yzmauto();
+    }
+
+    /**
+     * 历史入口名。转码机侧配置的是 /api.php/yzm/yzmauto，
+     * 在对方改配置之前不能改名，否则入库直接静默中断。
+     */
     public function yzmauto()
     {
         $collect = config('maccms.collect');
