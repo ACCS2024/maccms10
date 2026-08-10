@@ -3224,6 +3224,7 @@ https://www.baidu.com/123.jpg
     'admin/tpl/config/type_picker_single_meta' => '点击条目即可选中 · Esc 关闭',
     'admin/tpl/config/hotvod_tab_label' => 'Tab%d',
     'admin/meilisearch/super_admin_only' => '仅超级管理员（admin_id=1）可操作 Meilisearch 索引',
+    'admin/meilisearch/index_uid_underivable' => '无法解析数据库名,拒绝派生索引名(派生名会与其它站点相撞并互相覆盖)。请在上方手动填写索引名。',
     'admin/meilisearch/sync_tip' => 'POST 或 AJAX 调用本方法将执行全量同步，数据量大时请耐心等待。',
     'admin/meilisearch/index_intro' => 'Meilisearch 全文检索：开启后，视频 / 文章 / 漫画列表在「仅关键词 wd」且筛选条件较简单时会走 Meilisearch，否则仍用 MySQL LIKE。',
     'admin/meilisearch/switch' => '开关',

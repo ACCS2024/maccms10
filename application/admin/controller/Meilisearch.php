@@ -104,6 +104,11 @@ class Meilisearch extends Base
         if ($row['index_uid'] === '') {
             // 清空时派生本站唯一名，绝不回落到会串库的共享默认名
             $row['index_uid'] = MeilisearchService::defaultIndexUid();
+            // 派生失败(库名解析不出来)时不要静默写一个空索引名 —— 那会让 enabled()
+            // 恒为 false,后台显示保存成功而搜索悄悄回落 MySQL。
+            if ($row['index_uid'] === '') {
+                return json(['code' => 0, 'msg' => lang('admin/meilisearch/index_uid_underivable')]);
+            }
         }
         $newKey = isset($meili['api_key']) ? trim((string)$meili['api_key']) : '';
         if ($newKey !== '') {

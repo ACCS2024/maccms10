@@ -60,7 +60,12 @@ class DbBackup
             $page = 1;
             $size = 2000;
             while (true) {
-                $rows = Db::table($t)->page($page, $size)->select();
+                // TP8 的 select() 返回 think\Collection(对象),empty() 对任何对象
+                // 恒为 false —— 翻到空页时循环不会退出,下一行 $rows[0] 直接
+                // "Undefined array key 0",在 CLI 下被 think\initializer\Error 抛成
+                // ErrorException,整条 db:export 中断。库里只要有一张空表就必然踩到
+                // (实测:全新安装即 100% 失败)。转成数组后 empty() 恢复原意。
+                $rows = Db::table($t)->page($page, $size)->select()->toArray();
                 if (empty($rows)) {
                     break;
                 }

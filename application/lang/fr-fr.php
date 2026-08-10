@@ -2944,6 +2944,7 @@ Note: Si les listes noires et blanches sont remplies, les stratégies s\'appliqu
     'admin/system/configaisearch/semantic_weight' => 'Poids sémantique (0-1)',
     'admin/system/configaisearch/semantic_candidates' => 'Nombre de candidats pour le reclassement sémantique',
     'admin/meilisearch/super_admin_only' => 'Only super admin (admin_id=1) can operate Meilisearch index',
+    'admin/meilisearch/index_uid_underivable' => 'Cannot resolve the database name; refusing to derive an index UID (a derived name would collide with other sites and overwrite them). Please set the index UID manually above.',
     'admin/meilisearch/sync_tip' => 'Calling this endpoint by POST or AJAX will run a full sync. Please wait patiently for large datasets.',
     'admin/meilisearch/index_intro' => 'Meilisearch full-text search: once enabled, video/article/manga lists will use Meilisearch when only wd keyword is provided and filters are simple; otherwise it falls back to MySQL LIKE.',
     'admin/meilisearch/switch' => 'Switch',

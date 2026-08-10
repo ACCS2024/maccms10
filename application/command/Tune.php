@@ -175,7 +175,9 @@ class Tune extends Command
         $mysqlConnected = false;
         $bufMb = 0;
         try {
-            if (Config::get('database.database')) {
+            // 扁平的 database.database 在 TP8 恒为 null → 这个闸门永远关着,
+            // innodb_buffer_pool_size 探针从不执行,报告永远说 mysql 未连接、buffer 0MB。
+            if (Db::connect()->getConfig('database')) {
                 $rows = Db::query("SHOW VARIABLES LIKE 'innodb_buffer_pool_size'");
                 if (!empty($rows)) {
                     $bufMb = (int)floor(((int)$rows[0]['Value']) / 1048576);

@@ -238,7 +238,7 @@ class Annex extends Base
             }
 
             $pre = config('database.connections.mysql.prefix');
-            $schema = Db::query('select * from information_schema.columns where table_schema = ?', [config('database.database')]);
+            $schema = Db::query('select * from information_schema.columns where table_schema = ?', [Db::connect()->getConfig('database')]);
             $col_list = [];
             foreach ($schema as $k => $v) {
                 $col_list[$v['TABLE_NAME']][$v['COLUMN_NAME']] = $v;

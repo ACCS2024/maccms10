@@ -39,7 +39,15 @@ class DbSearchReplace extends Command
             return 2;
         }
 
-        $prefix = (string)Config::get('database.prefix');
+        // TP8 只有 database.connections.<name>.prefix,扁平的 database.prefix 恒为 null。
+        // 退化成 '' 会让下面的 TABLE_NAME LIKE ? 变成 LIKE '%' —— 对当前 schema 里
+        // 【每一张表的每一个文本列】跑 UPDATE ... REPLACE(:78),不可逆。
+        $prefix = (string)Db::connect()->getConfig('prefix');
+        if ($prefix === '') {
+            $output->writeln('<error>表前缀解析为空,拒绝执行(否则会重写当前库里所有表的所有文本列,不可逆)。'
+                . '请检查 .env 的 DB_PREFIX,或用 --tables 显式指定要处理的表。</error>');
+            return 2;
+        }
         $only = [];
         if (trim((string)$input->getOption('tables')) !== '') {
             $only = array_values(array_filter(array_map('trim', explode(',', $input->getOption('tables')))));

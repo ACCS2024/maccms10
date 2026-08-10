@@ -27,7 +27,15 @@ class DbExport extends Command
     protected function execute(Input $input, Output $output)
     {
         $backup = new DbBackup();
-        $prefix = (string)Config::get('database.prefix');
+        // TP8 只有 database.connections.<name>.prefix,扁平的 database.prefix 恒为 null。
+        // 退化成 '' 会让 listTables 的前缀过滤整体失效 → 把同库里其它应用的表
+        // 一并导进备份,之后 db:import 的 DROP TABLE + CREATE 会连带清掉它们。
+        $prefix = (string)\think\facade\Db::connect()->getConfig('prefix');
+        if ($prefix === '') {
+            $output->writeln('<error>表前缀解析为空,拒绝按前缀导出(否则会把整库所有表都导出来)。'
+                . '请检查 .env 的 DB_PREFIX,或用 --tables 显式指定要导出的表。</error>');
+            return 2;
+        }
 
         try {
             if (trim((string)$input->getOption('tables')) !== '') {

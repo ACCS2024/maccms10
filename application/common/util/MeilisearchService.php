@@ -39,10 +39,23 @@ class MeilisearchService
      */
     public static function defaultIndexUid()
     {
-        $db = (string)config('database.database');
-        $host = (string)config('database.hostname');
-        $port = (string)config('database.hostport');
-        $prefix = (string)config('database.connections.mysql.prefix');
+        // 这三个键在 TP8 只存在于 database.connections.<name> 之下,扁平路径
+        // config('database.database') 等一律解析为 null。原写法让 $db/$host/$port
+        // 全部退化成 '',于是 name 落到 'site' 兜底、hash 收敛成 md5('||mac_|'),
+        // 每个用默认 mac_ 前缀的 maccms 装机都得到【同一个】maccms_site_<常量>,
+        // 上面那句「绝不串库」的承诺被完全打穿。
+        $conn   = \think\facade\Db::connect();
+        $db     = (string)$conn->getConfig('database');
+        $host   = (string)$conn->getConfig('hostname');
+        $port   = (string)$conn->getConfig('hostport');
+        $prefix = (string)$conn->getConfig('prefix');
+        // 库名解析不出来时【拒绝派生】:派生名必然与其它站点相撞并互相覆盖,
+        // 而这个返回值会被 admin/controller/Meilisearch 回填进站点配置、驱动整库重建。
+        // 返回空串而不是抛异常 —— indexUid() 会把空串一路带到 enabled(),
+        // Meili 自动判为未启用、回落 MySQL;抛异常则会打穿前台搜索(enabled() 在热路径上)。
+        if ($db === '') {
+            return '';
+        }
         // Meili 索引名仅允许 [A-Za-z0-9_-]
         $name = preg_replace('/[^A-Za-z0-9_-]/', '_', $db);
         $name = trim((string)$name, '_');

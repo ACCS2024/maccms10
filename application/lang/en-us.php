@@ -2948,6 +2948,7 @@ Note: If both black and white lists are filled, both policies will take effect.'
     'admin/tpl/config/type_picker_single_meta' => 'Click an item to select · Esc to close',
     'admin/tpl/config/hotvod_tab_label' => 'Tab%d',
     'admin/meilisearch/super_admin_only' => 'Only super admin (admin_id=1) can operate Meilisearch index',
+    'admin/meilisearch/index_uid_underivable' => 'Cannot resolve the database name; refusing to derive an index UID (a derived name would collide with other sites and overwrite them). Please set the index UID manually above.',
     'admin/meilisearch/sync_tip' => 'Calling this endpoint by POST or AJAX will run a full sync. Please wait patiently for large datasets.',
     'admin/meilisearch/index_intro' => 'Meilisearch full-text search: once enabled, video/article/manga lists will use Meilisearch when only wd keyword is provided and filters are simple; otherwise it falls back to MySQL LIKE.',
     'admin/meilisearch/switch' => 'Switch',

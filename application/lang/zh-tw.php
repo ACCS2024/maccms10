@@ -3381,6 +3381,7 @@ https://www.baidu.com/123.jpg
     'admin/system/configaisearch/semantic_weight' => '語義權重(0-1)',
     'admin/system/configaisearch/semantic_candidates' => '語義重排條數',
     'admin/meilisearch/super_admin_only' => '僅超級管理員（admin_id=1）可操作 Meilisearch 索引',
+    'admin/meilisearch/index_uid_underivable' => '無法解析資料庫名,拒絕派生索引名(派生名會與其它站點相撞並互相覆蓋)。請在上方手動填寫索引名。',
     'admin/meilisearch/sync_tip' => '使用 POST 或 AJAX 呼叫本方法會執行全量同步，資料量大時請耐心等待。',
     'admin/meilisearch/index_intro' => 'Meilisearch 全文檢索：啟用後，影片 / 文章 / 漫畫列表在「僅關鍵詞 wd」且篩選條件較簡單時會走 Meilisearch，否則仍使用 MySQL LIKE。',
     'admin/meilisearch/switch' => '開關',

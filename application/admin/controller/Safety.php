@@ -81,7 +81,7 @@ class Safety extends Base
         $param = \think\facade\Request::param();
         if ($param['ck']) {
             $pre = config('database.connections.mysql.prefix');
-            $schema = Db::query('select * from information_schema.columns where table_schema = ?', [config('database.database')]);
+            $schema = Db::query('select * from information_schema.columns where table_schema = ?', [Db::connect()->getConfig('database')]);
             $col_list = [];
             $sql = '';
             foreach ($schema as $k => $v) {

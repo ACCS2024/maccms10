@@ -74,9 +74,9 @@ class Database {
         $sql  = "-- -----------------------------\n";
         $sql .= "-- Think MySQL Data Transfer \n";
         $sql .= "-- \n";
-        $sql .= "-- Host     : " . config('database.hostname') . "\n";
-        $sql .= "-- Port     : " . config('database.hostport') . "\n";
-        $sql .= "-- Database : " . config('database.database') . "\n";
+        $sql .= "-- Host     : " . Db::connect()->getConfig('hostname') . "\n";
+        $sql .= "-- Port     : " . Db::connect()->getConfig('hostport') . "\n";
+        $sql .= "-- Database : " . Db::connect()->getConfig('database') . "\n";
         $sql .= "-- \n";
         $sql .= "-- Part : #{$this->file['part']}\n";
         $sql .= "-- Date : " . date("Y-m-d H:i:s") . "\n";
