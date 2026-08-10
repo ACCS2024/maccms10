@@ -23,4 +23,63 @@ class MacApp extends \think\App
     {
         return $this->rootPath . 'application' . DIRECTORY_SEPARATOR;
     }
+
+    /**
+     * TP8 的 think\initializer\Error::init() 会强制 error_reporting(E_ALL),
+     * 并把【任何】在报告级别内的 PHP 诊断(含 E_WARNING/E_NOTICE/E_DEPRECATED)
+     * 一律 throw 成 ErrorException。
+     *
+     * 但 maccms 自己在 application/common.php:12 写的是
+     *     error_reporting(E_ERROR | E_PARSE);
+     * ——它的代码和模板体系是按「notice/warning 被抑制」设计的:
+     *   · mac_url() 里对 $info/$param 有 130+ 处裸下标(URL 构造本就接收
+     *     vod/art/type/topic 等异构数组,缺键是常态而非异常);
+     *   · 第三方主题(如从 TP5 时代沿用的 155zy)大量引用当前模型不存在的字段。
+     * 在 PHP 7.4 下这些只是 notice,静默跳过;迁到 PHP 8 + TP8 后,
+     * "未定义数组键"升为 E_WARNING 并被转成异常,于是【一个缺字段就 500 整页】。
+     * 实测:前台详情页、文章分类页全部 500。
+     *
+     * 这里在框架初始化【之后】接管错误处理,恢复 maccms 的既定语义:
+     *   - 非致命诊断:记日志(每请求按 file:line 去重,避免刷屏),不中断渲染;
+     *   - 致命错误:原样交回框架先前的处理器,行为不变。
+     * 需要在开发期恢复 TP8 的严格行为时,把 config/app.php 的
+     * strict_php_errors 设为 true 即可。
+     */
+    public function initialize()
+    {
+        parent::initialize();
+
+        if ($this->config->get('app.strict_php_errors', false)) {
+            return $this;
+        }
+
+        $nonFatal = E_WARNING | E_NOTICE | E_DEPRECATED | E_USER_WARNING
+                  | E_USER_NOTICE | E_USER_DEPRECATED;
+        if (defined('E_STRICT')) {
+            $nonFatal |= E_STRICT;
+        }
+
+        $seen = [];
+        $prev = null;
+        $prev = set_error_handler(
+            function (int $errno, string $errstr, string $errfile = '', int $errline = 0) use (&$prev, $nonFatal, &$seen) {
+                if (!($errno & $nonFatal)) {
+                    // 致命级别:交回框架原处理器(仍会抛 ErrorException)
+                    return $prev ? $prev($errno, $errstr, $errfile, $errline) : false;
+                }
+                $key = $errfile . ':' . $errline;
+                if (!isset($seen[$key])) {
+                    $seen[$key] = true;
+                    try {
+                        \think\facade\Log::notice('[php] ' . $errstr . ' in ' . $errfile . ':' . $errline);
+                    } catch (\Throwable $e) {
+                        // 日志系统尚未就绪时不能反过来影响请求
+                    }
+                }
+                return true; // 已处理,不再冒泡为异常
+            }
+        );
+
+        return $this;
+    }
 }
