@@ -164,9 +164,24 @@ class All
         if(!empty($GLOBALS['config']['app']['page_404'])){
             $tpl = $GLOBALS['config']['app']['page_404'];
         }
-        $html = $this->label_fetch('public/'.$tpl);
+        // 后台的「404 模板」是一个自由文本框(system/config.html:825),而主题是第三方产物 ——
+        // 一旦填的名字在当前主题里不存在(默认值 '404' 在本仓库自带的 vozy 主题里就没有),
+        // label_fetch 抛 TemplateNotFoundException,于是【每一个 404 都变成 500】。
+        // 对内容站这是实打实的 SEO 损失,而且症状出现在"页面本来就不存在"的路径上,最难被发现。
+        // 逐级降级:配置的模板 → jump(主题基本都有) → 纯文本 404,任何一级都不让它变成 5xx。
+        $tplRoot = isset($GLOBALS['MAC_ROOT_TEMPLATE']) ? $GLOBALS['MAC_ROOT_TEMPLATE'] : '';
+        $suffix  = '.' . ltrim((string)config('view.view_suffix') ?: 'html', '.');
+        if ($tplRoot !== '' && !is_file($tplRoot . 'public/' . $tpl . $suffix)) {
+            $tpl = 'jump';
+        }
         header("HTTP/1.1 404 Not Found");
         header("Status: 404 Not Found");
+        if ($tplRoot !== '' && !is_file($tplRoot . 'public/' . $tpl . $suffix)) {
+            header('Content-Type: text/html; charset=utf-8');
+            exit('<!doctype html><meta charset="utf-8"><title>404</title><h1>404</h1><p>'
+                . htmlspecialchars((string)$msg, ENT_QUOTES) . '</p>');
+        }
+        $html = $this->label_fetch('public/'.$tpl);
         exit($html);
     }
 

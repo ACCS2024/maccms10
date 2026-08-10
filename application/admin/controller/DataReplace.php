@@ -17,7 +17,13 @@ class DataReplace extends Base
     public function __construct()
     {
         parent::__construct();
-        Config::set(['view_path' => APP_PATH . 'admin/view/'], 'template');
+        // TP8 的视图配置组名是 'view';'template' 是 TP5 的旧组名,全仓没有任何读取点,
+        // 写进去等于空操作。这五处今天之所以没出事,只是因为 AppInit 对
+        // ENTRANCE==='admin' 无条件把 view.view_path 置空,think-view 恰好回落到
+        // application/admin/view/ —— 与这行想指定的目录相同。一旦 AppInit 那个
+        // 分支改成有条件的(债务方案 S5 正打算这么做),这五个页面会静默改渲染前台
+        // 主题模板。把组名修正为 'view',让这行真正承担它声称的职责。
+        Config::set(['view_path' => APP_PATH . 'admin/view/'], 'view');
     }
 
     public function index()

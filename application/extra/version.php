@@ -11,6 +11,6 @@ return array (
     // 【改动 Update.php 后必须同步更新这里】，否则全新部署的站点后台会直接锁死。
     // 历史教训：c905031 改了 Update.php 的 curl 超时却漏改本值，导致后台不可用。
     //   校验方式：md5sum application/admin/controller/Update.php
-    'update_hash' => 'c04be0eb0d7a24f90adb3e2517ef6fb9',
+    'update_hash' => 'd446ccf6bfedb8c5ed5697bc1543317f',
 );
 ?>

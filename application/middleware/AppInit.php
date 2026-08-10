@@ -21,13 +21,22 @@ class AppInit
         // 相对解析 → 打回路由拿到 HTML → 浏览器以 MIME 不符拒绝加载，
         // 表现为整个后台无样式、layui is not defined。
         //
-        // static 与 static_new 的取舍：后台模板引用的
-        // css/tailwindcssOutput.css、images/signin_ic_*.png 只存在于
-        // static_new/，故默认取它；仅当 site.new_version 显式为 0 时用 static。
-        // 注意不要照抄 TP5 原表达式里的 `$v != 0` —— 空字符串与 0 的比较
-        // 在 PHP 8 下结果与 PHP 7 相反，同一份配置会走到相反的分支。
-        $newVersion = $config['site']['new_version'] ?? '';
-        $staticDir  = ((string)$newVersion === '0') ? '/static' : '/static_new';
+        // static 与 static_new 的取舍：固定取 static_new。
+        //
+        // 这里原本写的是
+        //     $newVersion = $config['site']['new_version'] ?? '';
+        //     $staticDir  = ((string)$newVersion === '0') ? '/static' : '/static_new';
+        // 但 $config 直到本方法第 60 行附近才由 config('maccms') 赋值 —— 第一行读的是
+        // 未定义变量，?? 把它吞成 ''，于是 === '0' 恒为 false，整个分支是死代码，
+        // 实际行为一直就是无条件 /static_new。
+        //
+        // 不把它"修好"成真的读 new_version，是因为那会把一个从未生效过的开关
+        // 突然接通：new_version 是【后台皮肤】开关（admin/controller/System.php
+        // 的 configVersion 写它），而本仓库只带新版后台视图，其模板引用的
+        // static_new/css/tailwindcssOutput.css 在 static/ 下并不存在 ——
+        // 任何一个历史上把它设成 0 的站点会在这次上线后整个后台无样式。
+        // 所以这里把真实契约写死并写清楚，而不是留一段"看起来能配"的死代码。
+        $staticDir = '/static_new';
 
         $req  = $request;
         $base = method_exists($req, 'root') ? (string)$req->root() : '';
@@ -168,8 +177,30 @@ class AppInit
             'stores'  => $cacheStores,
         ], 'cache');
 
+        // 后台「系统设置 → 语言」原本写的是 app 组的 default_lang,而 TP8 的 Lang
+        // 只读【lang 组】(Lang.php:78 `$config->get('lang')`),config/lang.php 又不存在,
+        // 所以那次 Config::set 没有任何消费者 —— 实测:把 maccms.app.lang 设成 en-us 后
+        // Lang::getLangSet() 仍是 zh-cn、lang('save_ok') 仍返回中文,仓库里 9 份翻译
+        // 一份都选不中。
+        // 而且 App::initialize() 的 loadLangPack()(App.php:511-512)早在中间件之前
+        // 就按 Lang 自带默认值 zh-cn 装完包了,只改配置也追不回来,必须显式重切。
         if (!empty($config['app']['lang'])) {
-            \think\facade\Config::set(['default_lang' => $config['app']['lang']], 'app');
+            $langSet = (string)$config['app']['lang'];
+            // 只在确实存在对应语言包时才切:否则 getLangSet() 会变成一个查不到任何
+            // 键的语言,界面直接显示裸键名(比语言不生效更糟)。
+            $langFile = APP_PATH . 'lang' . DIRECTORY_SEPARATOR . $langSet . '.php';
+            if (is_file($langFile)) {
+                \think\facade\Config::set(['default_lang' => $langSet], 'lang');
+                if (strtolower((string)\think\facade\Lang::getLangSet()) !== strtolower($langSet)) {
+                    // 不能只调 switchLangSet():它按 glob(getAppPath().'lang/...') 找语言包,
+                    // 而中间件此刻已在 MultiApp 之后 —— getAppPath() 早被改写成
+                    // application/<应用名>/(MultiApp.php:176),那底下没有 lang/ 目录,
+                    // 于是只切了语言标记却一个键都没装,界面全部退化成裸键名。
+                    // 显式按 APP_PATH 装包。
+                    \think\facade\Lang::setLangSet($langSet);
+                    \think\facade\Lang::load([$langFile], $langSet);
+                }
+            }
         }
 
         $sessionType = isset($config['app']['session_type'])
