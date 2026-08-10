@@ -505,6 +505,7 @@ class Website extends Base {
         if(!$validate->check($data)){
             return ['code'=>1001,'msg'=>lang('param_err').'：'.$validate->getError() ];
         }
+        if(isset($data['website_jumpurl'])){ $data['website_jumpurl'] = mac_safe_jumpurl($data['website_jumpurl']); }
 
         $key = 'website_detail_'.$data['website_id'];
         Cache::delete($key);

@@ -408,6 +408,7 @@ class Actor extends Base {
         if(!$validate->check($data)){
             return ['code'=>1001,'msg'=>lang('param_err').'：'.$validate->getError() ];
         }
+        if(isset($data['actor_jumpurl'])){ $data['actor_jumpurl'] = mac_safe_jumpurl($data['actor_jumpurl']); }
 
         $key = 'actor_detail_'.$data['actor_id'];
         Cache::delete($key);

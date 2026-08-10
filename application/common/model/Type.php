@@ -241,6 +241,7 @@ class Type extends Base {
         if(!$validate->check($data)){
             return ['code'=>1001,'msg'=>lang('param_err').'：'.$validate->getError() ];
         }
+        if(isset($data['type_jumpurl'])){ $data['type_jumpurl'] = mac_safe_jumpurl($data['type_jumpurl']); }
 
         if(!empty($data['type_extend'])){
             $data['type_extend'] = json_encode($data['type_extend']);

@@ -517,6 +517,7 @@ class Manga extends Base {
         if(!$validate->check($data)){
             return ['code'=>1001,'msg'=>lang('param_err').'：'.$validate->getError() ];
         }
+        if(isset($data['manga_jumpurl'])){ $data['manga_jumpurl'] = mac_safe_jumpurl($data['manga_jumpurl']); }
 
         $key = 'manga_detail_'.$data['manga_id'];
         Cache::delete($key);

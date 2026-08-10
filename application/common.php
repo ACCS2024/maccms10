@@ -441,6 +441,43 @@ function mac_jump($url,$sec=0)
     echo '<script>setTimeout(function (){location.href="'.$url.'";},'.($sec*1000).');</script><span>'.lang('pause').''.$sec.''.lang('continue_in_second').'  >>>  </span><a href="'.$url.'" >'.lang('browser_jump').'</a><br>';
 }
 
+/**
+ * jumpurl 安全净化(安全加固,不兼容旧脏数据):
+ * 仅放行干净的 http/https 绝对地址(长度<=150,不含引号/尖括号/空白/反斜杠/反引号/控制字符),
+ * 其余(javascript:/data: 伪协议、XSS 引号闭合、注入脚本)一律返回空串。
+ * cs_jump 跳转木马正是滥用此字段——入库(各模型 saveData)与模板输出两端都必须经过它。
+ */
+function mac_safe_jumpurl($url)
+{
+    $url = trim((string)$url);
+    if ($url === '' || strlen($url) > 150) {
+        return '';
+    }
+    if (preg_match('/[\x00-\x20\x22\x27\x3c\x3e\x5c\x60\x7f]/', $url)) {
+        return '';
+    }
+    if (!preg_match('#^https?://[A-Za-z0-9\-._~%:/?\#\[\]@!$&()*+,;=]+$#', $url)) {
+        return '';
+    }
+    return $url;
+}
+
+/**
+ * 批量净化一行数据里的所有 *_jumpurl 字段——用于采集/接收等绕过 saveData 的直接入库路径。
+ */
+function mac_clean_jumpurl_fields($row)
+{
+    if (!is_array($row)) {
+        return $row;
+    }
+    foreach (['vod_jumpurl','art_jumpurl','actor_jumpurl','type_jumpurl','website_jumpurl','manga_jumpurl'] as $k) {
+        if (isset($row[$k])) {
+            $row[$k] = mac_safe_jumpurl($row[$k]);
+        }
+    }
+    return $row;
+}
+
 function mac_echo($str)
 {
     echo $str.'<br>';

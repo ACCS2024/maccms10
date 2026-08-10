@@ -946,6 +946,7 @@ class Collect extends Base {
                         $v['vod_pic'] = (string)$tmp['pic'];
                         $msg = $tmp['msg'];
                         $v = VodValidate::formatDataBeforeDb($v);
+                        $v = mac_clean_jumpurl_fields($v);
                         $vod_id = (new \app\common\model\Vod())->insert($v, false, true);
                         if ($vod_id > 0) {
                             $vod_search_enabled && $vod_search->checkAndUpdateTopResults(['vod_id' => $vod_id] + $v, true);
@@ -1204,6 +1205,7 @@ class Collect extends Base {
                             $where = [];
                             $where['vod_id'] = $info['vod_id'];
                             $update = VodValidate::formatDataBeforeDb($update);
+                            $update = mac_clean_jumpurl_fields($update);
                             (new \app\common\model\Vod())->where($where)->update($update);
                             \app\common\util\MeilisearchSync::afterVodSave((int)$info['vod_id']); // 采集更新:增量同步 Meili
                             $color = 'green';
@@ -1555,6 +1557,7 @@ class Collect extends Base {
                     $v['art_pic'] = (string)$tmp['pic'];
 
                     $msg = $tmp['msg'];
+                    $v = mac_clean_jumpurl_fields($v);
                     $res = (new \app\common\model\Art())->insert($v, false, true);
                     \app\common\util\MeilisearchSync::afterArtSave((int)$res); // 采集入库:增量同步 Meili(Meili 关闭则空操作)
                     if($res===false){
@@ -1615,6 +1618,7 @@ class Collect extends Base {
                                 $update['art_time'] = time();
                                 $where = [];
                                 $where['art_id'] = $info['art_id'];
+                                $update = mac_clean_jumpurl_fields($update);
                                 $res = (new \app\common\model\Art())->where($where)->update($update);
                                 \app\common\util\MeilisearchSync::afterArtSave((int)$info['art_id']); // 采集更新:增量同步 Meili
                                 $color = 'green';
@@ -1869,6 +1873,7 @@ class Collect extends Base {
                     $tmp = $this->syncImages($config_sync_pic, $v['actor_pic'],'actor');
                     $v['actor_pic'] = $tmp['pic'];
                     $msg = $tmp['msg'];
+                    $v = mac_clean_jumpurl_fields($v);
                     $res = (new \app\common\model\Actor())->insert($v, false, true);
                     \app\common\util\MeilisearchSync::afterActorSave((int)$res); // 采集入库:增量同步 Meili(Meili 关闭则空操作)
                     if($res===false){
@@ -1912,6 +1917,7 @@ class Collect extends Base {
                                 $update['actor_time'] = time();
                                 $where = [];
                                 $where['actor_id'] = $info['actor_id'];
+                                $update = mac_clean_jumpurl_fields($update);
                                 $res = (new \app\common\model\Actor())->where($where)->update($update);
                                 \app\common\util\MeilisearchSync::afterActorSave((int)$info['actor_id']); // 采集更新:增量同步 Meili
                                 $color = 'green';
@@ -2467,6 +2473,7 @@ class Collect extends Base {
                     $tmp = $this->syncImages($config_sync_pic, $v['website_pic'],'website');
                     $v['website_pic'] = $tmp['pic'];
                     $msg = $tmp['msg'];
+                    $v = mac_clean_jumpurl_fields($v);
                     $res = (new \app\common\model\Website())->insert($v, false, true);
                     \app\common\util\MeilisearchSync::afterWebsiteSave((int)$res); // 采集入库:增量同步 Meili(Meili 关闭则空操作)
                     if($res===false){
@@ -2510,6 +2517,7 @@ class Collect extends Base {
                                 $update['website_time'] = time();
                                 $where = [];
                                 $where['website_id'] = $info['website_id'];
+                                $update = mac_clean_jumpurl_fields($update);
                                 $res = (new \app\common\model\Website())->where($where)->update($update);
                                 \app\common\util\MeilisearchSync::afterWebsiteSave((int)$info['website_id']); // 采集更新:增量同步 Meili
                                 $color = 'green';
@@ -3062,6 +3070,7 @@ class Collect extends Base {
                     $v['manga_chapter_from'] = $v['manga_play_from'];
                     $v['manga_chapter_url'] = $v['manga_play_url'];
                     
+                    $v = mac_clean_jumpurl_fields($v);
                     $res = (new \app\common\model\Manga())->insert($v, false, true);
                     \app\common\util\MeilisearchSync::afterMangaSave((int)$res); // 采集入库:增量同步 Meili(Meili 关闭则空操作)
                     if($res===false){
@@ -3111,6 +3120,7 @@ class Collect extends Base {
                             $update['manga_time'] = time();
                             $where = [];
                             $where['manga_id'] = $info['manga_id'];
+                            $update = mac_clean_jumpurl_fields($update);
                             $res = (new \app\common\model\Manga())->where($where)->update($update);
                             \app\common\util\MeilisearchSync::afterMangaSave((int)$info['manga_id']); // 采集更新:增量同步 Meili
                             $color = 'green';

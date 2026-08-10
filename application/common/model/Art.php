@@ -518,6 +518,7 @@ class Art extends Base {
         if(!$validate->check($data)){
             return ['code'=>1001,'msg'=>lang('param_err').'：'.$validate->getError() ];
         }
+        if(isset($data['art_jumpurl'])){ $data['art_jumpurl'] = mac_safe_jumpurl($data['art_jumpurl']); }
 
         $key = 'art_detail_'.$data['art_id'];
         Cache::delete($key);

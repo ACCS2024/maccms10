@@ -721,6 +721,7 @@ class Vod extends Base {
         if(!$validate->check($data)){
             return ['code'=>1001,'msg'=>lang('param_err').'：'.$validate->getError() ];
         }
+        if(isset($data['vod_jumpurl'])){ $data['vod_jumpurl'] = mac_safe_jumpurl($data['vod_jumpurl']); }
         $key = 'vod_detail_'.$data['vod_id'];
         Cache::delete($key);
         $key = 'vod_detail_'.$data['vod_en'];

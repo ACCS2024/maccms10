@@ -378,7 +378,7 @@
         </div>
         <script>
             {if condition="$obj.vod_jumpurl neq ''"}
-            location.href='{$obj.vod_jumpurl}';
+            location.href='<?php echo mac_safe_jumpurl($obj["vod_jumpurl"]); ?>';
             {/if}
             var lang = localStorage.getItem('lang');
             function changeLang() {

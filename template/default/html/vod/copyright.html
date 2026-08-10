@@ -16,7 +16,7 @@
     <div class="jump">
         {if condition="$obj['vod_jumpurl'] neq ''"}
         <span data-lang='string_yemianzid'>页面自动</span>
-        <a id="href" href="<?php echo($obj['vod_jumpurl']);?>" data-lang="string_tiaoz">因为版权问题，本站不提供在线播放</a> 
+        <a id="href" href="<?php echo mac_safe_jumpurl($obj['vod_jumpurl']);?>" data-lang="string_tiaoz">因为版权问题，本站不提供在线播放</a>
         <span data-lang="string_dengdai">等待时间：</span> <b id="wait">3</b>
         {/if}
     </div>
