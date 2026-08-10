@@ -3,9 +3,21 @@ namespace app\common\model;
 use think\facade\Db;
 use think\facade\Cache;
 
-class Extend extends Base {
-
-    protected $schema = [];
+/**
+ * 扩展数据查询辅助类(area/lang/class/year/version/state/letter/dataCount)。
+ *
+ * 【不要让它继承 Base/Model】
+ * 本类没有对应的数据表(mac_extend 不存在),内部一律通过 Vod/Art 等真实模型取数。
+ * 而 TP8 的 think\Model::__construct() 会调用 initializeData() → getFields(),
+ * 也就是说"实例化"这个动作本身就会去查自己那张表的字段结构 —— TP5 是懒加载,
+ * 从不触发,所以历史上继承 Base 没出过事;迁到 TP8 后每次 new Extend() 都会去查
+ * mac_extend,直接 SQLSTATE[42S02] 打穿整个前台(首页/所有带 maccms:area 等标签的页面)。
+ * 加 protected $schema = [] 也没用,getFields() 判的是 empty(),空数组照样去查库。
+ *
+ * 它本来就不需要 ActiveRecord 的任何能力,所以这里退回普通类。
+ * 调用方全部是 (new \app\common\model\Extend())->xxx(),类名与方法签名不变,无感知。
+ */
+class Extend {
 
     public function dataCount()
     {
