@@ -57,6 +57,28 @@ API_FORBIDDEN=(
     "application/api/controller/Yzm.php"   # 入库接口只应存在于主站
 )
 
+# 仓库里已删除、必须同步从生产删掉的路径。
+#
+# 为什么需要这份名单：上面的 rsync 【没有】 --delete，也不能加 —— 加了会连站点私有的
+# template/155zy/、.env、随机名后台入口一起删掉（它们只存在于生产，不在代码树里）。
+# 于是"仓库里删掉一个文件"这件事默认不会传播到生产：孤儿 PHP 会永久留在站点根目录。
+# 对刚做完木马取证的机器，留一堆没人维护的孤儿 PHP 本身就是净负债；
+# 更现实的问题是，任何"断言这些路径不存在"的自检在生产上会恒为 FAIL。
+#
+# 规则：任何删除文件的 commit，必须同时往这份数组里加一行。
+REMOVED_PATHS=(
+    # TP5 死平面（TP8 从不加载，却仍被后台/安装器写入）
+    "application/config.php"
+    "application/database.php"
+    "application/route.php"
+    "application/command.php"
+    "application/tags.php"
+    "application/common/behavior"
+    # TP8 下不再使用的实现
+    "application/middleware/SessionSameSite.php"   # 依赖 session_start()，TP8 从不调用
+    "application/index/controller/Myerror.php"     # TP5 的 _empty 约定，TP8 不认
+)
+
 echo "源: $SRC"
 echo "目标: $HOST → ${SITES[*]}"
 echo
@@ -75,14 +97,54 @@ for site in "${SITES[@]}"; do
         done
     fi
 
+    # 传播删除（rsync 无 --delete，见 REMOVED_PATHS 上方说明）
+    if [ ${#REMOVED_PATHS[@]} -gt 0 ]; then
+        removed=0
+        for p in "${REMOVED_PATHS[@]}"; do
+            if $SSH "test -e /home/wwwroot/$site/$p"; then
+                $SSH "rm -rf /home/wwwroot/$site/$p"
+                echo "  已删除残留 $p"
+                removed=$((removed+1))
+            fi
+        done
+        [ "$removed" = "0" ] && echo "  无待删除残留"
+    fi
+
+    # vendor/ 被 EXCLUDES 排除（由 composer 管理），所以依赖必须在远端装。
+    # 不装的后果很隐蔽：改了 composer.json 的 psr-4 或加了新依赖之后，
+    # 部署会"看起来成功"，然后整站 Class not found。
+    if $SSH "command -v composer >/dev/null 2>&1"; then
+        echo "  composer install …"
+        $SSH "cd /home/wwwroot/$site && sudo -u www COMPOSER_ALLOW_SUPERUSER=1 composer install --no-dev --no-interaction --no-progress -o 2>&1 | tail -3" || {
+            echo "  ⚠ composer install 失败，请手工在 /home/wwwroot/$site 下执行后再冒烟"
+        }
+    else
+        echo "  ⚠ 远端没有 composer：跳过依赖安装。若本次改动了 composer.json，请先装 composer"
+    fi
+
     # .user.ini 被 aaPanel 用 chattr +i 锁定，chown 必然失败且不应中断部署，
     # 故显式排除它；其余一律归还 www:www（rsync 以 root 跑会把新建文件留给 root）。
+    # runtime 清理：只清编译产物与缓存，【保留 session】。
+    # 原先是 rm -rf runtime/*，等于每次部署把所有管理员与会员踢下线
+    # （20 次部署 = 20 次强制登出）。会话要单独清时用 --flush-sessions。
+    KEEP_SESSION="! -name session"
+    [ "${FLUSH_SESSIONS:-0}" = "1" ] && KEEP_SESSION=""
     $SSH "find /home/wwwroot/$site -name .user.ini -prune -o -exec chown www:www {} + 2>/dev/null; \
           chmod -R 775 /home/wwwroot/$site/runtime /home/wwwroot/$site/log /home/wwwroot/$site/application/data 2>/dev/null; \
-          rm -rf /home/wwwroot/$site/runtime/*; \
+          find /home/wwwroot/$site/runtime -mindepth 1 -maxdepth 1 $KEEP_SESSION -exec rm -rf {} + 2>/dev/null; \
           chown -R www:www /home/wwwroot/$site/runtime; true" >/dev/null
+    [ "${FLUSH_SESSIONS:-0}" = "1" ] && echo "  已清空会话（所有人需重新登录）"
     echo "  属主与缓存已处理"
 done
+
+# OPcache：不 reload 的话，改过的 config/ 与 application/ 下的 PHP 在旧进程里仍是旧字节码，
+# 于是"改配置 → 立刻 curl 验证"既可能假绿也可能假红。放在冒烟之前。
+echo
+echo "── reload php-fpm ────────────────────"
+$SSH "if [ -x /etc/init.d/php-fpm-83 ]; then /etc/init.d/php-fpm-83 reload && echo '  php-fpm-83 reloaded'; \
+      elif command -v systemctl >/dev/null 2>&1 && systemctl list-units --type=service --all 2>/dev/null | grep -qE 'php[0-9.-]*fpm'; then \
+        systemctl reload \$(systemctl list-units --type=service --all --no-legend 2>/dev/null | grep -oE 'php[0-9.-]*fpm[^ ]*' | head -1) && echo '  php-fpm reloaded (systemd)'; \
+      else echo '  ⚠ 未找到 php-fpm 服务，请手工 reload，否则本次改动可能未生效'; fi" || true
 
 echo
 echo "── 站点私有配置完整性 ────────────────"
@@ -110,6 +172,16 @@ if [ "$missing" = "1" ]; then
 fi
 
 echo
+echo "── 远端静态自检 ──────────────────────"
+# 以 www 身份跑：以 root 跑会在 www 属主的 runtime 下留 root 属主文件，
+# 下一次 FPM 写同一路径会失败——而这条路径恰好是 fail-silent 的。
+for site in "${SITES[@]}"; do
+    out=$($SSH "cd /home/wwwroot/$site && sudo -u www php think mac:selfcheck 2>&1 | tail -1" || echo "ERR")
+    printf "  %-12s %s\n" "$site" "$out"
+    $SSH "chown -R www:www /home/wwwroot/$site/runtime 2>/dev/null; true" >/dev/null
+done
+
+echo
 echo "── 冒烟 ──────────────────────────────"
 for site in "${SITES[@]}"; do
     for path in "/" "/api.php/provide/vod/?ac=list"; do
@@ -117,6 +189,8 @@ for site in "${SITES[@]}"; do
         printf "  %-12s %-32s %s\n" "$site" "${path:0:30}" "$code"
     done
 done
+echo
+echo "提示：清空所有登录会话请用  FLUSH_SESSIONS=1 bash bin/deploy-155.sh"
 echo
 echo "完成。若改动了 application/admin/controller/Update.php，"
 echo "记得同步 application/extra/version.php 的 update_hash（否则后台会被完整性校验锁死）。"
