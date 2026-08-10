@@ -1681,23 +1681,6 @@ class System extends Base
         return json(['code' => 1, 'msg' => 'ok']);
     }
 
-    public function configVersion(){
-        $param = \think\facade\Request::param();
-        $config = config('maccms');
-        if (!isset($config['site'])) {
-            $config['site'] = [];
-        }
-        $config['site']['new_version'] = $param['version'];
-        if (!is_writable(APP_PATH . 'extra/maccms.php')) {
-            return $this->error(APP_PATH . 'extra/maccms.php' . lang('install/write_read_err'));
-        }
-        $res = mac_arr2file(APP_PATH . 'extra/maccms.php', $config);
-        if ($res === false) {
-            return $this->ajaxErrorWithFreshToken(lang('save_err'));
-        }
-        return json(['code' => 1, 'msg' => 'ok']);
-    }
-
     /**
      * AJAX form error with a new __token__ (ThinkPHP deletes the session token when validation runs).
      */
