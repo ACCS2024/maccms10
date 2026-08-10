@@ -28,3 +28,10 @@ adm_smoke.php
 
 .claude/settings.local.json
 
+
+# 运行时产物,不入库:
+#   data/backup/*.sql   —— db:export / 后台备份导出的库转储(含站点数据)
+#   data/optimize/      —— php think tune 生成的主机调优配置(基础设施信息)
+# 目录里的 index.html 占位文件仍然跟踪。
+application/data/backup/*.sql
+application/data/optimize/
