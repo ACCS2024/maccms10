@@ -1633,3 +1633,56 @@ INSERT INTO `mac_live` (`cate_id`,`live_name`,`live_en`,`live_url`,`live_play_fr
 (1,'CCTV-14 少儿','cctv14','HD$https://pili-live-hls.cntv.myqcloud.com/live/cctv14hd.m3u8','hls',1,106,0,0,'CCTV-14 少儿频道 中央电视台官方直播'),
 (1,'CCTV-15 音乐','cctv15','HD$https://pili-live-hls.cntv.myqcloud.com/live/cctv15hd.m3u8','hls',1,105,0,0,'CCTV-15 音乐频道 中央电视台官方直播'),
 (1,'CCTV-17 农业农村','cctv17','HD$https://pili-live-hls.cntv.myqcloud.com/live/cctv17hd.m3u8','hls',1,104,0,0,'CCTV-17 农业农村频道 中央电视台官方直播');
+
+-- ----------------------------
+-- Table structure for mac_help_cfg
+-- 帮助中心配置(key-value)。HelpCfg::setMulti() 用 UPDATE 落盘,
+-- 因此每个 cfg_key 必须预置一行,否则后台保存静默不生效。
+-- ----------------------------
+CREATE TABLE `mac_help_cfg` (
+  `cfg_key` varchar(50) NOT NULL COMMENT '配置键',
+  `cfg_val` text DEFAULT NULL COMMENT '配置值',
+  `cfg_label` varchar(100) NOT NULL DEFAULT '' COMMENT '显示名称',
+  `cfg_sort` int(10) NOT NULL DEFAULT '0' COMMENT '排序',
+  PRIMARY KEY (`cfg_key`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='帮助中心配置';
+
+-- ----------------------------
+-- Default data for mac_help_cfg
+-- ----------------------------
+INSERT INTO `mac_help_cfg` (`cfg_key`,`cfg_val`,`cfg_label`,`cfg_sort`) VALUES
+('enabled','1','启用帮助中心',1),
+('help_path','help','帮助中心访问路径',2),
+('site_name','','站点名称',3),
+('site_host','','站点地址',4),
+('site_back_tip','','返回站点提示',5),
+('player_flag','','播放器标识',6),
+('player_host','','播放器解析地址',7),
+('player_code','','播放器自定义代码',8),
+('parse_host','','备用解析地址',9),
+('api_host','','采集接口地址',10),
+('api_host_backup','','备用采集接口地址',11),
+('newart_enabled','0','启用新闻/演员接口',12),
+('newart_api_host','','新闻演员接口地址',13),
+('tg_url','','Telegram 地址',14),
+('notice','','公告',15),
+('file_regen_time','0','资源包最后生成时间',16);
+
+-- ----------------------------
+-- Table structure for mac_rep
+-- 内容替换规则(域名替换/播放器替换等),对应 app\common\model\Rep
+-- ----------------------------
+CREATE TABLE `mac_rep` (
+  `rep_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `rep_type` varchar(30) NOT NULL DEFAULT '' COMMENT '替换类型(见 Rep::$typeMap)',
+  `rep_original` varchar(500) NOT NULL DEFAULT '' COMMENT '原内容',
+  `rep_replacement` varchar(500) NOT NULL DEFAULT '' COMMENT '替换为',
+  `rep_note` varchar(255) NOT NULL DEFAULT '' COMMENT '备注',
+  `rep_status` tinyint(1) unsigned NOT NULL DEFAULT '1' COMMENT '启用状态(0=停用,1=启用)',
+  `rep_applied` tinyint(1) unsigned NOT NULL DEFAULT '0' COMMENT '是否已执行',
+  `rep_applied_time` int(10) unsigned NOT NULL DEFAULT '0' COMMENT '最后执行时间',
+  `rep_create_time` int(10) unsigned NOT NULL DEFAULT '0' COMMENT '创建时间',
+  PRIMARY KEY (`rep_id`),
+  KEY `rep_status` (`rep_status`),
+  KEY `rep_applied` (`rep_applied`)
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COMMENT='内容替换规则';

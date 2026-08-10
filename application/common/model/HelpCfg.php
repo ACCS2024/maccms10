@@ -14,7 +14,12 @@ class HelpCfg
      */
     public static function getAll(): array
     {
-        $rows = Db::name('help_cfg')->select()->toArray();
+        try {
+            $rows = Db::name('help_cfg')->select()->toArray();
+        } catch (\Throwable $e) {
+            // 表缺失/库不可用时降级为空配置,详见 self::get() 的说明
+            return [];
+        }
         $result = [];
         foreach ($rows as $row) {
             $result[$row['cfg_key']] = $row['cfg_val'];
@@ -24,10 +29,20 @@ class HelpCfg
 
     /**
      * 获取单个配置值
+     *
+     * 注意:本方法在 application/index/route/web.php 里被【路由定义阶段】调用
+     * (用 help_path 决定帮助中心的路由前缀),也就是说它跑在每一个前台请求最前面。
+     * 一旦这里抛异常,整站前台直接 500 —— mac_help_cfg 曾因漏在 install.sql 里建表
+     * 而导致全新安装的站点首页全部 500。所以这里必须失效降级:
+     * 拿不到配置就退回默认值,只让帮助中心这一个功能不可用,不牵连全站。
      */
     public static function get(string $key, string $default = ''): string
     {
-        $val = Db::name('help_cfg')->where('cfg_key', $key)->value('cfg_val');
+        try {
+            $val = Db::name('help_cfg')->where('cfg_key', $key)->value('cfg_val');
+        } catch (\Throwable $e) {
+            return $default;
+        }
         return $val !== null ? (string)$val : $default;
     }
 
