@@ -43,14 +43,27 @@ function check($name, $status, $detail = '') {
 // 检查 1: application/extra/ 可疑文件检测
 // ============================================
 $extraDir = APP_PATH . 'extra' . DIRECTORY_SEPARATOR;
-$allowedFiles = [
-    'addons.php', 'bind.php', 'blacks.php', 'captcha.php',
-    'domain.php', 'maccms.php', 'queue.php', 'quickmenu.php',
-    'timming.php', 'version.php', 'voddowner.php', 'vodplayer.php',
-    'vodserver.php',
-];
+// 白名单只有一份权威副本:application/middleware/Begin.php 的 $allowedExtraFiles。
+// 那份是【会真的动手的】—— Begin 中间件每个请求都 scandir extra/ 并 @unlink 不在名单里的文件。
+// 这里原本是手抄的第二份,已经和它漂移了(缺 mctheme.php / type_synonyms.php /
+// resource_sites_custom.php),于是每次体检都对两个正常文件报 DANGER「可能是攻击者植入的后门」。
+// 一个常年亮红的告警等于没有告警 —— 运维会学会忽略它,真出事那次也一起忽略。
+// 所以这里直接从 Begin.php 反射读取那一份,两份名单合并成一份。
+$allowedFiles = [];
+$beginFile = APP_PATH . 'middleware' . DIRECTORY_SEPARATOR . 'Begin.php';
+if (is_file($beginFile)) {
+    $src = file_get_contents($beginFile);
+    if (preg_match('/\$allowedExtraFiles\s*=\s*\[(.*?)\];/s', $src, $m)
+        && preg_match_all("/'([^']+\.php)'/", $m[1], $mm)) {
+        $allowedFiles = $mm[1];
+    }
+}
+if (!$allowedFiles) {
+    check('extra/ 白名单来源', 'WARNING',
+        '未能从 application/middleware/Begin.php 解析出 $allowedExtraFiles,跳过 extra/ 目录检测');
+}
 
-if (is_dir($extraDir)) {
+if ($allowedFiles && is_dir($extraDir)) {
     $files = scandir($extraDir);
     $suspicious = [];
     foreach ($files as $f) {

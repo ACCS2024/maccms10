@@ -301,8 +301,11 @@ class Index extends \app\common\controller\All
     private function checkDir()
     {
         $items = [
-            ['file', './application/database.php', lang('install/read_and_write'), lang('install/read_and_write'), 'ok'],
-            ['file', './application/route.php', lang('install/read_and_write'), lang('install/read_and_write'), 'ok'],
+            // 凭据的唯一事实源是根目录 .env(TP8 的 config/database.php 一律取自 env()),
+            // 所以这里检查的是【根目录可写】而不是那两个已删除的 TP5 死文件
+            // (application/database.php / route.php,TP8 从不加载,继续检查它们
+            //  只会让全新代码树的安装器在第一步就报"文件不存在"而卡死)。
+            ['dir', '.', lang('install/read_and_write'), lang('install/read_and_write'), 'ok'],
             ['dir', './application/extra', lang('install/read_and_write'), lang('install/read_and_write'), 'ok'],
             ['dir', './application/data/backup', lang('install/read_and_write'), lang('install/read_and_write'), 'ok'],
             ['dir', './application/data/update', lang('install/read_and_write'), lang('install/read_and_write'), 'ok'],

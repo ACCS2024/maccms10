@@ -145,7 +145,7 @@ class SiteInstall extends Command
             }
         }
 
-        // 6) 写 database.php 并切换本进程默认连接
+        // 6) 写 .env 并切换本进程默认连接
         try {
             $appCfg = $installer->buildDbConfig([
                 'hostname' => $o('db-host'), 'hostport' => $o('db-port'),
@@ -249,7 +249,7 @@ class SiteInstall extends Command
             $output->writeln('  数据库账号: <comment>root(开发模式,生产请勿如此)</comment>');
         } else {
             $output->writeln("  应用账号 : {$appUser}");
-            $output->writeln("  应用口令 : <comment>{$appPass}</comment>(已写入 application/database.php)");
+            $output->writeln("  应用口令 : <comment>{$appPass}</comment>(已写入根目录 .env)");
         }
         $output->writeln("  管理员   : <comment>{$adminUser} / {$adminPass}</comment>");
         $output->writeln('  下一步   : 浏览器打开  <站点地址>/admin.php  登录');

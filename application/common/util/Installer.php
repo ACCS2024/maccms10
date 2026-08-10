@@ -140,10 +140,6 @@ class Installer
     }
 
     /**
-     * 写 application/database.php(var_export,防注入)。
-     * @throws \RuntimeException 写入或回读校验失败
-     */
-    /**
      * 写数据库凭据。
      *
      * TP8 的 config/database.php 是 ['default'=>..,'connections'=>['mysql'=>..]] 结构,
