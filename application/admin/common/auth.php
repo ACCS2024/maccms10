@@ -1636,7 +1636,10 @@ return array (
         'show' => 0,
         'name' => lang('admin/resourcehub/multi_collect_menu'),
         'controller' => 'resource_hub',
-        'action' => 'multi_collect',
+        // 必须与 UI 实际请求的动作名一致(view/resourcehub/index.html 链的是
+        // url('resource_hub/multiCollect'))。权限校验拿 controller/action 原样比对,
+        // 这里写 multi_collect 会让被授权的子管理员照样被拒。
+        'action' => 'multiCollect',
       ),
       9502 => 
       array (

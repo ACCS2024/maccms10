@@ -2,7 +2,7 @@
 namespace app\admin\controller;
 use think\facade\Db;
 
-class Signmilestone extends Base
+class SignMilestone extends Base
 {
     public function __construct()
     {

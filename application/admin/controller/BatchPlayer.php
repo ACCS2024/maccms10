@@ -7,7 +7,7 @@ use think\facade\Config;
 /**
  * 批量播放器设定控制器
  */
-class Batchplayer extends Base
+class BatchPlayer extends Base
 {
     public function __construct()
     {

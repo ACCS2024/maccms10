@@ -7,7 +7,7 @@ use think\facade\Config;
  * 数据替换控制器
  * 提供批量替换数据库中的字段内容功能
  */
-class Datareplace extends Base
+class DataReplace extends Base
 {
     /**
      * 允许操作的数据表白名单

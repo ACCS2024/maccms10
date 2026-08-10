@@ -7,6 +7,7 @@ return [
         'db:import'            => \app\command\DbImport::class,
         'db:search-replace'    => \app\command\DbSearchReplace::class,
         'info'                 => \app\command\Info::class,
+        'mac:selfcheck'        => \app\command\SelfCheck::class,
         'seo:ai-generate'      => \app\command\SeoAiGenerate::class,
         'site:destroy'         => \app\command\SiteDestroy::class,
         'site:install'         => \app\command\SiteInstall::class,
