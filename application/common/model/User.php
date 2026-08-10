@@ -604,8 +604,12 @@ class User extends Base
             }
         }
 
-        cookie('user_id', $row['user_id'], ['expire' => 2592000]);
-        cookie('user_name', $row['user_name'], ['expire' => 2592000]);
+        // user_id / user_name 是展示型标识(非凭据),前台主题的 JS 会读它们来决定
+        // 显示「登录」还是用户名(例:template/default/asset/js/foot-expand.js 的
+        // $.cookie("user_id")),所以单独放开 HttpOnly;真正的登录令牌 user_check
+        // 沿用 config/cookie.php 的 httponly=true,JS 读不到。
+        cookie('user_id', $row['user_id'], ['expire' => 2592000, 'httponly' => false]);
+        cookie('user_name', $row['user_name'], ['expire' => 2592000, 'httponly' => false]);
         cookie('group_id', !empty($group[0]['group_id']) ? $group[0]['group_id'] : $this->_def_group, ['expire' => 2592000]);
         cookie('group_name', !empty($group[0]['group_name']) ? $group[0]['group_name'] : '', ['expire' => 2592000]);
         cookie('user_check', md5($random . '-' . $row['user_name'] . '-' . $row['user_id'] . '-'), ['expire' => 2592000]);
@@ -700,8 +704,9 @@ class User extends Base
 
         $setCookie = !isset($options['set_cookie']) || $options['set_cookie'];
         if ($setCookie) {
-            cookie('user_id', $row['user_id'],['expire'=>2592000] );
-            cookie('user_name', $row['user_name'],['expire'=>2592000] );
+            // 同上:展示型标识放开 HttpOnly,令牌 user_check 不放开。
+            cookie('user_id', $row['user_id'],['expire'=>2592000,'httponly'=>false] );
+            cookie('user_name', $row['user_name'],['expire'=>2592000,'httponly'=>false] );
             cookie('group_id', $group[0]['group_id'],['expire'=>2592000] );
             cookie('group_name', $group[0]['group_name'],['expire'=>2592000] );
             cookie('user_check', md5($random . '-' .$row['user_name'] . '-' . $row['user_id'] .'-' ),['expire'=>2592000] );
