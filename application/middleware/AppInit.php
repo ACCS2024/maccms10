@@ -149,33 +149,17 @@ class AppInit
         }
         \think\facade\Config::set(['pathinfo_depr' => $config['app']['pathinfo_depr']], 'route');
 
+        // 这两处归一只是为了让 $GLOBALS['config'] 里的值干净(模板与业务代码会读它),
+        // 【不再】从这里回写 cache 配置组 —— 缓存驱动在 App::initialize() 的
+        // BootService→ModelService 阶段就建好并记忆化了,比任何中间件都早,
+        // 这里写多少它都不重读(实测生效 expire 一直是 0 = 永不过期)。
+        // 真正的落点已挪到 config/cache.php,在 App::load() 期直接读 extra/maccms.php。
         if (intval($config['app']['cache_time']) < 1) {
             $config['app']['cache_time'] = 60;
         }
         if (!in_array($config['app']['cache_type'], ['file', 'memcache', 'memcached', 'redis'])) {
             $config['app']['cache_type'] = 'file';
         }
-
-        $cacheTimeout = (isset($config['app']['cache_timeout']) && (float)$config['app']['cache_timeout'] > 0)
-            ? (float)$config['app']['cache_timeout'] : 1.5;
-
-        // Batch-update cache config in one call (TP8 array_merges at namespace level)
-        $cacheStores = \think\facade\Config::get('cache.stores') ?: [];
-        $cacheStores['file']['expire'] = (int)$config['app']['cache_time'];
-        $cacheStores['redis']['timeout']  = $cacheTimeout;
-        $cacheStores['redis']['host']     = $config['app']['cache_host']     ?? '127.0.0.1';
-        $cacheStores['redis']['port']     = $config['app']['cache_port']     ?? 6379;
-        $cacheStores['redis']['username'] = $config['app']['cache_username'] ?? '';
-        $cacheStores['redis']['password'] = $config['app']['cache_password'] ?? '';
-        if ($config['app']['cache_type'] === 'redis'
-            && isset($config['app']['cache_db'])
-            && intval($config['app']['cache_db']) > 0) {
-            $cacheStores['redis']['select'] = intval($config['app']['cache_db']);
-        }
-        \think\facade\Config::set([
-            'default' => $config['app']['cache_type'],
-            'stores'  => $cacheStores,
-        ], 'cache');
 
         // 后台「系统设置 → 语言」原本写的是 app 组的 default_lang,而 TP8 的 Lang
         // 只读【lang 组】(Lang.php:78 `$config->get('lang')`),config/lang.php 又不存在,
@@ -203,19 +187,10 @@ class AppInit
             }
         }
 
-        $sessionType = isset($config['app']['session_type'])
-            ? strtolower(trim((string)$config['app']['session_type'])) : '';
-        if ($sessionType === 'redis') {
-            \think\facade\Config::set([
-                'type'       => 'redis',
-                'host'       => $config['app']['cache_host']     ?? '127.0.0.1',
-                'port'       => $config['app']['cache_port']     ?? 6379,
-                'password'   => $config['app']['cache_password'] ?? '',
-                'select'     => isset($config['app']['cache_db']) ? intval($config['app']['cache_db']) : 0,
-                'timeout'    => $cacheTimeout,
-                'persistent' => true,
-            ], 'session');
-        }
+        // 会话后端的选择已挪到 config/session.php(App::load() 期定型)。
+        // 原先这里的 Config::set(..., 'session') 是彻底的空操作:SessionInit 是第 2 个
+        // 全局中间件,它在本中间件之前就已经解析并记忆化了 Store + handler;
+        // 而且 TP8 根本没有 redis session 驱动,'type'=>'redis' 一旦真生效反而是致命错误。
 
         $GLOBALS['config'] = $config;
 
