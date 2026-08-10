@@ -15,7 +15,9 @@ class Timming extends Base
         // 安全加固(V1/CVE-2026-4562):未授权定时任务收紧为 fail-closed。
         // CLI(本机 crontab/命令行)放行;HTTP 必须携带与后台配置一致的 token,
         // 且 token 未配置时一律拒绝(杜绝默认空 token 时的未授权触发采集/SSRF/清缓存)。
-        if (!IS_CLI) {
+        // IS_CLI 在 application/common.php 统一定义;这里仍用 defined() 兜底,
+        // 使「常量缺失」退化为最严格的分支(要求 token),而不是致命 Error。
+        if (!defined('IS_CLI') || !IS_CLI) {
             if (strtoupper($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
                 echo json_encode(['code'=>0,'msg'=>'POST method not allowed for timming']);
                 exit;
@@ -28,14 +30,19 @@ class Timming extends Base
             }
         }
 
+        // 闸门已过(本机 CLI 或 token 正确)。定时任务要以后台身份实例化 admin 控制器,
+        // 授权由【真正做过校验的这段代码】显式授予,而不是让 admin\Base 从 URL 里的
+        // 控制器名反推(那样一来任何 /api.php/timming/* 形状的请求都能顶着后台身份跑)。
+        if (!defined('MAC_TIMMING_AUTHORIZED')) {
+            define('MAC_TIMMING_AUTHORIZED', true);
+        }
+
         // 低峰兜底:把 Redis 播放/阅读计数缓冲的零头落库(未开 hits_buffer 时为空操作)
         \app\common\util\HitsBuffer::flush();
 
         $param = \think\facade\Request::get();
-        $name = $param['name'];
-        if(empty($name)){
-            //return $this->error('参数错误!');
-        }
+        $name    = (string)($param['name'] ?? '');
+        $enforce = (string)($param['enforce'] ?? '');
 
         $list = config('timming');
         foreach($list as $k=>$v){
@@ -43,6 +50,7 @@ class Timming extends Base
                 continue;
             }
 
+            $oldweek = ''; $oldhours = '';
             if(!empty($v['runtime'])) { $oldweek= date('w',$v['runtime']); $oldhours= date('H',$v['runtime']); }
             $curweek= date('w',time()) ;	$curhours= date("H",time());
             if(strlen($oldhours)==1 && intval($oldhours) <10){ $oldhours= '0'.$oldhours; }
@@ -54,7 +62,7 @@ class Timming extends Base
             //$v['runtime']=0;
 
             if( $v['status']=='1' &&
-                ( empty($v['runtime']) || ($oldweek."-".$oldhours) != ($curweek."-".$curhours) && strpos($v['weeks'],$curweek)!==false && strpos($v['hours'],$curhours)!==false  || $param['enforce'] =='1')
+                ( empty($v['runtime']) || ($oldweek."-".$oldhours) != ($curweek."-".$curhours) && strpos($v['weeks'],$curweek)!==false && strpos($v['hours'],$curhours)!==false  || $enforce =='1')
                ) {
                 mac_echo( lang('api/task_tip_exec',[$v['name'] ,$status,$last]));
                 $list[$k]['runtime'] = time();
@@ -96,39 +104,41 @@ class Timming extends Base
         }
     }
 
+    /**
+     * TP5 的全局助手 controller('admin/xxx') 在 TP8 中【不存在】
+     * (vendor/topthink/framework/src/helper.php 无此函数,think\Loader 也已移除),
+     * 调用它是 "Call to undefined function" 致命 Error —— 与 IS_CLI 同一类缺陷,
+     * 藏在 IS_CLI 后面,只修 IS_CLI 的话 7 种任务里有 5 种照样 500。
+     * TP8 下直接实例化即可(鉴权由 MAC_TIMMING_AUTHORIZED 显式授予)。
+     */
     protected function collect($param)
     {
         @parse_str($param,$output);
-        $request = controller('admin/collect');
-        $request->api($output);
+        (new \app\admin\controller\Collect())->api($output);
     }
 
     protected function make($param)
     {
         @parse_str($param,$output);
-        $request = controller('admin/make');
-        $request->make($output);
+        (new \app\admin\controller\Make())->make($output);
     }
 
     protected function cj($param)
     {
         @parse_str($param,$output);
-        $request = controller('admin/cj');
-        $request->col_all($output);
+        (new \app\admin\controller\Cj())->col_all($output);
     }
 
     protected function cache($param)
     {
         @parse_str($param,$output);
-        $request = controller('admin/index');
-        $request->clear();
+        (new \app\admin\controller\Index())->clear();
     }
 
     protected function urlsend($param)
     {
         @parse_str($param,$output);
-        $request = controller('admin/urlsend');
-        $request->push($output);
+        (new \app\admin\controller\Urlsend())->push($output);
     }
 
     protected function analytics($param)

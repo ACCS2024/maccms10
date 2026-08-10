@@ -32,13 +32,19 @@ class Base extends All
         mac_meili_settings_auto_sync();
 
         //判断用户登录状态
-        // 获取真实的控制器类名，防止通过 API Timming 绕过鉴权
-        $real_class = basename(str_replace('\\', '/', get_class($this)));
-
+        // 定时任务放行:授权由【真正做过校验的代码路径】显式授予 ——
+        // app\api\controller\Timming::index() 在通过「本机 CLI 或 token 正确」的闸门之后
+        // 才 define(MAC_TIMMING_AUTHORIZED)。
+        //
+        // 上游版本这里比对的是 $this->_cl=='Timming',即从 URL 里的控制器名反推身份;
+        // 之后为堵这个洞改成比对真实类名 $real_class=='Timming',但 cron 实例化的是
+        // Collect/Make/Cj/Index/Urlsend,真实类名永远不是 Timming —— 该分支从此不可达,
+        // 定时任务全部落进 else 分支被判「未登录」。改为显式常量后两个问题一起消失:
+        // 不可伪造(常量只由过闸后的那段代码定义),也不再误伤 cron。
         if(in_array($this->_cl,['Index']) && in_array($this->_ac,['login'])) {
 
         }
-        elseif(ENTRANCE=='api' && $real_class=='Timming' && in_array($this->_ac,['index'])){
+        elseif(ENTRANCE=='api' && defined('MAC_TIMMING_AUTHORIZED') && MAC_TIMMING_AUTHORIZED === true){
 
         }
         else {

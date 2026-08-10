@@ -159,7 +159,12 @@ class AnalyticsAggregator
 
     private static function upsertHourDim($statHour, $dimType, $dimKey, $row, $now)
     {
-        $prefix = Db::getConfig('prefix');
+        // Db::getConfig() 读的是 database 组的【顶层】键(DbManager::getConfig →
+        // $this->config[$name]),而 TP8 把 prefix 放在 connections.mysql 之下,
+        // 顶层没有这个键 → 返回 null → 表名退化成无前缀的 analytics_hour_dim
+        // → "Base table or view not found"。整点统计任务每次必 500(已实测复现)。
+        // 与本文件其余处(:40/:49/:182)保持一致,走嵌套路径。
+        $prefix = (string)config('database.connections.mysql.prefix');
         $table = $prefix . 'analytics_hour_dim';
         Db::execute(
             "INSERT INTO `{$table}` (`stat_hour`,`dim_type`,`dim_key`,`pv`,`uv`,`session_cnt`,`updated_at`) VALUES (?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE `pv`=VALUES(`pv`),`uv`=VALUES(`uv`),`session_cnt`=VALUES(`session_cnt`),`updated_at`=VALUES(`updated_at`)",
@@ -295,7 +300,8 @@ class AnalyticsAggregator
 
     private static function upsertRetentionCohort($cohortDate, $returnDay, $userCnt, $now)
     {
-        $prefix = Db::getConfig('prefix');
+        // 同 upsertHourDim:Db::getConfig('prefix') 在 TP8 恒为 null,详见该处注释。
+        $prefix = (string)config('database.connections.mysql.prefix');
         $table = $prefix . 'analytics_retention_cohort';
         Db::execute(
             "INSERT INTO `{$table}` (`cohort_date`,`cohort_type`,`return_day`,`user_cnt`,`updated_at`) VALUES (?,?,?,?,?) ON DUPLICATE KEY UPDATE `user_cnt`=VALUES(`user_cnt`),`updated_at`=VALUES(`updated_at`)",

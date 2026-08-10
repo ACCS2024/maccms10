@@ -11,6 +11,21 @@ use think\View;
 
 error_reporting(E_ERROR | E_PARSE );
 
+/**
+ * TP5 时代由入口/框架提供的运行环境常量,TP8 全仓零定义。
+ *
+ * 定义点放在 common.php 而不是各入口文件,原因有二:
+ *   1. common.php 由 think\App::load() 从 appPath 统一加载,五个入口 + CLI 全覆盖;
+ *   2. 生产站的后台入口是随机文件名(防扫描)且被部署脚本排除,改入口文件到不了它。
+ *
+ * PHP 8 下未定义常量是致命 Error(不是 PHP 7 的 notice + 字符串回退),
+ * 不走 set_error_handler,MacApp 的诊断降级救不了 —— 参见
+ * application/api/controller/Timming.php:index() 的 IS_CLI 消费点。
+ */
+if (!defined('IS_CLI')) {
+    define('IS_CLI', PHP_SAPI === 'cli');
+}
+
 
 
 function get_array_unique_id_list($list, $need_sort = false) {
