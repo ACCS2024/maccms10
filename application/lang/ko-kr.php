@@ -2103,6 +2103,7 @@ https://www.baidu.com/123.jpg
   'admin/update/schema_probe_err' => 'Database schema probe failed (no column definitions were readable); the upgrade has been aborted. Continuing would emit the entire upgrade script indiscriminately: existing tables would be re-CREATEd, existing columns re-ADDed, and combined ALTERs would fail as a whole, leaving genuinely missing columns unadded. Please verify the database connection and database name, then retry.',
   'admin/make/view_root_err' => 'Static build aborted: the template root resolved inside application/ (or is empty), which would render backend views into a public directory. Check the theme directory settings and view_path.',
   'admin/make/admin_shell_err' => 'Static build aborted: the rendered output contains the backend console marker (ADMIN_PATH); refusing to write it to a public directory, as that would expose the admin entry path.',
+  'admin/make/tpl_missing_skip' => 'The active theme has no such template; this item was skipped (other pages are unaffected).',
   'admin/update/step3_a' => '온라인 업그레이드 중 세 번째 단계 [캐시 업데이트], 잠시 기다려 주십시오...',
   'admin/update/update_cache' => '데이터 캐시 파일을 업데이트하는 중...',
   'admin/update/upgrade_complete' => '축하합니다. 시스템 업그레이드가 완료되었습니다...',

@@ -2106,6 +2106,7 @@ Note: Si les listes noires et blanches sont remplies, les stratégies s\'appliqu
   'admin/update/schema_probe_err' => 'Database schema probe failed (no column definitions were readable); the upgrade has been aborted. Continuing would emit the entire upgrade script indiscriminately: existing tables would be re-CREATEd, existing columns re-ADDed, and combined ALTERs would fail as a whole, leaving genuinely missing columns unadded. Please verify the database connection and database name, then retry.',
   'admin/make/view_root_err' => 'Static build aborted: the template root resolved inside application/ (or is empty), which would render backend views into a public directory. Check the theme directory settings and view_path.',
   'admin/make/admin_shell_err' => 'Static build aborted: the rendered output contains the backend console marker (ADMIN_PATH); refusing to write it to a public directory, as that would expose the admin entry path.',
+  'admin/make/tpl_missing_skip' => 'The active theme has no such template; this item was skipped (other pages are unaffected).',
   'admin/update/step3_a' => 'Étape 3 en cours de mise à jour en ligne 【Mise à jour du cache】, veuillez patienter...',
   'admin/update/update_cache' => 'Mise à jour du fichier de cache des données en cours...',
   'admin/update/upgrade_complete' => 'Félicitations, la mise à jour du système est terminée...',

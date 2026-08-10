@@ -74,7 +74,15 @@ class Make extends Base
             return false;
         }
 
-        $content    =   $this->label_fetch($templateFile);
+        // 主题缺这个模板就跳过这一项,不要让整轮生成中断。
+        // 主题是第三方产物,map/rss 之类是可选项(本仓库自带的 vozy 主题就没有 map/),
+        // 缺一个模板抛 TemplateNotFoundException 会把后面所有还能生成的页面一起带走。
+        try {
+            $content = $this->label_fetch($templateFile);
+        } catch (\think\template\exception\TemplateNotFoundException $e) {
+            mac_echo(lang('admin/make/tpl_missing_skip') . ' tpl=' . $templateFile);
+            return false;
+        }
 
         // 二道闸:内容里出现后台外壳独有的标记就拒绝写盘。ADMIN_PATH 只由后台视图
         // (application/admin/view/index/index.html)定义,已确认 template/ 下不存在。

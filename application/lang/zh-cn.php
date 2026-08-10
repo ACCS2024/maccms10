@@ -2500,6 +2500,7 @@ https://www.baidu.com/123.jpg
     'admin/update/schema_probe_err' => '数据库结构探测失败(读不到任何列定义),已中止升级。继续执行会把整份升级脚本无差别发出:已存在的表会被重新 CREATE、已存在的列会被重新 ADD,合并式 ALTER 还会整条失败导致真正缺的列补不上。请先确认数据库连接与库名配置正确后重试。',
     'admin/make/view_root_err' => '静态生成中止:模板解析根目录落在 application/ 内(或为空),这会把后台视图渲染后写进公网目录。请检查主题目录配置与 view_path。',
     'admin/make/admin_shell_err' => '静态生成中止:渲染结果包含后台控制台外壳标记(ADMIN_PATH),拒绝写入公网目录 —— 写出去等于公开后台入口地址。',
+    'admin/make/tpl_missing_skip' => '当前主题缺少该模板,已跳过该项(不影响其余页面生成)。',
     'admin/update/step3_a'=>'在线升级进行中第三步【更新缓存】,请稍后......',
     'admin/update/update_cache'=>'更新数据缓存文件...',
     'admin/update/upgrade_complete'=>'恭喜您，系统升级完毕...',
