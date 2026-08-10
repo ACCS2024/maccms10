@@ -494,6 +494,7 @@ https://www.baidu.com/123.jpg
   'menu/configuser' => 'Comunidad de usuarios',
   'menu/configcomment' => 'Configuración de Comentarios',
   'menu/configupload' => 'Recursos, enlaces y reproducción',
+  'menu/configppvod' => 'Ingesta del transcodificador PPVOD',
   'menu/configurl' => 'Configuración de URL',
   'menu/configplay' => 'Configuración de Reproductor',
   'menu/configcollect' => 'Fuentes de contenido',

@@ -98,9 +98,13 @@ return array (
         'controller' => 'system',
         'action' => 'configupload',
       ),
+      // 键必须显式写出。本数组混用了显式整数键，一个无键元素会自动取
+      // 「当前最大整数键 + 1」= 214，随即被下面显式的 214 => 覆盖，整项被静默吃掉
+      // (表现为后台菜单里根本找不到这一项，而直接访问 URL 又是通的)。
+      2135 =>
       array (
         'show' => 1,
-        'name' => 'PPVOD 转码入库',
+        'name' => lang('menu/configppvod'),
         'controller' => 'system',
         'action' => 'configppvod',
       ),

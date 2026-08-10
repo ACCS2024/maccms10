@@ -494,6 +494,7 @@ https://www.baidu.com/123.jpg
   'menu/configuser' => '會員互動',
   'menu/configcomment' => '評論留言配置',
   'menu/configupload' => '資源、連結與播放',
+  'menu/configppvod' => 'PPVOD 轉碼入庫',
   'menu/configurl' => 'URL地址配置',
   'menu/configplay' => '播放器參數配置',
   'menu/configcollect' => '內容接入',

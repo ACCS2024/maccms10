@@ -533,6 +533,7 @@ https://www.baidu.com/123.jpg
     'menu/configassistant'=>'后台助手配置',
     'menu/configcomment'=>'评论留言配置',
     'menu/configupload'=>'资源、链接与播放',
+    'menu/configppvod'=>'PPVOD 转码入库',
     'menu/configurl'=>'URL地址配置',
     'menu/configplay'=>'播放器参数配置',
     'menu/configcollect'=>'内容接入',
