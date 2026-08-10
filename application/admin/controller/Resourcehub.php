@@ -9,7 +9,7 @@ use app\common\util\Pinyin;
  * 资源站中心控制器
  * 聚合全网资源站，提供一键采集、自动分类绑定、自动播放器配置等功能
  */
-class ResourceHub extends Base
+class Resourcehub extends Base
 {
     public function __construct()
     {

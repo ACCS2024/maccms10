@@ -2,7 +2,7 @@
 namespace app\index\controller;
 use think\facade\Request;
 
-class MyError
+class Myerror
 {
     public function _empty()
     {

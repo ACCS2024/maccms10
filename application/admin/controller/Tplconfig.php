@@ -2,7 +2,7 @@
 
 namespace app\admin\controller;
 
-class TplConfig extends Base
+class Tplconfig extends Base
 {
     /**
      * 默认模板主题配置

@@ -2,7 +2,7 @@
 namespace app\admin\controller;
 use think\facade\Db;
 
-class VodPlayer extends Base
+class Vodplayer extends Base
 {
     var $_pre;
     public function __construct()

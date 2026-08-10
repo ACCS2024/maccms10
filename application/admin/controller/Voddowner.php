@@ -2,7 +2,7 @@
 namespace app\admin\controller;
 use think\facade\Db;
 
-class VodDowner extends Base
+class Voddowner extends Base
 {
     var $_pre;
     public function __construct()

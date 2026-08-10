@@ -2,7 +2,7 @@
 namespace app\admin\controller;
 use think\facade\Db;
 
-class VodServer extends Base
+class Vodserver extends Base
 {
     var $_pre;
     public function __construct()

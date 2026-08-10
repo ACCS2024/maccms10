@@ -5,6 +5,7 @@ namespace app;
 
 use think\exception\Handle;
 use think\exception\HttpException;
+use think\exception\HttpResponseException;
 use think\facade\Log;
 use think\facade\View;
 use think\Request;
@@ -57,6 +58,19 @@ class ExceptionHandle extends Handle
      */
     public function render(Request $request, Throwable $e): Response
     {
+        // ── 控制流异常必须原样放行，绝不能当成错误渲染 ──────────────────────
+        // TP8 用 HttpResponseException 承载「提前结束请求并返回某个 Response」：
+        // redirect()、$this->error()/success()、中间件的拒绝响应，全都靠它。
+        // 框架基类 Handle::render() 第一步就是 `return $e->getResponse();`，
+        // 本类此前完全覆盖了 render() 却没有保留这一分支，导致：
+        //   · 后台未登录跳登录页 → 500（整个后台不可用）
+        //   · 后台任何 error()/success() 提示 → 500
+        //   · CsrfGuard 拒绝非法请求 → 500
+        // 即所有正常的跳转与提示都被渲染成了服务器错误。
+        if ($e instanceof HttpResponseException) {
+            return $e->getResponse();
+        }
+
         $status  = $this->resolveStatus($e);
         $errorId = $this->generateErrorId();
 
