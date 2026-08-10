@@ -11,12 +11,11 @@ use app\common\util\Pinyin;
  *   body: 转码服务产出的 JSON（orgfile / suffix / rpath / category / shareid / metadata ...）
  *
  * 【本文件不包含任何站点或基础设施信息】
- * 转码机地址、图床域名、播放域名、播放器标识、分类映射等全部来自
- * application/extra/yzm.php —— 该文件已被 .gitignore 排除，只存在于各自的部署上。
- * 缺少配置时接口直接拒绝服务并记录日志，绝不使用内置默认值兜底，
+ * 转码机地址、图床域名、播放域名、播放器标识、分类映射等全部来自后台
+ * 「PPVOD 转码入库」配置页（$config['ppvod']，保存在本站
+ * application/extra/maccms.php；仓库里那份是占位空值）。
+ * 未启用或配置不完整时接口直接拒绝服务并记日志，绝不使用内置默认值兜底，
  * 以免把某一个部署的地址变成所有部署的默认值。
- *
- * 配置项见 application/extra/yzm.php.example。
  */
 class Yzm extends Base
 {
@@ -39,10 +38,32 @@ class Yzm extends Base
             exit;
         }
 
-        $cfg = config('yzm');
-        if (!is_array($cfg) || empty($cfg['play_domain']) || empty($cfg['pic_domain']) || empty($cfg['category_map'])) {
-            $this->logError('yzm 配置缺失：请部署 application/extra/yzm.php（参考同目录 .example）');
+        // 配置来自后台「PPVOD 转码入库」页（$config['ppvod']，存于本站
+        // application/extra/maccms.php）。为兼容早期把配置放在独立文件的部署，
+        // ppvod 未启用时回退读 config('yzm')。
+        $cfg = $GLOBALS['config']['ppvod'] ?? [];
+        if (!is_array($cfg) || (string)($cfg['status'] ?? '0') !== '1') {
+            $legacy = config('yzm');
+            if (is_array($legacy) && !empty($legacy['play_domain'])) {
+                $cfg = $legacy;
+                $cfg['status'] = '1';
+            }
+        }
+        if ((string)($cfg['status'] ?? '0') !== '1') {
+            $this->logError('PPVOD 入库接口未启用：请在后台「PPVOD 转码入库」中开启');
             exit;
+        }
+        $cfg['category_map'] = is_array($cfg['category_map'] ?? null)
+            ? array_map('intval', $cfg['category_map'])
+            : mac_ppvod_category_map();
+        if (empty($cfg['play_domain']) || empty($cfg['pic_domain']) || empty($cfg['category_map'])) {
+            $this->logError('PPVOD 配置不完整：播放域名 / 图床域名 / 分类映射均为必填');
+            exit;
+        }
+        if (!is_array($cfg['keyword_blacklist'] ?? null)) {
+            $cfg['keyword_blacklist'] = array_values(array_filter(array_map(
+                'trim', preg_split('/[\r\n]+/', (string)($cfg['keyword_blacklist'] ?? ''))
+            )));
         }
         $this->_cfg = $cfg;
     }

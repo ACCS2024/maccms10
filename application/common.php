@@ -4505,4 +4505,44 @@ if (!function_exists('mac_rep_last_update')) {
 }
 // ========= /TP8 global helpers =========
 
+if (!function_exists('mac_ppvod_category_map')) {
+    /**
+     * 解析 PPVOD 分类映射配置。
+     *
+     * 后台里以每行 "转码机分类=栏目ID" 的形式维护，例如：
+     *     01wumazhuanqu=1
+     *     02madouchuanmei=2
+     * 解析为 ['01wumazhuanqu'=>1, '02madouchuanmei'=>2]。
+     * 兼容中英文等号与全角逗号分隔，容忍空行与注释行(# 或 //)。
+     */
+    function mac_ppvod_category_map(): array
+    {
+        $raw = $GLOBALS['config']['ppvod']['category_map'] ?? '';
+        if (is_array($raw)) {
+            return array_map('intval', $raw);
+        }
+        $raw = (string)$raw;
+        if (trim($raw) === '') {
+            return [];
+        }
+        $map = [];
+        foreach (preg_split('/[\r\n]+/', $raw) as $line) {
+            $line = trim($line);
+            if ($line === '' || $line[0] === '#' || strpos($line, '//') === 0) {
+                continue;
+            }
+            $line = str_replace(['＝', '：', ':'], '=', $line);
+            $pos = strpos($line, '=');
+            if ($pos === false) {
+                continue;
+            }
+            $k = trim(substr($line, 0, $pos));
+            $v = (int)trim(substr($line, $pos + 1));
+            if ($k !== '' && $v > 0) {
+                $map[$k] = $v;
+            }
+        }
 
+        return $map;
+    }
+}

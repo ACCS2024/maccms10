@@ -239,6 +239,21 @@ return array (
       ),
     ),
   ),
+  'ppvod' => 
+  array (
+    'status' => '0',
+    'transcoder_url' => '',
+    'pic_domain' => '',
+    'pic_fetch_api' => '',
+    'pic_fetch_timeout' => '15',
+    'play_domain' => '',
+    'player_flag' => '',
+    'play_name' => '第1集',
+    'addr_mode' => 'm3u8',
+    'default_status' => '0',
+    'category_map' => '',
+    'keyword_blacklist' => '',
+  ),
   'interface' => 
   array (
     'status' => 0,

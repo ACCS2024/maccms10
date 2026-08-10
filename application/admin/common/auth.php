@@ -98,6 +98,12 @@ return array (
         'controller' => 'system',
         'action' => 'configupload',
       ),
+      array (
+        'show' => 1,
+        'name' => 'PPVOD 转码入库',
+        'controller' => 'system',
+        'action' => 'configppvod',
+      ),
       214 =>
       array (
         'show' => 0,

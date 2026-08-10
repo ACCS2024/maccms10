@@ -766,6 +766,62 @@ class System extends Base
         return redirect( url('configcollect', ['tab' => 'api']) );
     }
 
+    /**
+     * PPVOD 转码入库接口配置。
+     *
+     * 对应接口 api/controller/Yzm.php（路由 /api.php/yzm/yzmauto）：
+     * PPVOD 转码服务把成片信息 POST 过来，据此自动建 vod 记录。
+     * 这些是各站自己的基础设施地址（转码机 / 图床 / 播放域名），
+     * 因此只存在于本站的 application/extra/maccms.php，不进版本库
+     * （仓库里那份是占位空值）。
+     */
+    public function configppvod()
+    {
+        if (Request()->isPost()) {
+            $config = \think\facade\Request::param();
+            if (!isset($config['ppvod']) || !is_array($config['ppvod'])) {
+                return $this->error(lang('param_err'));
+            }
+            $validate = mac_validate('Token');
+            if (!$validate->check($config)) {
+                $err = $validate->getError();
+                return $this->ajaxErrorWithFreshToken(is_scalar($err) ? (string)$err : lang('param_err'));
+            }
+            unset($config['__token__']);
+
+            $p = $config['ppvod'];
+            // 地址类字段只允许 http(s) 绝对地址，避免把 javascript: 之类写进配置
+            foreach (['transcoder_url', 'pic_domain', 'pic_fetch_api', 'play_domain'] as $k) {
+                $v = trim((string)($p[$k] ?? ''));
+                if ($v !== '' && !preg_match('#^https?://#i', $v)) {
+                    return $this->ajaxErrorWithFreshToken($k . ' 必须是 http(s):// 开头的地址');
+                }
+                $p[$k] = $v;
+            }
+            $p['status']            = (string)(int)($p['status'] ?? 0);
+            $p['default_status']    = (string)(int)($p['default_status'] ?? 0);
+            $p['pic_fetch_timeout'] = (string)max(1, min(120, (int)($p['pic_fetch_timeout'] ?? 15)));
+            $p['addr_mode']         = in_array(($p['addr_mode'] ?? 'm3u8'), ['m3u8', 'all'], true) ? $p['addr_mode'] : 'm3u8';
+            $p['player_flag']       = trim((string)($p['player_flag'] ?? ''));
+            $p['play_name']         = trim((string)($p['play_name'] ?? '')) ?: '第1集';
+
+            $config_new = config('maccms');
+            $config_new['ppvod'] = $p;
+
+            $res = mac_arr2file(APP_PATH . 'extra/maccms.php', $config_new);
+            if ($res === false) {
+                return $this->ajaxErrorWithFreshToken(lang('save_err'));
+            }
+            return $this->success(lang('save_ok'));
+        }
+
+        $cfg = config('maccms');
+        // 解析后的分类映射条数，供页面提示
+        $this->assign('ppvod_map_count', count(mac_ppvod_category_map()));
+        $this->assign('config', $cfg);
+        return $this->fetch('admin@system/configppvod');
+    }
+
     public function configinterface()
     {
         if (Request()->isPost()) {

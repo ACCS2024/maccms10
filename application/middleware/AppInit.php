@@ -13,6 +13,43 @@ class AppInit
 
         $GLOBALS['mctheme'] = config('mctheme') ?: ['theme' => []];
 
+        // ── 恢复 __STATIC__ / __ROOT__ 模板占位符替换 ──────────────────────
+        // TP5 的框架在 think\View::__construct() 里内置了这组替换
+        // （thinkphp/library/think/View.php:54），迁到 TP8 后框架不再提供，
+        // 而后台 41 个模板、前台 3 个主题文件仍在用 __STATIC__。
+        // 缺了它，href="__STATIC__/css/x.css" 会被浏览器按当前页面 URL
+        // 相对解析 → 打回路由拿到 HTML → 浏览器以 MIME 不符拒绝加载，
+        // 表现为整个后台无样式、layui is not defined。
+        //
+        // static 与 static_new 的取舍：后台模板引用的
+        // css/tailwindcssOutput.css、images/signin_ic_*.png 只存在于
+        // static_new/，故默认取它；仅当 site.new_version 显式为 0 时用 static。
+        // 注意不要照抄 TP5 原表达式里的 `$v != 0` —— 空字符串与 0 的比较
+        // 在 PHP 8 下结果与 PHP 7 相反，同一份配置会走到相反的分支。
+        $newVersion = $config['site']['new_version'] ?? '';
+        $staticDir  = ((string)$newVersion === '0') ? '/static' : '/static_new';
+
+        $req  = $request;
+        $base = method_exists($req, 'root') ? (string)$req->root() : '';
+        $root = strpos($base, '.') !== false ? rtrim(dirname($base), '/\\') : rtrim($base, '/');
+        if ($root !== '' && $root[0] !== '/') {
+            $root = '/' . $root;
+        }
+
+        \think\facade\Config::set([
+            'tpl_replace_string' => array_merge(
+                (array)\think\facade\Config::get('view.tpl_replace_string', []),
+                [
+                    '__ROOT__'      => $root,
+                    'MAC_BASE_PATH' => $root,
+                    '__STATIC__'    => $root . $staticDir,
+                    '__CSS__'       => $root . $staticDir . '/css',
+                    '__JS__'        => $root . $staticDir . '/js',
+                    '__IMG__'       => $root . $staticDir . '/images',
+                ]
+            ),
+        ], 'view');
+
         $config = config('maccms');
         if (!isset($config['meilisearch']) || !is_array($config['meilisearch'])) {
             $config['meilisearch'] = [
