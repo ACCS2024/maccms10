@@ -198,7 +198,7 @@ class Seacms extends Base
             // 封面地址处理
             $pic = (string)($v['vod_pic'] ?? '');
             if (str_starts_with($pic, 'mac:')) {
-                $pic = str_replace('mac:', $this->getImgUrlProtocol('vod'), $pic);
+                $pic = str_replace('mac:', self::imgUrlProtocol('vod'), $pic);
             } elseif ($pic !== '' && !str_starts_with($pic, 'http') && !str_starts_with($pic, '//')) {
                 $pic = $imgurl . $pic;
             }
@@ -260,5 +260,23 @@ class Seacms extends Base
 
         $xml .= '</rss>';
         return $xml;
+    }
+    /**
+     * mac:// 前缀图片的协议还原。
+     *
+     * 原实现调用 $this->getImgUrlProtocol()，但那是 Provide 的 private 方法，
+     * Seacms 继承的是 Base，运行时必然 Call to undefined method ——
+     * 只有当结果集里出现 mac: 前缀的 vod_pic 时才触发，所以前几页正常、
+     * 翻到含老数据的页面（如 ac=list&pg=9113）直接 500。
+     * 这里补上同语义实现，避免再跨类依赖私有方法。
+     */
+    private static function imgUrlProtocol(string $key): string
+    {
+        $default = ($GLOBALS['config']['upload']['protocol'] ?? 'http') . ':';
+        $imgurl  = $GLOBALS['config']['api'][$key]['imgurl'] ?? null;
+        if ($imgurl === null) {
+            return $default;
+        }
+        return substr($imgurl, 0, 5) === 'https' ? 'https:' : $default;
     }
 }
