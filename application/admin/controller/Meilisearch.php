@@ -12,8 +12,17 @@ class Meilisearch extends Base
     public function __construct()
     {
         parent::__construct();
-        if ((string)$this->_admin['admin_id'] !== '1') {
-            $this->error(lang('admin/meilisearch/super_admin_only'));
+        if ((string)($this->_admin['admin_id'] ?? '') !== '1') {
+            // 必须 throw:TP8 下构造函数的返回值被忽略,而 All::error() 在 AJAX 请求里
+            // 只 return 一个 Json Response(非 AJAX 才 throw HttpResponseException)。
+            // 于是原来的写法在 AJAX 下等于没有守卫 —— 构造函数正常结束,动作照常执行。
+            // 实测(真实 HTTP):一个被授予 meilisearch/* 菜单权限的子管理员
+            // AJAX POST meilisearch/save,返回「保存成功!」,并成功把 Meilisearch 的
+            // host 改成攻击者地址、index_uid 改成任意值 —— 之后全部搜索查询与整库
+            // 重建的内容都会发往那台机器。与 admin/Base.php 的鉴权失败分支写法保持一致。
+            throw new \think\exception\HttpResponseException(
+                $this->error(lang('admin/meilisearch/super_admin_only'))
+            );
         }
     }
 

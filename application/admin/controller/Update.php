@@ -136,6 +136,21 @@ class Update extends Base
             foreach($schema as $k=>$v){
                 $col_list[$v['TABLE_NAME']][$v['COLUMN_NAME']] = $v;
             }
+
+            // fail-closed:schema 探测失效时【拒绝执行整份升级脚本】。
+            // application/data/update/database.php 全篇是 60 个 `if(empty($col_list[...]))`
+            // 守卫,$col_list 一空就【全部打开】,于是已存在的表重新 CREATE、已存在的列
+            // 重新 ADD;而其中多条是合并式 ALTER(一条语句加 4 个列),在部分升级过的库上
+            // 会因第一个重复列整条失败,真正缺的列反而永远补不上 —— 下面的 catch 只打印
+            // 「失败」,操作者无法把真失败和噪声区分开,得到的是一次静默不完整的升级。
+            // 这个分支在修掉 config('database.database') 恒 NULL 之前是必然发生的。
+            if (empty($col_list)) {
+                echo "\n" . lang('admin/update/schema_probe_err') . "\n";
+                echo '</textarea></div>';
+                ob_flush();flush();
+                return;
+            }
+
             @include $sql_file;
             //dump($sql);die;
 

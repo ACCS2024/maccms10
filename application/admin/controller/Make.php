@@ -46,7 +46,9 @@ class Make extends Base
             $GLOBALS['MAC_PATH_TPL'] = $GLOBALS['MAC_PATH_TEMPLATE']. $TMP_HTMLDIR  .'/';
             $GLOBALS['MAC_PATH_ADS'] = $GLOBALS['MAC_PATH_TEMPLATE']. $TMP_ADSDIR  .'/';
         }
-        Config::set(['view_path' => 'template/' . $TMP_TEMPLATEDIR .'/' . $TMP_HTMLDIR .'/'], 'view');
+        // 必须是【绝对路径】:相对路径按进程 CWD 解析,而 FPM 与 CLI 的 CWD 并不相同
+        // (crontab / php think 触发的生成会解析到别处,表现为模板找不到或渲染错主题)。
+        Config::set(['view_path' => ROOT_PATH . 'template/' . $TMP_TEMPLATEDIR .'/' . $TMP_HTMLDIR .'/'], 'view');
 
         parent::__construct();
     }
@@ -55,7 +57,32 @@ class Make extends Base
         if(empty($htmlfile) || empty($htmlpath) || empty($templateFile)){
             return false;
         }
+
+        // ── 写盘守卫 ──────────────────────────────────────────────────────────
+        // 静态生成把渲染结果写进【公网可读目录】,所以"渲染错了模板"在这里不是显示问题,
+        // 是信息泄露。历史事故:view_path 落到 application/admin/view/ 时,裸模板名
+        // 'index/index' 命中后台 layui 控制台外壳,被写成站点根 index.html;webroot 的
+        // index.html 优先于 index.php,于是公网首页变成后台面板,而且外壳里带着
+        // ADMIN_PATH="/<改名后的后台入口>",等于把后台地址公开。
+        // 上面构造函数已把 view_path 显式钉到主题目录,这里再加一道结构性拦截,
+        // 让同类事故在结构上不可能重演(而不是依赖"别人不要改坏 AppInit")。
+        $viewRoot = (string)Config::get('view.view_path');
+        $viewReal = $viewRoot !== '' ? (realpath($viewRoot) ?: $viewRoot) : '';
+        $appReal  = realpath(APP_PATH) ?: APP_PATH;
+        if ($viewReal === '' || strpos($viewReal, $appReal) === 0) {
+            mac_echo(lang('admin/make/view_root_err') . ' view_path=' . ($viewRoot === '' ? '(empty)' : $viewRoot));
+            return false;
+        }
+
         $content    =   $this->label_fetch($templateFile);
+
+        // 二道闸:内容里出现后台外壳独有的标记就拒绝写盘。ADMIN_PATH 只由后台视图
+        // (application/admin/view/index/index.html)定义,已确认 template/ 下不存在。
+        if (strpos($content, 'ADMIN_PATH') !== false) {
+            mac_echo(lang('admin/make/admin_shell_err') . ' tpl=' . $templateFile);
+            return false;
+        }
+
         $htmlfile = reset_html_filename($htmlfile);
         $dir   =  dirname($htmlfile);
         if(!is_dir($dir)){
