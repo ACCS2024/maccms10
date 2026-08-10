@@ -13,16 +13,41 @@ class Make extends Base
         $this->_param = \think\facade\Request::param();
         $GLOBALS['ismake'] = '1';
 
-        if(($this->_param['ac2'] ?? '')=='wap'){
-            $TMP_TEMPLATEDIR = $GLOBALS['config']['site']['mob_template_dir'];
-            $TMP_HTMLDIR = $GLOBALS['config']['site']['mob_html_dir'];
-            $TMP_ADSDIR = $GLOBALS['config']['site']['mob_ads_dir'];
+        // 静态生成必须渲染【前台主题】,不是后台视图目录。
+        //
+        // 本类刻意用不带 admin@ 前缀的裸模板名去渲染前台页面
+        // ('index/index'、'topic/index'、mac_tpl_fetch() 返回的 'vod/type' 等),
+        // TP5 时代这些裸名落在 view_path = template/<主题>/<html>/ 下,是对的。
+        //
+        // TP8 下有两处让它失效,合起来造成过一次线上事故:
+        //   1. AppInit.php 对 ENTRANCE==='admin' 无条件把 view_path 置空,裸名于是
+        //      落到 application/admin/view/ —— 'index/index' 正好命中后台 layui
+        //      控制台外壳,被写进站点根 index.html。该文件公网可读,且内容里带着
+        //      ADMIN_PATH="/<改名后的后台入口>",等于把后台地址公开。其余裸名在
+        //      后台视图目录下不存在,直接 TemplateNotFoundException,生成中断。
+        //   2. 下面这行原本写的是 Config::set(..., 'template') —— TP5 的配置域名。
+        //      TP8 的视图配置域叫 'view',写 'template' 是彻底的空操作,连 wap 主题
+        //      切换也一并失效了。
+        //
+        // 这里按入口无关的方式显式指定主题目录:无论从 admin 还是 api 入口触发,
+        // 静态生成都渲染同一套前台模板(此前 api 入口正常、后台入口坏掉,
+        // 这种分入口不一致会让排查极其困难)。
+        // 注:不在 AppInit 里改 admin 分支,是因为 BatchPlayer/Help/DataReplace/Rep/
+        // ResourceHub 这几个后台控制器也用裸模板名,它们依赖 view_path 为空才能
+        // 落到 application/admin/view/。此处只影响静态生成自身。
+        $isWap = ($this->_param['ac2'] ?? '') == 'wap';
+        $TMP_TEMPLATEDIR = $GLOBALS['config']['site'][$isWap ? 'mob_template_dir' : 'template_dir'];
+        $TMP_HTMLDIR     = $GLOBALS['config']['site'][$isWap ? 'mob_html_dir'     : 'html_dir'];
+        $TMP_ADSDIR      = $GLOBALS['config']['site'][$isWap ? 'mob_ads_dir'      : 'ads_dir'];
+
+        if ($isWap) {
             $GLOBALS['MAC_ROOT_TEMPLATE'] = ROOT_PATH .'template/'.$TMP_TEMPLATEDIR.'/'. $TMP_HTMLDIR .'/';
             $GLOBALS['MAC_PATH_TEMPLATE'] = MAC_PATH.'template/'.$TMP_TEMPLATEDIR.'/';
             $GLOBALS['MAC_PATH_TPL'] = $GLOBALS['MAC_PATH_TEMPLATE']. $TMP_HTMLDIR  .'/';
             $GLOBALS['MAC_PATH_ADS'] = $GLOBALS['MAC_PATH_TEMPLATE']. $TMP_ADSDIR  .'/';
-            Config::set(['view_path' => 'template/' . $TMP_TEMPLATEDIR .'/' . $TMP_HTMLDIR .'/'], 'template');
         }
+        Config::set(['view_path' => 'template/' . $TMP_TEMPLATEDIR .'/' . $TMP_HTMLDIR .'/'], 'view');
+
         parent::__construct();
     }
 
