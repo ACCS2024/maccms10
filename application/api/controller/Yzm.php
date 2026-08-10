@@ -182,6 +182,24 @@ class Yzm extends Base
                 return;
             }
             $res = Db::name('vod')->insert($info);
+            if ($res) {
+                // 增量同步搜索索引。本控制器为了保持与老站一致的字段处理，
+                // 是直接 Db::insert 而非走 Vod::saveData()，因此不会自动触发
+                // MeilisearchSync —— 不显式调用的话，转码机推进来的内容要等到
+                // 下一次全量重建才可被搜索到。
+                // afterVodSave 内部会按 vod_status / vod_recycle_time 判断：
+                // 未发布(默认 status=0 待审核)时会从索引移除，因此无论
+                // default_status 配成 0 还是 1，这里调用都是正确的。
+                try {
+                    $newId = (int)Db::name('vod')->where('vod_name', $info['vod_name'])->value('vod_id');
+                    if ($newId > 0) {
+                        \app\common\util\MeilisearchSync::afterVodSave($newId);
+                    }
+                } catch (\Throwable $e) {
+                    // 索引同步失败不应影响入库结果
+                    $this->logError('Meili 同步失败: ' . $e->getMessage());
+                }
+            }
             $this->logError($res
                 ? '视频入库成功 视频ID:' . $info['vod_name'] . ' 分类:' . $info['vod_class']
                 : '视频入库失败');

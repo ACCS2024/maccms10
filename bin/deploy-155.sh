@@ -85,6 +85,31 @@ for site in "${SITES[@]}"; do
 done
 
 echo
+echo "── 站点私有配置完整性 ────────────────"
+# 这些文件被 EXCLUDES 排除（含各站自己的凭据/地址），一旦缺失，
+# 站点会静默降级：Yzm 入库直接拒绝服务、数据库连不上。
+# 部署后必须显式校验存在性，否则问题要等到转码机推内容失败才暴露。
+missing=0
+for site in "${SITES[@]}"; do
+    for f in ".env" "application/extra/maccms.php"; do
+        $SSH "test -s /home/wwwroot/$site/$f" \
+            && printf "  %-12s %-34s ok\n" "$site" "$f" \
+            || { printf "  %-12s %-34s !! 缺失\n" "$site" "$f"; missing=1; }
+    done
+done
+# yzm 配置只有主站需要（API 站不含入库接口）
+$SSH "test -s /home/wwwroot/${SITES[0]}/application/extra/yzm.php" \
+    && printf "  %-12s %-34s ok\n" "${SITES[0]}" "application/extra/yzm.php" \
+    || { printf "  %-12s %-34s !! 缺失（转码机入库将拒绝服务）\n" "${SITES[0]}" "application/extra/yzm.php"; missing=1; }
+if [ "$missing" = "1" ]; then
+    echo
+    echo "  ⚠ 有站点私有配置缺失。备份在 /home/migrate/ 下，例如："
+    echo "      cp /home/migrate/site-config-backup-yzm.php \\"
+    echo "         /home/wwwroot/${SITES[0]}/application/extra/yzm.php"
+    echo "      chown www:www … && chmod 640 …"
+fi
+
+echo
 echo "── 冒烟 ──────────────────────────────"
 for site in "${SITES[@]}"; do
     for path in "/" "/api.php/provide/vod/?ac=list"; do
