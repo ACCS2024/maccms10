@@ -143,19 +143,73 @@ class Installer
      * 写 application/database.php(var_export,防注入)。
      * @throws \RuntimeException 写入或回读校验失败
      */
+    /**
+     * 写数据库凭据。
+     *
+     * TP8 的 config/database.php 是 ['default'=>..,'connections'=>['mysql'=>..]] 结构,
+     * 且各字段一律取自 env();框架【不会】加载 application/database.php。
+     * 历史上安装器把扁平的 TP5 结构写进 application/database.php,那个文件谁都不读,
+     * 于是装完站 Db 门面仍用空账号连库,报 Access denied for user ''@'localhost'。
+     *
+     * 所以凭据的唯一事实源是根目录 .env(已在 .gitignore 中,不会被提交)。
+     */
     public function writeDbConfig(array $cfg)
     {
-        $file = $this->appPath . 'database.php';
-        $code = "<?php\n// 数据库配置(maccms 安装器生成)\nreturn " . var_export($cfg, true) . ";\n";
-        if (false === @file_put_contents($file, $code)) {
+        $root = dirname(rtrim($this->appPath, '/\\')) . DIRECTORY_SEPARATOR;
+        $file = $root . '.env';
+
+        // ThinkPHP 用 parse_ini_file($file, true, INI_SCANNER_RAW) 读 .env。
+        // RAW 模式下【不会】剥离引号 —— 写 DB_PASS="x" 读回来就是带引号的 "x"。
+        // 所以一律写裸值;同时 RAW 模式仍会把 ; 当行注释、把引号当词法符号,
+        // 这类字符无法安全表达,宁可报错也不要写出一个能解析但值是错的文件。
+        $pairs = [
+            'DB_HOST'    => $cfg['hostname'],
+            'DB_PORT'    => $cfg['hostport'],
+            'DB_NAME'    => $cfg['database'],
+            'DB_USER'    => $cfg['username'],
+            'DB_PASS'    => $cfg['password'],
+            'DB_PREFIX'  => $cfg['prefix'],
+            'DB_CHARSET' => $cfg['charset'],
+        ];
+        $lines = ['; 数据库凭据(maccms 安装器生成) —— 含明文口令,已被 .gitignore 排除'];
+        foreach ($pairs as $k => $v) {
+            $v = (string)$v;
+            if (preg_match('/[;"\'\r\n]/', $v)) {
+                throw new \RuntimeException(
+                    "{$k} 含有无法写入 .env 的字符(; \" ' 或换行),请改用不含这些字符的值"
+                );
+            }
+            $lines[] = $k . ' = ' . $v;
+        }
+        $lines[] = '';
+        $content = implode("\n", $lines);
+
+        // 原子写入,避免半截文件被并发请求读到
+        $tmp = $file . '.tmp' . getmypid();
+        if (false === @file_put_contents($tmp, $content)) {
+            throw new \RuntimeException("无法写入 {$tmp}(检查目录权限)");
+        }
+        @chmod($tmp, 0640);
+        // 口令文件不给 other 读;属主/属组对齐 application/ 目录,
+        // 否则 CLI 以 root 装站、FPM 以 www 运行时,PHP 读不到 .env 会连不上库。
+        $st = @stat($this->appPath);
+        if ($st !== false) {
+            @chown($tmp, $st['uid']);
+            @chgrp($tmp, $st['gid']);
+        }
+        if (!@rename($tmp, $file)) {
+            @unlink($tmp);
             throw new \RuntimeException("无法写入 {$file}(检查权限)");
         }
-        if (function_exists('opcache_invalidate')) {
-            opcache_invalidate($file, true);
-        }
-        $back = include $file;
-        if (empty($back['database']) || $back['database'] !== $cfg['database']) {
-            throw new \RuntimeException('database.php 写入校验失败');
+
+        // 回读校验:必须用和 think\Env::load() 完全相同的解析方式,
+        // 否则校验通过而框架读到的是另一回事。
+        $back = @parse_ini_file($file, true, INI_SCANNER_RAW);
+        if (!is_array($back)
+            || ($back['DB_NAME'] ?? null) !== (string)$cfg['database']
+            || ($back['DB_USER'] ?? null) !== (string)$cfg['username']
+            || ($back['DB_PASS'] ?? null) !== (string)$cfg['password']) {
+            throw new \RuntimeException('.env 写入校验失败(凭据回读不一致)');
         }
     }
 

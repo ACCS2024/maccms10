@@ -42,7 +42,10 @@ class Info extends Command
 
         // 数据库
         $db = ['configured' => false, 'connected' => false, 'database' => '', 'prefix' => '', 'tables' => 0, 'admins' => 0];
-        $dbcfg = Config::get('database');
+        // TP8 的库配置是 ['default'=>..,'connections'=>['mysql'=>[..]]],
+        // 不能像 TP5 那样直接取 Config::get('database')['database']。
+        $conn   = Config::get('database.default', 'mysql');
+        $dbcfg  = Config::get('database.connections.' . $conn, []);
         if (!empty($dbcfg['database'])) {
             $db['configured'] = true;
             $db['database'] = $dbcfg['database'];
@@ -68,7 +71,9 @@ class Info extends Command
             'upload'               => ROOT_PATH . 'upload/',
             'application/extra'    => APP_PATH . 'extra/',
             'application/data'     => APP_PATH . 'data/',
-            'application/database.php' => APP_PATH . 'database.php',
+            // 库凭据放在根目录 .env(config/database.php 通过 env() 读取);
+            // application/database.php 是 TP5 时代的产物,TP8 不加载,不再检测。
+            '.env'                 => ROOT_PATH . '.env',
         ];
         $writable = [];
         foreach ($paths as $k => $p) {

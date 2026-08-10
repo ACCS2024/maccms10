@@ -3,6 +3,7 @@ namespace app\command;
 
 use app\common\util\Installer;
 use think\facade\Config;
+use think\facade\Db;
 use think\console\Command;
 use think\console\Input;
 use think\console\input\Option;
@@ -152,7 +153,17 @@ class SiteInstall extends Command
                 'database' => $dbName, 'prefix' => $prefix, 'charset' => $o('db-charset'),
             ]);
             $installer->writeDbConfig($appCfg);
-            Config::set($appCfg, 'database'); // ★ 单进程关键:后续 Db/model 走新连接
+            // ★ 单进程关键:后续 Db/model 走新连接。
+            // TP8 的库配置是 database.connections.<name>,不能像 TP5 那样把扁平数组
+            // 直接 set 到 'database' —— 那样 Db 门面仍会去读 connections.mysql 的旧值
+            // (env 缺省为空账号),导致后面导 SQL 时报 Access denied for user ''@'localhost'。
+            Config::set($appCfg, 'database.connections.mysql');
+            // 框架的 think\Db::getConfig() 每次都从 Config 对象实时读 database.*,
+            // 所以改完 Config 就已生效,不要再调 Db::setConfig() ——
+            // 那个方法收的是 think\Config 对象而非数组,传数组会把 Config 顶掉,
+            // 后续 getConfig() 在数组上调 ->get() 直接致命错误。
+            // force=true 只是丢弃可能已建立的旧连接实例。
+            Db::connect('mysql', true);
         } catch (\Exception $e) {
             $output->writeln('<error>' . $e->getMessage() . '</error>');
             return 3;
