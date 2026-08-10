@@ -39,6 +39,7 @@ EXCLUDES=(
     --exclude='log/'             --exclude='.env'
     --exclude='.user.ini'                                  # aaPanel 用 chattr +i 锁定，且各站 open_basedir 不同
     --exclude='application/extra/maccms.php'               # 两站配置本就不同
+    --exclude='application/extra/yzm.php'                  # 转码机对接的站点私有配置(含基础设施地址)
     --exclude='application/data/install/install.lock'
     --exclude='template/155zy/'                            # 线上主题，不在仓库里
     --exclude='admin.php'        --exclude='adm_*.php'     # 后台入口已各自改随机名

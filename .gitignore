@@ -27,3 +27,6 @@ application/data/update/sec_schema.lock
 adm_smoke.php
 
 .claude/settings.local.json
+
+# 转码机入库接口的站点私有配置（含基础设施地址，各部署自持，勿入库）
+application/extra/yzm.php

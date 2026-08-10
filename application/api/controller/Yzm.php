@@ -5,70 +5,25 @@ use think\facade\Db;
 use app\common\util\Pinyin;
 
 /**
- * 转码机内容入库接口（站点主要内容来源）
- *
- * 外部转码服务把成片信息以 JSON POST 到本接口，据此建 vod 记录。
- * 本站 mac_collect / mac_cj_node 均为空 —— 内容不是采集来的，是这条链路推进来的，
- * 所以这个控制器一旦缺失或报错，全站就不再有新内容。
+ * 转码机内容入库接口（站点侧对接组件）
  *
  *   POST /api.php/yzm/yzmauto?ac=yzm&pass=<interface.pass>
- *   body: 转码机产出的 JSON（orgfile/rpath/category/metadata/shareid/...）
+ *   body: 转码服务产出的 JSON（orgfile / suffix / rpath / category / shareid / metadata ...）
  *
- * 从 TP5 移植到 TP8 的改动（行为保持不变，仅修正不兼容与安全问题）：
- *  1. use think\Db → think\facade\Db；移除无用且大小写错误的 use think\config
- *     （在大小写敏感的文件系统上，think\config 会解析失败）。
- *  2. 同名判重原本拼裸 SQL：
- *        $where = "vod_name='" . $info['vod_name'] . "'";
- *     vod_name 直接来自外部 JSON 的 orgfile，可注入。改为参数化 where。
- *  3. $info['type_name'] 不是 mac_vod 的列，TP8 严格字段模式下会导致 insert 失败，
- *     用完分类映射后必须剔除。
- *  4. $this->_param['ac'] / ['pass'] 未定义键防护（PHP 8 下未定义键会告警）。
- *  5. 日志目录改用应用根目录推导，不再依赖 $_SERVER['DOCUMENT_ROOT']
- *     （CLI 或部分 FPM 配置下该变量为空，会把日志写到文件系统根）。
+ * 【本文件不包含任何站点或基础设施信息】
+ * 转码机地址、图床域名、播放域名、播放器标识、分类映射等全部来自
+ * application/extra/yzm.php —— 该文件已被 .gitignore 排除，只存在于各自的部署上。
+ * 缺少配置时接口直接拒绝服务并记录日志，绝不使用内置默认值兜底，
+ * 以免把某一个部署的地址变成所有部署的默认值。
+ *
+ * 配置项见 application/extra/yzm.php.example。
  */
 class Yzm extends Base
 {
     private $_param;
 
-    /** 播放器标识 */
-    private $player = '155m3u8';
-
-    /** 播放地址前缀名称 */
-    private $playname = '第1集';
-
-    /** share=分享地址 m3u8=m3u8地址 all=两个都入库 */
-    private $addr = 'm3u8';
-
-    /** 找不到分类时的默认栏目 ID */
-    private $errorid = 11;
-
-    /** 转码机 category → mac_type.type_id 映射 */
-    private static $categoryMap = [
-        '01wumazhuanqu'    => 1,
-        '02madouchuanmei'  => 2,
-        '03zhifuyouhuo'    => 3,
-        '04sanjilunli'     => 4,
-        '05aihuanlian'     => 5,
-        '06zhongwenzimu'   => 6,
-        '07katongdongman'  => 7,
-        '08oumeixilie'     => 8,
-        '09meinvzhubo'     => 9,
-        '10guochanzipai'   => 10,
-        '11shunvrenqi'     => 11,
-        '12luolishaonv'    => 12,
-        '13nvtongxingai'   => 13,
-        '14duorenqunjiao'  => 14,
-        '15meirujuru'      => 15,
-        '16qiangjianluanlun' => 16,
-        '33douyinshipin'   => 33,
-        '34hanguozhubo'    => 34,
-        '35wanghongtoutiao' => 35,
-        '36wangbaoheiliao' => 36,
-        '37oumeiwuma'      => 37,
-        '38nvyoumingxing'  => 38,
-        '39SMdiaojiao'     => 39,
-        '40AVjieshuo'      => 40,
-    ];
+    /** @var array 站点私有配置（application/extra/yzm.php） */
+    private $_cfg = [];
 
     public function __construct()
     {
@@ -83,20 +38,31 @@ class Yzm extends Base
             $this->logError('入库密码不一致');
             exit;
         }
+
+        $cfg = config('yzm');
+        if (!is_array($cfg) || empty($cfg['play_domain']) || empty($cfg['pic_domain']) || empty($cfg['category_map'])) {
+            $this->logError('yzm 配置缺失：请部署 application/extra/yzm.php（参考同目录 .example）');
+            exit;
+        }
+        $this->_cfg = $cfg;
     }
 
     /**
-     * 通知图床对远程图片做一次抓取缓存
+     * 通知图床对远程图片做一次抓取缓存（未配置该接口则跳过）
      */
     private function fetchImageWithTryCatch($picUrl)
     {
+        $api = $this->_cfg['pic_fetch_api'] ?? '';
+        if ($api === '') {
+            return;
+        }
         try {
             $ch = curl_init();
-            curl_setopt($ch, CURLOPT_URL, 'http://155pic.com/155pic_remoat.php?pic_url=' . $picUrl);
+            curl_setopt($ch, CURLOPT_URL, $api . rawurlencode($picUrl));
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
             curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
             curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
-            curl_setopt($ch, CURLOPT_TIMEOUT, 15);
+            curl_setopt($ch, CURLOPT_TIMEOUT, (int)($this->_cfg['pic_fetch_timeout'] ?? 15));
             curl_exec($ch);
             if (curl_errno($ch)) {
                 $this->logError('图床抓取失败: ' . curl_error($ch));
@@ -109,9 +75,9 @@ class Yzm extends Base
 
     public function yzmauto()
     {
-        $config = config('maccms.collect');
-        $config = $config['vod'] ?? [];
-        if (empty($config)) {
+        $collect = config('maccms.collect');
+        $collect = $collect['vod'] ?? [];
+        if (empty($collect)) {
             $this->logError('配置参数出错，无法使用');
             return;
         }
@@ -121,25 +87,26 @@ class Yzm extends Base
             $this->logError('未获取到对应视频信息');
             return;
         }
-
         $arr = json_decode($task, true);
         $this->logError($task);
         if (!$arr) {
             return;
         }
 
+        $c = $this->_cfg;
+
         $info = [];
-        $title_old = $arr['orgfile'] ?? '';
-        $title_hz  = '.' . ($arr['suffix'] ?? '');
-        $info['vod_name'] = str_replace($title_hz, '', $title_old);
+        $info['vod_name'] = str_replace('.' . ($arr['suffix'] ?? ''), '', (string)($arr['orgfile'] ?? ''));
 
-        $videopath  = str_replace('\\', '/', $arr['rpath'] ?? '');
-        $searchpath = $this->getCharpos2($videopath, '/');
-        $videorpath = $searchpath >= 2 ? $videopath : '/' . $videopath;
+        $rpath      = (string)($arr['rpath'] ?? '');
+        $videopath  = str_replace('\\', '/', $rpath);
+        $videorpath = substr_count($videopath, '/') >= 2 ? $videopath : '/' . $videopath;
 
-        $pic = 'http://23.224.205.82:2100' . ($arr['rpath'] ?? '') . '/1.jpg';
-        $this->fetchImageWithTryCatch($pic);
-        $info['vod_pic'] = 'http://15260503.top' . ($arr['rpath'] ?? '') . '/1.jpg';
+        // 先让图床把源站的图抓过去，再把 vod_pic 指向图床
+        if (!empty($c['transcoder_url'])) {
+            $this->fetchImageWithTryCatch(rtrim($c['transcoder_url'], '/') . $rpath . '/1.jpg');
+        }
+        $info['vod_pic'] = rtrim($c['pic_domain'], '/') . $rpath . '/1.jpg';
 
         if ($this->transgress_keyword($info['vod_name']) > 0) {
             $this->logError('内容含有非法词汇,无法入库 视频ID:' . $info['vod_name']);
@@ -152,12 +119,13 @@ class Yzm extends Base
         $info['vod_time_add']  = time();
         $info['vod_time']      = time();
         $info['vod_duration']  = $this->secondsToHour($arr['metadata']['time'] ?? 0);
-        $info['vod_play_from'] = $this->player;
+        $info['vod_play_from'] = $c['player_flag'];
 
-        $m3u8  = $this->playname . '$' . 'https://2607.v155p.com' . $videorpath . '/index.m3u8';
-        $share = $this->playname . '$' . 'https://2607.v155p.com' . '/share/' . ($arr['shareid'] ?? '');
-        // 原实现里 share 分支与 m3u8 分支等价，all 为两地址拼接，此处保持不变
-        $info['vod_play_url'] = ($this->addr === 'all') ? ($m3u8 . '$$$' . $m3u8) : $m3u8;
+        $playname = $c['play_name'] ?? '第1集';
+        $play     = rtrim($c['play_domain'], '/');
+        $m3u8     = $playname . '$' . $play . $videorpath . '/index.m3u8';
+        $share    = $playname . '$' . $play . '/share/' . ($arr['shareid'] ?? '');
+        $info['vod_play_url'] = (($c['addr_mode'] ?? 'm3u8') === 'all') ? ($m3u8 . '$$$' . $m3u8) : $m3u8;
 
         $info['vod_blurb']       = $info['vod_name'];
         $info['vod_content']     = $info['vod_name'];
@@ -166,47 +134,48 @@ class Yzm extends Base
         $info['vod_isend']       = '1';
         $info['vod_pubdate']     = date('Y-m-d');
         $info['vod_year']        = date('Y');
-        $info['vod_status']      = 0;
+        $info['vod_status']      = (int)($c['default_status'] ?? 0);
         $info['vod_down_url']    = $share;
         $info['vod_plot_name']   = 'null';
         $info['vod_plot_detail'] = 'null';
 
-        $category            = $arr['category'] ?? '';
-        $info['vod_class']   = mac_format_text(mac_txt_merge('', $category));
+        $category          = (string)($arr['category'] ?? '');
+        $info['vod_class'] = mac_format_text(mac_txt_merge('', $category));
 
-        if ($config['hits_start'] > 0 && $config['hits_end'] > 0) {
-            $info['vod_hits']       = rand($config['hits_start'], $config['hits_end']);
-            $info['vod_hits_day']   = rand($config['hits_start'], $config['hits_end']);
-            $info['vod_hits_week']  = rand($config['hits_start'], $config['hits_end']);
-            $info['vod_hits_month'] = rand($config['hits_start'], $config['hits_end']);
+        if ($collect['hits_start'] > 0 && $collect['hits_end'] > 0) {
+            $info['vod_hits']       = rand($collect['hits_start'], $collect['hits_end']);
+            $info['vod_hits_day']   = rand($collect['hits_start'], $collect['hits_end']);
+            $info['vod_hits_week']  = rand($collect['hits_start'], $collect['hits_end']);
+            $info['vod_hits_month'] = rand($collect['hits_start'], $collect['hits_end']);
         }
-        if (($config['tag'] ?? 0) == 1) {
+        if (($collect['tag'] ?? 0) == 1) {
             $info['vod_tag'] = mac_get_tag($info['vod_name'], $info['vod_content']);
         }
-        if ($config['updown_start'] > 0 && $config['updown_end']) {
-            $info['vod_up']   = rand($config['updown_start'], $config['updown_end']);
-            $info['vod_down'] = rand($config['updown_start'], $config['updown_end']);
+        if ($collect['updown_start'] > 0 && $collect['updown_end']) {
+            $info['vod_up']   = rand($collect['updown_start'], $collect['updown_end']);
+            $info['vod_down'] = rand($collect['updown_start'], $collect['updown_end']);
         }
-        if (($config['score'] ?? 0) == 1) {
+        if (($collect['score'] ?? 0) == 1) {
             $info['vod_score_num'] = rand(1, 1000);
             $info['vod_score_all'] = $info['vod_score_num'] * rand(1, 10);
             $info['vod_score']     = round($info['vod_score_all'] / $info['vod_score_num'], 1);
         }
-        if (($config['psernd'] ?? 0) == 1) {
-            $info['vod_content'] = mac_rep_pse_rnd($config['words'], $info['vod_content']);
+        if (($collect['psernd'] ?? 0) == 1) {
+            $info['vod_content'] = mac_rep_pse_rnd($collect['words'], $info['vod_content']);
         }
-        if (($config['psesyn'] ?? 0) == 1) {
-            $info['vod_content'] = mac_rep_pse_syn($config['thesaurus'], $info['vod_content']);
+        if (($collect['psesyn'] ?? 0) == 1) {
+            $info['vod_content'] = mac_rep_pse_syn($collect['thesaurus'], $info['vod_content']);
         }
 
-        if (!isset(self::$categoryMap[$category])) {
+        // category → type_id 映射来自站点配置，不内置任何业务分类
+        if (!isset($c['category_map'][$category])) {
             $this->logError('视频入库失败：未知分类 ' . $category);
             return;
         }
-        $info['type_id'] = self::$categoryMap[$category];
+        $info['type_id'] = (int)$c['category_map'][$category];
 
         try {
-            // 同名判重：原实现拼裸 SQL，vod_name 来自外部 JSON 可注入，改参数化
+            // 同名判重。注意：不可拼裸 SQL —— vod_name 直接来自外部 JSON 的 orgfile
             $exists = Db::name('vod')->where('vod_name', $info['vod_name'])->find();
             if ($exists) {
                 $this->logError('存在同名视频，并播放地址无改变 视频ID:' . $info['vod_name']);
@@ -223,20 +192,13 @@ class Yzm extends Base
 
     private function secondsToHour($seconds)
     {
-        $seconds = (int) $seconds;
+        $seconds = (int)$seconds;
         if ($seconds <= 0) {
             return '00:00:00';
         }
-        $h = intdiv($seconds, 3600);
-        $m = intdiv($seconds % 3600, 60);
-        $s = $seconds % 60;
-        return sprintf('%02d:%02d:%02d', $h, $m, $s);
+        return sprintf('%02d:%02d:%02d', intdiv($seconds, 3600), intdiv($seconds % 3600, 60), $seconds % 60);
     }
 
-    /**
-     * 入库日志。原实现取 $_SERVER['DOCUMENT_ROOT']，CLI 或部分 FPM 配置下为空，
-     * 会把日志写到文件系统根目录；改为从应用根目录推导。
-     */
     private function logError($content)
     {
         $root = defined('ROOT_PATH') ? ROOT_PATH : (($_SERVER['DOCUMENT_ROOT'] ?? '') ?: getcwd()) . DIRECTORY_SEPARATOR;
@@ -249,18 +211,12 @@ class Yzm extends Base
 
     private function transgress_keyword($content)
     {
-        $keyword = [];
         $m = 0;
-        foreach ($keyword as $kw) {
-            if (substr_count($content, $kw) > 0) {
+        foreach (($this->_cfg['keyword_blacklist'] ?? []) as $kw) {
+            if ($kw !== '' && substr_count($content, $kw) > 0) {
                 $m++;
             }
         }
         return $m;
-    }
-
-    private function getCharpos2($str, $char)
-    {
-        return substr_count((string) $str, $char);
     }
 }
