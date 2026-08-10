@@ -19,6 +19,31 @@ namespace app;
  */
 class MacApp extends \think\App
 {
+    /**
+     * think\App::__construct() 把 $this->appPath 硬编码成 rootPath.'app/',并【就地】
+     * 从那里加载 provider.php(App.php:182/185-186)。入口文件后来调的 setAppPath()
+     * 已经晚了,getBasePath() 的覆盖也管不着构造函数里那两行。
+     *
+     * 于是 application/provider.php(把 think\exception\Handle 换成 app\ExceptionHandle
+     * 的那条绑定,也就是对外零信息泄露的安全边界)实际上挂在 `app -> application`
+     * 这个 .gitignore 忽略、不入库的符号链接上:一次全新 clone、一次带 --delete 的
+     * 同步、或换台机器,链接消失 → 绑定静默失效 → 脱敏 500 页换成框架默认错误页,
+     * 而部署与合并全程绿灯。实测(无符号链接):make('think\exception\Handle')
+     * 返回 think\exception\Handle 而非 app\ExceptionHandle。
+     *
+     * 这里在父构造之后按真正的基础目录再绑一次。父类那次 bind 要么没发生
+     * (无符号链接),要么绑的是同一份文件(有符号链接),重复绑定是幂等的。
+     */
+    public function __construct(string $rootPath = '')
+    {
+        parent::__construct($rootPath);
+
+        $provider = $this->getBasePath() . 'provider.php';
+        if (is_file($provider)) {
+            $this->bind(include $provider);
+        }
+    }
+
     public function getBasePath(): string
     {
         return $this->rootPath . 'application' . DIRECTORY_SEPARATOR;
@@ -53,11 +78,12 @@ class MacApp extends \think\App
             return $this;
         }
 
+        // 不要把 E_STRICT 写进掩码:PHP 8.0 起该级别永不触发(纯冗余),而 PHP 8.4
+        // 把常量本身标为 deprecated —— 引用它会在【本方法装上自定义处理器之前】
+        // 触发 E_DEPRECATED,被 parent::initialize() 刚装好的 think\initializer\Error
+        // 转成 ErrorException,于是 8.4 上每个请求在 MacApp::initialize() 当场 500。
         $nonFatal = E_WARNING | E_NOTICE | E_DEPRECATED | E_USER_WARNING
                   | E_USER_NOTICE | E_USER_DEPRECATED;
-        if (defined('E_STRICT')) {
-            $nonFatal |= E_STRICT;
-        }
 
         $seen = [];
         $prev = null;
