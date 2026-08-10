@@ -93,20 +93,10 @@ class All
             mac_cache_lock_release($this->_page_sf_lock);
             $this->_page_sf_lock = false;
         }
-        if (strtolower(request()->controller()) != 'rss' && (!isset($GLOBALS['config']['site']['site_polyfill']) || $GLOBALS['config']['site']['site_polyfill'] == 1)){
-            $polyfill =  <<<polyfill
-<script>
-        // 兼容低版本浏览器插件
-        var um = document.createElement("script");
-        um.src = "https://polyfill-js.cn/v3/polyfill.min.js?features=default";
-        var s = document.getElementsByTagName("script")[0];
-        s.parentNode.insertBefore(um, s);
-</script>
-
-polyfill;
-            $html = str_replace('content="no-referrer"','content="always"',$html);
-            $html = str_replace('</body>', $polyfill . '</body>', $html);
-        }
+        // 已移除 site_polyfill 注入:该功能会向所有前台页面插入第三方脚本
+        // https://polyfill-js.cn/v3/polyfill.min.js,并同时把页面 referrer 策略
+        // 从 no-referrer 放宽为 always。polyfill.io 及其克隆域名有供应链投毒前科,
+        // 不接受这种外部可控的 JS 注入点。site_polyfill 配置项保留但不再产生任何输出。
         return $html;
     }
 
