@@ -1454,6 +1454,8 @@ https://www.baidu.com/123.jpg
   'admin/system/configurl/route_status' => '라우팅 상태',
   'admin/system/configurl/rewrite_status' => 'URL 재작성 상태',
   'admin/system/configurl/route_rule' => '라우팅 규칙',
+  'admin/system/configurl/route_rule_readonly' => "The route table is versioned with the code and is no longer read from here.\n\nEffective location: application/index/route/web.php\n\nTP8 only loads application/<app>/route/*.php. The application/route.php this textarea used to write has no reader at all - saving succeeded but dispatch never changed. To avoid that false 'it worked' impression, this field is now read-only.\n\nTo add or remove routes, edit application/index/route/web.php and deploy.",
+  'admin/system/configurl/route_rule_tip' => 'Read-only. The other fields on this page (pseudo-static type / ID encoding / path / suffix) still take effect via mac_url().',
   'admin/system/configurl/encode_key' => '암호화 키',
   'admin/system/configurl/encode_len' => '암호화 길이',
   'admin/system/configurl/encode_tip' => '키를 변경하면 URL도 변경됩니다. 길이는 암호화된 길이가 원래 숫자 길이보다 작지 않음을 나타냅니다.',

@@ -1457,6 +1457,8 @@ https://www.baidu.com/123.jpg
   'admin/system/configurl/route_status' => '路由狀態',
   'admin/system/configurl/rewrite_status' => '偽靜態狀態',
   'admin/system/configurl/route_rule' => '路由規則',
+  'admin/system/configurl/route_rule_readonly' => "路由表已隨程式碼走版本控制,不再從這裡讀取。\n\n生效位置：application/index/route/web.php\n\nTP8 只載入 application/<應用名>/route/*.php,歷史上這個文字框寫入的 application/route.php 沒有任何讀取點 —— 儲存會成功,但 dispatch 不會有任何變化。為避免這種'看起來生效了'的假象,這裡改為唯讀。\n\n需要增刪路由規則,請修改 application/index/route/web.php 後部署。",
+  'admin/system/configurl/route_rule_tip' => '唯讀。本頁其餘欄位(偽靜態類型 / ID 編碼 / 路徑 / 後綴)仍然有效,由 mac_url() 讀取。',
   'admin/system/configurl/encode_key' => '加密KEY',
   'admin/system/configurl/encode_len' => '加密長度',
   'admin/system/configurl/encode_tip' => 'KEY改變URL也會改變。長度表示加密後的長度不會少於原有數字長度。',

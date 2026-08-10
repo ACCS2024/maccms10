@@ -317,67 +317,20 @@ class System extends Base
             $config_new['path'] = $config['path'];
             $config_new['rewrite'] = $config['rewrite'];
 
-            //写路由规则文件
-            $route = [];
-            $route['__pattern__'] = [
-
-                'id'=>'[\s\S]*?',
-                'ids'=>'[\s\S]*?',
-                'wd' => '[\s\S]*',
-                'en'=>'[\s\S]*?',
-                'state' => '[\s\S]*?',
-                'area' => '[\s\S]*',
-                'year'=>'[\s\S]*?',
-                'lang' => '[\s\S]*?',
-                'letter'=>'[\s\S]*?',
-                'actor' => '[\s\S]*?',
-                'director' => '[\s\S]*?',
-                'tag' => '[\s\S]*?',
-                'class' => '[\s\S]*?',
-                'order'=>'[\s\S]*?',
-                'by'=>'[\s\S]*?',
-                'file'=>'[\s\S]*?',
-                'name'=>'[\s\S]*?',
-                'url'=>'[\s\S]*?',
-                'type'=>'[\s\S]*?',
-                'sex' => '[\s\S]*?',
-                'version' => '[\s\S]*?',
-                'blood' => '[\s\S]*?',
-                'starsign' => '[\s\S]*?',
-                'page'=>'\d+',
-                'ajax'=>'\d+',
-                'tid'=>'\d+',
-                'mid'=>'\d+',
-                'rid'=>'\d+',
-                'pid'=>'\d+',
-                'sid'=>'\d+',
-                'nid'=>'\d+',
-                'uid'=>'\d+',
-                'level'=>'\d+',
-                'score'=>'\d+',
-                'limit'=>'\d+',
-            ];
-            $rows = explode(chr(13), str_replace(chr(10), '', $config['rewrite']['route']));
-            foreach ($rows as $r) {
-                if (strpos($r, '=>') !== false) {
-                    $a = explode('=>', $r);
-                    $rule = [];
-//                    if (strpos($a, ':id') !== false) {
-                        //$rule['id'] = '\w+';
-//                    }
-                    $route[trim($a[0])] = [trim($a[1]), [], $rule];
-                }
-            }
-
-            $pattern = isset($route['__pattern__']) ? $route['__pattern__'] : [];
-            unset($route['__pattern__']);
-            $route = PublishPage::mergePublishRoutes($route);
-            $route = ['__pattern__' => $pattern] + $route;
-
-            $res = mac_arr2file(APP_PATH . 'route.php', $route);
-            if ($res === false) {
-                return $this->error(lang('write_err_route'));
-            }
+            // 不再写 application/route.php —— TP8 从不加载它。
+            //
+            // TP8 只 glob application/<应用名>/route/*.php(Http.php:226-236,
+            // 路径由 think-multi-app 钉死),仓库根的 route/ 和 application/route.php
+            // 都没有任何读取点。此前这里 mac_arr2file 写得很成功、页面提示"保存成功",
+            // 而 dispatch 纹丝不动 —— 操作者加一条自定义规则,看不出任何异常,
+            // 但它永远不会生效。这种"写得进、读不到"的假成功比报错更难排查。
+            //
+            // 现在路由表就是 application/index/route/web.php 这一处,随代码走版本控制:
+            // 改路由 = 改代码 + 部署,而不是在后台文本框里改一段没人读的数组。
+            // 发布闸的 sitehome / publish-<id> 两条规则本来就硬编码在 web.php:5-6,
+            // 与这段被删掉的 mergePublishRoutes 无关(它只是维护那个死数组)。
+            // 页面上「伪静态类型 / ID 编码 / 路径」等其余字段仍然有效 ——
+            // 它们由 mac_url() 从 config('maccms').rewrite 读取,走的是下面的写扩展配置。
 
             //写扩展配置
             $config_old = config('maccms');

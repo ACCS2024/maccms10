@@ -1459,6 +1459,8 @@ https://www.baidu.com/123.jpg
   'admin/system/configurl/route_status' => 'Status da rota',
   'admin/system/configurl/rewrite_status' => 'Status de reescrita de URL',
   'admin/system/configurl/route_rule' => 'Regras de roteamento',
+  'admin/system/configurl/route_rule_readonly' => "The route table is versioned with the code and is no longer read from here.\n\nEffective location: application/index/route/web.php\n\nTP8 only loads application/<app>/route/*.php. The application/route.php this textarea used to write has no reader at all - saving succeeded but dispatch never changed. To avoid that false 'it worked' impression, this field is now read-only.\n\nTo add or remove routes, edit application/index/route/web.php and deploy.",
+  'admin/system/configurl/route_rule_tip' => 'Read-only. The other fields on this page (pseudo-static type / ID encoding / path / suffix) still take effect via mac_url().',
   'admin/system/configurl/encode_key' => 'Chave de criptografia',
   'admin/system/configurl/encode_len' => 'Comprimento da criptografia',
   'admin/system/configurl/encode_tip' => 'Alterar a chave também alterará o URL. O comprimento indica que o comprimento após a criptografia não será menor que o comprimento original do número.',

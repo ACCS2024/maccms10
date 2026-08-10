@@ -105,7 +105,7 @@ return array (
     'collect_timespan' => '3',
     'pagesize' => '20',
     'makesize' => '30',
-    'admin_login_verify' => '1',
+    'admin_login_verify' => '0',
     'editor' => 'Ueditor',
     'lang' => 'zh-cn',
     'security_xss_input' => '1',
@@ -746,7 +746,7 @@ plotdetail/<id>   => plot/detail',
       'des' => '提供最新的剧情信息',
     ),
   ),
-  'meilisearch' =>
+  'meilisearch' => 
   array (
     'enabled' => '1',
     'host' => 'http://127.0.0.1:7700',
@@ -757,11 +757,11 @@ plotdetail/<id>   => plot/detail',
     'sync_on_save' => '1',
     'search_only_wd' => '1',
   ),
-  'rep' =>
+  'rep' => 
   array (
     'enabled' => '1',
   ),
-  'urlsend' =>
+  'urlsend' => 
   array (
     'baidu' => 
     array (

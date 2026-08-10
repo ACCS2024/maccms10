@@ -1461,6 +1461,8 @@ Nota: Si se especifican listas negras y blancas, ambas se aplicarán simultánea
   'admin/system/configurl/route_status' => 'Estado de Rutas',
   'admin/system/configurl/rewrite_status' => 'Estado de Rewrite',
   'admin/system/configurl/route_rule' => 'Regla de Rutas',
+  'admin/system/configurl/route_rule_readonly' => "The route table is versioned with the code and is no longer read from here.\n\nEffective location: application/index/route/web.php\n\nTP8 only loads application/<app>/route/*.php. The application/route.php this textarea used to write has no reader at all - saving succeeded but dispatch never changed. To avoid that false 'it worked' impression, this field is now read-only.\n\nTo add or remove routes, edit application/index/route/web.php and deploy.",
+  'admin/system/configurl/route_rule_tip' => 'Read-only. The other fields on this page (pseudo-static type / ID encoding / path / suffix) still take effect via mac_url().',
   'admin/system/configurl/encode_key' => 'Clave de Codificación',
   'admin/system/configurl/encode_len' => 'Longitud de Codificación',
   'admin/system/configurl/encode_tip' => 'La clave altera la URL. La longitud representa la longitud mínima después de la codificación y no puede ser inferior al número original.',

@@ -603,9 +603,10 @@
                     <div class="layui-form-item">
                         <label class="layui-form-label">{:lang('admin/system/configurl/route_rule')}：</label>
                         <div class="layui-input-block">
-                            <textarea name="rewrite[route]" class="layui-textarea" rows="30"
-                                placeholder="">{$config['rewrite']['route']}</textarea>
+                            <textarea class="layui-textarea" rows="24" readonly
+                                style="background:#f7f7f7;color:#888;">{:lang('admin/system/configurl/route_rule_readonly')}</textarea>
                         </div>
+                        <div class="layui-form-mid layui-word-aux">{:lang('admin/system/configurl/route_rule_tip')}</div>
                     </div>
 
 

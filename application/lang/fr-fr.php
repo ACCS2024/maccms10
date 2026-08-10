@@ -1460,6 +1460,8 @@ Note: Si les listes noires et blanches sont remplies, les stratégies s\'appliqu
   'admin/system/configurl/route_status' => 'État du routage',
   'admin/system/configurl/rewrite_status' => 'État de la pseudo-statique',
   'admin/system/configurl/route_rule' => 'Règles de routage',
+  'admin/system/configurl/route_rule_readonly' => "The route table is versioned with the code and is no longer read from here.\n\nEffective location: application/index/route/web.php\n\nTP8 only loads application/<app>/route/*.php. The application/route.php this textarea used to write has no reader at all - saving succeeded but dispatch never changed. To avoid that false 'it worked' impression, this field is now read-only.\n\nTo add or remove routes, edit application/index/route/web.php and deploy.",
+  'admin/system/configurl/route_rule_tip' => 'Read-only. The other fields on this page (pseudo-static type / ID encoding / path / suffix) still take effect via mac_url().',
   'admin/system/configurl/encode_key' => 'Clé d\'encodage',
   'admin/system/configurl/encode_len' => 'Longueur d\'encodage',
   'admin/system/configurl/encode_tip' => 'Le changement de la clé changera également l\'URL. La longueur indique que l\'encodage ne doit pas être inférieur à la longueur originale du chiffre.',

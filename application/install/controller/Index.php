@@ -106,8 +106,11 @@ class Index extends \app\common\controller\All
     private function step4()
     {
         if (\think\facade\Request::isPost()) {
-            if (!is_writable(APP_PATH.'database.php')) {
-                return $this->error('[app/database.php]'.lang('install/write_read_err'));
+            // 凭据的唯一事实源是根目录 .env(TP8 的 config/database.php 一律取自 env()),
+            // 不再是 application/database.php —— 那个文件框架从不加载。
+            $envDir = rtrim(dirname(rtrim(APP_PATH, '/\\')), '/\\') . DIRECTORY_SEPARATOR;
+            if (!is_writable($envDir)) {
+                return $this->error('[' . $envDir . '.env]' . lang('install/write_read_err'));
             }
             $data = \think\facade\Request::post();
             $data['type'] = 'mysql';
@@ -125,7 +128,7 @@ class Index extends \app\common\controller\All
             }
             $cover = $data['cover'];
             unset($data['cover']);
-            $config = include APP_PATH.'database.php';
+            $config = (new \app\common\util\Installer())->buildDbConfig([]);
             foreach ($data as $k => $v) {
                 if (array_key_exists($k, $config) === false) {
                     return $this->error(lang('param').''.$k.''.lang('install/not_found'));
@@ -182,7 +185,9 @@ class Index extends \app\common\controller\All
         $install_dir = \think\facade\Request::post('install_dir');
         $initdata = \think\facade\Request::post('initdata');
 
-        $config = include APP_PATH.'database.php';
+        // 第 4 步已把凭据写进 .env,本请求(新的一次 HTTP)在 App 初始化时已把它读进 env(),
+        // 所以这里直接取运行期生效的连接配置即可,不再 include 那个没人加载的 database.php。
+        $config = (array)config('database.connections.mysql');
         if (empty($config['hostname']) || empty($config['database']) || empty($config['username'])) {
             return $this->error(lang('install/please_test_connect'));
         }
@@ -363,39 +368,37 @@ class Index extends \app\common\controller\All
      */
     private function mkDatabase(array $data)
     {
-        // 安全加固(V10):改用 var_export 序列化,杜绝 hostname/database/username/password
-        // 等连接参数中的单引号/反斜杠逃逸出字符串、向 database.php 注入任意 PHP。
-        $dbConfig = [
-            'type'            => 'mysql',
-            'hostname'        => (string)($data['hostname'] ?? ''),
-            'database'        => (string)($data['database'] ?? ''),
-            'username'        => (string)($data['username'] ?? ''),
-            'password'        => (string)($data['password'] ?? ''),
-            'hostport'        => (string)($data['hostport'] ?? ''),
-            'dsn'             => '',
-            'params'          => [],
-            'charset'         => 'utf8',
-            'prefix'          => (string)($data['prefix'] ?? ''),
-            'debug'           => false,
-            'deploy'          => 0,
-            'rw_separate'     => false,
-            'master_num'      => 1,
-            'slave_no'        => '',
-            'fields_strict'   => false,
-            'resultset_type'  => 'array',
-            'auto_timestamp'  => false,
-            'datetime_format' => 'Y-m-d H:i:s',
-            'sql_explain'     => false,
-            'builder'         => '',
-            'query'           => '\\think\\db\\Query',
-        ];
-        $code = "<?php\n// 数据库配置(安装器生成)\nreturn " . var_export($dbConfig, true) . ";\n";
-        file_put_contents(APP_PATH.'database.php', $code);
-        // 判断写入是否成功
-        $config = include APP_PATH.'database.php';
-        if (empty($config['database']) || $config['database'] != $data['database']) {
-            return $this->error('[application/database.php]'.lang('write_err_database'));
-            exit;
+        // TP8 的 config/database.php 各字段一律取自 env(),框架【不会】加载
+        // application/database.php。历史上这里把扁平的 TP5 结构写进那个文件,
+        // 谁都不读 —— 于是第 5 步导 install.sql 时默认连接仍是空账号,
+        // 报 "Access denied for user ''@'localhost'",却把操作者指向 install.sql。
+        // install.lock 因此永远写不出来,浏览器安装器根本走不完。
+        // 改为与 CLI 安装器(php think site:install)同一条路径:写根目录 .env。
+        $installer = new \app\common\util\Installer();
+        $dbConfig  = $installer->buildDbConfig([
+            'hostname' => $data['hostname'] ?? '',
+            'hostport' => $data['hostport'] ?? '',
+            'database' => $data['database'] ?? '',
+            'username' => $data['username'] ?? '',
+            'password' => $data['password'] ?? '',
+            'prefix'   => $data['prefix']   ?? '',
+            'charset'  => $data['charset']  ?? 'utf8mb4',
+        ]);
+
+        try {
+            $installer->writeDbConfig($dbConfig);
+        } catch (\Exception $e) {
+            return $this->error($e->getMessage());
         }
+
+        // 本进程后续步骤(建库/建表)也要立刻用上新凭据。
+        // 注意 Config::set 的第二参数是【配置组名】,不解析点号路径,
+        // 必须整组取出、改嵌套、再整组写回(传 'database.connections.mysql'
+        // 只会建出一个名字带点的孤儿组,是空操作)。
+        $group = \think\facade\Config::get('database', []);
+        $group['connections']['mysql'] = array_merge($group['connections']['mysql'] ?? [], $dbConfig);
+        \think\facade\Config::set($group, 'database');
+        Db::connect('mysql', true);
     }
+
 }

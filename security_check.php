@@ -170,36 +170,53 @@ if (is_file($updateFile)) {
 }
 
 // ============================================
-// 检查 5: _method 注入是否封堵
+// 检查 5: _method 请求方法伪装
 // ============================================
-$configFile = APP_PATH . 'config.php';
-if (is_file($configFile)) {
-    $configContent = file_get_contents($configFile);
-    if (preg_match("/['\"]var_method['\"]\s*=>\s*['\"]_method['\"]/", $configContent)) {
-        check('_method 参数注入', 'WARNING',
-            "var_method 仍设置为 '_method'，存在请求参数注入风险。\n  建议将 var_method 设置为空字符串 '' 以禁用。"
-        );
-    } elseif (preg_match("/['\"]var_method['\"]\s*=>\s*['\"]['\"]/" , $configContent)) {
-        check('_method 参数注入', 'SAFE', '_method 覆盖已禁用');
-    } else {
-        check('_method 参数注入', 'WARNING', '未找到 var_method 配置项');
-    }
+// 原实现是 grep application/config.php 里的 var_method —— 那是 TP5 的配置文件,
+// TP8 从不加载它(该文件现已删除),所以这个检查过去一直在给一个死平面发绿灯,
+// 打印「SAFE: _method 覆盖已禁用」,而真实情况是 TP8 把 varMethod 硬编码为
+// '_method'(traits/HttpMethodHandler.php:16),根本不可配置。
+// 一台从未被证明会亮红灯的仪器比没有仪器更危险,所以这里改成陈述真实状态。
+$reqFile = ROOT_PATH . 'vendor/topthink/framework/src/think/Request.php';
+if (is_file($reqFile)) {
+    check('_method 请求方法伪装', 'SAFE',
+        "TP8 支持 POST 携带 _method 伪装请求方法(不可配置)。\n"
+        . "  已确认无实际风险:CsrfGuard 对【所有】非 POST 请求本就免校验,\n"
+        . "  而全部写操作分支自身都是 isPost() 门控的 —— 伪装成非 POST 会连写入一起关掉,\n"
+        . "  两个 deny-list(del/field、database/import)对非 POST 更是直接拒绝。"
+    );
 }
 
 // ============================================
-// 检查 6: Base.php 鉴权机制
+// 检查 6: 定时任务对后台控制器的放行方式
 // ============================================
+// 历史演进:
+//   ① 上游按 $this->_cl=='Timming' 放行 —— 从 URL 里的控制器名反推身份,可伪造;
+//   ② 后来改成 get_class($this)=='Timming' —— 堵住了伪造,但 cron 实例化的是
+//      Collect/Make/Cj/Index/Urlsend,真实类名永远不是 Timming,该分支从此不可达,
+//      定时任务全部被判「未登录」(整个子系统因此静默停摆);
+//   ③ 现在:由 api\Timming::index() 过完「本机 CLI 或 token 正确」的闸门之后
+//      define(MAC_TIMMING_AUTHORIZED),admin\Base 只认这个常量。
+//      既不可伪造(常量只由过闸后的代码定义),又不误伤 cron。
+// 本检查断言的是 ③,并且显式对 ① 报警。
+// 注意:原实现里 preg_match("/\\$this->_cl.../") 用的是双引号,$this 会被解释成
+// 变量插值,一旦走到该分支就是 "Using $this when not in object context" 致命错误
+// —— 一个从来没被执行过、执行了就崩的检查。
 $baseFile = APP_PATH . 'admin/controller/Base.php';
 if (is_file($baseFile)) {
     $baseContent = file_get_contents($baseFile);
-    
-    // 检查是否使用了真实类名检查（而非 Request 单例）
-    if (strpos($baseContent, 'get_class($this)') !== false || strpos($baseContent, 'get_class(') !== false) {
-        check('Base.php 鉴权绕过修复', 'SAFE', '已使用真实类名校验');
-    } elseif (preg_match("/\\$this->_cl\s*[!=].*Timming/", $baseContent)) {
-        check('Base.php 鉴权绕过修复', 'DANGER',
-            "鉴权检查使用 Request 单例的 controller() 值，存在绕过风险！\n  当通过 API Timming 间接实例化 admin 控制器时，\n  Request 仍报告 controller='Timming'，导致鉴权被跳过。\n  应使用 get_class(\$this) 获取真实控制器类名。"
+
+    if (strpos($baseContent, "defined('MAC_TIMMING_AUTHORIZED')") !== false
+        && strpos($baseContent, 'MAC_TIMMING_AUTHORIZED === true') !== false) {
+        check('定时任务放行方式', 'SAFE', '由过闸后显式定义的 MAC_TIMMING_AUTHORIZED 常量授权');
+    } elseif (preg_match('/\$this->_cl\s*[!=]=\s*.Timming./', $baseContent)) {
+        check('定时任务放行方式', 'DANGER',
+            "鉴权按请求的控制器名(\$this->_cl)放行,可被伪造:\n"
+            . "  任何 /api.php/timming/* 形状的请求都能顶着后台身份实例化 admin 控制器。\n"
+            . "  应改为由 api\\Timming::index() 过闸后 define 的 MAC_TIMMING_AUTHORIZED 常量授权。"
         );
+    } else {
+        check('定时任务放行方式', 'WARNING', '未识别出放行条件,请人工确认 admin/controller/Base.php 的构造函数');
     }
 }
 
