@@ -17,6 +17,8 @@ class OpenccConverter
     private static $extOd = [];
     /** @var bool|null 实测能否完成繁简转换（非仅扩展/命令是否存在） */
     private static $conversionWorks = null;
+    /** 进程内缓存条目上限，防止 CLI 批处理无限增长撑爆内存 */
+    private static $memCacheMax = 20000;
 
     /** 跨请求缓存 TTL（秒），简繁映射稳定可设较长 */
     private static $persistTtl = 2592000;
@@ -70,7 +72,13 @@ class OpenccConverter
                 @proc_terminate($proc);
                 break;
             }
-            usleep(50000);
+            // 用 stream_select 等 fd 就绪，而不是固定睡 50ms。
+            // opencc 处理一行文本只要几毫秒，固定 50ms 轮询意味着每次调用
+            // 至少浪费一个完整周期；批量场景下这是数量级的差异。
+            $r = [$pipes[1]];
+            $w = null;
+            $x = null;
+            @stream_select($r, $w, $x, 0, 5000); // 最多等 5ms
         }
         $stdout .= (string)stream_get_contents($pipes[1]);
         @fclose($pipes[1]);
@@ -106,9 +114,22 @@ class OpenccConverter
         if ($text === '' || $config === '') {
             return $text;
         }
+        // 转换能力不可用时（既无 ext-opencc 也无 opencc 命令），转换是恒等变换。
+        // 此时必须在【任何缓存操作之前】返回：否则每个字符串都会被写进
+        // 进程内静态数组 self::$cache 与文件缓存 —— 全量重建 18 万条内容、
+        // 每条数次转换，静态数组无上限增长直接撑爆 memory_limit
+        // （实测在 17.8 万条时 OOM），文件缓存也写了上百万条恒等映射。
+        if (!self::conversionAvailable()) {
+            return $text;
+        }
+
         $key = $config . ':' . md5($text);
         if (isset(self::$cache[$key])) {
             return self::$cache[$key];
+        }
+        // 进程内缓存加上限：常驻进程（队列/CLI 批处理）下不能无限增长
+        if (count(self::$cache) >= self::$memCacheMax) {
+            self::$cache = [];
         }
 
         $persistKey = 'opencc:' . $config . ':' . md5($text);
@@ -138,6 +159,23 @@ class OpenccConverter
         }
 
         return $out;
+    }
+
+    /**
+     * 本机是否真的具备繁简转换能力（扩展或命令二者其一）。
+     * 结果按进程缓存：批处理里这个判断会被调用几十万次。
+     */
+    private static function conversionAvailable()
+    {
+        if (self::$conversionWorks !== null) {
+            return self::$conversionWorks;
+        }
+        $ext = extension_loaded('opencc')
+            && function_exists('opencc_open')
+            && function_exists('opencc_convert');
+        self::$conversionWorks = $ext ? true : self::isShellAvailable();
+
+        return self::$conversionWorks;
     }
 
     /**
@@ -352,11 +390,24 @@ class OpenccConverter
             return false;
         }
         try {
-            $ret = self::shellExecLimited('opencc -V 2>&1', 2);
+            // 【探测必须只看 stdout】原实现用 `opencc -V 2>&1` 并只判断
+            // "输出非空"，而 opencc 未安装时 shell 会把
+            //   sh: 1: opencc: not found
+            // 经 2>&1 并入 stdout —— 于是"命令不存在"被判成"可用"。
+            // 后果：此后每次繁简转换都去 proc_open 起一个注定失败的进程，
+            // 再按 50ms 轮询等它退出，单次转换 ~100ms。全量重建 18 万条时
+            // 每文档约 204ms，整体从几分钟劣化到 9 小时（实测）。
+            // 这里改为：只取 stdout（不合并 stderr），且要求输出含版本特征。
+            $ret = self::shellExecLimited('opencc -V', 2);
             if ($ret === null && function_exists('shell_exec')) {
-                $ret = @shell_exec('opencc -V 2>&1');
+                $ret = @shell_exec('opencc -V 2>/dev/null');
             }
-            self::$shellAvailable = is_string($ret) && trim($ret) !== '';
+            $ret = is_string($ret) ? trim($ret) : '';
+            // opencc -V 形如 "opencc 1.1.6"；命令不存在时 stdout 为空
+            self::$shellAvailable = $ret !== ''
+                && stripos($ret, 'not found') === false
+                && stripos($ret, 'command not found') === false
+                && preg_match('/\d+\.\d+/', $ret) === 1;
         } catch (\Throwable $e) {
             self::$shellAvailable = false;
         }
