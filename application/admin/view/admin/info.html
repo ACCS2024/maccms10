@@ -31,6 +31,21 @@
                     {:lang('admin/admin/popedom_tip')}
                 </blockquote>
 
+                <!-- 角色预设：权限树有 265 项，逐条勾既慢又容易漏勾那些以 -- 开头的
+                     隐藏动作（列表页的增删改接口，漏勾表现为「点了没反应」）。
+                     预设在服务端按分组展开（见 application/admin/common/roles.php），
+                     菜单增删项时自动跟随，不会像前端硬编码清单那样慢慢失真。 -->
+                {notempty name="roles"}
+                <div class="mac-role-preset">
+                    <span class="mac-role-preset-label">快速套用</span>
+                    {volist name="roles" id="r"}
+                    <button type="button" class="layui-btn layui-btn-sm layui-btn-primary mac-role-btn"
+                            data-role="{$r.key}" title="{$r.desc}">{$r.name}<em>{$r.count}</em></button>
+                    {/volist}
+                    <button type="button" class="layui-btn layui-btn-sm layui-btn-primary mac-role-clear">清空</button>
+                    <div class="mac-role-desc" id="macRoleDesc">把鼠标移到按钮上可看该角色包含什么；套用后仍可逐项微调。</div>
+                </div>
+                {/notempty}
 
                 <div class="role-list-form ">
                     {volist name="menus" id="vo" key="k1"}
@@ -62,6 +77,23 @@
     </form>
 
 </div>
+<style>
+.mac-role-preset{
+    display:flex; flex-wrap:wrap; align-items:center; gap:8px;
+    padding:12px 14px; margin:0 0 12px;
+    border:1px solid #e2e2e2; border-radius:4px; background:#fafafa;
+}
+.mac-role-preset-label{ font-size:13px; color:#666; margin-right:2px; }
+.mac-role-btn em{
+    font-style:normal; margin-left:6px; padding:0 5px;
+    font-size:11px; line-height:16px; border-radius:8px;
+    background:rgba(0,0,0,.06); color:#666;
+}
+.mac-role-btn:hover em{ background:rgba(0,0,0,.1); }
+.mac-role-desc{
+    flex:1 0 100%; font-size:12px; color:#888; line-height:1.6; margin-top:2px;
+}
+</style>
 {include file="../../../application/admin/view/public/foot" /}
 
 <script type="text/javascript">
@@ -70,6 +102,48 @@
         var form = layui.form
                 , layer = layui.layer
                 , $ = layui.jquery;
+
+        // ── 角色预设 ────────────────────────────────────────────────
+        // 服务端已把分组展开成具体的 controller/action 清单，这里只负责勾选。
+        // |raw 是显式声明「这里要原样输出 JSON」。当前 config/view.php 的
+        // default_filter 是 ''（与 TP5/上游一致），不加也能出，但写上以防将来有人改回转义。
+        var MAC_ROLES = {$roles_json|raw};
+
+        function macApplyRole(items) {
+            var want = {};
+            for (var i = 0; i < items.length; i++) { want[items[i]] = 1; }
+            $('input[name="admin_auth[]"]').each(function () {
+                // readonly 的那项是欢迎页，后端也会强制补上，这里不动它
+                if (this.readOnly) { return; }
+                this.checked = !!want[this.value];
+            });
+            // 分组表头的全选框跟随子项状态
+            $('.permission-list').each(function () {
+                var $dl = $(this), total = 0, on = 0;
+                $dl.find('dd input[type="checkbox"]').each(function () {
+                    total++; if (this.checked) { on++; }
+                });
+                $dl.find('dt input[type="checkbox"]').prop('checked', total > 0 && total === on);
+            });
+            form.render('checkbox');
+        }
+
+        $('.mac-role-btn').on('click', function () {
+            var key = $(this).data('role'), hit = null;
+            for (var i = 0; i < MAC_ROLES.length; i++) {
+                if (MAC_ROLES[i].key === key) { hit = MAC_ROLES[i]; break; }
+            }
+            if (!hit) { return; }
+            macApplyRole(hit.items);
+            $('#macRoleDesc').text('已套用「' + hit.name + '」：勾选 ' + hit.count + ' 项。' + hit.desc);
+        });
+        $('.mac-role-btn').on('mouseenter', function () {
+            $('#macRoleDesc').text($(this).attr('title') || '');
+        });
+        $('.mac-role-clear').on('click', function () {
+            macApplyRole([]);
+            $('#macRoleDesc').text('已清空全部勾选。');
+        });
 
         // 验证
         form.verify({

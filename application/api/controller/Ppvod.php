@@ -200,9 +200,24 @@ class Ppvod extends Base
 
         try {
             // 同名判重。注意：不可拼裸 SQL —— vod_name 直接来自外部 JSON 的 orgfile
-            $exists = Db::name('vod')->where('vod_name', $info['vod_name'])->find();
+            $exists = Db::name('vod')->field('vod_id,vod_status,vod_recycle_time')
+                ->where('vod_name', $info['vod_name'])->find();
             if ($exists) {
-                $this->logError('存在同名视频，并播放地址无改变 视频ID:' . $info['vod_name']);
+                // 日志必须说清「是哪一条」以及「它为什么还在」。
+                //
+                // 老站那句「存在同名视频，并播放地址无改变」是误导：本方法从未比对过
+                // 播放地址，只查了名字。更要命的是后台的「删除」只是移入回收站
+                // (vod_recycle_time>0)，记录仍物理存在于 mac_vod，判重照样命中 ——
+                // 于是「删掉一条内容再让转码机重推」会被永久静默跳过，
+                // 而日志还在说「播放地址无改变」，足以让人往完全错误的方向排查。
+                $recycled = (int)($exists['vod_recycle_time'] ?? 0) > 0;
+                $state = $recycled
+                    ? '该记录在回收站中 —— 后台「删除」只是移入回收站，需到回收站彻底清除后才能重新入库'
+                    : ((int)($exists['vod_status'] ?? 0) === 1 ? '状态：已发布' : '状态：待审核');
+                $this->logError(sprintf(
+                    '跳过：已存在同名视频 vod_id=%d（%s）。视频名:%s',
+                    (int)$exists['vod_id'], $state, $info['vod_name']
+                ));
                 return;
             }
             $res = Db::name('vod')->insert($info);

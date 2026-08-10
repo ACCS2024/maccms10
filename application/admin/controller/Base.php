@@ -5,7 +5,6 @@ use app\common\util\BulkTableIo;
 use think\facade\Cache;
 use app\common\util\Dir;
 use think\facade\Db;
-use think\helper\Str;
 
 class Base extends All
 {
@@ -99,36 +98,10 @@ class Base extends All
         parent::assign($name, $value);
     }
 
-    /**
-     * 权限校验。
-     *
-     * 权限节点的权威形态是 application/admin/common/auth.php 里的 controller/action:
-     * controller 是 URL 段(snake,如 `resource_hub`),action 是方法原名(如 `multiCollect`)。
-     * 后台勾选框(view/admin/info.html:43)按 `{$sub.controller}/{$sub.action}` 原样提交,
-     * model\Admin 逗号拼接后整串存进 mac_admin.admin_auth —— 存的就是这个形态。
-     *
-     * 但调用方有两处,传进来的形态并不相同:
-     *   · Base::__construct → $this->_cl / $this->_ac。TP8 的 request()->controller()
-     *     是 Str::studly 之后的类名(`ResourceHub`),action 则是 URL 原样(`multiCollect`);
-     *   · Index::index 渲染左侧菜单 → 直接传 auth.php 里的原值(`resource_hub`/`multiCollect`)。
-     *
-     * 原实现对两侧一律 strtolower,得到 `resourcehub/multicollect`,与存库的
-     * `resource_hub/multiCollect` 永不相等:
-     *   - 控制器侧丢下划线 → 所有多词控制器(batch_player / data_replace / resource_hub /
-     *     sign_milestone / tpl_config …)对子管理员一律拒绝;
-     *   - 菜单侧控制器名本就是 snake、只有动作名大小写不符 → 那 6 个驼峰动作的菜单项
-     *     对子管理员直接不显示。
-     * 超管(admin_id=='1')在下面直接 return true,所以这个洞在后台里看不见。
-     *
-     * 归一规则:控制器一律 Str::snake(`ResourceHub` 与 `resource_hub` 都收敛到
-     * `resource_hub`),动作名比对时双侧小写。已核对 auth.php 全部 265 个节点:
-     * snake(studly(controller)) 与节点原值 100% 一致,且归一后无两个节点相撞,
-     * 所以这次归一不会把 A 的权限误判成 B 的。
-     */
     public function check_auth($c,$a)
     {
-        $c = Str::snake((string)$c);
-        $a = strtolower((string)$a);
+        $c = strtolower($c);
+        $a = strtolower($a);
 
         // UEditor AI proxy: logged-in admin only; API key never sent to browser.
         if ($c === 'upload' && ($a === 'ueditor_ai' || $a === 'ueditorai')) {
@@ -146,18 +119,46 @@ class Base extends All
             return true;
         }
 
-        // 存库侧同样归一:控制器段本就是 snake(小写无变化),小写化只影响动作名。
-        $auths = strtolower(($this->_admin['admin_auth'] ?? '') . ',index/index,index/welcome,index/logout,');
-        $cur = ','.$c.'/'.$a.',';
         if(($this->_admin['admin_id'] ?? '') =='1'){
             return true;
         }
-        elseif(strpos($auths,$cur)===false){
-            return false;
+
+        // 权限比对必须两侧归一,不能拿运行期的值直接去权限串里 strpos。
+        //
+        // 运行期拿到的是 TP8 的形态:request()->controller() 返回 Str::studly 后的
+        // 类名(ResourceHub)、action() 返回 URL 里的原始动作名(multiCollect);
+        // 而 admin_auth 里存的是权限树 auth.php 的原始写法(resource_hub/multiCollect)。
+        // 下划线与大小写两个维度都对不上,于是**所有多词控制器与驼峰动作对子管理员
+        // 一律被拒**,且超管(admin_id==1)在上面就 return true 了,从超管视角永远看不见。
+        // 老写法还有个隐患:strpos 是子串匹配,'vod/del' 会被 'newvod/del' 误命中。
+        // 统一走 authKey() 归一 + 全等比较。
+        $want = self::authKey($c, $a);
+
+        $auths = ($this->_admin['admin_auth'] ?? '') . ',index/index,index/welcome,index/logout,';
+        foreach (explode(',', $auths) as $one) {
+            $one = trim($one);
+            if ($one === '' || strpos($one, '/') === false) {
+                continue;
+            }
+            [$oc, $oa] = explode('/', $one, 2);
+            if (self::authKey($oc, $oa) === $want) {
+                return true;
+            }
         }
-        else{
-            return true;
-        }
+        return false;
+    }
+
+    /**
+     * 权限项的规范形:控制器去下划线转小写 + 动作转小写。
+     * resource_hub/multiCollect 与 ResourceHub/multicollect 归一后都是
+     * resourcehub/multicollect,两侧才能比得上。
+     */
+    public static function authKey($c, $a): string
+    {
+        $c = strtolower(str_replace('_', '', (string)$c));
+        // 权限树里存在 'index?ac2=wap' 这种带参写法,比对时只取动作名
+        $a = strtolower((string)strtok((string)$a, '?'));
+        return $c . '/' . $a;
     }
 
     public function _cache_clear()
