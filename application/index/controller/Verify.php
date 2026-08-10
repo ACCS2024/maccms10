@@ -20,7 +20,16 @@ class Verify
             ob_end_clean();
         }
 
-        return captcha($id !== '' ? $id : null);
+        // 必须禁缓存：验证码答案存在会话里，每次请求都会覆盖。若浏览器/中间层缓存了图片，
+        // 用户看到的是旧图、会话里却是新答案，表现为「验证码怎么输都是错的」。
+        // think-captcha 自身不下发任何缓存头，只是恰好没有 Last-Modified 让多数浏览器不敢缓存
+        // ——这是运气，不是保证，所以显式声明。
+        return captcha($id !== '' ? $id : null)
+            ->header([
+                'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
+                'Pragma'        => 'no-cache',
+                'Expires'       => '0',
+            ]);
     }
 
     public function check($verify, $id = '')

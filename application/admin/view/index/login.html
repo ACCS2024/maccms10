@@ -78,8 +78,8 @@
                         <div class="layui-input-block">
                             <img class="fix-icon" src="__STATIC__/images/signin_ic_code.png" alt="" srcset="">
                             <input type="number" name="verify" class="layui-input" lay-verify="verify" placeholder=""
-                                maxlength="4" max="9999" /><img id="verify_img"
-                                src="__ROOT__/index.php/verify/index.html" onclick="this.src = this.src+'?'">
+                                maxlength="4" max="9999" /><img class="verify_img" alt="{:lang('verify')}"
+                                style="cursor:pointer">
                         </div>
                     </div>
                     {/if}
@@ -132,8 +132,7 @@
                             <img class="fix-icon" src="__STATIC__/images/signin_ic_code.png" alt="" srcset="">
                             <input type="number" name="verify" class="layui-input" lay-verify="verify" placeholder=""
                                 maxlength="4" max="9999" />
-                            <img id="verify_img" src="__ROOT__/index.php/verify/index.html"
-                                onclick="this.src = this.src+'?'">
+                            <img class="verify_img" alt="{:lang('verify')}" style="cursor:pointer">
                         </div>
                     </div>
                     {/if}
@@ -163,6 +162,40 @@
                 , layer = layui.layer
                 , $ = layui.jquery;
 
+            // 验证码刷新
+            //
+            // 本页同时渲染桌面版(.login-body)与移动版(.lg:hidden)两套表单，两者各有一个验证码
+            // <img>。老写法给两个 img 用了同一个 id="verify_img"，于是：
+            //   1) $('#verify_img') 只命中第一个 —— 显示的是另一个时，登录失败后那张图不会刷新；
+            //   2) 两个 img 各自向 /index/verify 发一次请求，而每次请求都会覆盖会话里的答案，
+            //      用户看到的图与会话里存的答案未必是同一次生成的 —— 表现为「怎么输都是错的」。
+            //      目前只发一次请求纯粹是因为两个 src 字符串相同、浏览器顺手做了去重，
+            //      这是运气不是保证(响应带 no-store 后去重就不成立了)。
+            // 现改为：只发一次请求，把同一张图的 blob 同时给两个 img。请求数与答案都确定。
+            var verifyUrl = "__ROOT__/index.php/verify/index.html";
+            function macRefreshVerify() {
+                var $imgs = $('.verify_img');
+                if (!$imgs.length) { return; }
+                var url = verifyUrl + (verifyUrl.indexOf('?') < 0 ? '?' : '&') + '_=' + (+new Date());
+                if (!window.fetch || !window.URL || !URL.createObjectURL) {
+                    $imgs.attr('src', url);   // 老浏览器兜底：仍依赖同 URL 去重
+                    return;
+                }
+                fetch(url, { credentials: 'same-origin', cache: 'no-store' })
+                    .then(function (r) { return r.ok ? r.blob() : Promise.reject(r.status); })
+                    .then(function (b) {
+                        var o = URL.createObjectURL(b);
+                        $imgs.each(function () {
+                            if (this.dataset.blobUrl) { URL.revokeObjectURL(this.dataset.blobUrl); }
+                            this.src = o;
+                            this.dataset.blobUrl = o;
+                        });
+                    })
+                    .catch(function () { $imgs.attr('src', url); });
+            }
+            $(document).on('click', '.verify_img', macRefreshVerify);
+            macRefreshVerify();
+
             // 验证
             form.verify({
                 admin_name: function (value) {
@@ -191,7 +224,7 @@
                     }
                     else {
                         layer.msg(r.msg, { time: 1800 });
-                        $('#verify_img').click();
+                        macRefreshVerify();
                     }
                 });
                 return false;
@@ -205,7 +238,7 @@
                     }
                     else {
                         layer.msg(r.msg, { time: 1800 });
-                        $('#verify_img').click();
+                        macRefreshVerify();
                     }
                 });
                 return false;
