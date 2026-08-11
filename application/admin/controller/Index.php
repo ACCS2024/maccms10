@@ -343,7 +343,21 @@ class Index extends Base
             $os_data['mem_total'] = $mem_arr['total'];
         }
 
-        return $os_data;
+        // TP8 不会像 TP5 那样把控制器返回的数组自动转成 JSON，
+        // 直接 return 数组会记一条「variable type error： array」然后【输出 0 字节】，
+        // 前端 success 拿到空值，Object.entries(data.disk_datas) 当场抛
+        // 「Cannot convert undefined or null to object」，整个仪表盘脚本挂掉。
+        // 另外 open_basedir 通常不含 /proc（本站是 /home/wwwroot/<站>/:/etc/maccms/:/tmp/），
+        // 读不到 /proc/meminfo、/proc/stat 时这里补齐字段而不是留空，
+        // 让前端永远拿得到形状完整的对象。
+        $os_data += [
+            'disk_datas' => [],
+            'cpu_usage'  => 0,
+            'mem_usage'  => 0,
+            'mem_total'  => 0,
+            'mem_used'   => 0,
+        ];
+        return json($os_data);
     }
 
     private function byte_format($size, $dec = 2)
@@ -1018,9 +1032,10 @@ class Index extends Base
         $bot_list['Alexa']['values'] = array_values($alexa_arr);
 
         if (!empty($_POST['category'])) {
-            return $bot_list[$_POST['category']];
+            // 同上：TP8 必须显式转 Response，返回裸数组会输出 0 字节
+            return json($bot_list[$_POST['category']] ?? []);
         } else {
-            return $bot_list;
+            return json($bot_list);
         }
     }
 

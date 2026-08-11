@@ -1101,7 +1101,11 @@
                     $('#mem_usage').text(data.mem_usage + '%');
                 }
                 var i = 1;
-                for (const [key, value] of Object.entries(data.disk_datas)) {
+                // 防御：接口异常/降级时 disk_datas 可能缺失。
+                // 原来直接 Object.entries(undefined) 会抛
+                // 「Cannot convert undefined or null to object」，
+                // 而这是 window.onload 里的回调 —— 一抛就把后面的初始化全带走。
+                for (const [key, value] of Object.entries((data && data.disk_datas) || {})) {
                     $('#mem_detail').text(roundTo(data.mem_used, 2) + ' MB/' + roundTo(data.mem_total, 2) + ' MB');
                     $('#chart_' + i).css('width', data.disk_datas[key][2] + '%');
                     $('#disk_usage_' + i).text(data.disk_datas[key][2] + '%');
