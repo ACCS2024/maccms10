@@ -13,39 +13,63 @@ class Rss extends Base
         header("Content-Type:text/xml");
     }
 
+    /**
+     * 渲染一个 rss 模板;主题没提供就干净地 404,不要 500。
+     *
+     * 为什么需要这层:恢复 .xml 后缀解析之后,/rss.xml 这类路径开始真正落到本控制器,
+     * 于是「主题缺模板」从原来的路由不匹配(404)变成了 TemplateNotFoundException(500)。
+     * rss 是给搜索引擎爬的公开端点,主题是第三方产物、rss/ 目录本就是可选项
+     * (线上 155zy 主题只有 art/comment/index/public/topic/user/vod 七个目录,没有 rss/)。
+     *
+     * 这里选 404 而不是像 map 那样 302 回首页:feed 地址上 302 到一篇 HTML,
+     * 爬虫拿到的是内容类型不符的响应;404 才是"本站不提供这个 feed"的诚实表达。
+     */
+    private function feed(string $tpl)
+    {
+        try {
+            return response($this->label_fetch($tpl))->contentType('text/xml');
+        } catch (\think\template\exception\TemplateNotFoundException $e) {
+            return response(
+                '<?xml version="1.0" encoding="utf-8"?>' . "\n"
+                . '<!-- feed not available: current template provides no ' . $tpl . ' -->',
+                404
+            )->contentType('text/xml');
+        }
+    }
+
     public function index()
     {
-        return response($this->label_fetch('rss/index'))->contentType('text/xml');
+        return $this->feed('rss/index');
     }
 
     public function baidu()
     {
-        return response($this->label_fetch('rss/baidu'))->contentType('text/xml');
+        return $this->feed('rss/baidu');
     }
 
     public function google()
     {
-        return response($this->label_fetch('rss/google'))->contentType('text/xml');
+        return $this->feed('rss/google');
     }
 
     public function so()
     {
-        return response($this->label_fetch('rss/so'))->contentType('text/xml');
+        return $this->feed('rss/so');
     }
 
     public function sogou()
     {
-        return response($this->label_fetch('rss/sogou'))->contentType('text/xml');
+        return $this->feed('rss/sogou');
     }
 
     public function bing()
     {
-        return response($this->label_fetch('rss/bing'))->contentType('text/xml');
+        return $this->feed('rss/bing');
     }
 
     public function sm()
     {
-        return response($this->label_fetch('rss/sm'))->contentType('text/xml');
+        return $this->feed('rss/sm');
     }
 
 }

@@ -11,7 +11,17 @@
 set -euo pipefail
 
 HOST="${MACCMS_HOST:-23.224.241.250}"
-SITES=("155zy.com" "155api.com")
+
+# 默认一次发两站（「要改两遍」的成本由本脚本消除）。
+# 但**金丝雀发布必须能只发一个站**：155api 没有后台、没有前台主题、故障面最小，
+# 是天然的金丝雀。改动大时先只发它、观察，确认无恙再发主站。
+#   MACCMS_SITES="155api.com" bash bin/deploy-155.sh
+# 多个站用空格分隔。留空则用默认的两站。
+if [ -n "${MACCMS_SITES:-}" ]; then
+    read -r -a SITES <<< "$MACCMS_SITES"
+else
+    SITES=("155zy.com" "155api.com")
+fi
 SRC="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/"
 
 if [ -z "${SSHPASS:-}" ]; then
@@ -53,8 +63,14 @@ EXCLUDES=(
 )
 
 # 155api 不应存在的文件（物理隔离的关键，同步后强制清除）
+# API 站按设计【不含】转码机入库接口 —— 这个隔离不依赖任何一行 nginx 规则。
+# 名单必须随控制器改名一起更新：Yzm.php 改名成 Ppvod.php 之后这里没跟着改，
+# 结果入库控制器被同步进了 API 站（实测 /api.php/yzm/yzmauto 在 API 站返回 200），
+# 隔离静默失效。旧名保留，防止历史部署残留。
 API_FORBIDDEN=(
-    "application/api/controller/Yzm.php"   # 入库接口只应存在于主站
+    "application/api/controller/Ppvod.php"  # 入库接口（现名），只应存在于主站
+    "application/api/controller/Yzm.php"    # 旧名，清理历史残留
+    "application/api/route/route.php"       # 仅为入库接口提供 yzm/* 历史别名路由
 )
 
 # 仓库里已删除、必须同步从生产删掉的路径。
@@ -159,16 +175,33 @@ for site in "${SITES[@]}"; do
             || { printf "  %-12s %-34s !! 缺失\n" "$site" "$f"; missing=1; }
     done
 done
-# yzm 配置只有主站需要（API 站不含入库接口）
-$SSH "test -s /home/wwwroot/${SITES[0]}/application/extra/yzm.php" \
-    && printf "  %-12s %-34s ok\n" "${SITES[0]}" "application/extra/yzm.php" \
-    || { printf "  %-12s %-34s !! 缺失（转码机入库将拒绝服务）\n" "${SITES[0]}" "application/extra/yzm.php"; missing=1; }
+# PPVOD 入库配置：只有装了入库控制器的站才需要（API 站按设计不含它）。
+#
+# 不要写死 ${SITES[0]}——那假设了「第一个站就是主站」，金丝雀模式
+# （MACCMS_SITES="155api.com"）下会去 API 站找主站才该有的东西，报假警报。
+# 也不要再找 application/extra/yzm.php：那份独立配置在 Yzm→Ppvod 改名时
+# 已并入 application/extra/maccms.php 的 'ppvod' 段，文件本身不该再存在。
+# 改为按「该站有没有 Ppvod 控制器」自描述地判断，并校验配置真的可用。
+for site in "${SITES[@]}"; do
+    if ! $SSH "test -f /home/wwwroot/$site/application/api/controller/Ppvod.php" 2>/dev/null; then
+        continue
+    fi
+    if $SSH "sudo -u www php -r '
+        \$c = @include \"/home/wwwroot/$site/application/extra/maccms.php\";
+        \$p = (is_array(\$c) ? (\$c[\"ppvod\"] ?? []) : []);
+        exit((is_array(\$p) && !empty(\$p[\"play_domain\"]) && !empty(\$p[\"pic_domain\"])
+              && !empty(\$p[\"category_map\"])) ? 0 : 1);'" 2>/dev/null; then
+        printf "  %-12s %-34s ok\n" "$site" "extra/maccms.php 的 ppvod 段"
+    else
+        printf "  %-12s %-34s !! 不完整（转码机入库将拒绝服务）\n" "$site" "extra/maccms.php 的 ppvod 段"
+        missing=1
+    fi
+done
 if [ "$missing" = "1" ]; then
     echo
-    echo "  ⚠ 有站点私有配置缺失。备份在 /home/migrate/ 下，例如："
-    echo "      cp /home/migrate/site-config-backup-yzm.php \\"
-    echo "         /home/wwwroot/${SITES[0]}/application/extra/yzm.php"
-    echo "      chown www:www … && chmod 640 …"
+    echo "  ⚠ 有站点私有配置缺失或不完整。"
+    echo "     .env / extra/maccms.php 被本脚本 EXCLUDES 排除，不随代码分发。"
+    echo "     PPVOD 相关项在后台「系统 → PPVOD 转码入库」里填（播放域名/图床域名/分类映射为必填）。"
 fi
 
 echo
