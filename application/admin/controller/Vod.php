@@ -746,7 +746,12 @@ class Vod extends Base
 
         if(!empty($ids) && in_array($col,['vod_status','vod_lock','vod_level','vod_hits','type_id','vod_copyright'])){
             $where=[];
-            $where['vod_id'] = $ids;
+            // 前端 .j-select 把勾选 id 以逗号串提交（admin_common.js: ids.join(',')）。
+            // 迁移时 $where['vod_id']=['in',$ids] 被简化成 =$ids，生成 vod_id='1,2,3'，
+            // MySQL 截断成 1 → 只更新第一个 →「批量审核每次只成功一个」。
+            // mac_where_ids() 归一化成整数数组，框架自动按 IN 处理。详见该函数注释。
+            // （下面 empty($start) 分支消费它；else 分支每轮用单个 $v 覆盖，不受影响。）
+            $where['vod_id'] = mac_where_ids($ids);
             $update = [];
             if(empty($start)) {
                 $update[$col] = $val;

@@ -88,7 +88,7 @@ class SignMilestone extends Base
         $val = $param['val'];
         if (!empty($ids) && in_array($col, ['milestone_status'])) {
             $where = [];
-            $where['milestone_id'] = $ids;
+            $where['milestone_id'] = mac_where_ids($ids);
             $res = (new \app\common\model\SignMilestone())->fieldData($where, $col, $val);
             if ($res['code'] > 1) {
                 return $this->error($res['msg']);

@@ -4682,3 +4682,35 @@ if (!function_exists('mac_ppvod_category_map')) {
         return $map;
     }
 }
+if (!function_exists('mac_where_ids')) {
+    /**
+     * 把「勾选的主键 id 集合」归一化成整数数组，供 where(['xxx_id' => ...]) 用。
+     *
+     * 背景（TP5.1 → TP8 迁移遗留的一类系统性 bug）：
+     *   后台列表页有两条提交勾选 id 的路径，形态不同：
+     *     - 删除按钮 .j-page-btns：走 AJAX，form.serialize() 把 name="ids[]" 的复选框
+     *       序列化成 ids[]=1&ids[]=2 —— PHP 收到的是【数组】；
+     *     - 批量设置字段 .j-select（审核/锁定/等级…→ xxx/field）：把勾选 id 以
+     *       ids.join(',') 拼成 "1,2,3" 塞进 URL 与 iframe 隐藏字段 —— PHP 收到的是
+     *       【逗号串】。
+     *   原始 maccms 用 TP5.1 的 $where['xxx_id'] = ['in',$ids] 同时兼容两者；迁移时被
+     *   简化成 $where['xxx_id'] = $ids。数组那条照常生成 IN(...)，没事；但逗号串那条
+     *   生成 WHERE xxx_id = '1,2,3'，MySQL 拿字符串跟整数列比较会隐式截断成 1，
+     *   于是【只命中第一个 id】—— 表现为「批量审核每次只成功一个视频」。
+     *
+     *   不能照抄 ['in',$ids] 回来：TP8 已删除这种关联式条件语法，实测
+     *   where(['id'=>['in','1,2,3']]) 会生成 IN (in,1,2,3)（把 'in' 也当成值）。
+     *   正确做法是把值统一成整数数组，框架自动按 IN 处理；单个 id 也没问题（IN (5)）。
+     *
+     * 传数组或逗号串都接受，返回去重后的正整数数组；无有效 id 时返回 []（调用方
+     * 的 !empty($ids) 早已挡在前面，这里再兜一层）。
+     */
+    function mac_where_ids($ids): array {
+        if (!is_array($ids)) {
+            $ids = explode(',', (string)$ids);
+        }
+        $ids = array_map('intval', $ids);
+        $ids = array_filter($ids, function ($v) { return $v > 0; });
+        return array_values(array_unique($ids));
+    }
+}

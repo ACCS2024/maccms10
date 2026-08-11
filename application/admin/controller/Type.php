@@ -129,7 +129,7 @@ class Type extends Base
 
         if(!empty($ids) && in_array($col,['type_status']) && in_array($val,['0','1'])){
             $where=[];
-            $where['type_id'] = $ids;
+            $where['type_id'] = mac_where_ids($ids);
 
             $res = (new \app\common\model\Type())->fieldData($where,$col,$val);
             if($res['code']>1){
@@ -258,7 +258,9 @@ class Type extends Base
         $val = $param['val'];
         if(!empty($ids) && !empty($val)){
             $where=[];
-            $where['type_id'] = $ids;
+            // 与各控制器 field() 同一处迁移遗留：j-select 提交逗号串，$where=$ids
+            // 会生成 type_id='1,2,3' 被 MySQL 截断成 1，只移动第一个分类。详见 mac_where_ids()。
+            $where['type_id'] = mac_where_ids($ids);
             $res = (new \app\common\model\Type())->moveData($where,$val);
             if($res['code']>1){
                 return $this->error($res['msg']);

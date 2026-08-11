@@ -98,7 +98,7 @@ class Task extends Base
         $val = $param['val'];
         if (!empty($ids) && in_array($col, ['task_status'])) {
             $where = [];
-            $where['task_id'] = $ids;
+            $where['task_id'] = mac_where_ids($ids);
             $res = (new \app\common\model\Task())->fieldData($where, $col, $val);
             if ($res['code'] > 1) {
                 return $this->error($res['msg']);

@@ -95,7 +95,7 @@ class Chatroom extends Base
 
         if (!empty($ids) && in_array($col, ['chat_status'])) {
             $where = [];
-            $where['chat_id'] = $ids;
+            $where['chat_id'] = mac_where_ids($ids);
 
             $res = (new \app\common\model\Chatroom())->fieldData($where, $col, $val);
             if ($res['code'] > 1) {

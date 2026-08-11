@@ -105,7 +105,7 @@ class Live extends Base
         if (!empty($ids) && isset($col) && isset($val)) {
             $where = [];
             if (is_array($ids)) {
-                $where['live_id'] = $ids;
+                $where['live_id'] = mac_where_ids($ids);
             } else {
                 $where['live_id'] = (int)$ids;
             }

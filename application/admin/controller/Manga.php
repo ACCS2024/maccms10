@@ -334,7 +334,7 @@ class Manga extends Base
 
         if(!empty($ids) && in_array($col,['manga_status','manga_lock','manga_level','manga_hits','type_id'])){
             $where=[];
-            $where['manga_id'] = $ids;
+            $where['manga_id'] = mac_where_ids($ids);
             $update = [];
             if(empty($start)) {
                 $update[$col] = $val;

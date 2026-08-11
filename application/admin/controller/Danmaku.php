@@ -95,7 +95,7 @@ class Danmaku extends Base
 
         if (!empty($ids) && in_array($col, ['danmaku_status'])) {
             $where = [];
-            $where['danmaku_id'] = $ids;
+            $where['danmaku_id'] = mac_where_ids($ids);
 
             $res = (new \app\common\model\Danmaku())->fieldData($where, $col, $val);
             if ($res['code'] > 1) {

@@ -123,7 +123,7 @@ class Role extends Base
 
         if(!empty($ids) && in_array($col,['role_status','role_lock','role_level','role_hits'])){
             $where=[];
-            $where['role_id'] = $ids;
+            $where['role_id'] = mac_where_ids($ids);
             if(empty($start)) {
                 $res = (new \app\common\model\Role())->fieldData($where, $col, $val);
             }

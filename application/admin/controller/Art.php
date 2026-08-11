@@ -366,7 +366,7 @@ class Art extends Base
 
         if(!empty($ids) && in_array($col,['art_status','art_lock','art_level','art_hits','type_id'])){
             $where=[];
-            $where['art_id'] = $ids;
+            $where['art_id'] = mac_where_ids($ids);
             $update = [];
             if(empty($start)) {
                 $update[$col] = $val;

@@ -264,7 +264,7 @@ class Website extends Base
 
         if(!empty($ids) && in_array($col,['website_status','website_lock','website_level','website_hits','type_id'])){
             $where=[];
-            $where['website_id'] = $ids;
+            $where['website_id'] = mac_where_ids($ids);
             $update = [];
             if(empty($start)) {
                 $update[$col] = $val;

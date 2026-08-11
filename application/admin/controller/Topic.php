@@ -98,7 +98,7 @@ class Topic extends Base
 
         if(!empty($ids) && in_array($col,['topic_status','topic_level']) ){
             $where=[];
-            $where['topic_id'] = $ids;
+            $where['topic_id'] = mac_where_ids($ids);
 
             $res = (new \app\common\model\Topic())->fieldData($where,$col,$val);
             if($res['code']>1){

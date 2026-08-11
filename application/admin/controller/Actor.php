@@ -119,7 +119,7 @@ class Actor extends Base
         if(!empty($ids) && in_array($col,['actor_status','actor_lock','actor_level','type_id','actor_hits'])){
             $where=[];
             $update = [];
-            $where['actor_id'] = $ids;
+            $where['actor_id'] = mac_where_ids($ids);
             if(empty($start)){
                 $update[$col] = $val;
                 if($col == 'type_id'){

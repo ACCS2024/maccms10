@@ -108,7 +108,7 @@ class Gbook extends Base
 
         if(!empty($ids) && in_array($col,['gbook_status']) ){
             $where=[];
-            $where['gbook_id'] = $ids;
+            $where['gbook_id'] = mac_where_ids($ids);
 
             $res = (new \app\common\model\Gbook())->fieldData($where,$col,$val);
             if($res['code']>1){

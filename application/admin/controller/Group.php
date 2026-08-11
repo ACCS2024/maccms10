@@ -94,7 +94,7 @@ class Group extends Base
 
         if(!empty($ids) && in_array($col,['group_status']) && in_array($val,['0','1'])){
             $where=[];
-            $where['group_id'] = $ids;
+            $where['group_id'] = mac_where_ids($ids);
 
             $res = (new \app\common\model\Group())->fieldData($where,$col,$val);
             if($res['code']>1){

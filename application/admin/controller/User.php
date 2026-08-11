@@ -281,7 +281,7 @@ class User extends Base
 
         if(!empty($ids) && in_array($col,['user_status']) && in_array($val,['0','1'])){
             $where=[];
-            $where['user_id'] = $ids;
+            $where['user_id'] = mac_where_ids($ids);
 
             $res = (new \app\common\model\User())->fieldData($where,$col,$val);
             if($res['code']>1){

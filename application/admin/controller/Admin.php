@@ -174,7 +174,7 @@ class Admin extends Base
 
         if(!empty($ids) && in_array($col,['admin_status']) && in_array($val,['0','1'])){
             $where=[];
-            $where['admin_id'] = $ids;
+            $where['admin_id'] = mac_where_ids($ids);
 
             $res = (new \app\common\model\Admin())->fieldData($where,$col,$val);
             if($res['code']>1){

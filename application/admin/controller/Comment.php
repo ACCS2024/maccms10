@@ -107,7 +107,7 @@ class Comment extends Base
 
         if(!empty($ids) && in_array($col,['comment_status']) ){
             $where=[];
-            $where['comment_id'] = $ids;
+            $where['comment_id'] = mac_where_ids($ids);
 
             $res = (new \app\common\model\Comment())->fieldData($where,$col,$val);
             if($res['code']>1){
