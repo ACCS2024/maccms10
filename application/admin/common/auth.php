@@ -1762,6 +1762,27 @@ return array (
         'controller' => 'rep',
         'action' => 'toggleEnabled',
       ),
+      9806 =>
+      array (
+        'show' => 0,
+        'name' => '替换模拟执行',
+        'controller' => 'rep',
+        'action' => 'preview',
+      ),
+      9807 =>
+      array (
+        'show' => 0,
+        'name' => '替换前备份',
+        'controller' => 'rep',
+        'action' => 'backup',
+      ),
+      9808 =>
+      array (
+        'show' => 0,
+        'name' => '替换备份进度',
+        'controller' => 'rep',
+        'action' => 'backupStatus',
+      ),
       99 =>
       array (
         'show' => 1,

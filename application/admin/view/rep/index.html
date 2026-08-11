@@ -1,5 +1,11 @@
 {include file="../../../application/admin/view/public/head" /}
 
+<style>
+/* 模拟执行里把命中的原文/替换文高亮出来，站长一眼看到改的是哪一段 */
+.rep-old { background:#ffe6e6; color:#d93025; padding:0 2px; border-radius:2px; }
+.rep-new { background:#e6ffed; color:#137333; padding:0 2px; border-radius:2px; }
+</style>
+
 <div class="page-container p10">
 
   <!-- 工具栏 -->
@@ -15,6 +21,16 @@
         <i class="layui-icon">&#xe66e;</i>
         前台显示：<strong>{if $rep_enabled eq '1'}已开启{else/}已关闭{/if}</strong>
       </button>
+      <!-- 前台是公开页面,直接新标签页打开即可,不套 iframe -->
+      <a class="layui-btn layui-btn-sm layui-btn-primary" id="btnFront"
+         href="{$front_url}" target="_blank" rel="noopener">
+        <i class="layui-icon">&#xe64c;</i> 查看前台页面
+      </a>
+    </div>
+    <div class="layui-word-aux" style="margin-top:8px;font-size:12px;color:#888">
+      前台地址：<code id="frontUrlText">{$front_url}</code>
+      <a href="javascript:;" id="btnCopyFront" style="margin-left:6px">复制</a>
+      　主题里用 <code>&#123;:mac_rep_url()&#125;</code> 取地址、<code>&#123;:mac_rep_notice()&#125;</code> 取提醒文案。
     </div>
   </div>
 
@@ -61,6 +77,11 @@
                 {/if}
               </td>
               <td>
+                <button type="button" class="layui-btn layui-btn-xs layui-btn-warm btn-preview"
+                        data-id="{$vo.rep_id}"
+                        data-type="{$vo.rep_type|htmlspecialchars}">
+                  <i class="layui-icon">&#xe615;</i> 模拟
+                </button>
                 <button type="button" class="layui-btn layui-btn-xs layui-btn-danger btn-execute"
                         data-id="{$vo.rep_id}"
                         data-type="{$vo.rep_type|htmlspecialchars}"
@@ -129,7 +150,7 @@
 
 {include file="../../../application/admin/view/public/foot" /}
 <script>
-layui.use(['layer', 'form', 'table'], function () {
+layui.use(['layer', 'form', 'table', 'element'], function () {
     var layer = layui.layer, form = layui.form, $ = layui.$;
 
     // 全选
@@ -226,35 +247,251 @@ layui.use(['layer', 'form', 'table'], function () {
         });
     });
 
-    // 执行 SQL 替换
-    $(document).on('click', '.btn-execute', function () {
-        var $btn = $(this);
-        var id   = $btn.data('id');
-        var type = $btn.data('type');
-        var orig = $btn.data('orig');
-        var repl = $btn.data('repl');
+    // ================= 替换执行器 =================
+    // 四步：模拟(preview) → 备份(backup+轮询) → 分批执行(execute 循环) → 完成
+    // 每一步都是短请求，进度实时回传，不存在「点一下然后干等不知道死活」的状态。
 
-        var msg = '⚠️ 确认对数据库执行以下替换？<br><br>'
-            + '<strong>类型：</strong>' + type + '<br>'
-            + '<strong>原内容：</strong><code>' + orig + '</code><br>'
-            + '<strong>替换为：</strong><code>' + repl + '</code><br><br>'
-            + '<span style="color:#ff5722">此操作直接修改数据库，建议提前备份！</span>';
+    var AUTO_TYPES = {$auto_types};
 
-        layer.confirm(msg, {
-            icon: 3,
-            title: '执行数据库替换',
-            btn: ['确认执行', '取消'],
-            btnclass: ['layui-btn layui-btn-danger', 'layui-btn layui-btn-primary']
-        }, function (idx) {
-            layer.close(idx);
-            var loading = layer.load(1);
-            $.post('{:url("execute")}', { id: id }, function (res) {
-                layer.close(loading);
-                layer.alert(res.msg, { icon: res.code === 1 ? 1 : 2 }, function () {
-                    if (res.code === 1) { location.reload(); }
-                });
-            }, 'json');
+    function esc(s) {
+        return String(s == null ? '' : s)
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+    // 在片段里把命中的原文高亮出来，站长一眼能看到改的是哪一段
+    function mark(snippet, needle, cls) {
+        var s = esc(snippet), n = esc(needle);
+        if (!n) { return s; }
+        return s.split(n).join('<b class="' + cls + '">' + n + '</b>');
+    }
+    function fmtBytes(b) {
+        if (!b) { return '0 B'; }
+        var u = ['B', 'KB', 'MB', 'GB'], i = 0;
+        while (b >= 1024 && i < u.length - 1) { b /= 1024; i++; }
+        return b.toFixed(i ? 1 : 0) + ' ' + u[i];
+    }
+
+    // ---- 第一步：模拟执行（只读，不改任何数据）----
+    function runPreview(id, cb) {
+        var loading = layer.load(1);
+        $.post('{:url("preview")}', { id: id }, function (res) {
+            layer.close(loading);
+            if (res.code !== 1) { layer.alert(res.msg, { icon: 2 }); return; }
+            if (cb) { cb(res); } else { showPreview(res); }
+        }, 'json').fail(function () {
+            layer.close(loading);
+            layer.alert('模拟执行请求失败，请检查网络或服务器日志', { icon: 2 });
         });
+    }
+
+    function previewHtml(res) {
+        var h = '<div style="padding:16px;font-size:13px">';
+        h += '<div style="margin-bottom:12px;padding:10px;background:#f2f8ff;border-left:3px solid #1e9fff">'
+           + '共命中 <b style="font-size:18px;color:#1e9fff">' + res.total + '</b> 行，'
+           + '涉及 ' + res.details.length + ' 个字段，将分 ' + res.batches + ' 批执行。'
+           + '<div style="color:#888;margin-top:4px">'
+           + '<code>' + esc(res.orig) + '</code> → <code>' + esc(res.repl) + '</code>'
+           + '</div></div>';
+
+        if (res.total === 0) {
+            h += '<div style="padding:20px;text-align:center;color:#999">'
+               + '没有匹配的数据。检查原内容是否写对（区分大小写、有没有多余空格）。</div>';
+        }
+
+        res.details.forEach(function (d) {
+            h += '<div style="margin-bottom:14px">'
+               + '<div style="font-weight:600;margin-bottom:6px">'
+               + esc(d.target) + ' —— <span style="color:' + (d.count ? '#ff5722' : '#999') + '">'
+               + d.count + ' 行</span></div>';
+            if (d.samples.length) {
+                h += '<table class="layui-table" lay-size="sm" style="margin:0">'
+                   + '<thead><tr><th width="70">主键</th><th>改前</th><th>改后</th></tr></thead><tbody>';
+                d.samples.forEach(function (s) {
+                    h += '<tr><td>' + esc(s.pk) + '</td>'
+                       + '<td style="word-break:break-all;font-family:monospace;font-size:12px">'
+                       + mark(s.before, res.orig, 'rep-old') + '</td>'
+                       + '<td style="word-break:break-all;font-family:monospace;font-size:12px">'
+                       + mark(s.after, res.repl, 'rep-new') + '</td></tr>';
+                });
+                h += '</tbody></table>';
+                if (d.count > d.samples.length) {
+                    h += '<div style="color:#999;font-size:12px;margin-top:4px">'
+                       + '（仅抽样前 ' + d.samples.length + ' 条，其余 ' + (d.count - d.samples.length) + ' 条同理）</div>';
+                }
+            }
+            h += '</div>';
+        });
+        return h + '</div>';
+    }
+
+    function showPreview(res) {
+        layer.open({
+            type: 1, title: '模拟执行结果（未修改任何数据）',
+            area: ['900px', '600px'], shadeClose: true,
+            content: previewHtml(res)
+        });
+    }
+
+    $(document).on('click', '.btn-preview', function () {
+        var id = $(this).data('id'), type = $(this).data('type');
+        if (!AUTO_TYPES[type]) {
+            layer.alert('类型「' + esc(type) + '」没有对应的表字段映射，只能手工处理', { icon: 0 });
+            return;
+        }
+        runPreview(id);
+    });
+
+    // ---- 第二、三步：备份 → 分批执行 ----
+    $(document).on('click', '.btn-execute', function () {
+        var id   = $(this).data('id');
+        var type = $(this).data('type');
+        if (!AUTO_TYPES[type]) {
+            layer.alert('类型「' + esc(type) + '」没有对应的表字段映射，只能手工处理', { icon: 0 });
+            return;
+        }
+        // 执行前强制先走一遍模拟：站长看到的确认框里是真实命中数，不是估计值
+        runPreview(id, function (res) {
+            if (res.total === 0) {
+                layer.alert('模拟结果为 0 行，无需执行。', { icon: 0 });
+                return;
+            }
+            var h = previewHtml(res)
+                  + '<div style="padding:0 16px 16px">'
+                  + '<div style="padding:10px;background:#fff7e6;border-left:3px solid #ffb800">'
+                  + '<b>下一步将真正修改数据库。</b>执行前会自动把受影响的表（'
+                  + esc(res.tables.join('、')) + '）备份到 <code>/home/backup/db/</code>。'
+                  + '<div style="margin-top:8px">'
+                  + '<input type="checkbox" id="skipBackup"> '
+                  + '<label for="skipBackup" style="cursor:pointer">跳过自动备份（我已自行备份）</label>'
+                  + '</div></div></div>';
+            layer.open({
+                type: 1, title: '确认执行替换', area: ['900px', '640px'],
+                content: h,
+                btn: ['确认执行', '取消'],
+                btnAlign: 'c',
+                yes: function (idx) {
+                    var skip = $('#skipBackup').prop('checked');
+                    layer.close(idx);
+                    if (skip) { startRun(id, '', true); }
+                    else { startBackup(id); }
+                }
+            });
+        });
+    });
+
+    // 备份：后台 mysqldump，这里轮询它写了多少字节
+    function startBackup(id) {
+        var box = layer.open({
+            type: 1, title: '正在备份', area: ['520px', '210px'],
+            closeBtn: 0, shadeClose: false,
+            content: '<div style="padding:24px;text-align:center">'
+                   + '<div id="bkState" style="margin-bottom:12px">正在导出受影响的表…</div>'
+                   + '<div id="bkBytes" style="font-size:22px;font-weight:600;color:#1e9fff">0 B</div>'
+                   + '<div style="color:#999;font-size:12px;margin-top:10px">'
+                   + 'mac_art 有 759M，压缩导出通常需要几十秒，请勿关闭本页</div></div>'
+        });
+        $.post('{:url("backup")}', { id: id }, function (res) {
+            if (res.code !== 1) {
+                layer.close(box);
+                layer.alert(res.msg, { icon: 2 });
+                return;
+            }
+            $('#bkState').html('备份中 → <code>' + esc(res.path) + '</code>');
+            var tries = 0;
+            var timer = setInterval(function () {
+                $.post('{:url("backupStatus")}', { id: id, token: res.token }, function (st) {
+                    $('#bkBytes').text(fmtBytes(st.bytes || 0));
+                    if (st.state === 'done') {
+                        clearInterval(timer);
+                        layer.close(box);
+                        layer.msg('备份完成 ' + fmtBytes(st.bytes), { icon: 1, time: 1200 });
+                        startRun(id, st.path, false);
+                    } else if (st.state === 'failed') {
+                        clearInterval(timer);
+                        layer.close(box);
+                        layer.alert(st.msg, { icon: 2 });
+                    } else if (++tries > 600) {   // 600 × 1s = 10 分钟
+                        clearInterval(timer);
+                        layer.close(box);
+                        layer.alert('备份超过 10 分钟仍未完成，已停止等待。请到服务器上确认 mysqldump 状态。', { icon: 2 });
+                    }
+                }, 'json');
+            }, 1000);
+        }, 'json');
+    }
+
+    // 分批执行：每次请求跑一段就回来，循环推进到 100%
+    function startRun(id, backupPath, skipBackup) {
+        var box = layer.open({
+            type: 1, title: '正在执行替换', area: ['620px', '340px'],
+            closeBtn: 0, shadeClose: false,
+            content: '<div style="padding:20px">'
+                   + '<div class="layui-progress layui-progress-big" lay-showpercent="true" lay-filter="repbar">'
+                   + '<div class="layui-progress-bar layui-bg-blue" lay-percent="0%"></div></div>'
+                   + '<div id="runCur" style="margin-top:14px;font-size:13px">准备中…</div>'
+                   + '<div id="runTotal" style="margin-top:6px;font-size:13px">已替换 <b>0</b> 行</div>'
+                   + '<div id="runUnits" style="margin-top:10px;font-size:12px;color:#666"></div>'
+                   + '<div style="margin-top:12px;font-size:12px;color:#999">'
+                   + '按主键分批执行，中途关闭页面不会损坏数据，重新点「执行」会从断点续跑。</div>'
+                   + '</div>'
+        });
+        var element = layui.element;
+        var first = true;
+
+        function step() {
+            var post = { id: id };
+            if (first) {
+                first = false;
+                post.restart = 1;
+                if (skipBackup) { post.skip_backup = 1; } else { post.backup = backupPath; }
+            }
+            $.post('{:url("execute")}', post, function (res) {
+                if (res.code !== 1) {
+                    layer.close(box);
+                    layer.alert(res.msg, { icon: 2 }, function () { location.reload(); });
+                    return;
+                }
+                element.progress('repbar', res.percent + '%');
+                $('#runCur').html(res.done ? '<b style="color:#5FB878">全部完成</b>'
+                                           : '当前：<code>' + esc(res.current) + '</code>');
+                $('#runTotal').html('已替换 <b style="color:#1e9fff">' + res.total + '</b> 行');
+                $('#runUnits').html(res.units.map(function (u) {
+                    return (u.done ? '✅ ' : '⏳ ') + esc(u.target) + '：' + u.affected + ' 行';
+                }).join('<br>'));
+
+                if (res.done) {
+                    setTimeout(function () {
+                        layer.close(box);
+                        layer.alert('执行完成，共替换 <b>' + res.total + '</b> 行。<br><br>'
+                                  + '<span style="font-size:12px;color:#888">备份：'
+                                  + esc(res.backup) + '</span>',
+                                  { icon: 1, title: '完成' }, function () { location.reload(); });
+                    }, 400);
+                } else {
+                    step();
+                }
+            }, 'json').fail(function () {
+                layer.close(box);
+                layer.alert('执行请求失败。进度已保存在服务器上，重新点「执行」可续跑。', { icon: 2 });
+            });
+        }
+        step();
+    }
+
+    // 复制前台地址
+    $('#btnCopyFront').on('click', function () {
+        var t = $('#frontUrlText').text();
+        var abs = location.origin + t;
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(abs).then(function () {
+                layer.msg('已复制：' + abs, { icon: 1 });
+            });
+        } else {
+            var ta = document.createElement('textarea');
+            ta.value = abs; document.body.appendChild(ta); ta.select();
+            try { document.execCommand('copy'); layer.msg('已复制：' + abs, { icon: 1 }); }
+            catch (e) { layer.msg('复制失败，请手动选中', { icon: 2 }); }
+            document.body.removeChild(ta);
+        }
     });
 });
 </script>

@@ -4565,34 +4565,34 @@ if (!function_exists('mac_help_url')) {
 }
 if (!function_exists('mac_rep_url')) {
     /**
-     * 替换助手的前台地址。
+     * 替换助手的前台地址。主题与后台「查看前台页面」都从这里取，只有一个来源。
      *
-     * 不能硬编码 '/macrep' —— 那要求 nginx 配了伪静态。本站实测【没有配】：
-     *     /macrep.html            404（nginx 找不到该文件，不转交 PHP）
-     *     /index.php/macrep.html  200（同一条路由，走入口文件就正常）
-     * 于是主题里按 '/macrep' 出的链接全是死链。
+     * 路由：application/index/route/web.php:68  Route::any('macrep', 'rep/index')
      *
-     * 改用框架的 url() 生成：它会按站点当前的 URL 模式（是否伪静态、后缀、
-     * 是否带入口文件）产出正确地址，换部署环境也不用改代码。
-     * 路由 application/index/route/web.php:68 已把 macrep 指向 rep/index。
+     * 为什么是写死的 '/index.php/macrep.html'，而不是用某个生成器 —— 两条路都试过，
+     * 都不对：
+     *
+     *   框架的 url()      产出 /rep/index.html。本站【没配 nginx 伪静态】
+     *                    （/www/server/panel/vhost/rewrite/ 下是空的），
+     *                    nginx 找不到这个文件就直接 404，根本不转交 PHP。实测：
+     *                        /macrep.html               404
+     *                        /rep/index.html            404
+     *                        /index.php/macrep.html     200  ←
+     *                        /index.php/rep/index.html  200
+     *                    前台其余链接同理，nginx 日志里全是 /index.php/voddetail/...。
+     *
+     *   maccms 的 mac_url()  它靠 switch($model) 匹配 29 个固定模型名
+     *                    （index/index、vod/detail、art/show …，见 common.php:2897），
+     *                    里面【没有 rep/index】。传进去会穿过整个 switch 返回空串，
+     *                    途中还会用到 ENTRANCE 常量 —— 该常量只有 web 入口文件
+     *                    （index.php:18 等）才定义，CLI 下会直接抛
+     *                    "Undefined constant ENTRANCE"。给它传一个它不认识的模型名，
+     *                    本身就是误用。
+     *
+     * 所以这里就诚实地返回这个部署下唯一能打开的形式。哪天补了伪静态，
+     * 改这一处即可（并把上面这段实测记录一起更新）。
      */
     function mac_rep_url(): string {
-        // 不要用框架的 url()：实测本站 url('rep/index') 产出 /rep/index.html，
-        // 而它 404 —— nginx 没配伪静态（/www/server/panel/vhost/rewrite/ 下是空的）。
-        // 能打开的是带入口文件的形式：
-        //     /rep/index.html            404
-        //     /index.php/rep/index.html  200
-        //     /index.php/macrep.html     200   ← 路由 web.php:68 的短地址
-        // 前台其余链接同理，nginx 日志里全是 /index.php/voddetail/... 这种形态。
-        //
-        // 这里返回短地址常量。留 mac_url() 分支是为了将来：若哪天补了伪静态、
-        // 或引入了统一的 URL 生成器，改那一处即可，不必回来动本函数。
-        if (function_exists('mac_url')) {
-            $u = (string)mac_url('rep/index');
-            if ($u !== '') {
-                return $u;
-            }
-        }
         return '/index.php/macrep.html';
     }
 }

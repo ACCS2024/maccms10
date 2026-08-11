@@ -161,6 +161,12 @@ for site in "${SITES[@]}"; do
           chown www:www /home/wwwroot/$site/application/data/asset_version.txt"
     echo "  静态资源版本戳已更新"
 
+    # 替换助手执行前会把受影响的表 mysqldump 到这里。目录本来是 root:root 755，
+    # PHP 以 www 跑，写不进去就只能回落到 application/data/rep/backup/ —— 那在
+    # 站点目录里，下次 rsync 部署会被清掉，等于备份白做。这里补上属主。
+    $SSH "mkdir -p /home/backup/db && chown www:www /home/backup/db && chmod 750 /home/backup/db"
+    echo "  备份目录 /home/backup/db 属主已就绪"
+
     [ "${FLUSH_SESSIONS:-0}" = "1" ] && echo "  已清空会话（所有人需重新登录）"
     echo "  属主与缓存已处理"
 done
