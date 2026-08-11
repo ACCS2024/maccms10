@@ -285,6 +285,23 @@
             $('#mainNav .main-nav-item[data-i="' + i + '"]').addClass('is-active').siblings().removeClass('is-active');
             $('#mobileMainNav .mobile-module-item[data-i="' + i + '"]').addClass('is-active').siblings().removeClass('is-active');
             $('.side-panel').attr('hidden', true).filter('[data-panel="' + i + '"]').removeAttr('hidden');
+
+            // 顶栏一级菜单点完要【真的打开内容】。
+            //
+            // 原来这个函数只切 CSS 类和左侧面板的显隐，内容区(iframe 标签页)纹丝不动 ——
+            // 于是点「视频」的观感是「点了没反应 / 又回到首页」，因为内容区一直停在
+            // 登录后默认打开的欢迎页。日志实测：点击顶栏时浏览器一个请求都不发。
+            //
+            // $trigger 只在真实用户点击时才有（481 行那个按标签页反查分组的调用不传），
+            // 所以这里不会在同步选中态时误开标签页。
+            // 复用左侧项自己的点击处理器：标签页已存在就切过去并刷新，不存在才新开，
+            // 数量上限、移动端收起菜单等逻辑一并沿用，不另起一套。
+            if ($trigger && $trigger.length) {
+                var $first = $('.side-panel[data-panel="' + i + '"]').find('.admin-nav-item').first();
+                if ($first.length) {
+                    $first.trigger('click');
+                }
+            }
         }
 
         $('#mainNav .main-nav-item').on('click', function () {
