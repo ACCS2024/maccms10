@@ -829,7 +829,7 @@
             , done: function (value, date, endDate) {
                 var dates = value.split(' - ');
                 $.ajax({
-                    url: ADMIN_PATH + '/admin/index/rangeDateDailyVisit.html',
+                    url: ADMIN_PATH + '/index/rangeDateDailyVisit.html',
                     data: {
                         startDate: dates[0],
                         endDate: dates[1]
@@ -1066,7 +1066,7 @@
     function showSpiderData() {
         console.log("showSpiderData -> showSpiderData")
         $.ajax({
-            url: ADMIN_PATH + '/admin/index/botlist.html',
+            url: ADMIN_PATH + '/index/botlist.html',
             data: {
                 category: $('#hs-pro-select-currency').val()
             },
@@ -1091,7 +1091,7 @@
 
     function update_system_status() {
         $.ajax({
-            url: ADMIN_PATH + '/admin/index/get_system_status.html',
+            url: ADMIN_PATH + '/index/get_system_status.html',
             method: "GET",
             success: function (data) {
                 if (data.cpu_usage != 'undefine') {

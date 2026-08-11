@@ -88,7 +88,7 @@ layui.define(['element', 'form'], function (exports) {
         if (pwd == '') {
             return false;
         }
-        $.post(ADMIN_PATH + '/admin/index/unlocked', { password: pwd }, function (res) {
+        $.post(ADMIN_PATH + '/index/unlocked', { password: pwd }, function (res) {
             if (res.code == 1) {
                 window.sessionStorage.setItem("lockscreen", false);
                 layer.closeAll();
