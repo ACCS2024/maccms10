@@ -802,6 +802,24 @@ class Vod extends Base {
         unset($data['uptime']);
         unset($data['uptag']);
 
+        // 按【真实表列】取交集，而不是继续靠上面那种硬编码黑名单。
+        //
+        // 上面两行只剥了 uptime/uptag 两个已知的纯 UI 字段。问题是：表单里每新增一个
+        // 不对应列的字段，这里就要有人记得再加一行 unset —— 没人会记得。
+        // 实际发生的：vod/info.html 的 AI 封面「补充提示词」文本框带了
+        // name="ai_cover_extra_prompt"（它本该只由 JS 按 id 读取、单独 POST），
+        // 于是随整表单提交进来，think-orm 抛
+        //     DbException: fields not exists:[ai_cover_extra_prompt]
+        // 视频保存直接 500，且报错信息只出现在服务端日志里，前台只看到「服务器错误」。
+        //
+        // 改为按 getFields() 的实际列名过滤：从此任何多余字段都被安静丢弃，
+        // 新增 UI 字段不再需要同步维护黑名单，这一类缺陷永久消失。
+        // 取不到列信息时（极端情况）保持原样，不因为过滤逻辑本身把保存搞挂。
+        $cols = $this->getFields();
+        if (is_array($cols) && $cols) {
+            $data = array_intersect_key($data, $cols);
+        }
+
         $data = VodValidate::formatDataBeforeDb($data);
         $seoObjId = 0;
         if(!empty($data['vod_id'])){

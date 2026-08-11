@@ -287,7 +287,12 @@
                     <div class="layui-form-item layui-form-text">
                         <label class="layui-form-label">{:lang('admin/ai_cover/extra_prompt_label')}</label>
                         <div class="layui-input-block">
-                            <textarea id="ai_cover_extra_prompt" name="ai_cover_extra_prompt" class="layui-textarea" rows="2" placeholder="{:lang('admin/ai_cover/extra_prompt_placeholder')}"></textarea>
+                            <!-- 不能有 name：这是 AI 封面生成的【纯 UI 字段】，由下方 JS 按 id 读出、
+                                 以 extra_prompt 之名单独 POST 给 vod/aiCoverGenerate。
+                                 一旦带 name，它就会随整个视频编辑表单一起提交进 Vod::info()，
+                                 而 mac_vod 没有 ai_cover_extra_prompt 这一列 →
+                                 think-orm 抛 DbException: fields not exists:[ai_cover_extra_prompt] → 保存直接 500。 -->
+                            <textarea id="ai_cover_extra_prompt" class="layui-textarea" rows="2" placeholder="{:lang('admin/ai_cover/extra_prompt_placeholder')}"></textarea>
                             <div class="layui-word-aux">{:lang('admin/ai_cover/extra_prompt_tip')}</div>
                         </div>
                     </div>
