@@ -1762,6 +1762,13 @@ return array (
         'controller' => 'rep',
         'action' => 'toggleEnabled',
       ),
+      9809 =>
+      array (
+        'show' => 0,
+        'name' => '编辑替换记录',
+        'controller' => 'rep',
+        'action' => 'edit',
+      ),
       9806 =>
       array (
         'show' => 0,

@@ -50,7 +50,7 @@
               <th width="120">备注</th>
               <th width="90">状态</th>
               <th width="90">已执行</th>
-              <th width="180">操作</th>
+              <th width="250">操作</th>
             </tr>
           </thead>
           <tbody>
@@ -77,6 +77,14 @@
                 {/if}
               </td>
               <td>
+                <button type="button" class="layui-btn layui-btn-xs btn-edit"
+                        data-id="{$vo.rep_id}"
+                        data-type="{$vo.rep_type|htmlspecialchars}"
+                        data-orig="{$vo.rep_original|htmlspecialchars}"
+                        data-repl="{$vo.rep_replacement|htmlspecialchars}"
+                        data-note="{$vo.rep_note|htmlspecialchars}">
+                  <i class="layui-icon">&#xe642;</i> 编辑
+                </button>
                 <button type="button" class="layui-btn layui-btn-xs layui-btn-warm btn-preview"
                         data-id="{$vo.rep_id}"
                         data-type="{$vo.rep_type|htmlspecialchars}">
@@ -110,6 +118,8 @@
 <div id="addModal" class="layui-hide">
   <div style="padding:20px;">
     <form class="layui-form" id="addForm">
+      <!-- 有值 = 编辑模式，空 = 新增。同一个表单服务两种用途，字段不会两处走样 -->
+      <input type="hidden" name="rep_id" id="fRepId" value="">
       <div class="layui-form-item">
         <label class="layui-form-label">类型</label>
         <div class="layui-input-block">
@@ -141,7 +151,7 @@
       </div>
       <div class="layui-form-item">
         <div class="layui-input-block">
-          <button class="layui-btn" lay-submit lay-filter="addSubmit">确认添加</button>
+          <button class="layui-btn" lay-submit lay-filter="addSubmit" id="fSubmit">确认添加</button>
         </div>
       </div>
     </form>
@@ -158,11 +168,18 @@ layui.use(['layer', 'form', 'table', 'element'], function () {
         $('input[name="ids[]"]').each(function () { this.checked = data.elem.checked; });
     });
 
-    // 添加弹窗
-    $('#btnAdd').on('click', function () {
+    // 新增与编辑共用同一个弹窗。row 为空 = 新增。
+    function openForm(row) {
+        var isEdit = !!row;
+        $('#fRepId').val(isEdit ? row.id : '');
+        $('#addForm').find('[name=rep_type]').val(isEdit ? row.type : '');
+        $('#addForm').find('[name=rep_original]').val(isEdit ? row.orig : '');
+        $('#addForm').find('[name=rep_replacement]').val(isEdit ? row.repl : '');
+        $('#addForm').find('[name=rep_note]').val(isEdit ? row.note : '');
+        $('#fSubmit').text(isEdit ? '保存修改' : '确认添加');
         layer.open({
             type: 1,
-            title: '添加替换记录',
+            title: isEdit ? ('编辑替换记录 #' + row.id) : '添加替换记录',
             area: ['560px', 'auto'],
             content: $('#addModal'),
             // layui 2.9 与 2.2.5 的差异：content 传 jQuery 对象时会把该节点【搬进弹层】，
@@ -177,13 +194,32 @@ layui.use(['layer', 'form', 'table', 'element'], function () {
                 $('#addModal').addClass('layui-hide');
             }
         });
+    }
+
+    $('#btnAdd').on('click', function () { openForm(null); });
+
+    $(document).on('click', '.btn-edit', function () {
+        var $b = $(this);
+        openForm({
+            id:   $b.data('id'),
+            type: $b.data('type'),
+            orig: $b.data('orig'),
+            repl: $b.data('repl'),
+            note: $b.data('note')
+        });
     });
 
-    // 提交添加
+    // 新增与编辑走同一个提交口，靠 rep_id 是否有值分流
     form.on('submit(addSubmit)', function (data) {
-        $.post('{:url("add")}', data.field, function (res) {
+        var isEdit = !!data.field.rep_id;
+        $.post(isEdit ? '{:url("edit")}' : '{:url("add")}', data.field, function (res) {
             if (res.code === 1) {
-                layer.msg(res.msg, { icon: 1 }, function () { location.reload(); });
+                // 改了替换内容会导致「已执行」被重置，这种情况用 alert 让站长确实看到
+                if (res.reset) {
+                    layer.alert(res.msg, { icon: 0 }, function () { location.reload(); });
+                } else {
+                    layer.msg(res.msg, { icon: 1 }, function () { location.reload(); });
+                }
             } else {
                 layer.msg(res.msg, { icon: 2 });
             }
@@ -283,9 +319,27 @@ layui.use(['layer', 'form', 'table', 'element'], function () {
         });
     }
 
-    function previewHtml(res) {
-        var h = '<div style="padding:16px;font-size:13px">';
-        h += '<div style="margin-bottom:12px;padding:10px;background:#f2f8ff;border-left:3px solid #1e9fff">'
+    // 弹窗高度必须跟着视口算，不能写死。
+    // 之前写死 640px，但抽样有 10 条、每条两行，内容把对话框整个撑开，
+    // layer 的按钮栏被顶到屏幕外 —— 站长看得到内容却点不到「确认执行」。
+    function boxH(max) {
+        var vh = window.innerHeight || 800;
+        return Math.max(320, Math.min(max, vh - 80));
+    }
+
+    // 用 flex 三段式，不用估算高度。
+    // layer 给 .layui-layer-content 设了确定高度，这里 height:100% 就能吃满；
+    // 摘要与 tail 是 flex:0 0 auto（不压缩），明细区 flex:1 1 auto + min-height:0
+    // 拿走剩余空间并在内部滚动。这样 tail 再长也顶不破弹窗，
+    // 也就不会再出现「内容看得到、确认按钮被挤出屏幕」。
+    // （min-height:0 不能省 —— flex 子项默认 min-height:auto，
+    //   内容会把它撑开，overflow 根本不生效。）
+    // opts.tail  追加在明细区下方、始终可见的一段 HTML
+    function previewHtml(res, opts) {
+        opts = opts || {};
+        var h = '<div style="display:flex;flex-direction:column;height:100%;'
+              + 'box-sizing:border-box;padding:16px;font-size:13px">';
+        h += '<div style="flex:0 0 auto;margin-bottom:12px;padding:10px;background:#f2f8ff;border-left:3px solid #1e9fff">'
            + '共命中 <b style="font-size:18px;color:#1e9fff">' + res.total + '</b> 行，'
            + '涉及 ' + res.details.length + ' 个字段，将分 ' + res.batches + ' 批执行。'
            + '<div style="color:#888;margin-top:4px">'
@@ -297,6 +351,9 @@ layui.use(['layer', 'form', 'table', 'element'], function () {
                + '没有匹配的数据。检查原内容是否写对（区分大小写、有没有多余空格）。</div>';
         }
 
+        // 明细区：吃掉剩余空间，超出就在自己内部滚动
+        h += '<div style="flex:1 1 auto;min-height:0;overflow-y:auto;'
+           + 'border:1px solid #e6e6e6;border-radius:3px;padding:10px;background:#fff">';
         res.details.forEach(function (d) {
             h += '<div style="margin-bottom:14px">'
                + '<div style="font-weight:600;margin-bottom:6px">'
@@ -320,13 +377,16 @@ layui.use(['layer', 'form', 'table', 'element'], function () {
             }
             h += '</div>';
         });
+        h += '</div>';                       // 明细滚动区结束
+        if (opts.tail) { h += opts.tail; }   // tail 在滚动区之外，flex:0 0 auto，始终可见
         return h + '</div>';
     }
 
     function showPreview(res) {
+        var H = boxH(640);
         layer.open({
             type: 1, title: '模拟执行结果（未修改任何数据）',
-            area: ['900px', '600px'], shadeClose: true,
+            area: ['920px', H + 'px'], shadeClose: true,
             content: previewHtml(res)
         });
     }
@@ -354,17 +414,17 @@ layui.use(['layer', 'form', 'table', 'element'], function () {
                 layer.alert('模拟结果为 0 行，无需执行。', { icon: 0 });
                 return;
             }
-            var h = previewHtml(res)
-                  + '<div style="padding:0 16px 16px">'
-                  + '<div style="padding:10px;background:#fff7e6;border-left:3px solid #ffb800">'
-                  + '<b>下一步将真正修改数据库。</b>执行前会自动把受影响的表（'
-                  + esc(res.tables.join('、')) + '）备份到 <code>/home/backup/db/</code>。'
-                  + '<div style="margin-top:8px">'
-                  + '<input type="checkbox" id="skipBackup"> '
-                  + '<label for="skipBackup" style="cursor:pointer">跳过自动备份（我已自行备份）</label>'
-                  + '</div></div></div>';
+            var H = boxH(700);
+            var tail = '<div style="flex:0 0 auto;margin-top:12px;padding:10px;background:#fff7e6;border-left:3px solid #ffb800">'
+                     + '<b>下一步将真正修改数据库。</b>执行前会自动把受影响的表（'
+                     + esc(res.tables.join('、')) + '）备份到 <code>/home/backup/db/</code>。'
+                     + '<div style="margin-top:8px">'
+                     + '<input type="checkbox" id="skipBackup"> '
+                     + '<label for="skipBackup" style="cursor:pointer">跳过自动备份（我已自行备份）</label>'
+                     + '</div></div>';
+            var h = previewHtml(res, { tail: tail });
             layer.open({
-                type: 1, title: '确认执行替换', area: ['900px', '640px'],
+                type: 1, title: '确认执行替换', area: ['920px', H + 'px'],
                 content: h,
                 btn: ['确认执行', '取消'],
                 btnAlign: 'c',

@@ -69,6 +69,70 @@ class Rep extends Base
         return json(['code' => 1, 'msg' => '添加成功']);
     }
 
+    /**
+     * 编辑已有记录。
+     *
+     * 两件事必须在这里处理，否则会留下前后矛盾的状态：
+     *
+     * 1. 正在执行的记录不许改。execute() 会把执行时的 orig/repl 记进进度文件，
+     *    续跑时比对不一致就中止 —— 那道守卫是最后一道保险，但站长看到的是
+     *    「执行到一半突然报错」，不知道是自己刚才改的。在这里直接拦住，说清原因。
+     *
+     * 2. 改了类型/原文/替换文之后，「已执行」这个标记就作废了 ——
+     *    库里跑过的是【旧的】那一对字符串，新的一对一行都没替过。
+     *    不清掉的话列表上会显示绿色「已执行」，站长据此以为不用再跑，
+     *    实际上新内容根本没生效。所以一并把 rep_applied 归零并告知。
+     *    只改备注则不影响执行状态，不归零。
+     */
+    public function edit()
+    {
+        $param = Request::post();
+        $id    = intval($param['rep_id'] ?? 0);
+        if (!$id) {
+            return json(['code' => 0, 'msg' => '参数错误']);
+        }
+        $row = RepModel::find($id);
+        if (!$row) {
+            return json(['code' => 0, 'msg' => '记录不存在']);
+        }
+
+        $type = trim($param['rep_type'] ?? '');
+        $orig = trim($param['rep_original'] ?? '');
+        $rep  = trim($param['rep_replacement'] ?? '');
+        $note = trim($param['rep_note'] ?? '');
+
+        if ($type === '' || $orig === '' || $rep === '') {
+            return json(['code' => 0, 'msg' => '参数不完整']);
+        }
+        if (!array_key_exists($type, RepModel::$typeMap)) {
+            return json(['code' => 0, 'msg' => '不支持的替换类型']);
+        }
+
+        if (is_file($this->statePath($id))) {
+            return json(['code' => 0, 'msg' => '该记录正在执行中，无法编辑。请等执行完成，或先把它执行完再改']);
+        }
+
+        $changed = ($type !== $row->rep_type)
+                || ($orig !== $row->rep_original)
+                || ($rep  !== $row->rep_replacement);
+
+        $row->rep_type        = $type;
+        $row->rep_original    = $orig;
+        $row->rep_replacement = $rep;
+        $row->rep_note        = $note;
+
+        $msg = '保存成功';
+        if ($changed && $row->rep_applied) {
+            $row->rep_applied      = 0;
+            $row->rep_applied_time = 0;
+            $msg = '保存成功。因为替换内容变了，「已执行」标记已重置 —— '
+                 . '库里跑过的是改之前那一对字符串，新的内容需要重新执行';
+        }
+        $row->save();
+
+        return json(['code' => 1, 'msg' => $msg, 'reset' => $changed && $msg !== '保存成功']);
+    }
+
     public function del()
     {
         $ids = Request::post('ids');
