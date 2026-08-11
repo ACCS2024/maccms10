@@ -96,6 +96,8 @@ REMOVED_PATHS=(
     # FUNNULL/RingH23 投毒链清理：孤儿的在线更新 JS（内含 update.maccms.la）
     "static_new/js/update.js"
     "static/js/update.js"
+    # 全后台从未使用（0 处 data-hs-*），却每页加载 309KB 且抛异常
+    "static_new/js/preline.js"
 )
 
 echo "源: $SRC"

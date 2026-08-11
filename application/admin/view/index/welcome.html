@@ -609,7 +609,7 @@
                 series: [
                     {
                         name: "{:lang('admin/index/welcome/reg_users_count')}",
-                        data: <?= json_encode($dashboard_data['seven_day_reg_count']) ?>
+                        data: <?= json_encode($dashboard_data['seven_day_reg_count'] ?? []) ?>
                     }
                 ],
                 chart: {
@@ -625,7 +625,7 @@
                 },
                 xaxis: {
                     type: "category",
-                    categories: <?= json_encode($dashboard_data['seven_day_reg_day']) ?>
+                    categories: <?= json_encode($dashboard_data['seven_day_reg_day'] ?? []) ?>
         },
                 crosshairs: {
                     show: false
@@ -682,7 +682,7 @@
     var options = {
         series: [{
             name: "Visitors",
-            data: <?= json_encode($dashboard_data['seven_day_visit_count']) ?>
+            data: <?= json_encode($dashboard_data['seven_day_visit_count'] ?? []) ?>
         }],
         colors: ['#2563eb', '#9333ea'],
         fill: {
@@ -725,7 +725,7 @@
         xaxis: {
             type: 'category',
             tickPlacement: 'on',
-            categories: <?= json_encode($dashboard_data['seven_day_visit_day']) ?>,
+            categories: <?= json_encode($dashboard_data['seven_day_visit_day'] ?? []) ?>,
             axisBorder: {
                 show: false
             },
@@ -887,7 +887,7 @@
         series: [
             {
                 name: 'Referrals',
-                data: <?= json_encode($spider_data['Google']['values']) ?>
+                data: <?= json_encode($spider_data['Google']['values'] ?? []) ?>
             }
         ],
         legend: {
@@ -912,7 +912,7 @@
         xaxis: {
             type: 'category',
             tickPlacement: 'on',
-            categories: <?= json_encode($spider_data['Google']['key']) ?>,
+            categories: <?= json_encode($spider_data['Google']['key'] ?? []) ?>,
             axisBorder: {
                 show: false
             },

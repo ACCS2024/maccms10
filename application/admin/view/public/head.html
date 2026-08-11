@@ -14,7 +14,10 @@
     <script type="text/javascript" src="__STATIC__/js/jquery-migrate.js?v=__ASSETV__"></script>
     <link rel="stylesheet" href="__STATIC__/css/tailwindcssOutput.css?v=__ASSETV__">
     <script type="text/javascript" src="__STATIC__/layui/layui.js?v=__ASSETV__"></script>
-    <script src="__STATIC__/js/preline.js?v=__ASSETV__"></script>
+    <!-- preline.js 已移除：全后台 0 处 data-hs-* 属性、0 处 HSStaticMethods 调用，
+         即从未被使用；却在每个后台页加载 309KB 并在 index/index 抛
+         "Cannot read properties of undefined (reading 'getAttribute')"。
+         模板里那几个 hs- 开头的名字是 apexcharts 的容器 id，与 preline 无关。 -->
     <script>
         var ROOT_PATH="__ROOT__",ADMIN_PATH="{$_SERVER['SCRIPT_NAME']}", MAC_VERSION="v10";
     </script>  
