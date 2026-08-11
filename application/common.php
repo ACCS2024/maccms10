@@ -4564,8 +4564,36 @@ if (!function_exists('mac_help_url')) {
     }
 }
 if (!function_exists('mac_rep_url')) {
+    /**
+     * 替换助手的前台地址。
+     *
+     * 不能硬编码 '/macrep' —— 那要求 nginx 配了伪静态。本站实测【没有配】：
+     *     /macrep.html            404（nginx 找不到该文件，不转交 PHP）
+     *     /index.php/macrep.html  200（同一条路由，走入口文件就正常）
+     * 于是主题里按 '/macrep' 出的链接全是死链。
+     *
+     * 改用框架的 url() 生成：它会按站点当前的 URL 模式（是否伪静态、后缀、
+     * 是否带入口文件）产出正确地址，换部署环境也不用改代码。
+     * 路由 application/index/route/web.php:68 已把 macrep 指向 rep/index。
+     */
     function mac_rep_url(): string {
-        return '/macrep';
+        // 不要用框架的 url()：实测本站 url('rep/index') 产出 /rep/index.html，
+        // 而它 404 —— nginx 没配伪静态（/www/server/panel/vhost/rewrite/ 下是空的）。
+        // 能打开的是带入口文件的形式：
+        //     /rep/index.html            404
+        //     /index.php/rep/index.html  200
+        //     /index.php/macrep.html     200   ← 路由 web.php:68 的短地址
+        // 前台其余链接同理，nginx 日志里全是 /index.php/voddetail/... 这种形态。
+        //
+        // 这里返回短地址常量。留 mac_url() 分支是为了将来：若哪天补了伪静态、
+        // 或引入了统一的 URL 生成器，改那一处即可，不必回来动本函数。
+        if (function_exists('mac_url')) {
+            $u = (string)mac_url('rep/index');
+            if ($u !== '') {
+                return $u;
+            }
+        }
+        return '/index.php/macrep.html';
     }
 }
 if (!function_exists('mac_rep_last_update')) {
@@ -4575,6 +4603,40 @@ if (!function_exists('mac_rep_last_update')) {
             ->max('rep_applied_time');
         if (!$t) return '';
         return ' ' . date('Y/m/d', (int)$t);
+    }
+}
+if (!function_exists('mac_rep_notice')) {
+    /**
+     * 给主题用的「最近替换提醒」整句文案。
+     *
+     * mac_rep_last_update() 只给日期，主题想显示
+     *     26-08-26，播放器替换，请站长替换
+     * 这类带类型的提示还得自己再查一次库。这里一次给全。
+     *
+     * 取的是【最近一条对外可见(rep_status=1)的记录】，不要求 rep_applied ——
+     * 因为这个提示的受众是【下游采集站的站长】：本站刚改了播放域名、图片域名之后，
+     * 他们需要在自己库里同步替换，所以刚发布就该提醒，而不是等本站执行完。
+     *
+     * @param string $fmt 日期格式，默认 y-m-d（26-08-26 这种两位年份）
+     * @return string 无记录时返回空串，主题里可直接 {if} 判空
+     */
+    function mac_rep_notice(string $fmt = 'y-m-d'): string {
+        $row = \think\facade\Db::name('rep')
+            ->where('rep_status', 1)
+            ->order('rep_create_time', 'desc')
+            ->find();
+        if (!$row) {
+            return '';
+        }
+        $type = trim((string)($row['rep_type'] ?? ''));
+        $date = date($fmt, (int)($row['rep_create_time'] ?? 0));
+        return $type === '' ? $date : ($date . '，' . $type . '，请站长替换');
+    }
+}
+if (!function_exists('mac_rep_count')) {
+    /** 对外可见的替换记录条数。主题里用来决定要不要显示入口/红点。 */
+    function mac_rep_count(): int {
+        return (int)\think\facade\Db::name('rep')->where('rep_status', 1)->count();
     }
 }
 // ========= /TP8 global helpers =========
