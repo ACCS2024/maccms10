@@ -117,8 +117,8 @@ class Index extends Base
         $version = config('version');
         $update_sql = file_exists('./application/data/update/database.php');
 
-        $this->assign('spider_data', $this->botlist());
-        $os_data = $this->get_system_status();
+        $this->assign('spider_data', $this->botListData());
+        $os_data = $this->systemStatusData();
         $show_os_guide = false;
         if (empty($os_data['cpu_usage']) || empty($os_data['mem_total'])) {
             $show_os_guide = true;
@@ -291,7 +291,21 @@ class Index extends Base
         return $this->fetch('admin@public/' . $tpl);
     }
 
+    /**
+     * 动作入口：仅负责把数据包成 Response。
+     * TP8 不会像 TP5 那样自动把返回的数组转成 JSON —— 返回裸数组会记
+     * 「variable type error： array」并输出 0 字节。
+     * 但本方法【同时被 welcome() 内部当数组用】，所以数据生产必须留在
+     * 私有方法里：直接在这里 return json() 会让 welcome() 拿到 Response 对象，
+     * 触发「Cannot use object of type think\response\Json as array」而 500。
+     */
     public function get_system_status()
+    {
+        return json($this->systemStatusData());
+    }
+
+    /** 采集系统状态，返回数组。供动作与 welcome() 共用。 */
+    private function systemStatusData()
     {
         //判斷系統
         $os_name = PHP_OS;
@@ -357,7 +371,7 @@ class Index extends Base
             'mem_total'  => 0,
             'mem_used'   => 0,
         ];
-        return json($os_data);
+        return $os_data;
     }
 
     private function byte_format($size, $dec = 2)
@@ -971,7 +985,15 @@ class Index extends Base
         return json_encode($result);
     }
 
+    /** 动作入口：包 JSON。数据生产在 botListData()，因为 welcome() 也要用（见 get_system_status 的说明）。 */
     public function botlist()
+    {
+        $data = $this->botListData();
+        return json(isset($_POST['category']) ? ($data[$_POST['category']] ?? []) : $data);
+    }
+
+    /** 统计各搜索引擎蜘蛛最近 7 天的抓取，返回数组。供动作与 welcome() 共用。 */
+    private function botListData()
     {
         $day_arr = [];
         //列出最近10天的日期
@@ -1032,10 +1054,9 @@ class Index extends Base
         $bot_list['Alexa']['values'] = array_values($alexa_arr);
 
         if (!empty($_POST['category'])) {
-            // 同上：TP8 必须显式转 Response，返回裸数组会输出 0 字节
-            return json($bot_list[$_POST['category']] ?? []);
+            return $bot_list[$_POST['category']] ?? [];
         } else {
-            return json($bot_list);
+            return $bot_list;
         }
     }
 
