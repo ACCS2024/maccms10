@@ -48,12 +48,49 @@ return array (
         'controller' => 'index',
         'action' => 'select',
       ),
-      1005 => 
+      1005 =>
       array (
         'show' => 0,
         'name' => '--文件上传',
         'controller' => 'upload',
         'action' => 'upload',
+      ),
+      // 后台首页(仪表盘)自身会发的 AJAX。它们原本一个都不在权限树里 ——
+      // 超管靠 check_auth 里 admin_id==1 的短路放行，所以从超管视角完全看不见；
+      // 而【任何子管理员】只要停在后台首页，就会不停撞权限拒绝：
+      //   index/checkcache          view/index/index.html:651  setInterval 每 30 秒一次
+      //   index/botlist             view/index/welcome.html:1069
+      //   index/get_system_status   view/index/welcome.html:1094
+      //   index/rangeDateDailyVisit view/index/welcome.html:832
+      // 实测线上日志：同一路径超管 200、编辑 403。
+      // 全部是只读展示接口，随「首页」分组一并授予。
+      1006 =>
+      array (
+        'show' => 0,
+        'name' => '--缓存状态检查(首页轮询)',
+        'controller' => 'index',
+        'action' => 'checkcache',
+      ),
+      1007 =>
+      array (
+        'show' => 0,
+        'name' => '--首页机器人列表',
+        'controller' => 'index',
+        'action' => 'botlist',
+      ),
+      1008 =>
+      array (
+        'show' => 0,
+        'name' => '--首页系统状态',
+        'controller' => 'index',
+        'action' => 'get_system_status',
+      ),
+      1009 =>
+      array (
+        'show' => 0,
+        'name' => '--首页访问趋势',
+        'controller' => 'index',
+        'action' => 'rangeDateDailyVisit',
       ),
     ),
   ),
