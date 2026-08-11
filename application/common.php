@@ -1393,7 +1393,25 @@ function mac_is_official_url($url)
         return false;
     }
     $host = strtolower($host);
-    $blocked = ['maccms.la', 'maccms.com', 'maccms.cn', 'maccms.ai', 'dplayerstatic.com'];
+    $blocked = [
+        // ── 上游官方域：升级/统计/关键词等通道，一律不通信 ──
+        // update.maccms.la 是已被证实投毒的升级通道（奇安信 xlab 披露 FUNNULL/RingH23）。
+        // 本站日志实测：注入的远程 JS 曾在 26 次登录后自动驱动
+        // admin/update/step1.html?file=laupd<hash>，靠 step1 的 exit 与本函数双重拦下。
+        'maccms.la', 'maccms.com', 'maccms.cn', 'maccms.ai', 'dplayerstatic.com',
+
+        // ── FUNNULL/RingH23 投毒链的伪 CDN 与分发域（同一披露）──
+        // 全部是仿冒知名 CDN 的抢注域名，用来托管 JS 载荷与跳转脚本，例如
+        // code.jquecy.com 仿 code.jquery.com（r→c 一字之差）。
+        // 老机(已下线待处置)的 template/155zy/js/{jquery-1.12.4.min,layui}.js 尾部
+        // 被追加的载荷即指向 code.jquecy.com/jquery.min-3.6.8.js。
+        // 这里挡在【唯一的出站卡口】上：任何现有或将来新增的代码路径想访问它们都会被拒，
+        // 不依赖 /etc/hosts（换机器、重装系统都不会丢）。
+        'jquecy.com', 'jsdclivr.com', 'clondflare.com', 'bytedauce.com',
+        'macoms.la', 'bdustatic.com', 'jsdelivr.vip',
+        'ailyunoss.com', 'ailyun-oss.com',
+        'aqyaqua.com', 'zhw.sh',
+    ];
     foreach ($blocked as $d) {
         if ($host === $d || substr($host, -(strlen($d) + 1)) === '.' . $d) {
             return true;

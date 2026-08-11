@@ -43,12 +43,19 @@ class Safety extends Base
                 $ft = ['1','2'];
             }
             mac_echo('<style type="text/css">body{font-size:12px;color: #333333;line-height:21px;}span{font-weight:bold;color:#FF0000}</style>');
-            $url = 'http://update.maccms.la/'  /* 原base64已还原 */ . "v10/mac_files_".config('version')['code'].'.html';
-            $html = mac_curl_get($url);
-            $json = json_decode($html,true);
-            if(!$json){
-                return $this->error(lang('admin/safety/file_msg1'));
-            }
+            // 「文件校验」原本从 update.maccms.la 拉一份官方文件指纹清单来比对本地文件。
+            // 该域名是已被证实投毒的升级通道（奇安信 xlab 披露 FUNNULL/RingH23），
+            // 而这个功能的语义恰恰是「拿远程给的清单来判断本地文件是否可信」——
+            // 一旦上游被控，它会反过来把被篡改的文件判成正常、把加固过的文件判成异常，
+            // 是最不该保留远程依赖的地方。
+            //
+            // 何况本 fork 与上游差异极大（TP5→TP8 重写、权限/会话/路由/视图大量改动），
+            // 官方指纹清单对本站本来就不适用，比对结果只会是满屏误报。
+            //
+            // 本地完整性请用：php think mac:selfcheck（配置基线/菜单/权限/模板）
+            // 与 php security_check.php（安全体检），二者都不依赖任何外部源。
+            return $this->error('文件校验已停用：该功能依赖官方指纹源 update.maccms.la，'
+                . '该升级通道已被证实投毒。请改用 php think mac:selfcheck 与 php security_check.php。');
 
             $this->listDir('./');
             if(!is_array($this->_files)){

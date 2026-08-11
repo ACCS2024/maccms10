@@ -642,26 +642,15 @@
             setMobileNavOpen(false);
         });
 
-        /* ── 版本更新检测(安全加固:已禁用,原会 eval update.maccms.la 的响应,官方被劫持即可在管理员浏览器执行任意JS)── */
-        if (false && typeof MAC_VERSION !== 'undefined' && typeof PHP_VERSION !== 'undefined' && typeof THINK_VERSION !== 'undefined') {
-            $.ajax({
-                url: 'https://update.maccms.la/v10/?c=check&v=' + MAC_VERSION + '&p=' + PHP_VERSION + '&tp=' + THINK_VERSION + '&t=' + Math.random(),
-                type: 'GET',
-                dataType: 'text',
-                success: function (response) {
-                    var updateContentMatch = response.match(/var update_content\s*=\s*\[(.*?)\]\.join\('<br>'\);/s);
-                    if (updateContentMatch) {
-                        try { eval(updateContentMatch[0]); } catch (e) { console.error('update content eval failed', e); }
-                    }
-                    var newVMatch = response.match(/var new_v = '(.*?)';/);
-                    var newV = newVMatch ? newVMatch[1] : '';
-                    if (newV > MAC_VERSION) {
-                        window.updateInfo = { newV: newV, update_content: update_content, package: 'maccms10_update' };
-                        $('#update-notification, #update-notification-mobile').show();
-                    }
-                }
-            });
-        }
+        /* ── 版本更新检测已【整段删除】 ──
+         * 原实现向 https://update.maccms.la/v10/?c=check&… 发请求，并对响应体做
+         *     eval(updateContentMatch[0])
+         * 即【把上游返回的字符串当代码执行在管理员浏览器里】。
+         * update.maccms.la 已被证实投毒（奇安信 xlab 披露 FUNNULL/RingH23），
+         * 本站日志实测其下发的脚本曾 26 次驱动后台自动请求 update/step1?file=laupd<hash>。
+         * 它此前虽被 if(false&&…) 短路，但代码完整可用 —— 只要有人删掉那个 false 就立即复活，
+         * 因此整段删除而不是继续保留。
+         */
     });
     $(function () {
         setInterval("checkCache()", 30 * 1000);
@@ -680,63 +669,13 @@
         });
     }
 
-    // 显示更新对话框的函数
+    // 「在线更新」整套 UI 已删除（原 showUpdateDialog 会拼出
+    // ${ADMIN_PATH}/admin/update/step1.html?file=${package} 并引导管理员点击）。
+    // 该 package 值来自 update.maccms.la 下发的远程脚本 —— 正是 FUNNULL/RingH23
+    // 投毒链的触发点（奇安信 xlab 披露）。服务端 Update::step1() 的下载逻辑已一并删除。
+    // 升级方式：代码 git pull 自有仓库；库结构登录后台时自动迁移。
     function showUpdateDialog() {
-        if (!window.updateInfo) {
-            layer.msg('没有可用的更新信息', { time: 2000 });
-            return;
-        }
-
-        var newV = window.updateInfo.newV;
-        var update_content = window.updateInfo.update_content;
-        var package = window.updateInfo.package;
-
-        // js 判断是否移动端
-        var area = ['460px', '638px']
-        var agent = navigator.userAgent.toLowerCase();
-        var isMobile = /android|iphone|ipod|ipad|ios/.test(agent)
-        if (isMobile) {
-            area = ['95%', '638px']
-        }
-
-        layer.open({
-            type: 1,
-            area, // 宽高
-            title: false, // 不显示标题栏
-            closeBtn: 0,
-            btn: ['关闭'],
-            btnAlign: 'c',
-            shadeClose: true, // 点击遮罩关闭层
-            skin: 'skin_updae_from', // 加上边框
-            content: `
-                <div class="updae_from">
-                    <img class="update_bg" src="__STATIC__/images/upgrade_pop_rocket_bg@2x.png" alt="" srcset="">
-                    <div class="update_content">
-                    <div class="update_title">
-                        <p>更新提示</p>
-                        <p>${newV}>>></p>
-                    </div>
-                    <a class="group_link" target="_blank" href="https://t.me/maccms_channel">Telegram群   https://t.me/maccms_channel</a>
-                    <a class="group_link" target="_blank"
-                        href="https://github.com/magicblack">Github源码   https://github.com/magicblack</a>
-                    <div class="flex-col flex my-[20px] gap-1">
-                        <a class="j-iframe text-[#53D19C]" title="点击进入升级"
-                        data-href="${ADMIN_PATH}/admin/update/step1.html?file=${package}">
-                        【点击进入在线升级】
-                        </a>
-                        <a href="https://github.com/magicblack/maccms_down/raw/master/maccms10_update.zip">
-                        【下载离线升级包线路1】
-                        </a>
-                        <a href="https://cdn.jsdelivr.net/gh/magicblack/maccms_down@master/maccms10_update.zip">
-                        【下载离线升级包线路2】
-                        </a>
-                    </div>
-                    <div class="update_list">
-                        ${update_content}
-                    </div>
-                </div>
-            `
-        });
+        layer.msg('在线更新已停用（安全加固）。代码请用 git pull 升级。', { time: 3000 });
     }
 </script>
 

@@ -93,6 +93,9 @@ REMOVED_PATHS=(
     # TP8 下不再使用的实现
     "application/middleware/SessionSameSite.php"   # 依赖 session_start()，TP8 从不调用
     "application/index/controller/Myerror.php"     # TP5 的 _empty 约定，TP8 不认
+    # FUNNULL/RingH23 投毒链清理：孤儿的在线更新 JS（内含 update.maccms.la）
+    "static_new/js/update.js"
+    "static/js/update.js"
 )
 
 echo "源: $SRC"

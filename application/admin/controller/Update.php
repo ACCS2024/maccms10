@@ -3,11 +3,9 @@
 // update_hash = md5_file('application/admin/controller/Update.php')
 namespace app\admin\controller;
 use think\facade\Db;
-use app\common\util\PclZip;
 
 class Update extends Base
 {
-    var $_url;
     var $_save_path;
 
     public function __construct()
@@ -15,7 +13,8 @@ class Update extends Base
         parent::__construct();
         //header('X-Accel-Buffering: no');
 
-        $this->_url = 'https://update.maccms.la/'  /* 原base64已还原 */."v10/";
+        // 升级源地址已移除。原值指向 update.maccms.la（已被证实投毒的官方升级通道），
+        // 保留一个可用的 URL 只会让人以为「改回去就能用」。本类不再有任何出站调用。
         $this->_save_path = './application/data/update/';
     }
 
@@ -39,76 +38,19 @@ class Update extends Base
         echo "</textarea></div>";
         exit;
 
-        // 以下为原在线更新逻辑(已禁用,保留备查)
-        if(empty($file)){
-            return $this->error(lang('param_err'));
-        }
-        $version = config('version.code');
-        $url = $this->_url .$file . '.zip?t='.time();
-
-        echo $this->fetch('admin@public/head');
-        echo "<div class='update'><h1>".lang('admin/update/step1_a')."</h1><textarea rows=\"25\" class='layui-textarea' readonly>".lang('admin/update/step1_b')."\n";
-        ob_flush();flush();
-        sleep(1);
-
-        $save_file = $version.'.zip';
-        
-        $html = mac_curl_get($url, [], '', 120);  // ZIP 下载给足时间
-        @fwrite(@fopen($this->_save_path.$save_file,'wb'),$html);
-        if(!is_file($this->_save_path.$save_file)){
-            echo lang('admin/update/download_err')."\n";
-            exit;
-        }
-
-        if(filesize($this->_save_path.$save_file) <1){
-            @unlink($this->_save_path.$save_file);
-            echo lang('admin/update/download_err')."\n";
-            exit;
-        }
-
-        // SHA1校验：.sha1文件进行比对防篡改
-        $sha1_url = $this->_url . $file . '.zip.sha1?t=' . time();
-        $remote_sha1 = trim(mac_curl_get($sha1_url, [], '', 10));
-        $local_sha1 = sha1_file($this->_save_path . $save_file);
-        if (empty($remote_sha1) || strpos($remote_sha1, $local_sha1) !== 0) {
-            @unlink($this->_save_path . $save_file);
-            echo lang('admin/update/sha1_err') . "\n";
-            exit;
-        }
-        echo lang('admin/update/sha1_ok') . "\n";
-
-        echo lang('admin/update/download_ok')."\n";
-        echo lang('admin/update/upgrade_package_processed')."\n";
-        ob_flush();flush();
-        sleep(1);
-
-        $archive = new PclZip();
-        $archive->PclZip($this->_save_path.$save_file);
-        // 安全加固(V6/zip-slip):解压前预扫条目名,拒绝 ../、绝对路径、盘符、空字节,防穿越写入Web目录
-        $entries = $archive->listContent();
-        if (is_array($entries)) {
-            foreach ($entries as $entry) {
-                $en = isset($entry['stored_filename']) ? $entry['stored_filename'] : (isset($entry['filename']) ? $entry['filename'] : '');
-                $en = str_replace('\\', '/', (string)$en);
-                if ($en === '' || strpos($en, '../') !== false || strpos($en, "\0") !== false
-                    || $en[0] === '/' || preg_match('#^[a-zA-Z]:/#', $en)) {
-                    @unlink($this->_save_path.$save_file);
-                    echo lang('admin/update/upgrade_err')."\n";
-                    exit;
-                }
-            }
-        }
-        if(!$archive->extract(PCLZIP_OPT_PATH, '', PCLZIP_OPT_REPLACE_NEWER)) {
-            echo $archive->error_string."\n";
-            echo lang('admin/update/upgrade_err').'' ."\n";;
-            exit;
-        }
-        else{
-
-        }
-        @unlink($this->_save_path.$save_file);
-        echo '</textarea></div>';
-        mac_jump( url('update/step2',['jump'=>1]) ,3);
+        // ── 原「在线更新」逻辑已【整段删除】，不是注释掉 ──
+        //
+        // 删掉而不是保留备查的理由：
+        // 1. 它是奇安信 xlab 披露的 FUNNULL/RingH23 投毒链的服务端落点 ——
+        //    远程 JS 驱动浏览器请求本方法并带上 file=laupd<hash>，原逻辑会把该参数拼上 .zip
+        //    从 update.maccms.la 下载、校验 sha1、用 PclZip 解压覆盖到站点目录。
+        //    本站 nginx 日志实测该请求发生过 26 次（全部紧跟成功登录 1~3 秒内自动发出）。
+        // 2. 留着「已禁用但完整可用」的代码等于上膛的枪：只要有人误删上面那句 exit、
+        //    或将来重构时把它挪走，整条投毒通道立刻复活。本仓库刚因为
+        //    「删了函数头留下尾巴」造成过后台整块 JS 失效，教训就在眼前。
+        // 3. 升级路径已改为：代码用 git pull 从自有仓库拉；库结构在登录后台时自动迁移。
+        //
+        // 需要查看原实现请翻 git 历史（本次删除的提交里有完整 diff）。
     }
 
     public function step2()
