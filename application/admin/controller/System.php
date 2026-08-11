@@ -444,6 +444,30 @@ class System extends Base
             $config_new['upload'] = $config['upload'];
 
             $config_old = config('maccms');
+
+            // upload.api 保底：POST 里没带这一段时，保留库里原有的，绝不整段抹掉。
+            //
+            // 这一段装着各家存储的【凭据】（ftp 账号密码、七牛/又拍/S3 的 AK/SK…），
+            // 而它在页面上不是主表单的子节点 —— 那 27 个输入框由
+            // application/admin/view/extend/upload/*.html 渲染在 <form> 之外，
+            // 靠 HTML5 的 form 属性关联，而它们原先【一个都没写】。
+            // 于是提交时整段 api 根本不在 POST 里，上面那句整段替换就把凭据全清空了：
+            // 站长只是改了个 FTP 域名，保存后 FTP 账号密码全没了，
+            // 页面还因为读 $config['upload']['api']['qiniu']['bucket'] 而 500
+            // （SafeConfig 对缺失分支返回空串，再取下标 → TypeError）。
+            //
+            // 那 27 个 form 属性已在同一提交里补上；这里再加一道服务端保底：
+            // 表单坏掉、浏览器行为差异、或将来新增一段没绑好，都不会再造成凭据丢失。
+            // 只在「POST 没带」时保留，带了就以 POST 为准，不影响正常的清空操作。
+            if (!isset($config_new['upload']['api']) && isset($config_old['upload']['api'])) {
+                $config_new['upload']['api'] = $config_old['upload']['api'];
+            } elseif (isset($config_new['upload']['api'], $config_old['upload']['api'])
+                      && is_array($config_new['upload']['api'])
+                      && is_array($config_old['upload']['api'])) {
+                // 某一家存储的整块没提交（例如模板缺失/被条件渲染跳过）时同样保留
+                $config_new['upload']['api'] += $config_old['upload']['api'];
+            }
+
             $config_new = array_merge($config_old, $config_new);
 
             $res = mac_arr2file(APP_PATH . 'extra/maccms.php', $config_new);
