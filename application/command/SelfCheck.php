@@ -46,6 +46,7 @@ class SelfCheck extends Command
 
     protected function execute(Input $input, Output $output)
     {
+        $this->checkUpdateHash();
         $this->checkConfigBaseline();
         $this->checkMenuIntegrity();
         $this->checkLangParity();
@@ -85,6 +86,36 @@ class SelfCheck extends Command
     private function add(string $level, string $scope, string $msg, string $fix = ''): void
     {
         $this->issues[] = ['level' => $level, 'scope' => $scope, 'msg' => $msg, 'fix' => $fix];
+    }
+
+    // ------------------------------------------------------------------
+    // 0. update_hash 完整性
+    //
+    // application/admin/controller/Base.php 在构造函数里比对
+    // config('version.update_hash') 与 md5_file(admin/controller/Update.php)，
+    // 不一致就 exit(lang('admin/update/core_file_error')) —— 【整个后台连同登录页全部打不开】。
+    // 这个坑已经发生过两次，两次都是改完 Update.php 忘了同步 version.php，
+    // 而且两次都是等站长打不开后台才发现：PHP 语法检查过、部署脚本全绿、
+    // 冒烟只测前台也全绿，没有任何一件仪器覆盖它。放在所有检查的最前面。
+    // ------------------------------------------------------------------
+    private function checkUpdateHash(): void
+    {
+        $file = $this->appPath() . 'admin/controller/Update.php';
+        if (!is_file($file)) {
+            return;
+        }
+        $expected = (string)(\think\facade\Config::get('version.update_hash') ?? '');
+        if ($expected === '') {
+            return;   // 未启用该校验
+        }
+        $actual = md5_file($file);
+        if ($expected !== $actual) {
+            $this->add('FAIL', 'update_hash', sprintf(
+                'version.update_hash (%s) 与 Update.php 的实际 md5 (%s) 不一致 —— '
+                . '部署上去后 Base::__construct 会 exit，整个后台连同登录页全部打不开。',
+                $expected, $actual
+            ), "把 application/extra/version.php 的 update_hash 改成 {$actual}");
+        }
     }
 
     // ------------------------------------------------------------------
