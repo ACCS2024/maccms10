@@ -989,7 +989,22 @@ class Index extends Base
     public function botlist()
     {
         $data = $this->botListData();
-        return json(isset($_POST['category']) ? ($data[$_POST['category']] ?? []) : $data);
+        $cat  = isset($_POST['category']) ? trim((string)$_POST['category']) : '';
+        if ($cat === '') {
+            // 前端首屏调用时下拉框还没选中，category 是空串。
+            // 原来返回 $data[''] ?? [] —— 一个空数组，前端取 data.values 得到 undefined，
+            // apexcharts 收到 series[0].data = undefined 就抛
+            // 「t[c].data.map is not a function」，整个仪表盘脚本随之中断。
+            // 这里回退到第一个有数据的蜘蛛，保证响应形状始终是 {key:[], values:[]}。
+            foreach ($data as $one) {
+                if (is_array($one) && isset($one['key'], $one['values'])) { return json($one); }
+            }
+            return json(['key' => [], 'values' => []]);
+        }
+        $hit = $data[$cat] ?? null;
+        // 选了但该蜘蛛无记录时，同样返回形状完整的空结构，而不是空数组
+        return json(is_array($hit) && isset($hit['key'], $hit['values'])
+            ? $hit : ['key' => [], 'values' => []]);
     }
 
     /** 统计各搜索引擎蜘蛛最近 7 天的抓取，返回数组。供动作与 welcome() 共用。 */

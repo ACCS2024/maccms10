@@ -144,7 +144,17 @@ layui.use(['layer', 'form', 'table'], function () {
             title: '添加替换记录',
             area: ['560px', 'auto'],
             content: $('#addModal'),
-            success: function () { form.render(); }
+            // layui 2.9 与 2.2.5 的差异：content 传 jQuery 对象时会把该节点【搬进弹层】，
+            // 但不会替你去掉节点上的 layui-hide。2.2.5 会，所以升级后弹窗变成
+            // 「只有标题和关闭按钮、内容区空白」。这里在 success 里显式去掉，
+            // 并在 end 里加回来（节点会被 layer 还原到原位，下次打开才不会残留可见状态）。
+            success: function () {
+                $('#addModal').removeClass('layui-hide');
+                form.render();
+            },
+            end: function () {
+                $('#addModal').addClass('layui-hide');
+            }
         });
     });
 

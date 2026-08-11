@@ -1064,7 +1064,6 @@
     );
 
     function showSpiderData() {
-        console.log("showSpiderData -> showSpiderData")
         $.ajax({
             url: ADMIN_PATH + '/index/botlist.html',
             data: {
@@ -1072,15 +1071,14 @@
             },
             method: "POST",
             success: function (data) {
-                console.log("showSpiderData -> data", data.key)
+                // 兜底：接口返回形状不符时也不能让 apexcharts 收到 undefined ——
+                // series[].data 必须是数组，否则内部 .map() 直接抛异常，
+                // 而这是 window.onload 里的回调，一抛会把后面的初始化全带走。
+                var cats = (data && (data.key || data.keys)) || [];
+                var vals = (data && data.values) || [];
                 chart_spider.updateOptions({
-                    xaxis: {
-                        categories: data.key ? data.key : data.keys
-                    },
-                    series: [{
-                        name: "Spider_Visit",
-                        data: data.values
-                    }]
+                    xaxis: { categories: Array.isArray(cats) ? cats : [] },
+                    series: [{ name: "Spider_Visit", data: Array.isArray(vals) ? vals : [] }]
                 });
             },
             error: function (xhr, status, error) {
