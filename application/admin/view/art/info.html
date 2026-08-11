@@ -1,5 +1,5 @@
 {include file="../../../application/admin/view/public/head" /}
-<script type="text/javascript" src="__STATIC__/js/jquery.jscolor.js"></script>
+<script type="text/javascript" src="__STATIC__/js/jquery.jscolor.js?v=__ASSETV__"></script>
 {include file="../../../application/admin/view/public/editor" flag="art_editor"/}
 
 <div class="page-container p10">
@@ -334,7 +334,7 @@
 </div>
 {include file="../../../application/admin/view/public/foot" /}
 
-<script type="text/javascript" src="__STATIC__/js/ai_seo.js"></script>
+<script type="text/javascript" src="__STATIC__/js/ai_seo.js?v=__ASSETV__"></script>
 <script type="text/javascript">
     var UPLOAD_IMG_KEY="{$GLOBALS['config']['upload']['img_key']}";UPLOAD_IMG_API="{$GLOBALS['config']['upload']['img_api']}";
 
@@ -380,7 +380,7 @@
             bootAiSeo();
         } else {
             var s = document.createElement('script');
-            s.src = "__STATIC__/js/ai_seo.js?{$MAC_VERSION}";
+            s.src = "__STATIC__/js/ai_seo.js?v=__ASSETV__";
             s.onload = bootAiSeo;
             document.head.appendChild(s);
         }

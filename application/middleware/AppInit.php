@@ -5,6 +5,26 @@ use think\facade\Cache;
 
 class AppInit
 {
+    /**
+     * 静态资源版本戳。见 tpl_replace_string 里 __ASSETV__ 的说明。
+     * 缓存在静态属性里：一次请求内会被多个模板引用，不必反复 stat。
+     */
+    private static function assetVersion(): string
+    {
+        static $v = null;
+        if ($v !== null) {
+            return $v;
+        }
+        $stamp = (defined('APP_PATH') ? APP_PATH : __DIR__ . '/../') . 'data/asset_version.txt';
+        if (is_file($stamp)) {
+            $t = trim((string)@file_get_contents($stamp));
+            if ($t !== '' && preg_match('/^[A-Za-z0-9._-]{1,32}$/', $t)) {
+                return $v = $t;
+            }
+        }
+        return $v = (string)@filemtime(__FILE__);
+    }
+
     public function handle($request, \Closure $next)
     {
         if (PHP_VERSION_ID < 80000 && function_exists('libxml_disable_entity_loader')) {
@@ -55,6 +75,21 @@ class AppInit
                     '__CSS__'       => $root . $staticDir . '/css',
                     '__JS__'        => $root . $staticDir . '/js',
                     '__IMG__'       => $root . $staticDir . '/images',
+
+                    // 静态资源版本号（缓存击穿）。用法：src="__STATIC__/js/x.js?v=__ASSETV__"
+                    //
+                    // 之前的写法有三种，都不成立：
+                    //   · 43 处【完全没有版本号】—— 改了 JS/CSS 推上去，浏览器还吃旧缓存，
+                    //     本轮就因此让站长反复看到「改了没生效」；
+                    //   · 14 处用 {$MAC_VERSION} —— 那是 maccms 大版本号(v10)，每次 push 根本不变；
+                    //   · 1 处 v={:time()} —— 走到另一个极端，每次请求都变，等于彻底禁用缓存。
+                    //
+                    // 取值优先级：
+                    //   1. application/data/asset_version.txt —— 由 bin/deploy-155.sh 每次部署写入
+                    //      （内容是部署时间戳）。这是唯一「每次 push 必变、同一次部署内不变」的来源。
+                    //   2. 该文件不存在时（本地开发/未走部署脚本）退回到本文件自身的 mtime，
+                    //      保证改了代码就变，不会一直命中旧缓存。
+                    '__ASSETV__'    => self::assetVersion(),
                 ]
             ),
         ], 'view');

@@ -152,6 +152,13 @@ for site in "${SITES[@]}"; do
           chmod -R 775 /home/wwwroot/$site/runtime /home/wwwroot/$site/log /home/wwwroot/$site/application/data 2>/dev/null; \
           find /home/wwwroot/$site/runtime -mindepth 1 -maxdepth 1 $KEEP_SESSION -exec rm -rf {} + 2>/dev/null; \
           chown -R www:www /home/wwwroot/$site/runtime; true" >/dev/null
+    # 静态资源版本戳：模板里的 ?v=__ASSETV__ 取这个值（见 middleware/AppInit.php）。
+    # 每次部署写一个新时间戳 —— 这是唯一「每次 push 必变、同一次部署内不变」的来源。
+    # 不写的话，改了 JS/CSS 推上去浏览器仍吃旧缓存，表现为「明明改了却没生效」。
+    $SSH "date +%Y%m%d%H%M%S > /home/wwwroot/$site/application/data/asset_version.txt && \
+          chown www:www /home/wwwroot/$site/application/data/asset_version.txt"
+    echo "  静态资源版本戳已更新"
+
     [ "${FLUSH_SESSIONS:-0}" = "1" ] && echo "  已清空会话（所有人需重新登录）"
     echo "  属主与缓存已处理"
 done

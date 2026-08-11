@@ -35,3 +35,4 @@ adm_smoke.php
 # 目录里的 index.html 占位文件仍然跟踪。
 application/data/backup/*.sql
 application/data/optimize/
+application/data/asset_version.txt

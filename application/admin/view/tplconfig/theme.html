@@ -1,5 +1,5 @@
 {include file="../../../application/admin/view/public/head" /}
-<link rel="stylesheet" href="__STATIC__/css/theme_config_ux.css?{$MAC_VERSION}">
+<link rel="stylesheet" href="__STATIC__/css/theme_config_ux.css?v=__ASSETV__">
 
 <?php $mctheme = (is_file(ROOT_PATH . 'template/default/info.ini')) ? parse_ini_file(ROOT_PATH . 'template/default/info.ini') : []; ?>
 <?php $hlbg = (is_file(ROOT_PATH . 'template/default/asset/admin/hlbg.jpg')) ? ROOT_PATH . 'template/default/asset/admin/hlbg.jpg' : ''; ?>
@@ -2678,7 +2678,7 @@ $hotvod_tabs_list = (!empty($tplconfig['theme']['hotvod']['tabs']) && is_array($
     window.MAC_THEME_TYPE_INDEX = {:json_encode(isset($theme_type_index) ? $theme_type_index : [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)};
     window.MAC_THEME_UX_I18N = {$theme_ux_i18n_json};
 </script>
-<script type="text/javascript" src="__STATIC__/js/theme_config_ux.js?{$MAC_VERSION}"></script>
+<script type="text/javascript" src="__STATIC__/js/theme_config_ux.js?v=__ASSETV__"></script>
 <script type="text/javascript">
     layui.use(['form', 'upload', 'layer'], function () {
             // 操作对象
