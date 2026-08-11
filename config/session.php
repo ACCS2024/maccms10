@@ -42,7 +42,22 @@ return [
     // cache = think\session\driver\Cache,再由 store 指向 config/cache.php 里的某个 store
     'type'     => $_useRedis ? 'cache' : 'file',
     'store'    => $_useRedis ? 'redis' : null,
-    'expire'   => 1440,
+    // 会话有效期(秒)。这个值在 TP5 → TP8 之间【语义变了】,不能照抄。
+    //
+    // TP5:cookie 以 lifetime=0 下发,即浏览器会话 cookie —— 只要浏览器不关就一直在,
+    //     expire 只管服务端文件的过期,而 File 驱动每次写都会刷新 mtime,活跃会话不会掉。
+    // TP8:think\middleware\SessionInit:62 直接拿 session.expire 当 cookie 生命周期
+    //     (`$this->app->cookie->set($name, $id, $this->session->getConfig('expire'))`),
+    //     于是 1440 变成"Max-Age=1440 秒 = 闲置 24 分钟就掉线"。
+    //     实测每次请求都会重发 Set-Cookie 续期,所以连续操作不受影响,
+    //     但只要闲置超过 24 分钟,下一次点击就会跳回登录页。
+    //
+    // 24 分钟对内容编辑是不够的:写一篇长文、传一批图、或开着标签页去找素材,
+    // 都轻易超过。编辑反馈的「一点菜单就退出登录」即由此而来。
+    // 改为 12 小时,覆盖一个完整工作日。安全侧的补偿已经到位:
+    // HttpOnly + SameSite=Lax(config/cookie.php) + 登录成功后 Session::regenerate(true)
+    // 防会话固定 + 后台登录按 IP 限流。
+    'expire'   => 43200,
     'prefix'   => 'mac_',
 
     // 下面这三个键是【说明性的,TP8 的 Session 组件从不读】。
