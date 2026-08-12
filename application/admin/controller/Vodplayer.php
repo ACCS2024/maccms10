@@ -30,7 +30,11 @@ class Vodplayer extends Base
             }
             unset($param['__token__']);
             unset($param['flag']);
-            $code = $param['code'];
+            // 【安全治理】播放器一律配置化，不再向 static/player/ 写任何 JS 文件。
+            // 历史实现把一个 code 文本框的原始 JS 落盘成 <from>.js，而 player.js 会在
+            // 每个播放页加载并 innerHTML 它 —— 等于「后台加播放器 = 给全站每页注入任意
+            // HTML/跳转」，是架构级注入面。详见 docs/security/player-injection-hardening.md。
+            // 这里把 code 直接丢弃，不落盘。
             unset($param['code']);
             if(is_numeric($param['from'])){
                 $param['from'] .='_';
@@ -38,6 +42,14 @@ class Vodplayer extends Base
             if (strpos($param['from'], '.') !== false || strpos($param['from'], '/') !== false || strpos($param['from'], '\\') !== false) {
                 $this->error(lang('param_err'));
                 return;
+            }
+            // 新增/编辑的播放器必须能被【内置渲染器】处理：要么是内置类型，要么走解析
+            // (ps=1 且填了解析地址)。否则前端 player.js 的白名单会拒绝加载它 ——
+            // 从此不存在「未注册的自定义 JS 播放器」这条路。
+            $builtin = ['dplayer','videojs','iva','iframe','link','swf','flv'];
+            $isParse = (($param['ps'] ?? '0') === '1') && trim((string)($param['parse'] ?? '')) !== '';
+            if (!in_array($param['from'], $builtin, true) && !$isParse) {
+                return $this->error('播放器「'.$param['from'].'」无法渲染：请选择内置播放器类型，或开启解析(ps=1)并填写解析接口地址');
             }
             $list[$param['from']] = $param;
             $sort=[];
@@ -50,20 +62,12 @@ class Vodplayer extends Base
             if($res===false){
                 return $this->error(lang('write_err_config'));
             }
-
-            $res = fwrite(fopen('./static/player/' . $param['from'].'.js','wb'),$code);
-            if($res===false){
-                return $this->error(lang('wirte_err_codefile'));
-            }
             cache('cache_data','1');
             return $this->success(lang('save_ok'));
         }
 
+        // 不再读取 static/player/<id>.js —— 播放器已无自定义 JS，只剩配置。
         $info = $list[$param['id']];
-        if(!empty($info)){
-            $code = file_get_contents('./static/player/' . $param['id'].'.js');
-            $info['code'] = $code;
-        }
         $this->assign('info',$info);
         $this->assign('title',lang('admin/vodplayer/title'));
         return $this->fetch('admin@vodplayer/info');
@@ -110,11 +114,8 @@ class Vodplayer extends Base
     {
         $param = \think\facade\Request::param();
         $list = config($this->_pre);
+        // 导出只带配置，不再附带任何 JS 代码。
         $info = $list[$param['id']];
-        if(!empty($info)){
-            $code = file_get_contents('./static/player/' . $param['id'].'.js');
-            $info['code'] = $code;
-        }
 
         header("Content-type: application/octet-stream");
         if(strpos($_SERVER['HTTP_USER_AGENT'] ?? '', "MSIE")) {
@@ -148,19 +149,20 @@ class Vodplayer extends Base
                         $this->error(lang('param_err'));
                         return;
                     }
-                    $code = $data['code'];
+                    // 【安全治理】导入只接受配置，丢弃任何随包携带的 JS（老的分享包仍可导入，
+                    // 只是不再落盘执行）。同样要求可被内置渲染器处理。
                     unset($data['code']);
+                    $builtin = ['dplayer','videojs','iva','iframe','link','swf','flv'];
+                    $isParse = (($data['ps'] ?? '0') === '1') && trim((string)($data['parse'] ?? '')) !== '';
+                    if (!in_array($data['from'], $builtin, true) && !$isParse) {
+                        return $this->error('导入的播放器「'.$data['from'].'」无法渲染：需为内置类型或解析型(ps=1+解析地址)');
+                    }
 
                     $list = config($this->_pre);
                     $list[$data['from']] = $data;
                     $res = mac_arr2file(APP_PATH . 'extra/' . $this->_pre . '.php', $list);
                     if ($res === false) {
                         return $this->error(lang('write_err_config'));
-                    }
-
-                    $res = fwrite(fopen('./static/player/' . $data['from'] . '.js', 'wb'), $code);
-                    if ($res === false) {
-                        return $this->error(lang('wirte_err_codefile'));
                     }
                 }
                 return $this->success(lang('import_ok'));

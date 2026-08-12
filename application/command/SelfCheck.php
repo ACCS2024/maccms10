@@ -52,6 +52,7 @@ class SelfCheck extends Command
         $this->checkLangParity();
         $this->checkExtraStubs();
         $this->checkTemplateEscapeRegression();
+        $this->checkPlayerFiles();
 
         $fails = array_filter($this->issues, fn($i) => $i['level'] === 'FAIL');
         $warns = array_filter($this->issues, fn($i) => $i['level'] === 'WARN');
@@ -392,6 +393,42 @@ class SelfCheck extends Command
                 . '说明渲染时 view.default_filter 并未生效 —— 常见原因是 OPcache 还缓存着旧的 config/view.php。',
                 $hits, $sample
             ), '清空 runtime/ 并 reload php-fpm,然后复查');
+        }
+    }
+
+    /**
+     * static/player/ 下只允许存在【内置渲染器】文件。
+     *
+     * 背景：maccms 的播放器体系历史上支持「后台填一段 JS → 落盘成 <from>.js →
+     * 在每个播放页 innerHTML 执行」，这是全站级注入面（被 FUNNULL 链滥用过）。
+     * 治理后播放器一律配置化，static/player/ 只应有下面这几个随仓库版本化的内置文件。
+     * 任何多出来的 .js 都是异常，两种可能都要拦：
+     *   1) 有人（含被入侵后的后台）又往这里丢了自定义/恶意 JS —— 安全绊线；
+     *   2) 换机迁移时带过来了本不该有的旧自定义播放器 —— 迁移完整性兜底
+     *      （本次 155m3u8.js 漏迁那类问题的通用防线）。
+     * 详见 docs/security/player-injection-hardening.md。
+     */
+    private function checkPlayerFiles(): void
+    {
+        $allow = [
+            'dplayer.js', 'videojs.js', 'iva.js', 'iframe.js', 'link.js',
+            'swf.js', 'flv.js', 'parse.js', 'mac-play-child-bridge.js',
+        ];
+        foreach (['static/player', 'static_new/player'] as $rel) {
+            $dir = $this->rootPath() . $rel;
+            if (!is_dir($dir)) {
+                continue;
+            }
+            foreach (glob($dir . '/*.js') ?: [] as $p) {
+                $name = basename($p);
+                if (!in_array($name, $allow, true)) {
+                    $this->add('FAIL', 'player', sprintf(
+                        '%s/%s 不在内置播放器白名单内 —— 播放器已治理为纯配置，'
+                        . '不允许在此目录放自定义 JS（既可能是注入，也可能是迁移漏带的旧文件）。',
+                        $rel, $name
+                    ), "确认来源后删除它；播放器请在后台用「解析接口地址(ps=1+parse)」或内置类型配置");
+                }
+            }
         }
     }
 

@@ -88,7 +88,7 @@ return array (
     'tip' => '无需安装任何插件	',
     'id' => 'flv',
   ),
-  'modum3u8' => 
+  'modum3u8' =>
   array (
     'status' => '1',
     'from' => 'modum3u8',
@@ -98,6 +98,18 @@ return array (
     'ps' => '1',
     'parse' => 'https://jiexi.moduzyjx.com/?url=',
     'sort' => '8',
+    'tip' => '',
+  ),
+  '155m3u8' =>
+  array (
+    'status' => '1',
+    'from' => '155m3u8',
+    'show' => '155解析',
+    'des' => '',
+    'target' => '_self',
+    'ps' => '1',
+    'parse' => 'https://www.155jx.com/?url=',
+    'sort' => '9',
     'tip' => '',
   ),
 );

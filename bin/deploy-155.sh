@@ -98,6 +98,14 @@ REMOVED_PATHS=(
     "static/js/update.js"
     # 全后台从未使用（0 处 data-hs-*），却每页加载 309KB 且抛异常
     "static_new/js/preline.js"
+    # 播放器注入面治理（docs/security/player-injection-hardening.md）：
+    # 播放器改为纯配置，static/player/ 只留内置渲染器。清掉自定义/孤儿 JS：
+    #   155m3u8.js —— 迁成 ps=1+parse 配置（走内置 parse.js），裸文件不再需要
+    #   wjyun.js   —— 未注册的孤儿播放器，0 视频使用
+    "static/player/155m3u8.js"
+    "static_new/player/155m3u8.js"
+    "static/player/wjyun.js"
+    "static_new/player/wjyun.js"
 )
 
 echo "源: $SRC"
