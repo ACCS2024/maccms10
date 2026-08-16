@@ -510,11 +510,52 @@ if (!function_exists('mac_playurl_has_injection')) {
      * 返回 true = 有注入特征，调用方应拒绝写入 / 跳过该条。
      */
     function mac_playurl_has_injection($url): bool {
-        $url = (string)$url;
-        if ($url === '') { return false; }
-        if (preg_match('/["\'<>`\\\\]|\s/', $url)) { return true; }
-        if (preg_match('/\bon\w+\s*=|javascript:|vbscript:|data:\s*text\/html/i', $url)) { return true; }
+        $cur = (string)$url;
+        if ($cur === '') { return false; }
+        // 逐层 rawurldecode 后每层都查 —— 防 %22(")/%20(空格)/%3d(=)/%3c(<) 这类
+        // URL 编码绕过。攻击者在我上一版(只查字面字符)部署后，立刻改用编码变体：
+        //   正片$https://xiazai.it.com/%22%20onload%3d%22top.location.replace(%27...%27)...
+        // 实测 18.3 万条合法 play_url【零例外】不含 % 编码，故解码后再查不会误伤。
+        // 最多解 4 层，覆盖多重编码。
+        for ($i = 0; $i < 4; $i++) {
+            if (preg_match('/["\'<>`\\\\]|\s/', $cur)) { return true; }
+            if (preg_match('/\bon\w+\s*=|javascript:|vbscript:|data:\s*text\/html/i', $cur)) { return true; }
+            $dec = rawurldecode($cur);
+            if ($dec === $cur) { break; }
+            $cur = $dec;
+        }
         return false;
+    }
+}
+
+if (!function_exists('mac_vod_has_injection')) {
+    /**
+     * 入库前对一条 vod 数据的多个高危字段一次性做注入检测。命中返回触发的字段名，否则 ''。
+     *
+     * 覆盖两类向量（都是 mac_filter_xss 挡不住的）：
+     *  1) URL 字段（play/down 地址、各种封面图）—— 属性截断。
+     *     mac_filter_xss 对 URL 只 strip_tags、不转义引号，所以 1.jpg" onload=" 这种
+     *     能突破 <img src="..."> / iframe src="..."。用 mac_playurl_has_injection
+     *     （逐层 urldecode 后查引号/尖括号/空白/on事件/伪协议）单独把关。
+     *     实测 18 万条合法 pic/play 零误伤。
+     *  2) HTML 字段（vod_content / vod_blurb）—— 存储型 XSS。这两个字段【保留 HTML】
+     *     不做实体转义（否则正文格式全毁），所以要专门查 <script>/<iframe>/<embed>/
+     *     <object>/on事件/js|vbs 伪协议。实测 5000 条合法正文对这些模式零命中。
+     *
+     * 注：vod_jumpurl 不在此列 —— 它由 mac_clean_jumpurl_fields()/mac_safe_jumpurl()
+     * 走「清洗」而非「整条拒绝」，两者分工不同。
+     */
+    function mac_vod_has_injection($v): string {
+        if (!is_array($v)) { return ''; }
+        foreach (['vod_play_url','vod_down_url','vod_pic','vod_pic_thumb','vod_pic_slide','vod_pic_original'] as $f) {
+            if (isset($v[$f]) && $v[$f] !== '' && mac_playurl_has_injection($v[$f])) { return $f; }
+        }
+        foreach (['vod_content','vod_blurb'] as $f) {
+            if (isset($v[$f]) && preg_match('/<script\b|<iframe\b|<embed\b|<object\b|javascript:|vbscript:|\bon\w+\s*=/i', (string)$v[$f])) {
+                return $f;
+            }
+        }
+        return '';
     }
 }
 

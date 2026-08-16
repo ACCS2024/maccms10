@@ -914,10 +914,10 @@ class Collect extends Base {
                 // 播放页把它拼进 iframe 的 src="..." 就整页跳转。本站已被这样劫持 709 条。
                 // 命中即【整条跳过】：既不新增也不更新，已有的干净行原样保留。
                 // 判据见 mac_playurl_has_injection()（18 万条合法数据零误伤）。
-                if (mac_playurl_has_injection($v['vod_play_url']) || mac_playurl_has_injection($v['vod_down_url'])) {
+                if (($injField = mac_vod_has_injection($v)) !== '') {
                     @error_log(
-                        date('Y-m-d H:i:s') . " BLOCK play_url injection | name=" . mb_substr((string)($v['vod_name'] ?? ''), 0, 60)
-                        . " | play=" . mb_substr((string)$v['vod_play_url'], 0, 160) . "\n",
+                        date('Y-m-d H:i:s') . " BLOCK injection field={$injField} | name=" . mb_substr((string)($v['vod_name'] ?? ''), 0, 60)
+                        . " | val=" . mb_substr((string)($v[$injField] ?? ''), 0, 160) . "\n",
                         3, RUNTIME_PATH . 'log/play_injection.log'
                     );
                     continue;
