@@ -565,6 +565,11 @@ class Manga extends Base {
             unset($match_src1);
         }
 
+        // 安全加固：manga_content 保留 HTML 且不在下方 filter_fields 白名单内 —— 后台保存路径同样
+        // 需要富文本净化，去除 script/iframe/on事件/js伪协议，防存储型 XSS。
+        if (isset($data['manga_content']) && $data['manga_content'] !== '') {
+            $data['manga_content'] = mac_html_sanitize($data['manga_content']);
+        }
         if(empty($data['manga_blurb'])){
             $data['manga_blurb'] = mac_substring( str_replace('$$$','', strip_tags($data['manga_content'])),100);
         }

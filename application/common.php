@@ -2331,9 +2331,15 @@ function mac_filter_xss($str)
         }
 
         if ($is_url) {
-            // URL类型：只去除HTML标签，不进行HTML实体转义
-            // strip_tags() 会去除所有HTML标签，确保安全性
-            return trim(strip_tags($trimmed_str));
+            // URL 类型：去标签后【仍必须转义引号与尖括号】。否则"长得像 URL"的脏值
+            //（如 vod_name = a.com/" onmouseover="alert(1)）会被这里的 is_url 启发式误判为
+            // URL 而跳过实体转义，进而在模板的 src="..." / title="..." / alt="..." 里
+            // 截断属性、挂上事件处理器（属性截断存储型 XSS）。
+            // 只转义 " ' < >，保留 & = ? / 等 URL 合法字符不动 —— 真实 URL 的语义与显示
+            // 完全不受影响（合法 URL 本就不含裸引号/尖括号）。
+            $u = strip_tags($trimmed_str);
+            $u = str_replace(['"', "'", '<', '>'], ['&quot;', '&#039;', '&lt;', '&gt;'], $u);
+            return trim($u);
         }
     }
 
@@ -2342,10 +2348,94 @@ function mac_filter_xss($str)
 }
 
 function mac_restore_htmlfilter($str) {
-    if (stripos($str, '&amp;') !== false) {
-        return htmlspecialchars_decode($str, ENT_QUOTES);
+    // 安全加固（存储型 XSS 根因）：原实现对任何含 &amp; 的串做 htmlspecialchars_decode，
+    // 会把入库时 htmlentities() 转义过的评论/留言正文整段解码回真实 HTML —— 正文里只要
+    // 带一个字面 & 就触发，等于亲手把存储型 XSS 放回前台（/index.php/gbook 服务端内联渲染、
+    // 评论区 .html() 注入，对所有访客零点击执行，可盗管理员会话接管后台）。
+    // 存储内容已在入库端正确转义，输出端必须原样吐出，绝不能再解码。保留函数名做 no-op 垫片，
+    // 避免改动全部模板/调用点。
+    return (string)$str;
+}
+
+/**
+ * 富文本正文净化器（art_content / actor_content / manga_content / role_content /
+ * website_content 等【保留 HTML】的字段）。这些字段既不能像普通字段那样整体 htmlspecialchars
+ * （会毁掉排版），采集/接收(Collect::*_data 直接 insert)与后台保存(saveData 的 filter_fields
+ * 【不含】content)又都从不过滤它 —— <script>/<iframe>/<svg onload>/on事件/js伪协议 可原样落库，
+ * 主题一旦渲染 *_content 即存储型 XSS。
+ *
+ * 纯核心 PHP 实现（strip_tags 白名单 + 属性清洗 + 校验兜底），【不依赖 ext-dom/mbstring】
+ * ——本项目 composer 仅要求 ext-json/pdo，采集为高频路径，绝不能引入可能缺失的扩展。
+ * 语义等价浏览器：实体编码的 &lt;script&gt; 只是文本、予以保留；真正的可执行结构一律铲除。
+ * 宁可丢排版也绝不放行 XSS（第 5 步兜底：残留危险标签即降级为纯文本）。
+ */
+function mac_html_sanitize($html) {
+    $html = mac_scalar_string($html);
+    if ($html === '') { return ''; }
+    // 0) 去 NULL 与危险控制字符（保留 \t\n\r）
+    $html = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F]/', '', $html);
+    if (strpos($html, '<') === false) { return $html; } // 纯文本快路径
+
+    // 1) 整枝删除"带内容"的危险元素（闭合 + 未闭合兜底），循环到稳定以拆散 <scr<script>ipt>
+    $killWithContent = ['script','style','title','textarea','noscript','noembed','template','xml','svg','math','iframe','frameset'];
+    for ($pass = 0; $pass < 3; $pass++) {
+        $before = $html;
+        foreach ($killWithContent as $t) {
+            $html = preg_replace('#<'.$t.'\b[^>]*>.*?</'.$t.'\s*>#is', '', $html);
+            $html = preg_replace('#</?'.$t.'\b[^>]*>?#is', '', $html);
+        }
+        if ($html === $before) { break; }
     }
-    return $str;
+    // 2) 删注释 / CDATA / 条件注释 / doctype / PI
+    $html = preg_replace('#<!--.*?-->#s', '', $html);
+    $html = preg_replace('#<!\[CDATA\[.*?\]\]>#is', '', $html);
+    $html = preg_replace('#<![^>]*>#s', '', $html);
+    $html = preg_replace('#<\?.*?\?>#s', '', $html);
+
+    // 3) 标签白名单，其余标签剥离（strip_tags 保留内部文本，核心 C 解析器）
+    $allowed = '<p><br><hr><b><strong><i><em><u><s><strike><del><ins><span><div>'
+             . '<a><img><ul><ol><li><dl><dt><dd><table><caption><colgroup><col>'
+             . '<thead><tbody><tfoot><tr><td><th><h1><h2><h3><h4><h5><h6>'
+             . '<blockquote><q><pre><code><font><sub><sup><small><mark><abbr>'
+             . '<figure><figcaption><section><article><header><footer><nav><aside>';
+    $html = strip_tags($html, $allowed);
+
+    // 4) 逐开标签清洗属性：删 on* 事件、srcdoc/xmlns、危险协议 URL、style 里的 js
+    $html = preg_replace_callback(
+        '#<([a-zA-Z][a-zA-Z0-9]*)((?:"[^"]*"|\'[^\']*\'|[^>"\'])*)>#s',
+        function ($m) {
+            $attrs = $m[2];
+            $attrs = preg_replace('#\s+on\w+\s*=\s*("[^"]*"|\'[^\']*\'|[^\s>]+)#i', '', $attrs);
+            $attrs = preg_replace('#\s+(?:srcdoc|xmlns(?::\w+)?)\s*=\s*("[^"]*"|\'[^\']*\'|[^\s>]+)#i', '', $attrs);
+            $attrs = preg_replace_callback(
+                '#\s+([a-zA-Z:_-]+)\s*=\s*("[^"]*"|\'[^\']*\'|[^\s>]+)#s',
+                function ($a) {
+                    $an = strtolower($a[1]);
+                    $av = trim($a[2], "\"'");
+                    // 解码实体 + 去空白/控制字符，破解 &#106;avascript: / java\tscript: 类绕过
+                    $probe = strtolower(preg_replace('/[\x00-\x20]/', '', html_entity_decode($av, ENT_QUOTES)));
+                    if (preg_match('#^(?:javascript|vbscript|livescript|mocha|data|about|blob):#', $probe)
+                        && !preg_match('#^data:image/(?:png|jpe?g|gif|webp|bmp|x-icon)#', $probe)) {
+                        return '';
+                    }
+                    if ($an === 'style'
+                        && preg_match('#expression\s*\(|javascript\s*:|vbscript\s*:|behavior\s*:|@import|-moz-binding#i', $av)) {
+                        return '';
+                    }
+                    return $a[0];
+                },
+                $attrs
+            );
+            return '<' . $m[1] . $attrs . '>';
+        },
+        $html
+    );
+
+    // 5) 校验兜底：若仍残留危险开标签（异常/畸形构造绕过前面步骤），直接降级为纯文本。
+    if (preg_match('#<\s*(?:script|iframe|svg|object|embed|style|form|math|applet|meta|link|base|frame)\b#i', $html)) {
+        return trim(strip_tags($html));
+    }
+    return trim($html);
 }
 
 function mac_format_text($str, $allow_space = false)

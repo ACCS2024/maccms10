@@ -34,7 +34,8 @@ class Ppvod extends Base
             $this->logError('非法使用此参数，只能是yzm，不可更改');
             exit;
         }
-        if (($GLOBALS['config']['interface']['pass'] ?? '') !== ($this->_param['pass'] ?? '')) {
+        // 安全加固：常量时间比较，与 Receive 一致，杜绝时序侧信道逐字节爆破 interface.pass
+        if (!hash_equals((string)($GLOBALS['config']['interface']['pass'] ?? ''), (string)($this->_param['pass'] ?? ''))) {
             $this->logError('入库密码不一致');
             exit;
         }

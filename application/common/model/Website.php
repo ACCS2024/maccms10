@@ -530,6 +530,10 @@ class Website extends Base {
         if($data['uptime']==1){
             $data['website_time'] = time();
         }
+        // 安全加固：website_content 保留 HTML 且不在 filter_fields 白名单内，后台保存同样需富文本净化。
+        if (isset($data['website_content']) && $data['website_content'] !== '') {
+            $data['website_content'] = mac_html_sanitize($data['website_content']);
+        }
         if($data['uptag']==1){
             $data['website_tag'] = mac_get_tag($data['website_name'], $data['website_content']);
         }

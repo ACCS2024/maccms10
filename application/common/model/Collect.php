@@ -1481,7 +1481,10 @@ class Collect extends Base {
 
                 foreach($v as $k2=>$v2){
                     if(strpos($k2,'_content')===false) {
-                        $v[$k2] = mac_strip_tags($v2);
+                        // 安全加固：去标签(mac_strip_tags)后再做上下文转义(mac_filter_xss)。
+                        // 采集/接收(receive)入库路径不走 VodValidate::formatDataBeforeDb，
+                        // 原来仅 mac_strip_tags 会漏掉引号 —— 属性截断 XSS 从这里溜进 alt/title/src。
+                        $v[$k2] = mac_filter_xss(mac_strip_tags($v2));
                     }
                 }
                 $v['art_name'] = trim($v['art_name']);
@@ -1535,6 +1538,9 @@ class Collect extends Base {
                     $v['art_content'] = mac_rep_pse_syn($pse_syn, $v['art_content']);
                 }
 
+                // 安全加固：富文本正文保留 HTML，采集/接收路径不过 saveData，此处白名单净化
+                // 去除 script/iframe/on事件/js伪协议，防 *_content 存储型 XSS（blurb 随后取净化后纯文本）。
+                if (isset($v['art_content']) && $v['art_content'] !== '') { $v['art_content'] = mac_html_sanitize($v['art_content']); }
                 if(empty($v['art_blurb'])){
                     $v['art_blurb'] = mac_substring( strip_tags( str_replace('$$$','',$v['art_content']) ) ,100);
                 }
@@ -1819,7 +1825,10 @@ class Collect extends Base {
 
                 foreach($v as $k2=>$v2){
                     if(strpos($k2,'_content')===false) {
-                        $v[$k2] = mac_strip_tags($v2);
+                        // 安全加固：去标签(mac_strip_tags)后再做上下文转义(mac_filter_xss)。
+                        // 采集/接收(receive)入库路径不走 VodValidate::formatDataBeforeDb，
+                        // 原来仅 mac_strip_tags 会漏掉引号 —— 属性截断 XSS 从这里溜进 alt/title/src。
+                        $v[$k2] = mac_filter_xss(mac_strip_tags($v2));
                     }
                 }
                 $v['actor_name'] = trim($v['actor_name']);
@@ -1871,6 +1880,9 @@ class Collect extends Base {
                     $v['actor_content'] = mac_rep_pse_syn($pse_syn, $v['actor_content']);
                 }
 
+                // 安全加固：富文本正文保留 HTML，采集/接收路径不过 saveData，此处白名单净化
+                // 去除 script/iframe/on事件/js伪协议，防 *_content 存储型 XSS（blurb 随后取净化后纯文本）。
+                if (isset($v['actor_content']) && $v['actor_content'] !== '') { $v['actor_content'] = mac_html_sanitize($v['actor_content']); }
                 if(empty($v['actor_blurb'])){
                     $v['actor_blurb'] = mac_substring( strip_tags($v['actor_content']) ,100);
                 }
@@ -2094,10 +2106,15 @@ class Collect extends Base {
 
                 foreach($v as $k2=>$v2){
                     if(strpos($k2,'_content')===false) {
-                        $v[$k2] = mac_strip_tags($v2);
+                        // 安全加固：去标签(mac_strip_tags)后再做上下文转义(mac_filter_xss)。
+                        // 采集/接收(receive)入库路径不走 VodValidate::formatDataBeforeDb，
+                        // 原来仅 mac_strip_tags 会漏掉引号 —— 属性截断 XSS 从这里溜进 alt/title/src。
+                        $v[$k2] = mac_filter_xss(mac_strip_tags($v2));
                     }
                 }
 
+                // 安全加固：富文本正文保留 HTML，采集/接收路径不过 saveData，此处白名单净化防存储型 XSS。
+                if (isset($v['role_content']) && $v['role_content'] !== '') { $v['role_content'] = mac_html_sanitize($v['role_content']); }
                 $v['role_en'] = Pinyin::get($v['role_name']);
                 $v['role_letter'] = strtoupper(substr($v['role_en'],0,1));
                 $v['role_time_add'] = time();
@@ -2416,7 +2433,10 @@ class Collect extends Base {
 
                 foreach($v as $k2=>$v2){
                     if(strpos($k2,'_content')===false) {
-                        $v[$k2] = mac_strip_tags($v2);
+                        // 安全加固：去标签(mac_strip_tags)后再做上下文转义(mac_filter_xss)。
+                        // 采集/接收(receive)入库路径不走 VodValidate::formatDataBeforeDb，
+                        // 原来仅 mac_strip_tags 会漏掉引号 —— 属性截断 XSS 从这里溜进 alt/title/src。
+                        $v[$k2] = mac_filter_xss(mac_strip_tags($v2));
                     }
                 }
                 $v['website_name'] = trim($v['website_name']);
@@ -2468,6 +2488,9 @@ class Collect extends Base {
                     $v['website_content'] = mac_rep_pse_syn($pse_syn, $v['website_content']);
                 }
 
+                // 安全加固：富文本正文保留 HTML，采集/接收路径不过 saveData，此处白名单净化
+                // 去除 script/iframe/on事件/js伪协议，防 *_content 存储型 XSS（blurb 随后取净化后纯文本）。
+                if (isset($v['website_content']) && $v['website_content'] !== '') { $v['website_content'] = mac_html_sanitize($v['website_content']); }
                 if(empty($v['website_blurb'])){
                     $v['website_blurb'] = mac_substring( strip_tags($v['website_content']) ,100);
                 }
@@ -2694,7 +2717,10 @@ class Collect extends Base {
 
                 foreach($v as $k2=>$v2){
                     if(strpos($k2,'_content')===false) {
-                        $v[$k2] = mac_strip_tags($v2);
+                        // 安全加固：去标签(mac_strip_tags)后再做上下文转义(mac_filter_xss)。
+                        // 采集/接收(receive)入库路径不走 VodValidate::formatDataBeforeDb，
+                        // 原来仅 mac_strip_tags 会漏掉引号 —— 属性截断 XSS 从这里溜进 alt/title/src。
+                        $v[$k2] = mac_filter_xss(mac_strip_tags($v2));
                     }
                 }
 
@@ -2717,6 +2743,13 @@ class Collect extends Base {
                 if ($config['psesyn'] == 1) {
                     $v['comment_content'] = mac_rep_pse_syn($pse_syn, $v['comment_content']);
                 }
+
+                // 安全加固：Receive/comment(T1) 直接入库，comment_content 保留了 HTML 且未转义，
+                // 与前台评论(index/api controller 里的 htmlentities)行为不一致 —— 否则上游/推送方
+                // 可存入 <script>/<img onerror> 成为评论区存储型 XSS。这里对齐前台：违禁词过滤 +
+                // htmlentities，纯文本入库；渲染端(Comment::listData)已去掉 mac_restore_htmlfilter 解码。
+                // 放在 dedup where 之前，保证判重用的也是转义后的值，避免重复入库。
+                $v['comment_content'] = htmlentities(mac_filter_words((string)$v['comment_content']));
 
                 $where = [];
                 $where2 = [];
@@ -3060,11 +3093,16 @@ class Collect extends Base {
 
                 foreach($v as $k2=>$v2){
                     if(strpos($k2,'_content')===false) {
-                        $v[$k2] = mac_strip_tags($v2);
+                        // 安全加固：去标签(mac_strip_tags)后再做上下文转义(mac_filter_xss)。
+                        // 采集/接收(receive)入库路径不走 VodValidate::formatDataBeforeDb，
+                        // 原来仅 mac_strip_tags 会漏掉引号 —— 属性截断 XSS 从这里溜进 alt/title/src。
+                        $v[$k2] = mac_filter_xss(mac_strip_tags($v2));
                     }
                 }
 
                 $v['type_id_1'] = intval($type_list[$v['type_id']]['type_pid']);
+                // 安全加固：富文本正文保留 HTML，采集/接收路径不过 saveData，此处白名单净化防存储型 XSS。
+                if (isset($v['manga_content']) && $v['manga_content'] !== '') { $v['manga_content'] = mac_html_sanitize($v['manga_content']); }
                 $v['manga_en'] = Pinyin::get($v['manga_name']);
                 $v['manga_letter'] = strtoupper(substr($v['manga_en'],0,1));
                 $v['manga_time_add'] = time();

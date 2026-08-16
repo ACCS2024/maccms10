@@ -560,6 +560,11 @@ class Art extends Base {
             unset($match_src1);
         }
 
+        // 安全加固：art_content 保留 HTML 且不在下方 filter_fields 白名单内 —— 后台保存路径同样
+        // 需要富文本净化，去除 script/iframe/on事件/js伪协议，防存储型 XSS。
+        if (isset($data['art_content']) && $data['art_content'] !== '') {
+            $data['art_content'] = mac_html_sanitize($data['art_content']);
+        }
         if(empty($data['art_blurb'])){
             $data['art_blurb'] = mac_substring( str_replace('$$$','', strip_tags($data['art_content'])),100);
         }

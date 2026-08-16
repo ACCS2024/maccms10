@@ -376,6 +376,10 @@ class Role extends Base {
             unset($match_src1);
         }
 
+        // 安全加固：role_content 保留 HTML 且不在 filter_fields 白名单内，后台保存同样需富文本净化。
+        if (isset($data['role_content']) && $data['role_content'] !== '') {
+            $data['role_content'] = mac_html_sanitize($data['role_content']);
+        }
         if($data['uptime']==1){
             $data['role_time'] = time();
         }
