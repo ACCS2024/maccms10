@@ -220,6 +220,12 @@ class Ppvod extends Base
                 ));
                 return;
             }
+            // 【安全闸】纵深防御：ingest 的 play_url 虽由服务端配置拼装（play_domain+rpath），
+            // 但 rpath 来自推送方，理论上可夹带注入。与 receive/vod 同一道判据，命中即拒绝入库。
+            if (mac_playurl_has_injection($info['vod_play_url'] ?? '') || mac_playurl_has_injection($info['vod_down_url'] ?? '')) {
+                $this->logError('拒绝：play_url 含注入特征，视频名:' . ($info['vod_name'] ?? ''));
+                return;
+            }
             $res = Db::name('vod')->insert($info);
             if ($res) {
                 // 增量同步搜索索引。本控制器为了保持与老站一致的字段处理，

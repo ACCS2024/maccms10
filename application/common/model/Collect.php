@@ -907,6 +907,22 @@ class Collect extends Base {
                 $v['vod_down_server'] = (string)join('$$$', (array)$cj_down_server_arr);
                 $v['vod_down_note'] = (string)join('$$$', (array)$cj_down_note_arr);
 
+                // 【安全闸】拒绝夹带 HTML 属性截断注入的 播放/下载地址（cs_jump/xiazai 挂马向量）。
+                // 攻击者 POST 到 /api.php/receive/vod（凭 interface.pass），用 vod_name 匹配到
+                // 已有视频，把 vod_play_url 覆盖成
+                //   正片$https://xiazai.it.com/" onload="top.location.replace('...')" x="
+                // 播放页把它拼进 iframe 的 src="..." 就整页跳转。本站已被这样劫持 709 条。
+                // 命中即【整条跳过】：既不新增也不更新，已有的干净行原样保留。
+                // 判据见 mac_playurl_has_injection()（18 万条合法数据零误伤）。
+                if (mac_playurl_has_injection($v['vod_play_url']) || mac_playurl_has_injection($v['vod_down_url'])) {
+                    @error_log(
+                        date('Y-m-d H:i:s') . " BLOCK play_url injection | name=" . mb_substr((string)($v['vod_name'] ?? ''), 0, 60)
+                        . " | play=" . mb_substr((string)$v['vod_play_url'], 0, 160) . "\n",
+                        3, RUNTIME_PATH . 'log/play_injection.log'
+                    );
+                    continue;
+                }
+
                 if($blend===false){
                     $info = (new \app\common\model\Vod())->where($where)->find();
                 }

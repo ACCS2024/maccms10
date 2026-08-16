@@ -493,6 +493,31 @@ function mac_clean_jumpurl_fields($row)
     return $row;
 }
 
+if (!function_exists('mac_playurl_has_injection')) {
+    /**
+     * 检测 播放/下载地址 里是否夹带 HTML 属性截断注入。
+     *
+     * 背景（cs_jump 的进化版）：老攻击链往 vod_jumpurl 塞跳转，已被 mac_safe_jumpurl 挡住；
+     * 攻击者改往 vod_play_url 塞：
+     *   正片$https://xiazai.it.com/" onload="top.location.replace('https://xiazai.it.com/')" x="
+     * 播放页把 play_url 直接拼进 iframe 的 src="..."，那个 " 提前闭合 src，再挂一个
+     * onload 事件把整页 top.location 跳到挂马站。本站实测已有 709 条被这样劫持。
+     *
+     * 合法的 play_url 形如  第1集$https://x/a/index.m3u8#第2集$...  （$/$$$/# 分隔），
+     * 实测 18 万条干净数据【零例外】不含：双/单引号、尖括号、反引号、反斜杠、空白字符、
+     * on..= 事件处理器、js/vbs/data 伪协议。命中任一即判为注入。
+     *
+     * 返回 true = 有注入特征，调用方应拒绝写入 / 跳过该条。
+     */
+    function mac_playurl_has_injection($url): bool {
+        $url = (string)$url;
+        if ($url === '') { return false; }
+        if (preg_match('/["\'<>`\\\\]|\s/', $url)) { return true; }
+        if (preg_match('/\bon\w+\s*=|javascript:|vbscript:|data:\s*text\/html/i', $url)) { return true; }
+        return false;
+    }
+}
+
 function mac_echo($str)
 {
     echo $str.'<br>';
