@@ -43,10 +43,15 @@ trap cleanup EXIT
 sshpass -e ssh $SSH_OPTS -fN root@$HOST
 
 # 每个站点自有、绝不能被代码树覆盖的东西
+# 注意 runtime/upload/log 必须带【前导斜杠】锚定到站点根：
+#   不带斜杠的 'upload/' 会匹配【任意层级】叫 upload 的目录，把
+#   application/common/extend/upload/(上传适配器)、application/admin/view/upload/
+#   与 view/extend/upload/(上传视图模板) 一起误排除 —— 这些是代码，必须部署。
+#   曾导致 155api 缺 7 个上传适配器、且这些目录里的修复静默不生效。
 EXCLUDES=(
     --exclude='.git/'            --exclude='.github/'
-    --exclude='runtime/'         --exclude='upload/'
-    --exclude='log/'             --exclude='.env'
+    --exclude='/runtime/'        --exclude='/upload/'
+    --exclude='/log/'            --exclude='.env'
     --exclude='.user.ini'                                  # aaPanel 用 chattr +i 锁定，且各站 open_basedir 不同
     --exclude='application/extra/maccms.php'               # 两站配置本就不同
     --exclude='application/extra/yzm.php'                  # 转码机对接的站点私有配置(含基础设施地址)
@@ -116,7 +121,15 @@ for site in "${SITES[@]}"; do
     echo "── $site ──────────────────────────────"
     # --no-owner --no-group：以 root 跑 rsync 会把目标属主改成 root，
     # 导致 FPM(www) 无法在站点根创建 log/ 等目录（本次迁移踩过）
-    rsync -a --no-owner --no-group --info=stats1 \
+    #
+    # --checksum：按【内容】比对决定是否传输，不用 -a 默认的「大小+mtime」快判。
+    #   原因：git 操作（checkout/stash/pull）会把文件 mtime 重置成操作时刻，
+    #   可能让「内容已变、mtime 却比服务器旧」的文件被 rsync 静默跳过 ——
+    #   本次就发生过：mac_html_sanitize 富文本净化器提交进了 common.php，
+    #   却因 mtime 早于服务器上一版而【从未部署】，安全加固静默漏掉。
+    #   upload/(图片) 已 EXCLUDE，故 checksum 只扫代码+静态资源(约几百个小文件)，
+    #   多花几秒换「安全修复一定到位」，值。
+    rsync -a --checksum --no-owner --no-group --info=stats1 \
         -e "ssh $SSH_OPTS" "${EXCLUDES[@]}" \
         "$SRC" "root@$HOST:/home/wwwroot/$site/" 2>&1 | grep -E 'transferred|created' || true
 
