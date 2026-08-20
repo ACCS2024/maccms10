@@ -267,24 +267,21 @@ class Ppvod extends Base
                 $this->logError("拒绝：字段 {$injField} 含注入特征，视频名:" . ($info['vod_name'] ?? ''));
                 return json($this->env(0, 'rejected', ['field' => $injField]));
             }
-            $res = Db::name('vod')->insert($info);
-            if (!$res) {
+            // insertGetId 直接取自增 id。【不可】再用 where('vod_name')->value('vod_id') 反查：
+            // 判重已排除回收站记录、允许「回收站同名行(更早、id 更小) + 新活跃行」共存，按名反查
+            // 会命中那条更早的回收站行 —— 返回错的 vod_id，且 afterVodSave 会把它当已回收从索引
+            // 移除，结果新入库的活跃行反而没进搜索索引。
+            $newId = (int)Db::name('vod')->insertGetId($info);
+            if ($newId <= 0) {
                 $this->logError('视频入库失败');
                 return json($this->env(0, 'db_error'));
             }
-            // 增量同步搜索索引。本控制器为了保持与老站一致的字段处理，
-            // 是直接 Db::insert 而非走 Vod::saveData()，因此不会自动触发
-            // MeilisearchSync —— 不显式调用的话，转码机推进来的内容要等到
-            // 下一次全量重建才可被搜索到。
-            // afterVodSave 内部会按 vod_status / vod_recycle_time 判断：
-            // 未发布(默认 status=0 待审核)时会从索引移除，因此无论
-            // default_status 配成 0 还是 1，这里调用都是正确的。
-            $newId = 0;
+            // 增量同步搜索索引。本控制器为保持与老站一致的字段处理，是直接 Db::insert 而非走
+            // Vod::saveData()，因此不会自动触发 MeilisearchSync —— 不显式调用的话，转码机推进来的
+            // 内容要等下一次全量重建才可被搜索到。afterVodSave 内部会按 vod_status / vod_recycle_time
+            // 判断（未发布则从索引移除），故无论 default_status 是 0 还是 1，这里调用都正确。
             try {
-                $newId = (int)Db::name('vod')->where('vod_name', $info['vod_name'])->value('vod_id');
-                if ($newId > 0) {
-                    \app\common\util\MeilisearchSync::afterVodSave($newId);
-                }
+                \app\common\util\MeilisearchSync::afterVodSave($newId);
             } catch (\Throwable $e) {
                 // 索引同步失败不应影响入库结果
                 $this->logError('Meili 同步失败: ' . $e->getMessage());
