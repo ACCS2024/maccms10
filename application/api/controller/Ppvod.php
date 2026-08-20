@@ -32,12 +32,12 @@ class Ppvod extends Base
 
         if (($this->_param['ac'] ?? '') !== 'yzm') {
             $this->logError('非法使用此参数，只能是yzm，不可更改');
-            exit;
+            $this->jsonExit($this->env(0, 'bad_action'));
         }
         // 安全加固：常量时间比较，与 Receive 一致，杜绝时序侧信道逐字节爆破 interface.pass
         if (!hash_equals((string)($GLOBALS['config']['interface']['pass'] ?? ''), (string)($this->_param['pass'] ?? ''))) {
             $this->logError('入库密码不一致');
-            exit;
+            $this->jsonExit($this->env(0, 'bad_pass'));
         }
 
         // 配置来自后台「PPVOD 转码入库」页（$config['ppvod']，存于本站
@@ -45,14 +45,14 @@ class Ppvod extends Base
         $cfg = $GLOBALS['config']['ppvod'] ?? [];
         if (!is_array($cfg) || (string)($cfg['status'] ?? '0') !== '1') {
             $this->logError('PPVOD 入库接口未启用：请在后台「PPVOD 转码入库」中开启');
-            exit;
+            $this->jsonExit($this->env(0, 'disabled'));
         }
         $cfg['category_map'] = is_array($cfg['category_map'] ?? null)
             ? array_map('intval', $cfg['category_map'])
             : mac_ppvod_category_map();
         if (empty($cfg['play_domain']) || empty($cfg['pic_domain']) || empty($cfg['category_map'])) {
             $this->logError('PPVOD 配置不完整：播放域名 / 图床域名 / 分类映射均为必填');
-            exit;
+            $this->jsonExit($this->env(0, 'config_incomplete'));
         }
         if (!is_array($cfg['keyword_blacklist'] ?? null)) {
             $cfg['keyword_blacklist'] = array_values(array_filter(array_map(
@@ -60,6 +60,41 @@ class Ppvod extends Base
             )));
         }
         $this->_cfg = $cfg;
+    }
+
+    /**
+     * 统一入库回执信封。
+     *
+     * 历史顽疾：yzmauto 的每一条路径都 `return;`（HTTP 200 + 0 字节），推送方
+     * 无从区分「入库成功 / 同名已存在 / 分类未知 / 被安全闸拒绝 / 密码错」，只能靠
+     * 猜——于是转码机侧把一整批推送全标「成功」，本站实际一条没进，日志上还看不出。
+     *
+     * 契约（HTTP 状态码一律 200，对接方只看 body.code）：
+     *   code=1  内容此刻确实在本站库中且处于活跃态（本次插入，或同名已存在且未在回收站）
+     *           → 推送方判「已送达」，不必重投。
+     *   code=0  未入库/不可见，msg 为确定原因：
+     *           bad_action/bad_pass/disabled/config_incomplete/config_error/empty_body/
+     *           bad_json/blocked_keyword/bad_category/rejected/duplicate_recycled/db_error/db_exception
+     *           → 推送方据 msg 告警或修配置。
+     * 转码机旧版本忽略响应体，新增回执向后兼容。
+     */
+    private function env(int $code, string $msg, array $extra = []): array
+    {
+        return array_merge(['code' => $code, 'msg' => $msg], $extra);
+    }
+
+    /**
+     * 构造函数阶段没有「返回响应」通道（其返回值不会被框架渲染），故手动输出 JSON 后 exit——
+     * 与 action 内 `return json($this->env(...))` 产出完全同构的 body，
+     * 保证无论在哪一道闸被拦下，对接方都拿到结构一致的回执。
+     */
+    private function jsonExit(array $env): void
+    {
+        if (!headers_sent()) {
+            header('Content-Type: application/json; charset=utf-8');
+        }
+        echo json_encode($env, JSON_UNESCAPED_UNICODE);
+        exit;
     }
 
     /**
@@ -104,18 +139,18 @@ class Ppvod extends Base
         $collect = $collect['vod'] ?? [];
         if (empty($collect)) {
             $this->logError('配置参数出错，无法使用');
-            return;
+            return json($this->env(0, 'config_error'));
         }
 
         $task = file_get_contents('php://input');
         if (!$task) {
             $this->logError('未获取到对应视频信息');
-            return;
+            return json($this->env(0, 'empty_body'));
         }
         $arr = json_decode($task, true);
         $this->logError($task);
         if (!$arr) {
-            return;
+            return json($this->env(0, 'bad_json'));
         }
 
         $c = $this->_cfg;
@@ -135,7 +170,7 @@ class Ppvod extends Base
 
         if ($this->transgress_keyword($info['vod_name']) > 0) {
             $this->logError('内容含有非法词汇,无法入库 视频ID:' . $info['vod_name']);
-            return;
+            return json($this->env(0, 'blocked_keyword'));
         }
 
         $info['vod_en']        = Pinyin::get($info['vod_name']);
@@ -195,7 +230,7 @@ class Ppvod extends Base
         // category → type_id 映射来自站点配置，不内置任何业务分类
         if (!isset($c['category_map'][$category])) {
             $this->logError('视频入库失败：未知分类 ' . $category);
-            return;
+            return json($this->env(0, 'bad_category', ['category' => $category]));
         }
         $info['type_id'] = (int)$c['category_map'][$category];
 
@@ -219,38 +254,46 @@ class Ppvod extends Base
                     '跳过：已存在同名视频 vod_id=%d（%s）。视频名:%s',
                     (int)$exists['vod_id'], $state, $info['vod_name']
                 ));
-                return;
+                // 回执：回收站里的同名记录 = 内容当前不可见、且会被永久静默跳过，
+                // 对推送方等同「未入库」，给 code=0 便于其告警；活跃的同名 code=1（已在库）。
+                $stateTok = $recycled ? 'recycled' : ((int)($exists['vod_status'] ?? 0) === 1 ? 'published' : 'pending');
+                return $recycled
+                    ? json($this->env(0, 'duplicate_recycled', ['vod_id' => (int)$exists['vod_id'], 'state' => $stateTok]))
+                    : json($this->env(1, 'duplicate', ['vod_id' => (int)$exists['vod_id'], 'state' => $stateTok]));
             }
             // 【安全闸】纵深防御：ingest 的 play_url/pic 虽多由服务端配置拼装，但 rpath、
             // 推送方给的字段理论上可夹带注入。与 receive/vod 同一道综合判据，命中即拒绝入库。
             if (($injField = mac_vod_has_injection($info)) !== '') {
                 $this->logError("拒绝：字段 {$injField} 含注入特征，视频名:" . ($info['vod_name'] ?? ''));
-                return;
+                return json($this->env(0, 'rejected', ['field' => $injField]));
             }
             $res = Db::name('vod')->insert($info);
-            if ($res) {
-                // 增量同步搜索索引。本控制器为了保持与老站一致的字段处理，
-                // 是直接 Db::insert 而非走 Vod::saveData()，因此不会自动触发
-                // MeilisearchSync —— 不显式调用的话，转码机推进来的内容要等到
-                // 下一次全量重建才可被搜索到。
-                // afterVodSave 内部会按 vod_status / vod_recycle_time 判断：
-                // 未发布(默认 status=0 待审核)时会从索引移除，因此无论
-                // default_status 配成 0 还是 1，这里调用都是正确的。
-                try {
-                    $newId = (int)Db::name('vod')->where('vod_name', $info['vod_name'])->value('vod_id');
-                    if ($newId > 0) {
-                        \app\common\util\MeilisearchSync::afterVodSave($newId);
-                    }
-                } catch (\Throwable $e) {
-                    // 索引同步失败不应影响入库结果
-                    $this->logError('Meili 同步失败: ' . $e->getMessage());
-                }
+            if (!$res) {
+                $this->logError('视频入库失败');
+                return json($this->env(0, 'db_error'));
             }
-            $this->logError($res
-                ? '视频入库成功 视频ID:' . $info['vod_name'] . ' 分类:' . $info['vod_class']
-                : '视频入库失败');
+            // 增量同步搜索索引。本控制器为了保持与老站一致的字段处理，
+            // 是直接 Db::insert 而非走 Vod::saveData()，因此不会自动触发
+            // MeilisearchSync —— 不显式调用的话，转码机推进来的内容要等到
+            // 下一次全量重建才可被搜索到。
+            // afterVodSave 内部会按 vod_status / vod_recycle_time 判断：
+            // 未发布(默认 status=0 待审核)时会从索引移除，因此无论
+            // default_status 配成 0 还是 1，这里调用都是正确的。
+            $newId = 0;
+            try {
+                $newId = (int)Db::name('vod')->where('vod_name', $info['vod_name'])->value('vod_id');
+                if ($newId > 0) {
+                    \app\common\util\MeilisearchSync::afterVodSave($newId);
+                }
+            } catch (\Throwable $e) {
+                // 索引同步失败不应影响入库结果
+                $this->logError('Meili 同步失败: ' . $e->getMessage());
+            }
+            $this->logError('视频入库成功 视频ID:' . $info['vod_name'] . ' 分类:' . $info['vod_class']);
+            return json($this->env(1, 'inserted', ['vod_id' => $newId]));
         } catch (\Throwable $e) {
             $this->logError($e->getMessage());
+            return json($this->env(0, 'db_exception'));
         }
     }
 
