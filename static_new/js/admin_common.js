@@ -363,6 +363,16 @@ layui.define(['element', 'form'], function (exports) {
                 return false;
             }
             $.get(href, function (res) {
+                if (res.code == 2 && res.confirm) {
+                    layer.confirm(res.confirm, {title:false, closeBtn:0, btn:['是，覆盖','否，不还原']}, function (idx) {
+                        layer.close(idx);
+                        $.get(href + (href.indexOf('?')>-1?'&':'?') + 'overwrite=1', function (res2) {
+                            layer.msg(res2.msg);
+                            if (res2.code == 1) { that.parents('tr').remove(); that.parents('.tr').remove(); }
+                        });
+                    });
+                    return;
+                }
                 layer.msg(res.msg);
                 if (res.code == 1) {
                     that.parents('tr').remove();
@@ -496,6 +506,18 @@ layui.define(['element', 'form'], function (exports) {
                     }
                     layer.msg('数据提交中...', { time: 500000 });
                     $.post(href, query, function (res) {
+                        // 还原冲突二次确认（opt-in 协议）：仅当返回 code=2 且带 confirm 提示语时触发，
+                        // 弹「是否覆盖」；「是」带 overwrite=1 重发，「否」取消。其它动作不返回 confirm，不受影响。
+                        if (res.code == 2 && res.confirm) {
+                            layer.confirm(res.confirm, {title:false, closeBtn:0, btn:['是，覆盖','否，不还原']}, function (idx) {
+                                layer.close(idx);
+                                layer.msg('数据提交中...', {time:500000});
+                                $.post(href, query + '&overwrite=1', function (res2) {
+                                    layer.msg(res2.msg, {}, function () { if (res2.code != 0) { location.reload(); } });
+                                });
+                            });
+                            return;
+                        }
                         layer.msg(res.msg, {}, function () {
                             if (res.code != 0) {
                                 location.reload();

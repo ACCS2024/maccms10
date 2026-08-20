@@ -665,14 +665,64 @@ class Vod extends Base
     public function restore()
     {
         $param = \think\facade\Request::param();
-        $ids = $param['ids'];
+        $ids = $param['ids'] ?? '';
         if (empty($ids)) {
             return $this->error(lang('param_err'));
         }
-        $where = [['vod_id', 'in', $ids]];
-        $res = (new \app\common\model\Vod())->restoreData($where);
+        // 归一化为 int 数组（兼容 "1,2,3" 字符串与 ids[] 数组，杜绝 scalar 强转只命中一条）
+        $idList = mac_where_ids($ids);
+        if (empty($idList)) {
+            return $this->error(lang('param_err'));
+        }
+        $overwrite = !empty($param['overwrite']);
+
+        // 冲突检测：被还原的回收站记录里，哪些的 vod_name 已存在【活跃】同名行。
+        // 背景：原记录被删进回收站后，转码机 yzmauto（insert-fresh）可能已重推生成一条
+        // 新的活跃同名行；此时直接还原旧记录 → 两条同名活跃行、前台重复。故先探测冲突，
+        // 让后台用户确认是否「覆盖」（把现有活跃版移回回收站、让被还原版上位）。
+        $recycled = \think\facade\Db::name('vod')
+            ->whereIn('vod_id', $idList)->where('vod_recycle_time', '>', 0)
+            ->column('vod_name', 'vod_id');            // [id => name]
+        $conflictActiveIds = [];                        // 需被「覆盖」移入回收站的现有活跃行 id
+        $conflictCount = 0;
+        foreach ($recycled as $rname) {
+            $act = \think\facade\Db::name('vod')
+                ->where('vod_name', $rname)->where('vod_recycle_time', 0)
+                ->column('vod_id');
+            if (!empty($act)) {
+                $conflictCount++;
+                foreach ($act as $aid) { $conflictActiveIds[(int)$aid] = true; }
+            }
+        }
+
+        if ($conflictCount > 0 && !$overwrite) {
+            // 需二次确认。前端 admin_common.js 识别 code=2 + confirm 字段：
+            // 「是，覆盖」→ 带 overwrite=1 重发；「否，不还原」→ 取消。仅还原动作返回该协议。
+            return json([
+                'code'    => 2,
+                'msg'     => '存在同名冲突',
+                'confirm' => '有 ' . $conflictCount . ' 条要还原的记录，已存在另一版本（当前活跃）。'
+                    . '选择「覆盖」将把现有活跃版本移回回收站、让被还原版上位（可再还原，不会物理删除）；'
+                    . '选择「不还原」则取消本次还原。是否覆盖？',
+            ]);
+        }
+
+        // 覆盖：把冲突的现有活跃同名行移回回收站（软删除，可回滚，绝不物理删除），让被还原版上位
+        if ($overwrite && !empty($conflictActiveIds)) {
+            $aids = array_keys($conflictActiveIds);
+            \think\facade\Db::name('vod')->whereIn('vod_id', $aids)->update(['vod_recycle_time' => time()]);
+            foreach ($aids as $aid) {
+                try { \app\common\util\MeilisearchSync::afterVodSave((int)$aid); } catch (\Throwable $e) {}
+            }
+        }
+
+        $res = (new \app\common\model\Vod())->restoreData([['vod_id', 'in', $idList]]);
         if ($res['code'] > 1) {
             return $this->error($res['msg']);
+        }
+        // 还原后重建搜索索引（老实现漏了这步，导致还原的内容要等下次全量重建才搜得到）
+        foreach ($idList as $rid) {
+            try { \app\common\util\MeilisearchSync::afterVodSave((int)$rid); } catch (\Throwable $e) {}
         }
         Cache::delete('vod_repeat_table_created_time');
         return $this->success($res['msg']);
