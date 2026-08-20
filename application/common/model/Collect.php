@@ -923,11 +923,17 @@ class Collect extends Base {
                     continue;
                 }
 
+                // 判重排除回收站记录（与 yzmauto 一致，遵循 RecycleBinTrait 的 active 约定）：
+                // 回收站里的同名内容视同不存在 → 重新采集/接收会生成新的活跃行，而不是把内容
+                // 更新进一条隐藏(回收站)行、导致"收了却看不到"。裸 ->where()->find() 不经 listData、
+                // 不会自动套 mergeRecycleWhere，故这里显式加 where('vod_recycle_time',0)。
                 if($blend===false){
-                    $info = (new \app\common\model\Vod())->where($where)->find();
+                    $info = (new \app\common\model\Vod())->where($where)
+                        ->where('vod_recycle_time', 0)->find();
                 }
                 else{
                     $info = (new \app\common\model\Vod())->where($where)
+                        ->where('vod_recycle_time', 0)
                         ->where(function($query) {
                             $query->where('vod_director',$GLOBALS['blend']['vod_director']);
                             if (!empty($GLOBALS['blend']['vod_id'])) {
