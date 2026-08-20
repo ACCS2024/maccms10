@@ -32,7 +32,9 @@ body: 转码产出 JSON（orgfile / suffix / rpath / category / shareid / metada
 | msg | 额外字段 | 说明 |
 |---|---|---|
 | `inserted` | `vod_id` | 本次新插入 |
-| `duplicate` | `vod_id`, `state`(`published`/`pending`) | 同名已存在且活跃，无需重复入库 |
+| `duplicate` | `vod_id`, `state`(`published`/`pending`) | 同名已存在且**活跃**，无需重复入库 |
+
+> 同名判重只看**活跃**记录（`vod_recycle_time=0`）。见下「回收站行为」。
 
 ### code=0 的 msg
 
@@ -48,9 +50,24 @@ body: 转码产出 JSON（orgfile / suffix / rpath / category / shareid / metada
 | `blocked_keyword` | — | 命中非法词黑名单 | 否（内容策略拦截） |
 | `bad_category` | `category` | 分类不在 `category_map` 映射表 | 否，**补分类映射后**再推 |
 | `rejected` | `field` | 安全闸判定字段含注入特征 | 否（安全拦截） |
-| `duplicate_recycled` | `vod_id`, `state`(`recycled`) | 同名记录在**回收站**——当前不可见，且会被永久静默跳过 | 否，需先到回收站彻底清除再推 |
 | `db_error` | — | `Db::insert` 返回假值 | 可重投 |
 | `db_exception` | — | 入库过程抛异常（详情见站点 `log/YYYY-MM-DD.txt`） | 可重投 |
+
+## 回收站行为（重推被删内容）
+
+全系统约定：回收站记录（`vod_recycle_time>0`）对正常操作**视同不存在**
+（`RecycleBinTrait::mergeRecycleWhere` 默认 `active` 模式）。yzmauto 的同名判重据此
+**只匹配活跃记录**。因此：
+
+- 若同名内容在**回收站**里 → 判重视其不存在 → 重推**直接插入一条全新活跃记录**
+  （回执 `inserted`），旧的回收记录原样留在回收站。
+- 语义与采集入库、以及 WordPress「trash 掉再导入 = 生成新内容、旧的留回收站」一致。
+- 这修复了历史黑洞：过去删进回收站的同名内容会把 `vod_name` 永久占住、令重推被
+  **静默跳过**，内容既不可见又推不回（2026-08-20 线上事故：最新 150 条被批量移入回收站后
+  卡死）。
+
+> 若确实想让「管理员的删除具有终局性、重推不再复活」，应在**源头**（转码机侧）停止推送该
+> 内容，而不是依赖接收端静默吞掉——静默吞掉正是本次事故的根因。
 
 ## 对接建议（推送侧）
 

@@ -74,7 +74,8 @@ class Ppvod extends Base
      *           → 推送方判「已送达」，不必重投。
      *   code=0  未入库/不可见，msg 为确定原因：
      *           bad_action/bad_pass/disabled/config_incomplete/config_error/empty_body/
-     *           bad_json/blocked_keyword/bad_category/rejected/duplicate_recycled/db_error/db_exception
+     *           bad_json/blocked_keyword/bad_category/rejected/db_error/db_exception
+     *   备注：同名判重只看活跃记录，回收站里的同名内容视同不存在 → 重推直接 inserted（见类注释）。
      *           → 推送方据 msg 告警或修配置。
      * 转码机旧版本忽略响应体，新增回执向后兼容。
      */
@@ -235,31 +236,30 @@ class Ppvod extends Base
         $info['type_id'] = (int)$c['category_map'][$category];
 
         try {
-            // 同名判重。注意：不可拼裸 SQL —— vod_name 直接来自外部 JSON 的 orgfile
-            $exists = Db::name('vod')->field('vod_id,vod_status,vod_recycle_time')
-                ->where('vod_name', $info['vod_name'])->find();
+            // 同名判重 —— 严格遵循全系统「回收站记录视同不存在」的约定（见
+            // RecycleBinTrait::mergeRecycleWhere 默认 active 模式：正常操作只认
+            // vod_recycle_time=0 的行）。老实现用裸 Db::name('vod') 且【未】排除回收站记录，
+            // 于是「删进回收站的同名内容」把 vod_name 永久占住、重推被静默跳过 —— 内容既不可见
+            // 又推不回（本次线上事故根因：最新 150 条被批量移进回收站后既看不到又推不回、后台
+            // 又没有明显回收站入口，彻底卡死）。
+            //
+            // 这里显式 where('vod_recycle_time',0)：回收站里的同名记录一律【视为不存在】，
+            // 重推直接落到下面的 insert，生成一条全新的活跃记录 —— 与采集入库应有行为、以及
+            // WordPress「trash 掉再导入=生成新内容、旧的留在回收站」完全一致；旧的回收记录原样
+            // 保留在回收站，尊重管理员对那一行的删除。vod_repeat 判重本身也带 recycle=0 过滤，
+            // 故活跃行与回收行同名共存不会被误判为重复。
+            // 注意：不可拼裸 SQL —— vod_name 直接来自外部 JSON 的 orgfile。
+            $exists = Db::name('vod')->field('vod_id,vod_status')
+                ->where('vod_name', $info['vod_name'])
+                ->where('vod_recycle_time', 0)
+                ->find();
             if ($exists) {
-                // 日志必须说清「是哪一条」以及「它为什么还在」。
-                //
-                // 老站那句「存在同名视频，并播放地址无改变」是误导：本方法从未比对过
-                // 播放地址，只查了名字。更要命的是后台的「删除」只是移入回收站
-                // (vod_recycle_time>0)，记录仍物理存在于 mac_vod，判重照样命中 ——
-                // 于是「删掉一条内容再让转码机重推」会被永久静默跳过，
-                // 而日志还在说「播放地址无改变」，足以让人往完全错误的方向排查。
-                $recycled = (int)($exists['vod_recycle_time'] ?? 0) > 0;
-                $state = $recycled
-                    ? '该记录在回收站中 —— 后台「删除」只是移入回收站，需到回收站彻底清除后才能重新入库'
-                    : ((int)($exists['vod_status'] ?? 0) === 1 ? '状态：已发布' : '状态：待审核');
+                $state = (int)($exists['vod_status'] ?? 0) === 1 ? 'published' : 'pending';
                 $this->logError(sprintf(
-                    '跳过：已存在同名视频 vod_id=%d（%s）。视频名:%s',
+                    '跳过：已存在同名【活跃】视频 vod_id=%d（%s）。视频名:%s',
                     (int)$exists['vod_id'], $state, $info['vod_name']
                 ));
-                // 回执：回收站里的同名记录 = 内容当前不可见、且会被永久静默跳过，
-                // 对推送方等同「未入库」，给 code=0 便于其告警；活跃的同名 code=1（已在库）。
-                $stateTok = $recycled ? 'recycled' : ((int)($exists['vod_status'] ?? 0) === 1 ? 'published' : 'pending');
-                return $recycled
-                    ? json($this->env(0, 'duplicate_recycled', ['vod_id' => (int)$exists['vod_id'], 'state' => $stateTok]))
-                    : json($this->env(1, 'duplicate', ['vod_id' => (int)$exists['vod_id'], 'state' => $stateTok]));
+                return json($this->env(1, 'duplicate', ['vod_id' => (int)$exists['vod_id'], 'state' => $state]));
             }
             // 【安全闸】纵深防御：ingest 的 play_url/pic 虽多由服务端配置拼装，但 rpath、
             // 推送方给的字段理论上可夹带注入。与 receive/vod 同一道综合判据，命中即拒绝入库。
