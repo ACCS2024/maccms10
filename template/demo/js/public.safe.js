@@ -20,6 +20,51 @@
         return typeof value === 'string' && value !== '' ? value : fallback;
     }
 
+    function copyText(value) {
+        var text = String(value || '');
+        if (navigator.clipboard && window.isSecureContext) {
+            return navigator.clipboard.writeText(text);
+        }
+
+        return new Promise(function (resolve, reject) {
+            var textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.setAttribute('readonly', 'readonly');
+            textarea.style.cssText = 'position:fixed;left:-9999px;top:0;';
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+                document.execCommand('copy') ? resolve() : reject(new Error('copy failed'));
+            } catch (error) {
+                reject(error);
+            } finally {
+                textarea.remove();
+            }
+        });
+    }
+
+    function initClipboard() {
+        $('body')
+            .off('click.demoCopy', '.copy_btn, .copy_text, .copy_checked')
+            .on('click.demoCopy', '.copy_btn, .copy_text, .copy_checked', function (event) {
+                event.preventDefault();
+                var button = $(this);
+                var text = button.attr('data-text');
+                if (button.hasClass('copy_text')) {
+                    text = button.text();
+                } else if (button.hasClass('copy_checked')) {
+                    text = button.closest('.playlist').find('.copy_text').map(function () {
+                        return $(this).text();
+                    }).get().join('\n');
+                }
+                copyText(text).then(function () {
+                    showMessage('地址复制成功');
+                }).catch(function () {
+                    showMessage('复制失败，请手动选择复制');
+                });
+            });
+    }
+
     function showMessage(value) {
         var backdrop = document.createElement('div');
         var dialog = document.createElement('div');
@@ -341,6 +386,7 @@
         MAC.Verify.Init();
         MAC.Gbook.Init();
         MAC.Comment.Init();
+        initClipboard();
     });
 
     window.MAC = MAC;

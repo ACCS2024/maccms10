@@ -51,8 +51,7 @@ input{font-family:"Microsoft Yahei",Simsun,sans-serif;font-size: 14px;}
 #member #right .list li:hover{color: #3577CE;}
 #member #right .list li.cur{background: #3577CE;color:#fff;}
 #member #right #listCon{padding:10px;}
-#member #right #listCon div{line-height:40px;position:absolute;opacity:0;filter:alpha(opacity=0);}
-#member #right #listCon div.cur{opacity:1;filter:alpha(opacity=100);z-index:999;}
+#member #right #listCon div{line-height:40px;position:static;opacity:1;}
 
 #member #right #listCon .tishi img{width:20px;padding:0 5px 0 10px}
 #member #right #listCon .tishi2 img{width:20px;padding:0 5px 0 0}
@@ -207,14 +206,14 @@ input, button, select, textarea {
     #member #left {border-right:0;}
     #member #left ul {display:flex;flex-wrap:wrap;}
     #member #left ul li, #member #left ul .hover {box-sizing:border-box;width:50%;text-indent:0;border-left:0;}
-    #member #right {padding-top:16px;overflow-x:auto;}
-    #member #right .member-input {box-sizing:border-box;max-width:100%;}
+    #member #right {padding-top:16px;overflow-x:hidden;}
+    #member #right .member-input {box-sizing:border-box;width:calc(100% - 120px) !important;max-width:100%;}
+    #member #right .table {display:block;max-width:100%;overflow-x:auto;}
     .reg-w, .reg-another {box-sizing:border-box;float:none;width:100%;padding:24px 0;margin:0;border-left:0;height:auto;}
     .reg-w form .reg-group, .reg-w form .btn-sub {box-sizing:border-box;width:100%;}
     .reg-w form .reg-group .reg-control {width:55%;}
     .footer {padding:0 12px 24px;}
 }
-
 
 
 

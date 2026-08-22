@@ -5,7 +5,6 @@
   <meta name="keywords" content="{$obj.type.type_name}{$obj.vod_name}_{$maccms.site_name}" />
   <meta name="description" content="{$obj.type.type_name}{$obj.vod_name}_{$maccms.site_name}" />
   {include file="public/include"}
-    <!--<script src="{$maccms.path_tpl}js/clipboard.min.js"></script>-->
  </head>
  <body>
  {include file="public/head"}
@@ -77,46 +76,5 @@
     border-bottom: 1px solid #eee;
 }
 </style>
-<script type="text/javascript">	
-	$(".copy_btn").each(function(){
-		var text1 = $(this).attr("data-text");		
-		var clipboard = new Clipboard(this, {
-			text: function() {									
-				return text1;
-			}
-		});
-		clipboard.on('success', function(e) {
-			alert("地址复制成功");
-		});
-	});
-	
-	$(".copy_text").each(function(){
-		var text2 = $(this).text();
-		var clipboard = new Clipboard(this, {
-			text: function() {									
-				return text2;
-			}
-		});
-		clipboard.on('success', function(e) {
-			alert("地址复制成功");
-		});
-	});
-	
-	$(".copy_checked").each(function(){		
-		var checked_url=[];						
-		$(this).parent().parent().find("li").find(".copy_text").each(function(){
-			checked_url.push($(this).text());
-		});	
-		var clipboard = new Clipboard(this, {
-			text: function() {				
-				return checked_url.join('\n');
-			}
-		});
-		clipboard.on('success', function(e) {
-			alert("地址复制成功");
-		});
-	});
-</script>
-
 {include file="public/foot"}
  </body>
