@@ -35,7 +35,7 @@
 - 站点私有 `site_url` 和 `site_wapurl` 已改为 `nei.senlinzy.com`。旧 `nei.selangzy.com` 仅保留在 `server_name` 中兼容残余请求，不再作为正式域名或证书域名。
 - 随机后台入口、验证码、随机管理员、Dragonfly 会话和仪表盘真实登录通过；默认 `admin.php` 返回 404。
 - 旧站两个历史定时任务 `aa`（采集）和 `bb`（生成）均为关闭，宝塔无启用的 nei 计划任务，因此不复制。
-- 官网原 MacCMS 任务 `nei_internal_vod` 已从 `application/extra/timming.php` 删除；官网与内网站以后只在后台按需手动同步，不再定时采集。手动资源地址已改为 `https://nei.senlinzy.com/api.php/provide/vod/at/xml`，43 条分类绑定已随 URL 的 MD5 前缀迁移。宝塔证书续签、数据库备份和 MacCMS 运营统计任务不受影响。
+- 官网原 MacCMS 任务 `nei_internal_vod` 已从 `application/extra/timming.php` 删除，对应每 5 分钟 runner 也已从目标机 root crontab 删除；官网与内网站以后只在后台按需手动同步，不再定时采集。手动资源地址已改为 `https://nei.senlinzy.com/api.php/provide/vod/at/xml`，43 条分类绑定已随 URL 的 MD5 前缀迁移。宝塔证书续签、数据库备份和 MacCMS 运营统计任务不受影响。
 
 ## DNS 与域名现状
 

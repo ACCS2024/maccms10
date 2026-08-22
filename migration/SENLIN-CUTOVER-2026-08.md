@@ -9,14 +9,15 @@
 - 第一阶段迁移共享主站程序、数据以及仍在使用的 `beiyong.slapibf.com`、`slapibf.com`、`senlinzy*.com` SAN 别名。
 - PHP 代码、vendor、框架和后台入口不从源机复制；目标机使用 `feat/tp8-migration` 的干净代码。
 - 只迁数据库业务数据、上传文件和业务配置。明确排除 `mac_admin`、`addons.php`、版本文件、runtime、日志和历史备份。
-- 森林旧版 `ff.senlinzy.com`（MacCMS 8）和内网站 `nei.selangzy.com` 后置处理。
+- 森林旧版 `ff.senlinzy.com`（MacCMS 8）和静态帮助站 `help.senlinzy.com` / `help.selangzy.com` 后置处理；内网站已独立迁移到 `nei.senlinzy.com`。
 
 ## 已确认的域名决策
 
 - 2026-08-22 用户确认永久放弃 `selangzy.com` 和 `www.selangzy.com`。两条记录不切 CNAME、不切入新机对外服务、不作为共享主站迁移验收或回滚条件，后续操作不得再次把它们加入待切域名清单。
 - 共享主站继续通过已经命中新机的 `beiyong.slapibf.com`、`slapibf.com` 和 `senlinzy*.com` 别名提供服务；应用未配置强制主域，页面使用相对链接，不依赖已放弃域名。
-- `nei.selangzy.com` 是独立内网站和共享主站的采集源，拥有独立程序/数据库，尚未迁移。该子域名不在本次放弃范围内，完成独立迁移前不得修改其 DNS。
+- 原 `nei.selangzy.com` 独立内网站和数据库已迁到目标机，正式域名改为 `nei.senlinzy.com`；旧域名只保留在新旧 vhost 中吸收残余请求，不再作为 DNS 切换对象。
 - `ff.senlinzy.com` 是独立 MacCMS 8 旧站，尚未迁移；不得与当前共享主站数据库合并。
+- `help.senlinzy.com` / `help.selangzy.com` 是共享主站模板直接链接的静态帮助站，仍由老机提供，尚未迁移。
 - `slapibf1.com` 的目标站 vhost 已准备，但域名没有公开解析；它属于“未启用域名”，不是数据或程序迁移阻塞项。
 
 ## 已完成
@@ -75,7 +76,7 @@
 - 老机 root crontab 没有主站采集任务；其中每 5 分钟任务只是宝塔日志切割，其余为数据库/站点备份、rclone 和证书续签，均未误迁为业务采集。
 - 主站 `mac_collect` 唯一资源原为旧域名 `nei.selangzy.com`，确认主站确实采集内网站；现已改为 `https://nei.senlinzy.com/api.php/provide/vod/at/xml`，并将 `bind.php` 中 43 条分类绑定迁移到新 URL 的 MD5 前缀。资源保持 XML、视频、新增并更新、图片同步选项 2。
 - 迁移期间曾新增 `nei_internal_vod`，按 2 小时窗口自动采集内网站；该任务在完成迁移验证后已从官网 MacCMS 定时配置中删除。
-- 当前官网与内网站采用后台按需手动同步，不再运行内网自动采集。宝塔证书续签、数据库备份以及 MacCMS 运营统计任务继续保留。
+- 当前官网与内网站采用后台按需手动同步，不再运行内网自动采集。官网 `timming.php` 中的任务和 root crontab 中每 5 分钟 runner 均已删除；宝塔证书续签、数据库备份以及 MacCMS 运营统计任务继续保留。
 - 首轮共处理 12 页，新增 28 条：目标视频由 251606 增至 251634，max id 由 284544 增至 284572，最新时间为 2026-08-22 13:48:35；对应 Meilisearch 增至 331933 文档。
 - 修复两处 TP8 采集兼容问题：远端辅助字段入库前按真实表列白名单过滤；旧版 `insert($data, false, true)` 全部改为 `insertGetId()`，确保新增主键和 Meilisearch 增量同步正确。
 - 修复定时任务失败语义：任务抛异常、发生 PHP fatal 或配置了不存在的 handler 时，`runtime` 自动恢复为执行前值，下一次 5 分钟检查会重试；runner 对空 HTTP 200 和应用 JSON 错误均返回非零。临时故障任务验证结果为退出码 1、runtime 保持 0。
@@ -87,9 +88,18 @@
 - 观察期内 PHP 慢请求、MySQL 错误、Dragonfly/Meilisearch 错误和业务 FastCGI/upstream 错误均为 0。新增 78 条 Nginx error 全部是针对 `.env` 或随机不存在路径的机器人扫描，均被现有规则拒绝，不属于应用故障。
 - 三个共享 webroot vhost 已加载 `deploy/nginx/maccms-legacy-noise.conf`：`/favicon.ico` 映射到仓库内现有图标；已撤销的 `/selangadmin.php` 返回 410 且不进入 PHP。直连目标机验证首页 200、favicon 200、旧入口 410，Nginx 配置测试通过并已 reload；回滚备份位于 `/home/migration/nginx-noise-before-20260822-1518/extensions.tar.gz`。
 
+### 老机剩余资产审计
+
+- `ff.senlinzy.com` 仍由老机真实提供，公开首页与强制访问老机的内容哈希一致。它是独立 PHP 5.6 / MacCMS 8 站和独立数据库：精确有 `191036` 条视频、最大 ID `229697`，库约 `256.1 MiB`，最后业务更新时间为 2025-08-11；迁移时必须独立建站并做旧库兼容导入。
+- `help.senlinzy.com` / `help.selangzy.com` 仍由老机真实提供约 `2.8 MiB` 的静态帮助与下载文件，且官网模板直接链接它；应作为低风险静态站迁移，老证书有效期至 2026-09-30。
+- 老机 `sljxsl.com` / `slslplay.com` vhost 只含单文件播放器，但公开 DNS 已指向其他服务器且老机当前访问为 0；它属于待业务确认后清理的残留副本，不是当前切换阻塞项。
+- 老机 `23.225.73.50` 程序目录已被内网站反代 vhost 遮蔽，直接请求实际进入新内网站；`23.225.73.51` 没有 vhost且只返回默认 404。两者均按孤立历史程序保留，不直接复制到新机。
+- 外部业务 FTP 已迁移并通过读写删除闭环；两台面板均没有本机 FTP 账号，因此不存在遗漏的本地 FTP 用户。
+- 老机的每周网站备份以及两条 rclone 异地备份没有在新机重建。新机现有证书续签和数据库备份任务，但数据库任务创建后首次执行时间尚未到；下线老机前必须验证首次备份，并决定新的文件级与异地备份策略。
+
 ## 最终切换
 
-共享主站不再等待 DNS 切换。2026-08-22 的实际状态是：`beiyong.slapibf.com`、`slapibf.com` 和抽查的 `senlinzy.com`、`senlinzy1.com`、`senlinzy10.com` 及 www 别名已命中新机资源标记；`selangzy.com`、`www.selangzy.com` 已确认放弃；`nei.selangzy.com`、`ff.senlinzy.com` 按计划留在老机；`slapibf1.com` 仍无公开解析。
+共享主站不再等待 DNS 切换。2026-08-22 的实际状态是：`beiyong.slapibf.com`、`slapibf.com` 和抽查的 `senlinzy.com`、`senlinzy1.com`、`senlinzy10.com` 及 www 别名已命中新机资源标记；`selangzy.com`、`www.selangzy.com` 已确认放弃；内网站已通过 `nei.senlinzy.com` 直达新机；`ff.senlinzy.com` 和帮助站仍留在老机；`slapibf1.com` 仍无公开解析。
 
 1. 至少提前一个 TTL 周期把所有待切域名的 A 记录 TTL 降至 300 秒。
 2. 记录源库 `mac_vod`、`mac_art` 的精确 count/max(id)/max(time)，作为最终验收基线。当前基线见“定时采集”最后一条；切换窗口仍需再读一次。
@@ -100,7 +110,7 @@
 7. 核对源/目标所有业务表行数，并重点核对 vod/art/type 的 count/max(id)/max(time)；目标由新机采集产生的可解释领先属于正常状态。
 8. 清应用缓存，抽查首页、随机分类、随机详情、provide API、播放器配置和后台登录。
 9. 对唯一 Meilisearch 索引执行全量重建；索引未完成时应用可回退 MySQL 搜索，不阻塞切 DNS。
-10. 不再修改 `selangzy.com`、`www.selangzy.com`；已命中新机的共享主站域名也不要重复改动。旧机继续承载尚未迁移的内网站和 MacCMS 8 站点。
+10. 不再修改 `selangzy.com`、`www.selangzy.com`；已命中新机的共享主站和内网站域名也不要重复改动。旧机继续承载尚未迁移的 MacCMS 8 站和静态帮助站。
 11. DNS 生效后为 `slapibf.com` / `slapibf1.com` 在 aaPanel 重新签发证书，再启用 HTTPS。
 12. 连续观察新机 Nginx 5xx、PHP 错误、MySQL 慢查询、Dragonfly 和 Meilisearch 任务至少 2 小时。
 13. 旧机至少保留 48 小时，不删除数据；确认无回滚需求后再下线。
@@ -111,7 +121,7 @@
 - 下列根域名使用 Cloudflare CNAME Flattening，记录名为 `@`，目标统一为 `origin.slapibf.com`：`senlinzy.com`、`senlinzy1.com` 至 `senlinzy10.com`、`slapibf.com`、`slapibf1.com`。
 - 下列子域名直接 CNAME 到 `origin.slapibf.com`：`www.senlinzy.com`、`www.senlinzy1.com` 至 `www.senlinzy10.com`，以及 `beiyong.slapibf.com`。
 - `selangzy.com` 和 `www.selangzy.com` 已永久放弃，禁止添加到本 CNAME 方案。
-- `nei.selangzy.com` 和 `ff.senlinzy.com` 是独立程序/数据库，本阶段禁止修改，继续留在旧机。
+- `nei.senlinzy.com` 已直达新机，不加入共享主站 CNAME；`ff.senlinzy.com` 是尚未迁移的独立程序/数据库，继续留在旧机。
 - `slapibf1.com` 当前没有公开 NS/A 记录；若要启用，需先在注册商完成 Cloudflare NS 委派，再添加上述根 CNAME。
 - 唯一入口保持灰云可避免跨 Cloudflare 区域的代理 CNAME 风险；各业务记录继续沿用其当前代理状态。DNS 修改后立即在目标机为 `slapibf.com` / `slapibf1.com` 签发证书并复查 Cloudflare SSL 模式。
 
