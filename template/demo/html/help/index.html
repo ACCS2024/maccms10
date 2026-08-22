@@ -1,0 +1,625 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>帮助中心 - {$site_name}</title>
+{include file="public/include"}
+<style>
+.help-wrap{padding:20px 0 40px;}
+.help-tabs{display:flex;flex-wrap:wrap;background:#2c3e50;border-radius:4px 4px 0 0;overflow:hidden;margin-bottom:0;}
+.help-tabs a{display:inline-block;color:#cdd3d9;padding:12px 18px;text-decoration:none;font-size:14px;border-right:1px solid #3d5166;transition:background .2s,color .2s;white-space:nowrap;}
+.help-tabs a:last-child{border-right:none;}
+.help-tabs a:hover{background:#3d5166;color:#fff;}
+.help-tabs a.active{background:#0b87e7;color:#fff;}
+.help-tab{display:none;padding:24px 0 0;}
+.help-tab.active{display:block;}
+.help-card{background:#fff;border:1px solid #e5e9ef;border-radius:6px;padding:20px 24px;margin-bottom:20px;}
+.help-card h3{font-size:16px;font-weight:600;color:#2c3e50;margin:0 0 16px;padding-bottom:10px;border-bottom:2px solid #0b87e7;}
+.help-card h4{font-size:14px;font-weight:600;color:#34495e;margin:16px 0 8px;}
+.help-step{counter-reset:step;margin:0;padding:0;list-style:none;}
+.help-step li{counter-increment:step;display:flex;align-items:flex-start;margin-bottom:10px;font-size:14px;color:#555;line-height:1.6;}
+.help-step li::before{content:counter(step);display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;border-radius:50%;background:#0b87e7;color:#fff;font-size:12px;font-weight:700;margin-right:10px;margin-top:1px;flex-shrink:0;}
+.api-group{margin-bottom:16px;}
+.api-group-title{font-size:12px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;}
+.api-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap;}
+.api-label{font-size:13px;color:#666;min-width:110px;flex-shrink:0;}
+.api-box{display:inline-block;background:#f4f6f8;border:1px solid #dde2e8;border-radius:4px;padding:6px 12px;font-family:'Courier New',Courier,monospace;font-size:13px;color:#2c3e50;word-break:break-all;max-width:100%;box-sizing:border-box;}
+.api-box.primary{background:#e8f4ff;border-color:#b3d8ff;}
+.api-box.backup{background:#f5f5f5;border-color:#ccc;color:#777;}
+.api-tag{display:inline-block;padding:1px 6px;border-radius:3px;font-size:11px;font-weight:600;margin-left:4px;vertical-align:middle;}
+.tag-json{background:#27ae60;color:#fff;}
+.tag-xml{background:#999;color:#fff;}
+.tag-rec{background:#e74c3c;color:#fff;}
+.tag-bak{background:#aaa;color:#fff;}
+.copy-btn{display:inline-block;padding:4px 10px;background:#0b87e7;color:#fff;font-size:12px;border-radius:3px;cursor:pointer;border:none;outline:none;transition:background .2s;vertical-align:middle;white-space:nowrap;}
+.copy-btn:hover{background:#0971c7;}
+.copy-btn.copied{background:#27ae60;}
+.help-dl-btn{display:inline-block;padding:8px 20px;background:#27ae60;color:#fff;border-radius:4px;text-decoration:none;font-size:14px;margin-top:8px;transition:background .2s;}
+.help-dl-btn:hover{background:#1e9451;color:#fff;}
+.help-dl-btn+.help-dl-btn{margin-left:10px;}
+.help-warn{background:#fff8e1;border-left:4px solid #f9a825;border-radius:4px;padding:12px 16px;font-size:14px;color:#7b5800;margin-bottom:16px;line-height:1.7;}
+.help-info{background:#e3f2fd;border-left:4px solid #0b87e7;border-radius:4px;padding:12px 16px;font-size:14px;color:#0d47a1;margin-bottom:16px;line-height:1.7;}
+.help-kv{display:flex;align-items:flex-start;padding:10px 0;border-bottom:1px solid #f0f2f5;font-size:14px;}
+.help-kv:last-child{border-bottom:none;}
+.help-kv .kv-label{color:#888;min-width:130px;flex-shrink:0;}
+.help-kv .kv-val{color:#2c3e50;word-break:break-all;flex:1;}
+.help-code{background:#f4f6f8;border:1px solid #dde2e8;border-radius:4px;padding:12px 16px;font-family:'Courier New',Courier,monospace;font-size:13px;color:#2c3e50;margin-bottom:12px;white-space:pre-wrap;word-break:break-all;}
+.divider{border:none;border-top:1px dashed #e0e0e0;margin:16px 0;}
+@media(max-width:640px){
+  .help-tabs a{padding:10px 12px;font-size:13px;}
+  .help-card{padding:14px 14px;}
+  .api-label{min-width:80px;font-size:12px;}
+  .api-box{font-size:12px;}
+  .help-kv .kv-label{min-width:90px;font-size:13px;}
+}
+</style>
+</head>
+{include file="public/head"}
+<div class="width1200 white">
+<div class="help-wrap">
+
+  <div class="help-tabs">
+    <a href="#" data-tab="home" class="active">主页</a>
+    <a href="#" data-tab="mac10">MacCMS v10</a>
+    <a href="#" data-tab="maccms">MacCMS v8</a>
+    <a href="#" data-tab="seacms">SeaCMS</a>
+    <a href="#" data-tab="ff50">飞飞5</a>
+    <a href="#" data-tab="maxcms">MaxCMS</a>
+    <a href="#" data-tab="zanpian">赞片CMS</a>
+    <a href="#" data-tab="iycms">爱影CMS</a>
+    {if $newart_show}<a href="#" data-tab="newart">新闻演员</a>{/if}
+  </div>
+
+  <!-- Tab 1: 主页 -->
+  <div class="help-tab active" id="tab-home">
+    {if !empty($cfg.notice)}
+    <div class="help-card">
+      <h3>公告</h3>
+      <div class="help-warn">{$cfg.notice|nl2br}</div>
+    </div>
+    {/if}
+    <div class="help-card">
+      <h3>欢迎使用 {$cfg.site_name} 帮助中心</h3>
+      <div class="help-kv"><span class="kv-label">站点地址</span><span class="kv-val"><a href="{$cfg.site_host|htmlspecialchars}" target="_blank">{$cfg.site_host|htmlspecialchars}</a></span></div>
+      {if !empty($cfg.site_back_tip)}
+      <div class="help-kv"><span class="kv-label">备用提示</span><span class="kv-val">{$cfg.site_back_tip|htmlspecialchars}</span></div>
+      {/if}
+      {if !empty($cfg.tg_url)}
+      <div class="help-kv"><span class="kv-label">Telegram群组</span><span class="kv-val"><a href="{$cfg.tg_url|htmlspecialchars}" target="_blank">{$cfg.tg_url|htmlspecialchars}</a></span></div>
+      {/if}
+    </div>
+    <div class="help-card">
+      <h3>接口总览</h3>
+      <div class="help-info">推荐使用 <strong>JSON 格式</strong>采集接口，数据完整、速度更快、兼容性更好。XML 格式作为备选保留。</div>
+
+      <div class="api-group">
+        <div class="api-group-title">M3U8 解析接口</div>
+        <div class="api-row">
+          <span class="api-box primary">{$parse_host_eff|htmlspecialchars}</span>
+          <button class="copy-btn" data-text="{$parse_host_eff|htmlspecialchars}">复制</button>
+        </div>
+      </div>
+
+      <div class="api-group">
+        <div class="api-group-title">JSON 采集接口 <span class="api-tag tag-rec">推荐</span></div>
+        <div class="api-row">
+          <span class="api-label">主接口</span>
+          <span class="api-box primary">{$cfg.api_host|htmlspecialchars}api.php/provide/vod/</span>
+          <button class="copy-btn" data-text="{$cfg.api_host|htmlspecialchars}api.php/provide/vod/">复制</button>
+        </div>
+        {if !empty($cfg.api_host_backup)}
+        <div class="api-row">
+          <span class="api-label">备用接口</span>
+          <span class="api-box backup">{$cfg.api_host_backup|htmlspecialchars}api.php/provide/vod/</span>
+          <button class="copy-btn" data-text="{$cfg.api_host_backup|htmlspecialchars}api.php/provide/vod/">复制</button>
+        </div>
+        {/if}
+      </div>
+
+      <div class="api-group">
+        <div class="api-group-title">XML 采集接口 <span class="api-tag tag-xml">备选</span></div>
+        <div class="api-row">
+          <span class="api-label">主接口</span>
+          <span class="api-box">{$cfg.api_host|htmlspecialchars}api.php/provide/vod/at/xml</span>
+          <button class="copy-btn" data-text="{$cfg.api_host|htmlspecialchars}api.php/provide/vod/at/xml">复制</button>
+        </div>
+        {if !empty($cfg.api_host_backup)}
+        <div class="api-row">
+          <span class="api-label">备用接口</span>
+          <span class="api-box backup">{$cfg.api_host_backup|htmlspecialchars}api.php/provide/vod/at/xml</span>
+          <button class="copy-btn" data-text="{$cfg.api_host_backup|htmlspecialchars}api.php/provide/vod/at/xml">复制</button>
+        </div>
+        {/if}
+      </div>
+
+      {if $newart_show}
+      <hr class="divider">
+      <div class="api-group">
+        <div class="api-group-title">新闻 / 演员接口</div>
+        <div class="api-row">
+          <span class="api-label">新闻接口</span>
+          <span class="api-box">{$newart_api_host_eff|htmlspecialchars}api.php/provide/art/</span>
+          <button class="copy-btn" data-text="{$newart_api_host_eff|htmlspecialchars}api.php/provide/art/">复制</button>
+        </div>
+        <div class="api-row">
+          <span class="api-label">演员接口</span>
+          <span class="api-box">{$newart_api_host_eff|htmlspecialchars}api.php/provide/actor/</span>
+          <button class="copy-btn" data-text="{$newart_api_host_eff|htmlspecialchars}api.php/provide/actor/">复制</button>
+        </div>
+      </div>
+      {/if}
+    </div>
+  </div>
+
+  <!-- Tab 2: MacCMS v10 -->
+  <div class="help-tab" id="tab-mac10">
+    <div class="help-card">
+      <h3>MacCMS v10 — 采集配置</h3>
+      <div class="help-info">推荐使用 JSON 格式采集接口，数据结构更完整，采集速度更快。</div>
+
+      <div class="api-group">
+        <div class="api-group-title">JSON 采集接口 <span class="api-tag tag-rec">推荐</span></div>
+        <div class="api-row">
+          <span class="api-label">主接口</span>
+          <span class="api-box primary">{$cfg.api_host|htmlspecialchars}api.php/provide/vod/</span>
+          <button class="copy-btn" data-text="{$cfg.api_host|htmlspecialchars}api.php/provide/vod/">复制</button>
+        </div>
+        {if !empty($cfg.api_host_backup)}
+        <div class="api-row">
+          <span class="api-label">备用接口</span>
+          <span class="api-box backup">{$cfg.api_host_backup|htmlspecialchars}api.php/provide/vod/</span>
+          <button class="copy-btn" data-text="{$cfg.api_host_backup|htmlspecialchars}api.php/provide/vod/">复制</button>
+        </div>
+        {/if}
+      </div>
+
+      <div class="api-group">
+        <div class="api-group-title">XML 采集接口 <span class="api-tag tag-xml">备选</span></div>
+        <div class="api-row">
+          <span class="api-label">主接口</span>
+          <span class="api-box">{$cfg.api_host|htmlspecialchars}api.php/provide/vod/at/xml</span>
+          <button class="copy-btn" data-text="{$cfg.api_host|htmlspecialchars}api.php/provide/vod/at/xml">复制</button>
+        </div>
+        {if !empty($cfg.api_host_backup)}
+        <div class="api-row">
+          <span class="api-label">备用接口</span>
+          <span class="api-box backup">{$cfg.api_host_backup|htmlspecialchars}api.php/provide/vod/at/xml</span>
+          <button class="copy-btn" data-text="{$cfg.api_host_backup|htmlspecialchars}api.php/provide/vod/at/xml">复制</button>
+        </div>
+        {/if}
+      </div>
+
+      <div class="api-group">
+        <div class="api-group-title">M3U8 解析接口</div>
+        <div class="api-row">
+          <span class="api-box primary">{$parse_host_eff|htmlspecialchars}</span>
+          <button class="copy-btn" data-text="{$parse_host_eff|htmlspecialchars}">复制</button>
+        </div>
+      </div>
+
+      <h4>添加采集步骤</h4>
+      <ol class="help-step">
+        <li>后台 → <strong>采集</strong> → <strong>采集源管理</strong> → 添加采集源</li>
+        <li>接口格式选择 <strong>JSON</strong>，填写上方「JSON 主接口」地址</li>
+        <li>若主接口不可用，切换为备用接口；也可同时添加 XML 接口作为保险</li>
+        <li>保存后执行一次手动采集，验证数据正常入库</li>
+      </ol>
+    </div>
+
+    <div class="help-card">
+      <h3>MacCMS v10 — 播放器安装</h3>
+      <ol class="help-step">
+        <li>下载下方 mac10.zip 并解压，得到 <code>mac10/bfzym3u8.txt</code></li>
+        <li>后台 → <strong>系统</strong> → <strong>播放器管理</strong> → 点击「导入」</li>
+        <li>上传 <code>bfzym3u8.txt</code>，导入成功后可在播放器列表看到新条目</li>
+        <li>后台 → <strong>系统</strong> → <strong>缓存管理</strong> → 清除全部缓存</li>
+        <li>前台播放任意视频，验证播放正常</li>
+      </ol>
+      {if $files.mac10}
+      <a class="help-dl-btn" href="/upload/help/mac10.zip{if $cfg.file_regen_time gt 0}?v={$cfg.file_regen_time}{/if}">下载播放器文件 mac10.zip</a>
+      {else/}
+      <div class="help-warn">播放器文件尚未生成，请联系管理员在后台点击「重新生成文件」。</div>
+      {/if}
+    </div>
+  </div>
+
+  <!-- Tab 4: MacCMS v8 -->
+  <div class="help-tab" id="tab-maccms">
+    <div class="help-card">
+      <h3>MacCMS v8 — 采集配置</h3>
+      <div class="help-info">推荐使用 JSON 格式，兼容 MacCMS v8.x 全系版本。</div>
+
+      <div class="api-group">
+        <div class="api-group-title">JSON 采集接口 <span class="api-tag tag-rec">推荐</span></div>
+        <div class="api-row">
+          <span class="api-label">主接口</span>
+          <span class="api-box primary">{$cfg.api_host|htmlspecialchars}api.php/provide/vod/</span>
+          <button class="copy-btn" data-text="{$cfg.api_host|htmlspecialchars}api.php/provide/vod/">复制</button>
+        </div>
+        {if !empty($cfg.api_host_backup)}
+        <div class="api-row">
+          <span class="api-label">备用接口</span>
+          <span class="api-box backup">{$cfg.api_host_backup|htmlspecialchars}api.php/provide/vod/</span>
+          <button class="copy-btn" data-text="{$cfg.api_host_backup|htmlspecialchars}api.php/provide/vod/">复制</button>
+        </div>
+        {/if}
+      </div>
+
+      <div class="api-group">
+        <div class="api-group-title">XML 采集接口 <span class="api-tag tag-xml">备选</span></div>
+        <div class="api-row">
+          <span class="api-label">主接口</span>
+          <span class="api-box">{$cfg.api_host|htmlspecialchars}api.php/provide/vod/at/xml</span>
+          <button class="copy-btn" data-text="{$cfg.api_host|htmlspecialchars}api.php/provide/vod/at/xml">复制</button>
+        </div>
+        {if !empty($cfg.api_host_backup)}
+        <div class="api-row">
+          <span class="api-label">备用接口</span>
+          <span class="api-box backup">{$cfg.api_host_backup|htmlspecialchars}api.php/provide/vod/at/xml</span>
+          <button class="copy-btn" data-text="{$cfg.api_host_backup|htmlspecialchars}api.php/provide/vod/at/xml">复制</button>
+        </div>
+        {/if}
+      </div>
+
+      <h4>添加采集步骤</h4>
+      <ol class="help-step">
+        <li>后台 → <strong>采集</strong> → 添加资源库</li>
+        <li>API 格式选 <strong>JSON</strong>，填写上方主接口地址</li>
+        <li>保存并执行采集，确认数据入库</li>
+      </ol>
+    </div>
+
+    <div class="help-card">
+      <h3>MacCMS v8 — 播放器安装</h3>
+      <ol class="help-step">
+        <li>下载 maccms.zip 并解压，得到 <code>maccms/vodplay_bfm3u8.txt</code></li>
+        <li>后台 → <strong>系统设置</strong> → <strong>播放器管理</strong> → 导入</li>
+        <li>上传 txt 文件，导入成功后清除缓存</li>
+        <li>前台播放验证</li>
+      </ol>
+      {if $files.maccms}
+      <a class="help-dl-btn" href="/upload/help/maccms.zip{if $cfg.file_regen_time gt 0}?v={$cfg.file_regen_time}{/if}">下载播放器文件 maccms.zip</a>
+      {else/}
+      <div class="help-warn">播放器文件尚未生成，请联系管理员生成。</div>
+      {/if}
+    </div>
+  </div>
+
+  <!-- Tab 5: SeaCMS -->
+  <div class="help-tab" id="tab-seacms">
+    <div class="help-card">
+      <h3>SeaCMS — 采集配置</h3>
+      <div class="help-warn">SeaCMS 有专用采集接口，请使用下方 SeaCMS 格式而非通用 JSON/XML 接口。采集完成后需手动绑定分类，否则部分视频无法播放。</div>
+
+      <div class="api-group">
+        <div class="api-group-title">SeaCMS 专用采集接口 <span class="api-tag tag-rec">推荐</span></div>
+        <div class="api-row">
+          <span class="api-label">主接口</span>
+          <span class="api-box primary">{$cfg.api_host|htmlspecialchars}api.php/Seacms/vod/</span>
+          <button class="copy-btn" data-text="{$cfg.api_host|htmlspecialchars}api.php/Seacms/vod/">复制</button>
+        </div>
+        {if !empty($cfg.api_host_backup)}
+        <div class="api-row">
+          <span class="api-label">备用接口</span>
+          <span class="api-box backup">{$cfg.api_host_backup|htmlspecialchars}api.php/Seacms/vod/</span>
+          <button class="copy-btn" data-text="{$cfg.api_host_backup|htmlspecialchars}api.php/Seacms/vod/">复制</button>
+        </div>
+        {/if}
+      </div>
+
+      <div class="api-group">
+        <div class="api-group-title">M3U8 解析接口</div>
+        <div class="api-row">
+          <span class="api-box primary">{$parse_host_eff|htmlspecialchars}</span>
+          <button class="copy-btn" data-text="{$parse_host_eff|htmlspecialchars}">复制</button>
+        </div>
+      </div>
+
+      <h4>添加采集步骤</h4>
+      <ol class="help-step">
+        <li>后台 → <strong>采集</strong> → <strong>资源库管理</strong> → 新增资源库</li>
+        <li>填写资源库名称（如「{$cfg.site_name|htmlspecialchars}」），接口地址填写上方 SeaCMS 专用接口</li>
+        <li>保存后执行采集，手动绑定各分类</li>
+      </ol>
+    </div>
+
+    <div class="help-card">
+      <h3>播放器安装（SeaCMS v9.0+）</h3>
+      <ol class="help-step">
+        <li>下载 seacms.zip 并解压，得到 <code>seacms/bfzym3u8.html</code></li>
+        <li>将该文件上传至网站根目录对应播放器目录</li>
+        <li>后台 → <strong>系统设置</strong> → <strong>播放器管理</strong> → 新增，路径填 <code>bfzym3u8.html</code></li>
+        <li>绑定分类 → 清缓存 → 验证播放</li>
+      </ol>
+      {if $files.seacms}
+      <a class="help-dl-btn" href="/upload/help/seacms.zip{if $cfg.file_regen_time gt 0}?v={$cfg.file_regen_time}{/if}">下载 seacms.zip（v9.0+）</a>
+      {else/}
+      <div class="help-warn">seacms.zip 尚未生成，请联系管理员。</div>
+      {/if}
+    </div>
+
+    <div class="help-card">
+      <h3>播放器安装（SeaCMS v8.7 及以下）</h3>
+      <ol class="help-step">
+        <li>下载 seacms87.zip 并解压，得到 <code>seacms87/bfzym3u8.html</code></li>
+        <li>上传至网站播放器目录，配置方式同 v9.0+ 教程</li>
+        <li>清缓存后验证播放</li>
+      </ol>
+      {if $files.seacms87}
+      <a class="help-dl-btn" href="/upload/help/seacms87.zip{if $cfg.file_regen_time gt 0}?v={$cfg.file_regen_time}{/if}">下载 seacms87.zip（v8.7-）</a>
+      {else/}
+      <div class="help-warn">seacms87.zip 尚未生成，请联系管理员。</div>
+      {/if}
+    </div>
+  </div>
+
+  <!-- Tab 6: 飞飞5 -->
+  <div class="help-tab" id="tab-ff50">
+    <div class="help-card">
+      <h3>飞飞影视系统 v5 — 采集配置</h3>
+      <div class="api-group">
+        <div class="api-group-title">JSON 采集接口 <span class="api-tag tag-rec">推荐</span></div>
+        <div class="api-row">
+          <span class="api-label">主接口</span>
+          <span class="api-box primary">{$cfg.api_host|htmlspecialchars}api.php/provide/vod/</span>
+          <button class="copy-btn" data-text="{$cfg.api_host|htmlspecialchars}api.php/provide/vod/">复制</button>
+        </div>
+        {if !empty($cfg.api_host_backup)}
+        <div class="api-row">
+          <span class="api-label">备用接口</span>
+          <span class="api-box backup">{$cfg.api_host_backup|htmlspecialchars}api.php/provide/vod/</span>
+          <button class="copy-btn" data-text="{$cfg.api_host_backup|htmlspecialchars}api.php/provide/vod/">复制</button>
+        </div>
+        {/if}
+      </div>
+      <div class="api-group">
+        <div class="api-group-title">M3U8 解析接口</div>
+        <div class="api-row">
+          <span class="api-box primary">{$parse_host_eff|htmlspecialchars}</span>
+          <button class="copy-btn" data-text="{$parse_host_eff|htmlspecialchars}">复制</button>
+        </div>
+      </div>
+    </div>
+    <div class="help-card">
+      <h3>飞飞5 — 播放器插件安装</h3>
+      <ol class="help-step">
+        <li>下载 ff50player.zip 并解压，得到 <code>bfzym3u8.js</code> 和 <code>bfzym3u8.min.js</code></li>
+        <li>将两个文件上传至飞飞5根目录下 <code>Public/player5.0/</code> 目录</li>
+        <li>后台 → <strong>系统</strong> → <strong>播放器管理</strong> → 新增播放器</li>
+        <li>播放器文件选择 <code>bfzym3u8</code>，名称自定义，保存</li>
+        <li>在分类绑定该播放器 → 清缓存 → 验证播放</li>
+      </ol>
+      {if $files.ff50player}
+      <a class="help-dl-btn" href="/upload/help/ff50player.zip{if $cfg.file_regen_time gt 0}?v={$cfg.file_regen_time}{/if}">下载插件文件 ff50player.zip</a>
+      {else/}
+      <div class="help-warn">ff50player.zip 尚未生成，请联系管理员。</div>
+      {/if}
+    </div>
+  </div>
+
+  <!-- Tab 7: MaxCMS -->
+  <div class="help-tab" id="tab-maxcms">
+    <div class="help-card">
+      <h3>MaxCMS — 采集与播放器配置</h3>
+      <div class="help-info">MaxCMS 需手动修改两个配置文件来注册播放器，无自动导入功能。</div>
+
+      <div class="api-group">
+        <div class="api-group-title">JSON 采集接口 <span class="api-tag tag-rec">推荐</span></div>
+        <div class="api-row">
+          <span class="api-label">主接口</span>
+          <span class="api-box primary">{$cfg.api_host|htmlspecialchars}api.php/provide/vod/</span>
+          <button class="copy-btn" data-text="{$cfg.api_host|htmlspecialchars}api.php/provide/vod/">复制</button>
+        </div>
+        {if !empty($cfg.api_host_backup)}
+        <div class="api-row">
+          <span class="api-label">备用接口</span>
+          <span class="api-box backup">{$cfg.api_host_backup|htmlspecialchars}api.php/provide/vod/</span>
+          <button class="copy-btn" data-text="{$cfg.api_host_backup|htmlspecialchars}api.php/provide/vod/">复制</button>
+        </div>
+        {/if}
+      </div>
+      <div class="api-group">
+        <div class="api-group-title">M3U8 解析接口</div>
+        <div class="api-row">
+          <span class="api-box primary">{$parse_host_eff|htmlspecialchars}</span>
+          <button class="copy-btn" data-text="{$parse_host_eff|htmlspecialchars}">复制</button>
+        </div>
+      </div>
+    </div>
+    <div class="help-card">
+      <h3>修改 admin/imgs/main.js</h3>
+      <p style="font-size:14px;color:#555;margin-bottom:8px;">在播放器列表数组末尾添加（注意 JSON 格式，最后一项无逗号）：</p>
+      <div class="help-code">if(str.indexOf('{$cfg.player_flag|htmlspecialchars}')>-1) return "{$cfg.player_flag|htmlspecialchars}"</div>
+    </div>
+    <div class="help-card">
+      <h3>修改 inc/playerKinds.xml</h3>
+      <p style="font-size:14px;color:#555;margin-bottom:8px;">在 <code>&lt;players&gt;</code> 节点内追加：</p>
+      <div class="help-code">&lt;player open="1" sort="99" flag="{$cfg.player_flag|htmlspecialchars}" des="{$cfg.player_flag|htmlspecialchars}"&gt;
+  &lt;intro&gt;&lt;![CDATA[{$cfg.site_name|htmlspecialchars}]]&gt;&lt;/intro&gt;
+&lt;/player&gt;</div>
+      <ol class="help-step">
+        <li>修改并上传覆盖以上两个文件</li>
+        <li>后台清除缓存，刷新前台验证播放</li>
+      </ol>
+      <div class="help-warn">操作前建议备份原文件。</div>
+    </div>
+  </div>
+
+  <!-- Tab 8: 赞片CMS -->
+  <div class="help-tab" id="tab-zanpian">
+    <div class="help-card">
+      <h3>赞片CMS v8 — 采集配置</h3>
+      <div class="api-group">
+        <div class="api-group-title">JSON 采集接口 <span class="api-tag tag-rec">推荐</span></div>
+        <div class="api-row">
+          <span class="api-label">主接口</span>
+          <span class="api-box primary">{$cfg.api_host|htmlspecialchars}api.php/provide/vod/</span>
+          <button class="copy-btn" data-text="{$cfg.api_host|htmlspecialchars}api.php/provide/vod/">复制</button>
+        </div>
+        {if !empty($cfg.api_host_backup)}
+        <div class="api-row">
+          <span class="api-label">备用接口</span>
+          <span class="api-box backup">{$cfg.api_host_backup|htmlspecialchars}api.php/provide/vod/</span>
+          <button class="copy-btn" data-text="{$cfg.api_host_backup|htmlspecialchars}api.php/provide/vod/">复制</button>
+        </div>
+        {/if}
+      </div>
+      <div class="api-group">
+        <div class="api-group-title">M3U8 解析接口</div>
+        <div class="api-row">
+          <span class="api-box primary">{$parse_host_eff|htmlspecialchars}</span>
+          <button class="copy-btn" data-text="{$parse_host_eff|htmlspecialchars}">复制</button>
+        </div>
+      </div>
+      <div class="api-row">
+        <span class="api-label">播放器标识</span>
+        <span class="api-box">{$cfg.player_flag|htmlspecialchars}</span>
+        <button class="copy-btn" data-text="{$cfg.player_flag|htmlspecialchars}">复制</button>
+      </div>
+    </div>
+    <div class="help-card">
+      <h3>配置步骤</h3>
+      <ol class="help-step">
+        <li>后台 → <strong>系统设置</strong> → <strong>采集设置</strong> → 添加采集源</li>
+        <li>接口格式选 <strong>JSON</strong>，地址填写上方 JSON 主接口</li>
+        <li>后台 → <strong>播放器管理</strong> → 新增播放器</li>
+        <li>标识填上方「播放器标识」（{$cfg.player_flag|htmlspecialchars}），解析地址填 M3U8 解析接口</li>
+        <li>分类绑定播放器 → 清缓存 → 前台验证</li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- Tab 9: 爱影CMS -->
+  <div class="help-tab" id="tab-iycms">
+    <div class="help-card">
+      <h3>爱影CMS — 采集配置</h3>
+      <div class="api-group">
+        <div class="api-group-title">JSON 采集接口 <span class="api-tag tag-rec">推荐</span></div>
+        <div class="api-row">
+          <span class="api-label">主接口</span>
+          <span class="api-box primary">{$cfg.api_host|htmlspecialchars}api.php/provide/vod/</span>
+          <button class="copy-btn" data-text="{$cfg.api_host|htmlspecialchars}api.php/provide/vod/">复制</button>
+        </div>
+        {if !empty($cfg.api_host_backup)}
+        <div class="api-row">
+          <span class="api-label">备用接口</span>
+          <span class="api-box backup">{$cfg.api_host_backup|htmlspecialchars}api.php/provide/vod/</span>
+          <button class="copy-btn" data-text="{$cfg.api_host_backup|htmlspecialchars}api.php/provide/vod/">复制</button>
+        </div>
+        {/if}
+      </div>
+      <div class="api-group">
+        <div class="api-group-title">M3U8 解析接口</div>
+        <div class="api-row">
+          <span class="api-box primary">{$parse_host_eff|htmlspecialchars}</span>
+          <button class="copy-btn" data-text="{$parse_host_eff|htmlspecialchars}">复制</button>
+        </div>
+      </div>
+      <div class="api-row">
+        <span class="api-label">播放器标识</span>
+        <span class="api-box">{$cfg.player_flag|htmlspecialchars}</span>
+        <button class="copy-btn" data-text="{$cfg.player_flag|htmlspecialchars}">复制</button>
+      </div>
+    </div>
+    <div class="help-card">
+      <h3>配置步骤</h3>
+      <ol class="help-step">
+        <li>后台 → <strong>数据采集</strong> → <strong>新增资源库</strong></li>
+        <li>接口地址填写上方 JSON 主接口，接口类型选 <strong>JSON</strong></li>
+        <li>测试通过后保存，并进行站点绑定和分类绑定</li>
+        <li>后台 → <strong>工具软件</strong> → <strong>播放器管理</strong> → 新增</li>
+        <li>名称任意，采集标识填「{$cfg.player_flag|htmlspecialchars}」，解析地址填 M3U8 解析接口</li>
+        <li>完成后执行采集 → 清缓存 → 前台验证</li>
+      </ol>
+      <div class="help-info">若播放异常，请检查播放器标识是否与采集 flag 字段一致。</div>
+    </div>
+  </div>
+
+  {if $newart_show}
+  <!-- Tab 10: 新闻演员 -->
+  <div class="help-tab" id="tab-newart">
+    <div class="help-card">
+      <h3>新闻 &amp; 演员接口</h3>
+      <div class="help-info">以下接口独立于视频接口，可在支持自定义接口的 CMS 中单独配置。</div>
+
+      <div class="api-group">
+        <div class="api-group-title">新闻接口 <span class="api-tag tag-json">JSON</span></div>
+        <div class="api-row">
+          <span class="api-label">主接口</span>
+          <span class="api-box primary">{$newart_api_host_eff|htmlspecialchars}api.php/provide/art/</span>
+          <button class="copy-btn" data-text="{$newart_api_host_eff|htmlspecialchars}api.php/provide/art/">复制</button>
+        </div>
+        {if !empty($cfg.api_host_backup)}
+        <div class="api-row">
+          <span class="api-label">备用接口</span>
+          <span class="api-box backup">{$cfg.api_host_backup|htmlspecialchars}api.php/provide/art/</span>
+          <button class="copy-btn" data-text="{$cfg.api_host_backup|htmlspecialchars}api.php/provide/art/">复制</button>
+        </div>
+        {/if}
+      </div>
+
+      <div class="api-group">
+        <div class="api-group-title">演员接口 <span class="api-tag tag-json">JSON</span></div>
+        <div class="api-row">
+          <span class="api-label">主接口</span>
+          <span class="api-box primary">{$newart_api_host_eff|htmlspecialchars}api.php/provide/actor/</span>
+          <button class="copy-btn" data-text="{$newart_api_host_eff|htmlspecialchars}api.php/provide/actor/">复制</button>
+        </div>
+        {if !empty($cfg.api_host_backup)}
+        <div class="api-row">
+          <span class="api-label">备用接口</span>
+          <span class="api-box backup">{$cfg.api_host_backup|htmlspecialchars}api.php/provide/actor/</span>
+          <button class="copy-btn" data-text="{$cfg.api_host_backup|htmlspecialchars}api.php/provide/actor/">复制</button>
+        </div>
+        {/if}
+      </div>
+    </div>
+    <div class="help-card">
+      <h3>使用说明</h3>
+      <ol class="help-step">
+        <li>后台进入采集或内容源设置，新增数据源</li>
+        <li>新闻内容使用「新闻接口」，接口格式选 <strong>JSON</strong></li>
+        <li>演员数据使用「演员接口」，类型选演员，格式选 JSON</li>
+        <li>设置采集频率（建议每日一次），执行首次采集后前台验证展示效果</li>
+      </ol>
+    </div>
+  </div>
+  {/if}
+
+</div>
+</div>
+{include file="public/foot"}
+<script>
+{literal}
+$(function(){
+  $('.help-tabs a').on('click',function(e){
+    e.preventDefault();
+    var tab=$(this).data('tab');
+    $('.help-tabs a').removeClass('active');
+    $(this).addClass('active');
+    $('.help-tab').hide();
+    $('#tab-'+tab).show();
+  });
+
+  $(document).on('click','.copy-btn',function(){
+    var btn=$(this);
+    var text=btn.data('text')||btn.prev('.api-box').text().trim();
+    if(!text)return;
+    function done(){btn.text('已复制').addClass('copied');setTimeout(function(){btn.text('复制').removeClass('copied');},2000);}
+    if(navigator.clipboard&&window.isSecureContext){
+      navigator.clipboard.writeText(text).then(done).catch(function(){fb(text,done);});
+    }else{fb(text,done);}
+  });
+
+  function fb(text,cb){
+    var ta=document.createElement('textarea');
+    ta.value=text;ta.style.position='fixed';ta.style.opacity='0';
+    document.body.appendChild(ta);ta.focus();ta.select();
+    try{document.execCommand('copy');}catch(e){}
+    document.body.removeChild(ta);cb();
+  }
+});
+{/literal}
+</script>
+</body>
+</html>
