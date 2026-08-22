@@ -295,7 +295,7 @@ layui.use(['layer', 'form'], function () {
         fetch('{:url("save")}', {
             method: 'POST',
             credentials: 'same-origin',
-            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-Token': (document.querySelector('meta[name="mac-admin-csrf"]')||{}).content || '' },
             body: fd
         })
         .then(function (r) { return r.json(); })
@@ -321,7 +321,7 @@ layui.use(['layer', 'form'], function () {
             fetch('{:url("regen")}', {
                 method: 'POST',
                 credentials: 'same-origin',
-                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-Token': (document.querySelector('meta[name="mac-admin-csrf"]')||{}).content || '' }
             })
             .then(function (r) { return r.json(); })
             .then(function (res) {
@@ -351,7 +351,7 @@ layui.use(['layer', 'form'], function () {
             fetch('{:url("toggleEnabled")}', {
                 method: 'POST',
                 credentials: 'same-origin',
-                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-Token': (document.querySelector('meta[name="mac-admin-csrf"]')||{}).content || '' }
             })
             .then(function (r) { return r.json(); })
             .then(function (res) {
