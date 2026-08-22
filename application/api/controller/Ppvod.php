@@ -330,12 +330,14 @@ class Ppvod extends Base
 
     private function logError($content)
     {
-        $root = defined('ROOT_PATH') ? ROOT_PATH : (($_SERVER['DOCUMENT_ROOT'] ?? '') ?: getcwd()) . DIRECTORY_SEPARATOR;
-        $dir  = rtrim($root, '/\\') . DIRECTORY_SEPARATOR . 'log' . DIRECTORY_SEPARATOR;
+        $runtime = defined('RUNTIME_PATH')
+            ? RUNTIME_PATH
+            : rtrim((defined('ROOT_PATH') ? ROOT_PATH : getcwd()), '/\\') . DIRECTORY_SEPARATOR . 'runtime' . DIRECTORY_SEPARATOR;
+        $dir = rtrim($runtime, '/\\') . DIRECTORY_SEPARATOR . 'api' . DIRECTORY_SEPARATOR . 'ppvod' . DIRECTORY_SEPARATOR;
         if (!is_dir($dir)) {
             @mkdir($dir, 0755, true);
         }
-        @error_log(date('[Y-m-d H:i:s]') . ' - ' . $content . "\n", 3, $dir . date('Y-m-d') . '.txt');
+        @error_log(date('[Y-m-d H:i:s]') . ' - ' . $content . "\n", 3, $dir . date('Y-m-d') . '.log');
     }
 
     private function transgress_keyword($content)
