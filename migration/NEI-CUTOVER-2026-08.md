@@ -13,7 +13,7 @@
 
 ## 已完成
 
-- 目标代码从 `feat/tp8-migration` 独立部署到 `/opt/maccms10-nei`，当前为 `80746e7`，没有改动已有的 `/opt/maccms10`。
+- 目标代码从 `feat/tp8-migration` 独立部署到 `/opt/maccms10-nei`，源码树当前为 `132fb89`，运行时代码包含兼容提交 `b0bd513` 和日志修复 `80746e7`；没有改动已有的 `/opt/maccms10`。
 - 新建独立数据库 `nei_selangzy` 和最小权限应用账号；新管理员随机生成，旧 `mac_admin` 未迁移。
 - 安装记录和随机后台入口分别保存在目标机 `/root/nei-selangzy-install.json`、`/root/nei-selangzy-admin-entry`，权限为 `0600`。
 - 旧库快照先导入隔离库 `nei_selangzy_legacy`，再按共有字段迁入 25 张业务表；旧 `mac_tmpvod` 未迁入，新版功能表保留。
@@ -29,6 +29,7 @@
 - 首页、provide XML API 均为 HTTP 200；新旧最近两小时 API 的记录数和视频 ID 集合一致。
 - 最新真实推送报文在目标历史路由重放返回 `duplicate`，活跃同名记录前后均为 1；其封面、播放、MP4 下载、状态、分类和播放器 6 项均与旧版兼容构造结果一致。
 - 恶意 `javascript:` 报文域名实测返回 `rejected/domain`。Ppvod 独立日志已改到 Nginx 禁止访问且运行用户可写的 `runtime/api/ppvod/`，部署后 PHP/runtime 致命和未定义变量错误均为 0。
+- 旧机反代后、兼容代码部署前的 17:09 有一条过渡窗口入库（`vod_id=483732`）：只进入目标库，源库仍停在 `483731`，Meilisearch 文档存在。该行沿用当时现版本的分享下载地址；按老公式重建出的 MP4 候选当前返回 404，因此保留可用地址，不做猜测性覆盖。
 - 随机后台入口、验证码、随机管理员、Dragonfly 会话和仪表盘真实登录通过；默认 `admin.php` 返回 404。
 - 旧站两个历史定时任务 `aa`（采集）和 `bb`（生成）均为关闭，宝塔无启用的 nei 计划任务，因此不复制。共享主站的内网采集任务仍由共享主站负责。
 
@@ -53,7 +54,7 @@
 
 - 业务迁移和无双写切换已完成；公开 DNS 仍经过旧机反代，功能请求实际已由新机处理。
 - DNS 唯一待操作项：`nei.selangzy.com` 改为 `CNAME origin.slapibf.com`，仅 DNS，TTL `300`。不要修改已放弃的根域名和 `www`。
-- 继续观察下一条真实新推送是否返回 `inserted`，并核对 `mac_vod` 最大 ID、Ppvod 日志和 Meilisearch 任务；无需为了测试向生产库制造临时内容。
+- 继续观察兼容开启后的下一条真实新推送是否返回 `inserted`，并核对 `mac_vod` 最大 ID、Ppvod 日志和 Meilisearch 任务；无需为了测试向生产库制造临时内容。
 - DNS 修改后保留旧机整站反代至少 48 小时，再根据日志决定是否下线旧站资源。
 
 ## 无双写切换顺序
