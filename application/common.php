@@ -4720,8 +4720,11 @@ if (!function_exists('mac_validate')) {
 }
 if (!function_exists('mac_help_url')) {
     function mac_help_url(): string {
-        $path = \app\common\model\HelpCfg::get('help_path', 'help');
-        return '/' . ltrim($path ?: 'help', '/');
+        // 与 mac_rep_url() 同约定：本项目固定入口用 /index.php/<route>.html。
+        // 该形式在伪静态站同样可达（index.php 入口恒在），而裸 '/help' 在非伪静态站
+        // （本项目默认的 /index.php/xxx.html 方案）会 404。help_path 由后台可配。
+        $path = \app\common\model\HelpCfg::get('help_path', 'help') ?: 'help';
+        return '/index.php/' . ltrim($path, '/') . '.html';
     }
 }
 if (!function_exists('mac_rep_url')) {
