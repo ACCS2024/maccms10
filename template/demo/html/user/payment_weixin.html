@@ -29,7 +29,7 @@
 		<div class="line40">
 			<p><span class="xiang">订单编号：</span>{$order.order_code}</p>
 			<p><span class="xiang">订单金额：</span>{$order.order_price}元</p>
-			<p><img src="http://paysdk.weixin.qq.com/example/qrcode.php?data={$payment.code_url|urlencode}" width="150" height="150"/></p>
+			<p><img src="{:url('user/qrcode')}?data={$payment.code_url|urlencode}" width="150" height="150" alt="微信支付二维码"/></p>
 			<p>打开微信，扫码支付</p>
 		</div>
 		</form>
