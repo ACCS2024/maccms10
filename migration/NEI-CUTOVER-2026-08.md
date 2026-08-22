@@ -34,7 +34,8 @@
 - 新域名 `nei.senlinzy.com` 已加入站点 vhost 和宝塔站点 ID 5，DNS 直达目标机；Let's Encrypt 证书仅签发新域名并通过严格主机名校验，有效期至 2026-11-20。
 - 站点私有 `site_url` 和 `site_wapurl` 已改为 `nei.senlinzy.com`。旧 `nei.selangzy.com` 仅保留在 `server_name` 中兼容残余请求，不再作为正式域名或证书域名。
 - 随机后台入口、验证码、随机管理员、Dragonfly 会话和仪表盘真实登录通过；默认 `admin.php` 返回 404。
-- 旧站两个历史定时任务 `aa`（采集）和 `bb`（生成）均为关闭，宝塔无启用的 nei 计划任务，因此不复制。共享主站的内网采集任务仍由共享主站负责。
+- 旧站两个历史定时任务 `aa`（采集）和 `bb`（生成）均为关闭，宝塔无启用的 nei 计划任务，因此不复制。
+- 官网原 MacCMS 任务 `nei_internal_vod` 已从 `application/extra/timming.php` 删除；官网与内网站以后只在后台按需手动同步，不再定时采集。宝塔证书续签、数据库备份和 MacCMS 运营统计任务不受影响。
 
 ## DNS 与域名现状
 
