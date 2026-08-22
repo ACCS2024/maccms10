@@ -15,7 +15,9 @@ class MeilisearchService
 
     public static function cfg()
     {
-        $c = $GLOBALS['config']['meilisearch'] ?? [];
+        // AppInit sets the global during HTTP requests. Console maintenance commands
+        // have no middleware phase, so read the already-loaded config directly there.
+        $c = $GLOBALS['config']['meilisearch'] ?? config('maccms.meilisearch', []);
         return is_array($c) ? $c : [];
     }
 

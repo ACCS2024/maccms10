@@ -898,7 +898,12 @@ function mac_meili_settings_auto_sync()
  */
 function mac_perf_env_checks()
 {
-    $app = isset($GLOBALS['config']['app']) && is_array($GLOBALS['config']['app']) ? $GLOBALS['config']['app'] : [];
+    // HTTP requests populate $GLOBALS['config'] in AppInit. Console commands do not
+    // run middleware, so fall back to the loaded maccms config for accurate `think info` output.
+    $runtimeConfig = isset($GLOBALS['config']) && is_array($GLOBALS['config'])
+        ? $GLOBALS['config']
+        : (array)config('maccms');
+    $app = isset($runtimeConfig['app']) && is_array($runtimeConfig['app']) ? $runtimeConfig['app'] : [];
     $checks = [];
     $push = function ($label, $ok, $detail, $guide, $optional = false) use (&$checks) {
         $checks[] = ['label' => $label, 'ok' => (bool)$ok, 'optional' => (bool)$optional, 'detail' => (string)$detail, 'guide' => (string)$guide];
