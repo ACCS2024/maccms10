@@ -1,0 +1,143 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<title>专题 - {$maccms.site_name}</title>
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<meta name="robots" content="index, follow" />
+<meta name="revisit-after" content="1 days" />
+<meta name="keywords" content="" />
+<meta name="description" content="" />
+
+	
+<link rel="Shortcut Icon" type="image/ico" href="{$maccms.path_tpl}images/favicon.ico" />
+<link rel="apple-touch-icon" href="{$maccms.path_tpl}images/webapp-icon.png">
+<link rel="canonical" href="{$maccms.site_url}">
+	
+ {include file="public/include"}
+<style>
+    
+    h1 {
+        font-size: 18px;
+    }
+    h2 {
+        font-size: 16px;
+    }
+    @media screen and (min-width: 768px) {
+      .col-sm-6.col-md-4.col-lg-4 > .well.well-sm, .col-sm-4.col-md-3.col-lg-3 > .well.well-sm, .col-sm-6.col-md-3.col-lg-3 > .well.well-sm {
+        min-height: 192px;
+      }
+    }
+    @media screen and (min-width: 991px) {
+      .col-sm-6.col-md-4.col-lg-4 > .well.well-sm, .col-sm-4.col-md-3.col-lg-3 > .well.well-sm, .col-sm-6.col-md-3.col-lg-3 > .well.well-sm {
+        min-height: 194px;
+      }
+    }
+    @media screen and (min-width: 1200px) {
+      .col-sm-6.col-md-4.col-lg-4 > .well.well-sm, .col-sm-4.col-md-3.col-lg-3 > .well.well-sm, .col-sm-6.col-md-3.col-lg-3 > .well.well-sm {
+        min-height: 218px;
+      }
+    }
+    .popover.bottom>.arrow:after {
+        border-bottom-color: white;
+    }
+    .popover {
+        background-color: white;
+    }
+    .popover-content {
+        padding: 4px 4px 0px 4px;
+    }
+    h1.hidden-xs.big-title-truncate.m-t-0 > a {
+        white-space: nowrap;
+    }
+    .modal-open .modal {
+        z-index: 99999999;
+    }
+    
+    </style>
+</head>
+<body>
+ {include file="public/head"}
+ <div id="wrapper">
+  <div class="container">
+     <div class="well well-filters">
+      <div class="pull-left">
+         <h1>影集</h1>
+       </div>
+      <div class="pull-left m-l-20">
+         <div class="hidden-xs">
+          <div class="btn-group">
+             <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">最多观看 <span class="caret"></span></button>
+             <ul class="dropdown-menu">
+              <li><a href="{:mac_url('/topic/index/by/time')}">最新</a></li>
+              <li class="active"><a href="{:mac_url('/topic/index/by/hits')}">最多观看</a></li>
+            </ul>
+           </div>
+        </div>
+         <div class="visible-xs">
+          <div class="btn-group">
+             <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">Filters <span class="caret"></span></button>
+             <ul class="dropdown-menu">
+              <li><a href="{:mac_url('/topic/index/by/time')}">最新</a></li>
+              <li class="active"><a href="{:mac_url('/topic/index/by/hits')}">最多观看</a></li>
+            </ul>
+           </div>
+        </div>
+       </div>
+      <div class="clearfix"></div>
+    </div>
+     <div class="row">
+      <div class="col-sm-12">
+         <div class="row">
+			 {maccms:topic num="24" paging="yes" order="desc" by="time"}
+          <div class="col-sm-4 col-md-3 col-lg-3 m-b-20">
+			  <a href="{:mac_url_topic_detail($vo)}">
+            <div class="thumb-overlay">
+				<img style="height: 150px" data-original="{$vo.topic_pic|mac_url_img}" title="{$vo.topic_name}" alt="{$vo.topic_name}" class="lazy img-responsive" src="{include file="public/image"}" />
+              <div class="fps60-text-icon">{$vo.topic_hits} <i class="glyphicon glyphicon-play-circle"></i></div>
+              <div class="category-title m-t-5">
+                <div class="pull-left title-truncate"> {$vo.topic_name} </div>
+                <div class="pull-right"> <span class="badge">{$vo.topic_rel_vod|explode=',',###|count}</span> </div>
+              </div>
+            </div>
+            </a> </div>
+             {/maccms:topic}
+        </div>
+       </div>
+    </div>
+       {include file="public/paging"} 
+     <div>
+      <div class="well well-filters">
+		  {maccms:foreach name=":explode(',',$maccms.vod_extend_class)" id="vo1" key="key2"}
+			<a class="btn btn-primary" href="{:mac_url_type($obj,['area'=>$param['area'],'lang'=>$param['lang'],'year'=>$param['year'],'level'=>$param['level'],'letter'=>$param['letter'],'state'=>$param['state'],'tag'=>$param['tag'],'class'=>$vo1,'order'=>$param['order'],'by'=>$param['by'] ],'search')}"> {$vo1}</a>
+           {/maccms:foreach}
+		 </div>
+    </div>
+   </div>
+  <div style="overflow: hidden !important;">
+     <center>
+       <!--广告位-->
+    </center>
+   </div>
+   {include file="public/foot"}
+</div>
+
+
+ 
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery_lazyload/1.9.7/jquery.lazyload.min.js"></script>
+<script>
+	
+      $("img.lazy").lazyload({
+          effect : 'fadeIn'
+      });
+			 
+	
+	</script>
+ 
+ 
+</script>
+</body>
+</html> 

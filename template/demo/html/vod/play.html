@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+    <html>
+    <head>
+    <title>在线播放{$obj.vod_name} {$obj['vod_play_list'][$param['sid']]['urls'][$param['nid']]['name']} - 高清资源 - {$maccms.site_name}</title>
+    <meta name="keywords" content="{$obj.vod_name}{$obj['vod_play_list'][$param['sid']]['urls'][$param['nid']]['name']}免费在线观看,{$obj.vod_name}剧情介绍">
+    <meta name="description" content="{$obj.vod_name}{$obj['vod_play_list'][$param['sid']]['urls'][$param['nid']]['name']}免费在线观看,{$obj.vod_name}剧情介绍">
+       {include file="public/include"}
+    </head>
+    <body>
+     {include file="public/head"}
+     
+     <div class="addition-content">
+<div class="list-nav" style="
+margin-top: 10px;
+">
+        <p class="limit" style="
+    padding: 0 20px;
+    color: #c5cde9;
+    height: 48px;
+    line-height: 48px;
+    background: url(../img/listbg_03.jpg) no-repeat center;
+">
+            当前位置：
+            <a href="{$maccms.path}">首页</a>
+            &nbsp;&nbsp;&#155;&nbsp;&nbsp;<a href="{:mac_url_type($obj.type_1)}">{$obj.type_1.type_name}</a>&nbsp;&nbsp;&#155;&nbsp;&nbsp;<a href="{:mac_url_type($obj,[],'type')}">{$obj.type.type_name}</a>
+			&nbsp;&nbsp;&#155;&nbsp;&nbsp;在线播放{$obj.vod_name} {$obj['vod_play_list'][$param['sid']]['urls'][$param['nid']]['name']}
+        </p>
+    </div>
+    <div class="theme">
+        <div class="detail container" style="height:620px;background-color: #19233f;border-radius: 10px;margin-bottom: 30px;padding: 10px;box-shadow: 2px 2px 5px 2px rgb(0 0 0 / 20%);">
+           {$player_data}{$player_js}
+        </div>
+    </div>
+   <a id="playNum" style="height:0px;display:none;"><span class="mac_hits hits" data-mid="{$maccms.mid}" data-id="{$obj.vod_id}" data-type="hits"></span></a><div class="other">
+        <p class="other-title">影片简介</p>
+        <div class="other-content introduction">
+            <p>{$obj.vod_blurb}</p>
+        </div>
+    </div>
+    </div>
+    {include file="public/foot"}
+    </body>
+</html>

@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>{$obj.topic_name}- {$maccms.site_name}</title>
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<meta name="robots" content="index, follow" />
+<meta name="revisit-after" content="1 days" />
+<meta name="keywords" content=" {$obj.type_key}" />
+<meta name="description" content=" {$obj.type_des}" />
+<link rel="Shortcut Icon" type="image/ico" href="{$maccms.path_tpl}images/favicon.ico" />
+<link rel="apple-touch-icon" href="{$maccms.path_tpl}images/webapp-icon.png">
+<link rel="canonical" href="{$maccms.site_url}">
+{include file="public/include"}
+<style>
+h1 {
+	font-size: 18px;
+}
+h2 {
+	font-size: 16px;
+}
+
+@media screen and (min-width: 768px) {
+.col-sm-6.col-md-4.col-lg-4 > .well.well-sm, .col-sm-4.col-md-3.col-lg-3 > .well.well-sm, .col-sm-6.col-md-3.col-lg-3 > .well.well-sm {
+	min-height: 192px;
+}
+}
+
+@media screen and (min-width: 991px) {
+.col-sm-6.col-md-4.col-lg-4 > .well.well-sm, .col-sm-4.col-md-3.col-lg-3 > .well.well-sm, .col-sm-6.col-md-3.col-lg-3 > .well.well-sm {
+	min-height: 194px;
+}
+}
+
+@media screen and (min-width: 1200px) {
+.col-sm-6.col-md-4.col-lg-4 > .well.well-sm, .col-sm-4.col-md-3.col-lg-3 > .well.well-sm, .col-sm-6.col-md-3.col-lg-3 > .well.well-sm {
+	min-height: 218px;
+}
+}
+.popover.bottom>.arrow:after {
+	border-bottom-color: white;
+}
+.popover {
+	background-color: white;
+}
+.popover-content {
+	padding: 4px 4px 0px 4px;
+}
+h1.hidden-xs.big-title-truncate.m-t-0 > a {
+	white-space: nowrap;
+}
+.modal-open .modal {
+	z-index: 99999999;
+}
+</style>
+</head><body>
+{include file="public/head"} 
+ 
+<div id="wrapper">
+  <div class="container">
+    <div class="well well-filters">
+      <div class="pull-left">
+        <h1 title="{$obj.topic_name}">{$obj.topic_name}</h1>
+      </div>
+      <div class="pull-left m-l-20">
+        
+      </div>
+      <div class="pull-right"> <a class="btn btn-primary" href="/upload/video"><span class="hidden-xs"><i class="fa fa-upload"></i> 上传视频</span><span class="visible-xs"><i class="fa fa-upload"></i></span></a> </div>
+      <div class="clearfix"></div>
+    </div>
+    <div class="row">
+      <div class="col-md-9 col-sm-8">
+        <div class="well well-sm"> 一共 <span class="text-white" id="page_total"></span>页/<span class="text-white" >{$param.page}页</span>共<span class="text-white">{$obj.vod_list|count}</span>个视频. </div>
+        <div id="exo-native"></div>
+        <div class="row">{maccms:foreach name="$obj.vod_list"}
+          <div class="col-sm-6 col-md-4 col-lg-4">
+            <div class="well well-sm"> <a href="{:mac_url_vod_detail($vo)} ">
+              <noscript style="display: none">
+              <img src="{:mac_url_img($vo.vod_pic)}" title="{$vo.vod_name}" alt="{$vo.vod_name}"  class="img-responsive "/>
+				  <div class="hd-text-icon">{$vo.vod_version} </div>
+              <div class="duration">{$vo.vod_duration|mac_default='00:00:00'}</div>
+              </noscript>
+              <noscript style="display: none">
+              <span class="video-title title-truncate m-t-5">{$vo.vod_name}</span>
+              </noscript>
+              <div class="thumb-overlay"> <img data-original="{:mac_url_img($vo.vod_pic)}" title="{$vo.vod_name}" alt="{$vo.vod_name}" id="rotate_242860_20_1" class="lazy img-responsive " src="{include file="public/image"}" />
+                <div class="duration">{$vo.vod_duration|mac_default='00:00:00'}</div>
+              </div>
+              <span class="video-title title-truncate m-t-5">{$vo.vod_name}</span> </a>
+              <div class="video-added"> {$vo.vod_time|mac_friend_date} </div>
+              <div class="video-views pull-left">{$vo.vod_hits} <i class="glyphicon glyphicon-play-circle"></i> </div>
+              <div class="video-rating pull-right no-rating"> <i class="fa fa-heart video-rating-heart no-rating"></i> <b>-</b> </div>
+              <div class="clearfix"></div>
+            </div>
+          </div>
+          {/maccms:foreach} </div>
+      </div>
+      <div class="col-md-3 col-sm-4">
+        <div class="list-group"> <a class="list-group-item  {if condition="$obj.type_pid ==0"}active{/if}" href="{if condition="$obj.type_pid ==0"}{$obj.type_id}{else /}{$obj.type_pid}{/if}">全部</a> {if condition="($obj.type_pid ==0)"}
+          {maccms:type parent="current" order="asc" by="sort"} <a class="list-group-item  {if condition="($vo.type_name==$obj.type_name)"}active{/if}" href="{:mac_url_type($vo,[],'show')}">{$vo.type_name}</a> {/maccms:type}
+          {else /}
+          {maccms:type parent="'.$obj['type_pid'].'" order="asc" by="sort"} <a class="list-group-item {if condition="($vo.type_name==$obj.type_name)"}active{/if}" href="{:mac_url_type($vo,[],'show')}">{$vo.type_name}</a> {/maccms:type}
+          {/if} </div>
+      </div>
+    </div>
+    {include file="public/paging"} </div>
+  <div style="overflow: hidden !important;">
+    <center>
+      <script type="text/javascript" data-cfasync="false" async src="//adserver.juicyads.com/js/jads.js"></script> 
+      <ins id="625950" data-width="728" data-height="90"></ins>
+    </center>
+  </div>
+  {include file="public/foot"} </div>
+ 
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery_lazyload/1.9.7/jquery.lazyload.min.js"></script> 
+<script>
+	
+      $("img.lazy").lazyload({
+          effect : 'fadeIn'
+      });
+ 
+</script>
+</body>
+</html>

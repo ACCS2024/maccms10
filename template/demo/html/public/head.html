@@ -1,0 +1,178 @@
+<div class="head_box">
+	<div class="width1200 header">
+		<div class="header_left">
+			<a href="{$maccms.path}"><img src="{$maccms.path_tpl}img/logo.gif" alt="{$maccms.site_name}"></a>
+		</div>
+		<div class="header_right">
+			<div class="header_submit">
+				<div class="header_submit_b">
+					<form id="search" name="search" method="get" action="{:mac_url('vod/search')}" onsubmit="return qrsearch();">
+						<input type="text" name="wd" class="search-input mac_wd" placeholder="请在此处输入影片名或演员名称">
+						<input type="submit" id="searchbutton" class="search-button mac_search" value="搜索">
+					</form>
+				</div>
+			</div>
+			
+			
+			<div class="head-right">
+
+	</div>
+			<div class="header_list">
+				<ul>
+					<li>今日更新：<span style="font-weight: bold;color: #fe0085;">{:mac_data_count(0,'today','vod')}</span></li>
+					<li>本站共有影片：<span style="font-weight: bold;color: #fe0085;">{:mac_data_count(0,'all','vod')}</span></li>
+					<!--<li>本站共有资讯：<span style="font-weight: bold;color: #fe0085;">{:mac_data_count(0,'all','art')}</span></li>-->
+					<li><a href="https://help.senlinzy.com" target="_blank"><span style="font-weight: bold;">采集教程帮助中心</span></a></li>
+					<li><a class="domain-update-link" href="{:mac_rep_url()}" target="_blank">域名替换{:mac_rep_last_update()}</a></li>
+				
+				</ul>
+			</div>
+			
+			
+			
+		</div>
+		<!--<div class="header_fl">-->
+			<!--<div class="qq-c">&nbsp;TG交流群</div>-->
+		<!--	<strong >-->
+	 <!--   <a target="_blank" href="#">👉点击添加</a>-->
+		<!--<p>今日更新：<span style="font-weight: bold;">{:mac_data_count(0,'today','vod')}</span></p>-->
+		<!--<p>本站共有影片：<span style="font-weight: bold;">{:mac_data_count(0,'all','vod')}</span></p>-->
+		<!--<p>本站共有资讯：<span style="font-weight: bold;">{:mac_data_count(0,'all','art')}</span></p>-->
+		<!--</strong>-->
+		<!--</div>-->
+	</div>
+
+</div>
+<div class="head_box">
+  <div style="text-align: center; font-size: 24px; font-weight: bold; color: red;">
+
+</div>
+
+  <div class="nav">
+    <div class="width1200">
+      <ul>
+           <li>
+            <a  title="视频一区">视频一区</a>
+        </li>
+        
+      {maccms:type ids="20,22,23,24,25,26,27,28" order="asc" by="sort"}
+        <li>
+            <a href="{:mac_url_type($vo)}" title="{$vo.type_name}">{$vo.type_name}</a>
+        </li>
+        
+          {/maccms:type}
+    </div>
+  </div>
+ <div class="nav">
+    <div class="width1200">
+      <ul>
+           <li>
+            <a  title="视频二区">视频二区</a>
+        </li>
+        
+      {maccms:type ids="29,30,31,32,33,34,35,36" order="asc" by="sort"}
+        <li>
+            <a href="{:mac_url_type($vo)}" title="{$vo.type_name}">{$vo.type_name}</a>
+        </li>
+        
+          {/maccms:type}
+    </div>
+  </div>
+     <div class="nav">
+    <div class="width1200">
+      <ul>
+           <li>
+            <a  title="视频二区">视频三区</a>
+        </li>
+        
+      {maccms:type ids="37,38,39,40,41,42,43,44" order="asc" by="sort"}
+        <li>
+            <a href="{:mac_url_type($vo)}" title="{$vo.type_name}">{$vo.type_name}</a>
+        </li>
+    
+          {/maccms:type}
+    </div>
+  </div>
+     <div class="nav">
+    <div class="width1200">
+      <ul>
+           <li>
+            <a  title="视频二区">视频四区</a>
+        </li>
+        
+      {maccms:type ids="45,46,47,48,49,50,51,52" order="asc" by="sort"}
+        <li>
+            <a href="{:mac_url_type($vo)}" title="{$vo.type_name}">{$vo.type_name}</a>
+        </li>
+    
+          {/maccms:type}
+    </div>
+  </div>
+     <div class="nav">
+    <div class="width1200">
+      <ul>
+           <li>
+            <a  title="视频二区">视频五区</a>
+        </li>
+        
+      {maccms:type ids="53,54,55,56,47,58,59,60" order="asc" by="sort"}
+        <li>
+            <a href="{:mac_url_type($vo)}" title="{$vo.type_name}">{$vo.type_name}</a>
+        </li>
+    
+          {/maccms:type}
+    </div>
+  </div>
+       <div class="nav">
+    <div class="width1200">
+      <ul>
+       
+        
+      {maccms:type ids="60,61,62,63" order="asc" by="sort"}
+        <li>
+            <a href="{:mac_url_type($vo)}" title="{$vo.type_name}">{$vo.type_name}</a>
+        </li>
+    
+          {/maccms:type}
+    </div>
+  </div>
+  
+    <div class="nav">
+    <div class="width1200">
+      <ul>
+           <li>
+            <a  title="小说专区">小说专区</a>
+        </li>
+        {maccms:type order="asc" by="sort" mid="2" ids="64,65,66,67,68,69,70"}
+      
+        <li>
+            <a href="{:mac_url_type($vo)}" title="{$vo.type_name}">{$vo.type_name}</a>
+        </li>
+    
+          {/maccms:type}
+    </div>
+  </div>
+  
+  <div class="nav">
+    <div class="width1200">
+      <ul>
+           <li>
+            <a  title="图片专区">图片专区</a>
+        </li>
+        
+       {maccms:type order="asc" by="sort" mid="2" ids="71,72,73,74,75,76,77"}
+        <li>
+            <a href="{:mac_url_type($vo)}" title="{$vo.type_name}">{$vo.type_name}</a>
+        </li>
+    
+          {/maccms:type}
+    </div>
+  </div>
+  
+  
+  
+  
+  
+  
+</div>
+{include file="public/notice"}
