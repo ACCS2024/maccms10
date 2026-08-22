@@ -83,7 +83,7 @@
   <!-- 温馨提示 -->
   <div class="rep-tip" id="repTip">
     <span id="repTipText">正在计算新记录数量…</span>
-    <button class="rep-tip-close" onclick="hideTip()">✕</button>
+    <button class="rep-tip-close js-hide-tip" type="button">✕</button>
   </div>
 
   <!-- 记录列表 -->
@@ -95,7 +95,7 @@
   </div>
   {else/}
   {foreach $list as $index => $item}
-  <div class="rep-card" id="rep-{$item.rep_id}" data-id="{$item.rep_id}" data-ts="{$item.rep_create_time}" onclick="markViewed(this)">
+  <div class="rep-card" id="rep-{$item.rep_id|intval}" data-id="{$item.rep_id|intval}" data-ts="{$item.rep_create_time|intval}">
     <div class="rep-card-body">
       <div class="rep-card-meta">
         <span class="rep-badge b-new b-hidden">★ 新</span>
@@ -117,10 +117,10 @@
       <div class="rep-card-foot">
         <div class="rep-actions">
           {if $item.rep_type eq '播放器替换'}
-          <button class="rep-btn btn-green" onclick="event.stopPropagation();showTutorial('{$item.rep_type|htmlspecialchars}')">后台设置（推荐）</button>
+          <button class="rep-btn btn-green js-show-tutorial" type="button" data-rep-type="{$item.rep_type|htmlspecialchars}">后台设置（推荐）</button>
           {else/}
-          <button class="rep-btn btn-green" onclick="event.stopPropagation();showTutorial('{$item.rep_type|htmlspecialchars}')">后台操作（推荐）</button>
-          <button class="rep-btn btn-blue" onclick="event.stopPropagation();showSQL({$index})">复制 SQL（进阶）</button>
+          <button class="rep-btn btn-green js-show-tutorial" type="button" data-rep-type="{$item.rep_type|htmlspecialchars}">后台操作（推荐）</button>
+          <button class="rep-btn btn-blue js-show-sql" type="button" data-rep-index="{$index|intval}">复制 SQL（进阶）</button>
           {/if}
         </div>
         {if !empty($item.rep_note)}
@@ -139,14 +139,14 @@
   <div class="rep-modal">
     <div class="rep-modal-head">
       <h3>SQL 命令</h3>
-      <button class="rep-modal-close" onclick="closeModal('sqlModal')">✕</button>
+      <button class="rep-modal-close js-close-modal" type="button" data-modal="sqlModal">✕</button>
     </div>
     <div class="rep-modal-body">
       <div class="rep-sql-block"><pre id="sqlContent"></pre></div>
       <div class="rep-warn">⚠ 执行前请备份数据库。将 SQL 粘贴到 phpMyAdmin 或 MacCMS 后台「数据库」中执行。</div>
       <div class="rep-modal-foot">
-        <button class="rep-btn btn-blue" onclick="copySQL()">复制 SQL</button>
-        <button class="rep-btn btn-gray" onclick="closeModal('sqlModal')">关闭</button>
+        <button class="rep-btn btn-blue js-copy-sql" type="button">复制 SQL</button>
+        <button class="rep-btn btn-gray js-close-modal" type="button" data-modal="sqlModal">关闭</button>
       </div>
     </div>
   </div>
@@ -157,12 +157,12 @@
   <div class="rep-modal">
     <div class="rep-modal-head">
       <h3>操作教程</h3>
-      <button class="rep-modal-close" onclick="closeModal('tutorialModal')">✕</button>
+      <button class="rep-modal-close js-close-modal" type="button" data-modal="tutorialModal">✕</button>
     </div>
     <div class="rep-modal-body">
       <div class="rep-tutorial" id="tutorialContent"></div>
       <div class="rep-modal-foot" style="margin-top:16px;">
-        <button class="rep-btn btn-gray" onclick="closeModal('tutorialModal')">关闭</button>
+        <button class="rep-btn btn-gray js-close-modal" type="button" data-modal="tutorialModal">关闭</button>
       </div>
     </div>
   </div>
@@ -170,12 +170,15 @@
 
 {include file="public/foot"}
 <script>
-var repList = {php}echo json_encode($list, JSON_HEX_TAG|JSON_HEX_AMP|JSON_UNESCAPED_UNICODE);{/php};
+var repList = {php}echo json_encode($list, JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_UNESCAPED_UNICODE);{/php};
 
 // Modal
 function closeModal(id){document.getElementById(id).classList.remove('show');}
 document.querySelectorAll('.rep-modal-bg').forEach(function(m){
   m.addEventListener('click',function(e){if(e.target===m)m.classList.remove('show');});
+});
+document.querySelectorAll('.js-close-modal').forEach(function(button){
+  button.addEventListener('click',function(){closeModal(button.dataset.modal);});
 });
 
 // SQL生成
@@ -195,7 +198,7 @@ function showSQL(idx){
 }
 function copySQL(){
   var t=document.getElementById('sqlContent').textContent;
-  if(navigator.clipboard){navigator.clipboard.writeText(t).then(function(){alert('SQL 已复制！');});}
+  if(navigator.clipboard){navigator.clipboard.writeText(t).then(function(){alert('SQL 已复制！');}).catch(function(){alert('复制失败，请手动选择复制');});}
   else{var ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);alert('SQL 已复制！');}
 }
 
@@ -212,6 +215,18 @@ function showTutorial(type){
   document.getElementById('tutorialModal').classList.add('show');
 }
 function hideTip(){document.getElementById('repTip').style.display='none';}
+
+document.querySelector('.js-hide-tip').addEventListener('click',hideTip);
+document.querySelectorAll('.rep-card').forEach(function(card){
+  card.addEventListener('click',function(){markViewed(card);});
+});
+document.querySelectorAll('.js-show-tutorial').forEach(function(button){
+  button.addEventListener('click',function(event){event.stopPropagation();showTutorial(button.dataset.repType);});
+});
+document.querySelectorAll('.js-show-sql').forEach(function(button){
+  button.addEventListener('click',function(event){event.stopPropagation();showSQL(parseInt(button.dataset.repIndex,10));});
+});
+document.querySelector('.js-copy-sql').addEventListener('click',copySQL);
 
 // 已读状态
 var SK='macrep_v3',LK='macrep_lv3';
