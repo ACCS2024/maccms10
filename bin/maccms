@@ -182,7 +182,8 @@ case "$cmd" in
 
   *)
     # 若首参为 @别名/@分组(如 @site1 / @all),解析为站点路径并对每个站执行
-    if [ "${1:-}" != "${1#@}" ] && [ -n "${1:-}" ]; then
+    first_arg="${1:-}"
+    if [ -n "$first_arg" ] && [ "$first_arg" != "${first_arg#@}" ]; then
       alias_name="$1"; shift
       [ -n "$CONFIG" ] || die "未找到 maccms-cli.yml,无法解析 $alias_name(参考 maccms-cli.yml.example)"
       sites=()
