@@ -9,7 +9,7 @@
 - `nei.selangzy.com` 是独立站、独立数据库，也是共享主站的采集源。
 - 迁移只搬业务数据、白名单配置和 JPG 上传资源。旧 PHP、旧 `RX03` 主题、旧框架、旧 `vendor`、日志、runtime 和 `mac_admin` 均不迁移。
 - 当前系统已经集成的 Yzm/Ppvod 控制器、历史路由和响应契约保持原样，本次迁移不修改这些文件。
-- DNS 切换前旧站继续接收推送；正式切换必须使用“旧写入口反代到新机”避免双写。
+- DNS 切换前旧站继续接收推送；正式切换必须先把旧 vhost 整站反代到新机，避免双写并确保主站采集不会读到停止更新的旧库。
 
 ## 已完成
 
@@ -39,8 +39,8 @@
 ## 无双写切换顺序
 
 1. 再核对源/目标 `mac_vod` 的 count、max ID、max time；目标不得落后于上一次已同步基线。
-2. 把 `migration/nei-yzm-cutover-proxy.nginx.conf` 放到旧机 `nei.selangzy.com` vhost 的 extension 目录，执行 Nginx 配置测试后 reload。
-3. 用已导入目标库的真实报文请求旧域名；应由目标接口返回 `duplicate`，目标行数不变。
+2. 把 `migration/nei-cutover-proxy.nginx.conf` 放到旧机 `nei.selangzy.com` vhost 的 extension 目录，执行 Nginx 配置测试后 reload。旧域名此时所有读写均由新机处理。
+3. 用已导入目标库的真实报文请求旧域名；应由目标接口返回 `duplicate`，目标行数不变；首页和 provide API 也应返回新机资源标记与数据。
 4. 等待 15 秒让 reload 前已进入旧 PHP-FPM 的请求结束，再从旧库导出 `vod_id > 目标最大 ID` 的最终增量并导入目标库。
 5. 再次确认源/目标 count、max ID、max time 和最近两小时 API ID 集合一致。
 6. 把 DNS 改为 `CNAME nei -> origin.slapibf.com`，仅 DNS，TTL 300。
@@ -60,4 +60,4 @@
 - 不把 SSH、数据库、FTP、接口、Dragonfly、Meilisearch 或管理员口令写入仓库和日志摘要。
 - 不把默认 `admin.php` 再同步到目标站。
 - 后续代码 rsync 必须排除 `.env`、`application/extra/`、`upload/`、`runtime/` 和随机后台入口。
-- 切换反代只作用于旧 `nei.selangzy.com` vhost 的精确 Yzm 路径，不影响其他站点或当前系统代码。
+- 切换反代只作用于旧 `nei.selangzy.com` vhost，不影响其他站点或当前系统代码。
