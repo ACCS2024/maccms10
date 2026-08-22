@@ -8,6 +8,8 @@ class Ftp
     public $name = 'FTP存储';
     public $ver = '1.0';
     private $config = [];
+    private static $connections = [];
+    private static $failedConnections = [];
 
     public function __construct($config = []) {
         $this->config = $config;
@@ -15,19 +17,44 @@ class Ftp
 
     public function submit($file_path)
     {
-        $ftp = new ftpOper();
+        $settings = $GLOBALS['config']['upload']['api']['ftp'];
         $ftp_config = [
-            'ftp_host'=>$GLOBALS['config']['upload']['api']['ftp']['host'],
-            'ftp_port'=>$GLOBALS['config']['upload']['api']['ftp']['port'],
-            'ftp_user'=>$GLOBALS['config']['upload']['api']['ftp']['user'],
-            'ftp_pwd' =>$GLOBALS['config']['upload']['api']['ftp']['pwd'],
-            'ftp_dir'=>$GLOBALS['config']['upload']['api']['ftp']['path'],
+            'ftp_host'=>$settings['host'],
+            'ftp_port'=>$settings['port'],
+            'ftp_user'=>$settings['user'],
+            'ftp_pwd' =>$settings['pwd'],
+            'ftp_dir'=>$settings['path'],
+            'ftp_timeout'=>max(3, (int)($settings['timeout'] ?? 30)),
         ];
-        $ftp->config($ftp_config);
-        $ftp->connect();
-        $a = $ftp->put(ROOT_PATH. $file_path, $file_path);
+
+        $connectionKey = hash('sha256', serialize($ftp_config));
+        if (isset(self::$failedConnections[$connectionKey])) {
+            return $file_path;
+        }
+
+        if (!isset(self::$connections[$connectionKey])) {
+            $ftp = new ftpOper($ftp_config);
+            if ($ftp->connect() !== $ftp) {
+                self::$failedConnections[$connectionKey] = true;
+                return $file_path;
+            }
+            self::$connections[$connectionKey] = $ftp;
+        }
+
+        $ftp = self::$connections[$connectionKey];
+        try {
+            $uploaded = $ftp->put(ROOT_PATH . $file_path, $file_path);
+        } catch (\Throwable $e) {
+            $uploaded = false;
+        }
+        if (!$uploaded) {
+            self::$failedConnections[$connectionKey] = true;
+            unset(self::$connections[$connectionKey]);
+            return $file_path;
+        }
+
         $filePath = ROOT_PATH . $file_path;
         empty($this->config['keep_local']) && @unlink($filePath);
-        return $GLOBALS['config']['upload']['api']['ftp']['url'] . '/' . $file_path;
+        return $settings['url'] . '/' . $file_path;
     }
 }

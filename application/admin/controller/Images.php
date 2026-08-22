@@ -7,7 +7,8 @@ class Images extends Base
     public function __construct()
     {
         parent::__construct();
-        //header('X-Accel-Buffering: no');
+        header('X-Accel-Buffering: no');
+        header('Cache-Control: no-cache, no-store, must-revalidate');
     }
 
     public function data()
@@ -45,6 +46,10 @@ class Images extends Base
     public function sync()
     {
         $param = \think\facade\Request::param();
+
+        @ini_set('zlib.output_compression', '0');
+        @ini_set('output_buffering', '0');
+        @session_write_close();
 
         $param['page'] = intval($param['page'] ?? 0) < 1 ? 1 : $param['page'];
         $param['limit'] = intval($param['limit'] ?? 0) < 1 ? 10 : $param['limit'];
@@ -128,6 +133,8 @@ class Images extends Base
 
         mac_echo('<style type="text/css">body{font-size:12px;color: #333333;line-height:21px;}span{font-weight:bold;color:#FF0000}</style>');
         mac_echo(lang('admin/images/sync_tip',[$total,$param['limit'],$page_count,$param['page']]));
+        // Push the first progress lines through proxy/browser buffering immediately.
+        mac_echo('<!--' . str_repeat(' ', 4096) . '-->');
 
         $list = Db::name($tab)->where($where)->page($page_count-1,$param['limit'])->select();
         $config = config('maccms.upload');
