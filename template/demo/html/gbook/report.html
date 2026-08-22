@@ -2,7 +2,7 @@
 <div class="mac_report reply_box">
     <form class="gbook_form">
         <p class="msg_cue">请输入报错内容：</p>
-        <textarea class="gbook_content" name="gbook_content" style="width:98%;height:150px;">{$param.name}</textarea>
+        <textarea class="gbook_content" name="gbook_content" style="width:98%;height:150px;">{$param.name|htmlspecialchars}</textarea>
         <div class="msg_code">
             {if condition="$gbook.verify eq 1"}
             验证码：<input type="text" name="verify" class="mac_verify" maxlength="4" style="width:80px;lin-height:20px;">

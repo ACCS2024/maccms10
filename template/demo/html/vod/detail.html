@@ -47,7 +47,7 @@
 <li class="text-style">
 <a title="{$vo2.name}" href="javascript:;" class="copy_text">
 <font color="red">{$vo2.name}${$vo2.url}</font></a>
-<a  class="bugs" href="javascript:;" onclick="MAC.Gbook.Report('编号【{$obj.vod_id}】名称【{$obj.vod_name}】不能观看请检查修复，页面地址' + location.href)">我要报错</a>
+<a class="bugs" data-vod-id="{$obj.vod_id|intval}" data-vod-name="{$obj.vod_name|htmlspecialchars}" href="javascript:;">我要报错</a>
 <a  class="bugs" href="{:mac_url_vod_play($obj)}">点击播放</a>
 
 </li>

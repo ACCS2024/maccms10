@@ -94,19 +94,19 @@
     <div class="mac_pages" >
         <div class="page_tip">共{$__PAGING__.record_total}条数据,当前{$__PAGING__.page_current}/{$__PAGING__.page_total}页</div>
         <div class="page_info">
-            <a class="page_link" href="javascript:void(0);" onclick="MAC.Comment.Show(1)" title="首页">首页</a>
-            <a class="page_link" href="javascript:void(0);" onclick="MAC.Comment.Show({'$__PAGING__.page_prev}')" title="上一页">上一页</a>
+            <a class="page_link comment_page_link" data-page="1" href="javascript:void(0);" title="首页">首页</a>
+            <a class="page_link comment_page_link" data-page="{$__PAGING__.page_prev}" href="javascript:void(0);" title="上一页">上一页</a>
             {maccms:foreach name="$__PAGING__.page_num" id="num"}
             {if condition="$__PAGING__['page_current'] eq $num"}
             <a class="page_link page_current" href="javascript:;" title="第{$num}页">{$num}</a>
             {else}
-            <a class="page_link" href="javascript:void(0)" onclick="MAC.Comment.Show('{$num}')" title="第{$num}页" >{$num}</a>
+            <a class="page_link comment_page_link" data-page="{$num}" href="javascript:void(0)" title="第{$num}页" >{$num}</a>
             {/if}
             {/maccms:foreach}
-            <a class="page_link" href="javascript:void(0)" onclick="MAC.Comment.Show('{$__PAGING__.page_next}')" title="下一页">下一页</a>
-            <a class="page_link" href="javascript:void(0)" onclick="MAC.Comment.Show('{$__PAGING__.page_total}')" title="尾页">尾页</a>
+            <a class="page_link comment_page_link" data-page="{$__PAGING__.page_next}" href="javascript:void(0)" title="下一页">下一页</a>
+            <a class="page_link comment_page_link" data-page="{$__PAGING__.page_total}" href="javascript:void(0)" title="尾页">尾页</a>
 
             <input class="page_input" type="text" placeholder="页码" id="page" autocomplete="off" style="width:40px">
-            <button class="page_btn" type="button"  onclick="MAC.Comment.Show($('#page').val())">GO</button>
+            <button class="page_btn comment_page_go" type="button">GO</button>
         </div>
     </div>
