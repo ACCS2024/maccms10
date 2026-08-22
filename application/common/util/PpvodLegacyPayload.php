@@ -17,8 +17,8 @@ final class PpvodLegacyPayload
         $domain = self::baseUrl($payload, 'domain');
         $picDomain = self::baseUrl($payload, 'picdomain', $domain);
         $mp4Domain = self::baseUrl($payload, 'mp4domain', $domain);
-        $shareId = self::pathToken($payload['shareid'] ?? '', 'shareid');
-        $path = self::pathToken($payload['path'] ?? '', 'path');
+        $shareId = self::pathToken($payload['shareid'] ?? '', 'shareid', true);
+        $path = self::pathToken($payload['path'] ?? '', 'path', true);
 
         $playName = trim((string)($config['play_name'] ?? '')) ?: '在线播放';
         $m3u8 = $playName . '$' . $domain . $videoPath . '/index.m3u8';
@@ -84,10 +84,18 @@ final class PpvodLegacyPayload
         return substr_count($value, '/') >= 2 ? $value : '/' . $value;
     }
 
-    private static function pathToken($value, string $field): string
+    private static function pathToken($value, string $field, bool $allowEmpty = false): string
     {
         $value = self::scalarString($value, $field);
-        if ($value === '' || !preg_match('/^[A-Za-z0-9._~-]+$/D', $value)) {
+        if ($value === '') {
+            // 老 Yzm 对空 path/shareid 不校验、照样入库（构造出 .../mp4/.mp4 或 .../share/）。
+            // 复刻该宽容度：仅因可选字段为空不整条丢弃；非空仍严格校验挡穿越/注入。
+            if ($allowEmpty) {
+                return '';
+            }
+            throw new \InvalidArgumentException($field);
+        }
+        if (!preg_match('/^[A-Za-z0-9._~-]+$/D', $value)) {
             throw new \InvalidArgumentException($field);
         }
         return $value;

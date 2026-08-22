@@ -167,8 +167,17 @@ class Ppvod extends Base
 
         $legacy = null;
         if (PpvodLegacyPayload::enabled($c)) {
+            // 分类映射解析顺序复刻老 Yzm：后台 ppvod.category_map 优先，缺失的分类回落到
+            // 接口 vodtype 映射（老 Yzm 唯一来源），仍缺才用兜底栏目，避免整批内容误落 type-20。
+            $legacyCategoryMap = $c['category_map'];
+            if (function_exists('mac_interface_type')) {
+                $inter = mac_interface_type();
+                if (is_array($inter['vodtype'] ?? null)) {
+                    $legacyCategoryMap += array_map('intval', $inter['vodtype']);
+                }
+            }
             try {
-                $legacy = PpvodLegacyPayload::build($arr, $c, $collect, $c['category_map']);
+                $legacy = PpvodLegacyPayload::build($arr, $c, $collect, $legacyCategoryMap);
                 $videorpath = $legacy['video_path'];
             } catch (\InvalidArgumentException $e) {
                 $field = $e->getMessage();
@@ -207,7 +216,7 @@ class Ppvod extends Base
             $play     = rtrim($c['play_domain'], '/');
             $m3u8     = $playname . '$' . $play . $videorpath . '/index.m3u8';
             $share    = $playname . '$' . $play . '/share/' . ($arr['shareid'] ?? '');
-            $info['vod_play_url'] = (($c['addr_mode'] ?? 'm3u8') === 'all') ? ($m3u8 . '$$$' . $m3u8) : $m3u8;
+            $info['vod_play_url'] = (($c['addr_mode'] ?? 'm3u8') === 'all') ? ($m3u8 . '$$$' . $share) : $m3u8;
         }
 
         $info['vod_blurb']       = $info['vod_name'];

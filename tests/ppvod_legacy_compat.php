@@ -56,6 +56,35 @@ assertSameValue('Online$https://play.example.test/share/share001', $result['vod_
 assertSameValue('https://download.example.test/2026/08/video-id/mp4/part001.mp4', $result['vod_down_url'], 'Explicit MP4 domain changed');
 assertSameValue(20, $result['type_id'], 'Unknown category fallback changed');
 
+// 空 path/shareid 复刻老 Yzm 宽容度：不再整条丢弃，降级构造出与老版一致的 URL
+$empty = $payload;
+$empty['category'] = 'known';
+$empty['mp4domain'] = '';
+$empty['path'] = '';
+$empty['shareid'] = '';
+$config['addr_mode'] = 'all';
+$result = PpvodLegacyPayload::build($empty, $config, ['status' => 1], ['known' => 7]);
+assertSameValue(
+    'Online$https://play.example.test/2026/08/video-id/index.m3u8$$$Online$https://play.example.test/share/',
+    $result['vod_play_url'],
+    'Empty shareid must degrade like legacy (trailing /share/), not reject'
+);
+assertSameValue('https://play.example.test/2026/08/video-id/mp4/.mp4', $result['vod_down_url'], 'Empty path must degrade like legacy (/mp4/.mp4), not reject');
+
+// 但非空且畸形仍必须拒绝（挡穿越/注入）
+foreach ([['path', 'a/b'], ['shareid', 'x y']] as [$field, $badValue]) {
+    $bad = $payload;
+    $bad['category'] = 'known';
+    $bad[$field] = $badValue;
+    try {
+        PpvodLegacyPayload::build($bad, $config, ['status' => 1], ['known' => 7]);
+        fwrite(STDERR, 'Malformed non-empty field was accepted: ' . $field . PHP_EOL);
+        exit(1);
+    } catch (InvalidArgumentException $e) {
+        assertSameValue($field, $e->getMessage(), 'Rejected malformed field name changed');
+    }
+}
+
 foreach ([
     ['domain', 'javascript:alert(1)'],
     ['rpath', '/../escape'],
