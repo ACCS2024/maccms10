@@ -22,7 +22,10 @@ class Timming extends Base
                 echo json_encode(['code'=>0,'msg'=>'POST method not allowed for timming']);
                 exit;
             }
-            $token = \think\facade\Request::get('token', '', 'trim');
+            $token = \think\facade\Request::header('X-Maccms-Timming-Token', '');
+            if ($token === '') {
+                $token = \think\facade\Request::get('token', '', 'trim');
+            }
             $expected_token = (string)config('maccms.app.timming_token');
             if ($expected_token === '' || !hash_equals($expected_token, (string)$token)) {
                 echo json_encode(['code'=>0,'msg'=>'invalid or missing timming token']);

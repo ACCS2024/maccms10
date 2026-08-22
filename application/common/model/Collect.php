@@ -8,6 +8,8 @@ use app\common\validate\Vod as VodValidate;
 
 class Collect extends Base {
 
+    private $_vodTableFieldMap = [];
+
     // 设置数据表（不含前缀）
     protected $name = 'collect';
 
@@ -591,6 +593,7 @@ class Collect extends Base {
     private function syncImages($pic_status, $pic_url, $flag = 'vod')
     {
         $img_url_downloaded = $pic_url;
+        $des = '';
         if ($pic_status == 1) {
             // 清理失败标记，获取真实URL
             $clean_url = str_replace('#err', '', $pic_url);
@@ -610,6 +613,20 @@ class Collect extends Base {
             }
         }
         return ['pic' => $img_url_downloaded, 'msg' => $des];
+    }
+
+    private function filterVodTableFields($data)
+    {
+        if (empty($this->_vodTableFieldMap)) {
+            $fields = Db::name('Vod')->getTableFields();
+            if (is_array($fields) && $fields) {
+                $this->_vodTableFieldMap = array_fill_keys($fields, true);
+            }
+        }
+
+        return $this->_vodTableFieldMap
+            ? array_intersect_key($data, $this->_vodTableFieldMap)
+            : $data;
     }
 
     public function vod_data($param,$data,$show=1)
@@ -645,6 +662,33 @@ class Collect extends Base {
             $des='';
             $msg='';
             $tmp='';
+
+            // Resource APIs include display-only metadata and may omit optional
+            // vod fields. TP8 rejects unknown columns instead of ignoring them.
+            $v += [
+                'type_name' => '',
+                'vod_lock' => 0,
+                'vod_level' => 0,
+                'vod_hits' => 0,
+                'vod_hits_day' => 0,
+                'vod_hits_week' => 0,
+                'vod_hits_month' => 0,
+                'vod_stint_play' => 0,
+                'vod_stint_down' => 0,
+                'vod_up' => 0,
+                'vod_down' => 0,
+                'vod_score' => 0,
+                'vod_score_all' => 0,
+                'vod_score_num' => 0,
+                'vod_class' => '',
+                'vod_tag' => '',
+                'vod_plot_name' => '',
+                'vod_plot_detail' => '',
+                'vod_down_from' => '',
+                'vod_down_url' => '',
+                'vod_down_server' => '',
+                'vod_down_note' => '',
+            ];
 
             if ($v['type_id'] ==0) {
                 $des = lang('model/collect/type_err');
@@ -709,6 +753,7 @@ class Collect extends Base {
                 $v['vod_score_num'] = intval($v['vod_score_num']);
 
                 $v['vod_class'] = mac_txt_merge($v['vod_class'],$v['type_name']);
+                unset($v['type_name']);
 
                 $v['vod_actor'] = mac_format_text($v['vod_actor'], true);
                 $v['vod_director'] = mac_format_text($v['vod_director'], true);
@@ -969,7 +1014,8 @@ class Collect extends Base {
                         $msg = $tmp['msg'];
                         $v = VodValidate::formatDataBeforeDb($v);
                         $v = mac_clean_jumpurl_fields($v);
-                        $vod_id = (new \app\common\model\Vod())->insert($v, false, true);
+                        $v = $this->filterVodTableFields($v);
+                        $vod_id = (new \app\common\model\Vod())->insertGetId($v);
                         if ($vod_id > 0) {
                             $vod_search_enabled && $vod_search->checkAndUpdateTopResults(['vod_id' => $vod_id] + $v, true);
                             \app\common\util\MeilisearchSync::afterVodSave((int)$vod_id); // 采集入库:增量同步 Meili(Meili 关闭则空操作)
@@ -1586,7 +1632,7 @@ class Collect extends Base {
 
                     $msg = $tmp['msg'];
                     $v = mac_clean_jumpurl_fields($v);
-                    $res = (new \app\common\model\Art())->insert($v, false, true);
+                    $res = (new \app\common\model\Art())->insertGetId($v);
                     \app\common\util\MeilisearchSync::afterArtSave((int)$res); // 采集入库:增量同步 Meili(Meili 关闭则空操作)
                     if($res===false){
 
@@ -1908,7 +1954,7 @@ class Collect extends Base {
                     $v['actor_pic'] = $tmp['pic'];
                     $msg = $tmp['msg'];
                     $v = mac_clean_jumpurl_fields($v);
-                    $res = (new \app\common\model\Actor())->insert($v, false, true);
+                    $res = (new \app\common\model\Actor())->insertGetId($v);
                     \app\common\util\MeilisearchSync::afterActorSave((int)$res); // 采集入库:增量同步 Meili(Meili 关闭则空操作)
                     if($res===false){
 
@@ -2222,7 +2268,7 @@ class Collect extends Base {
                         $tmp = $this->syncImages($config_sync_pic,  $v['role_pic'], 'role');
                         $v['role_pic'] = $tmp['pic'];
                         $msg = $tmp['msg'];
-                        $res = (new \app\common\model\Role())->insert($v, false, true);
+                        $res = (new \app\common\model\Role())->insertGetId($v);
                         \app\common\util\MeilisearchSync::afterRoleSave((int)$res); // 采集入库:增量同步 Meili(Meili 关闭则空操作)
                         $color = 'green';
                         $des = lang('model/collect/add_ok');
@@ -2519,7 +2565,7 @@ class Collect extends Base {
                     $v['website_pic'] = $tmp['pic'];
                     $msg = $tmp['msg'];
                     $v = mac_clean_jumpurl_fields($v);
-                    $res = (new \app\common\model\Website())->insert($v, false, true);
+                    $res = (new \app\common\model\Website())->insertGetId($v);
                     \app\common\util\MeilisearchSync::afterWebsiteSave((int)$res); // 采集入库:增量同步 Meili(Meili 关闭则空操作)
                     if($res===false){
 
@@ -3131,7 +3177,7 @@ class Collect extends Base {
                     $v['manga_chapter_url'] = $v['manga_play_url'];
                     
                     $v = mac_clean_jumpurl_fields($v);
-                    $res = (new \app\common\model\Manga())->insert($v, false, true);
+                    $res = (new \app\common\model\Manga())->insertGetId($v);
                     \app\common\util\MeilisearchSync::afterMangaSave((int)$res); // 采集入库:增量同步 Meili(Meili 关闭则空操作)
                     if($res===false){
 

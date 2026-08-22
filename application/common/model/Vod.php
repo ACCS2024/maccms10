@@ -843,7 +843,7 @@ class Vod extends Base {
             $data['vod_plot_detail']='';
             $data['vod_time_add'] = time();
             $data['vod_time'] = time();
-            $res = $this->insert($data, false, true);
+            $res = $this->insertGetId($data);
             $seoObjId = intval($this->getLastInsID());
             if ($res > 0 && (new \app\common\model\VodSearch())->isFrontendEnabled()) {
                 (new \app\common\model\VodSearch())->checkAndUpdateTopResults(['vod_id' => $seoObjId] + $data);
