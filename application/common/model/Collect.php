@@ -1322,7 +1322,7 @@ class Collect extends Base {
                 mac_echo(lang('model/collect/is_over'));
                 unset($param['ids']);
                 $param['ac'] = 'list';
-                $url = url('api') . '?' . http_build_query($param);
+                $url = url('collect/api') . '?' . http_build_query($param);
                 $ref = $_SERVER["HTTP_REFERER"];
                 if(!empty($ref)){
                    $url = $ref;
@@ -1336,11 +1336,11 @@ class Collect extends Base {
                     mac_echo(lang('model/collect/is_over'));
                     unset($param['page'],$param['ids']);
                     $param['ac'] = 'list';
-                    $url = url('api') . '?' . http_build_query($param);
+                    $url = url('collect/api') . '?' . http_build_query($param);
                     mac_jump($url, $GLOBALS['config']['app']['collect_timespan']);
                 } else {
                     $param['page'] = intval($data['page']['page']) + 1;
-                    $url = url('api') . '?' . http_build_query($param);
+                    $url = url('collect/api') . '?' . http_build_query($param);
                     mac_jump($url, $GLOBALS['config']['app']['collect_timespan'] );
                 }
             }
@@ -1743,7 +1743,7 @@ class Collect extends Base {
                 mac_echo(lang('model/collect/is_over'));
                 unset($param['ids']);
                 $param['ac'] = 'list';
-                $url = url('api') . '?' . http_build_query($param);
+                $url = url('collect/api') . '?' . http_build_query($param);
                 $ref = $_SERVER["HTTP_REFERER"];
                 if(!empty($ref)){
                     $url = $ref;
@@ -1756,11 +1756,11 @@ class Collect extends Base {
                     mac_echo(lang('model/collect/is_over'));
                     unset($param['page']);
                     $param['ac'] = 'list';
-                    $url = url('api') . '?' . http_build_query($param);
+                    $url = url('collect/api') . '?' . http_build_query($param);
                     mac_jump($url, $GLOBALS['config']['app']['collect_timespan']);
                 } else {
                     $param['page'] = intval($data['page']['page']) + 1;
-                    $url = url('api') . '?' . http_build_query($param);
+                    $url = url('collect/api') . '?' . http_build_query($param);
                     mac_jump($url, $GLOBALS['config']['app']['collect_timespan']);
                 }
             }
@@ -2048,7 +2048,7 @@ class Collect extends Base {
                 mac_echo(lang('model/collect/is_over'));
                 unset($param['ids']);
                 $param['ac'] = 'list';
-                $url = url('api') . '?' . http_build_query($param);
+                $url = url('collect/api') . '?' . http_build_query($param);
                 $ref = $_SERVER["HTTP_REFERER"];
                 if(!empty($ref)){
                     $url = $ref;
@@ -2061,11 +2061,11 @@ class Collect extends Base {
                     mac_echo(lang('model/collect/is_over'));
                     unset($param['page']);
                     $param['ac'] = 'list';
-                    $url = url('api') . '?' . http_build_query($param);
+                    $url = url('collect/api') . '?' . http_build_query($param);
                     mac_jump($url, $GLOBALS['config']['app']['collect_timespan']);
                 } else {
                     $param['page'] = intval($data['page']['page']) + 1;
-                    $url = url('api') . '?' . http_build_query($param);
+                    $url = url('collect/api') . '?' . http_build_query($param);
                     mac_jump($url, $GLOBALS['config']['app']['collect_timespan']);
                 }
             }
@@ -2351,7 +2351,7 @@ class Collect extends Base {
                 mac_echo(lang('model/collect/is_over'));
                 unset($param['ids']);
                 $param['ac'] = 'list';
-                $url = url('api') . '?' . http_build_query($param);
+                $url = url('collect/api') . '?' . http_build_query($param);
                 $ref = $_SERVER["HTTP_REFERER"];
                 if(!empty($ref)){
                     $url = $ref;
@@ -2364,11 +2364,11 @@ class Collect extends Base {
                     mac_echo(lang('model/collect/is_over'));
                     unset($param['page']);
                     $param['ac'] = 'list';
-                    $url = url('api') . '?' . http_build_query($param);
+                    $url = url('collect/api') . '?' . http_build_query($param);
                     mac_jump($url, $GLOBALS['config']['app']['collect_timespan']);
                 } else {
                     $param['page'] = intval($data['page']['page']) + 1;
-                    $url = url('api') . '?' . http_build_query($param);
+                    $url = url('collect/api') . '?' . http_build_query($param);
                     mac_jump($url, $GLOBALS['config']['app']['collect_timespan']);
                 }
             }
@@ -2659,7 +2659,7 @@ class Collect extends Base {
                 mac_echo(lang('model/collect/is_over'));
                 unset($param['ids']);
                 $param['ac'] = 'list';
-                $url = url('api') . '?' . http_build_query($param);
+                $url = url('collect/api') . '?' . http_build_query($param);
                 $ref = $_SERVER["HTTP_REFERER"];
                 if(!empty($ref)){
                     $url = $ref;
@@ -2672,11 +2672,11 @@ class Collect extends Base {
                     mac_echo(lang('model/collect/is_over'));
                     unset($param['page']);
                     $param['ac'] = 'list';
-                    $url = url('api') . '?' . http_build_query($param);
+                    $url = url('collect/api') . '?' . http_build_query($param);
                     mac_jump($url, $GLOBALS['config']['app']['collect_timespan']);
                 } else {
                     $param['page'] = intval($data['page']['page']) + 1;
-                    $url = url('api') . '?' . http_build_query($param);
+                    $url = url('collect/api') . '?' . http_build_query($param);
                     mac_jump($url, $GLOBALS['config']['app']['collect_timespan']);
                 }
             }
@@ -2935,7 +2935,7 @@ class Collect extends Base {
                 mac_echo(lang('model/collect/is_over'));
                 unset($param['ids']);
                 $param['ac'] = 'list';
-                $url = url('api') . '?' . http_build_query($param);
+                $url = url('collect/api') . '?' . http_build_query($param);
                 $ref = $_SERVER["HTTP_REFERER"];
                 if(!empty($ref)){
                     $url = $ref;
@@ -2948,11 +2948,11 @@ class Collect extends Base {
                     mac_echo(lang('model/collect/is_over'));
                     unset($param['page']);
                     $param['ac'] = 'list';
-                    $url = url('api') . '?' . http_build_query($param);
+                    $url = url('collect/api') . '?' . http_build_query($param);
                     mac_jump($url, $GLOBALS['config']['app']['collect_timespan']);
                 } else {
                     $param['page'] = intval($data['page']['page']) + 1;
-                    $url = url('api') . '?' . http_build_query($param);
+                    $url = url('collect/api') . '?' . http_build_query($param);
                     mac_jump($url, $GLOBALS['config']['app']['collect_timespan']);
                 }
             }
@@ -3271,7 +3271,7 @@ class Collect extends Base {
                 mac_echo(lang('model/collect/is_over'));
                 unset($param['ids']);
                 $param['ac'] = 'list';
-                $url = url('api') . '?' . http_build_query($param);
+                $url = url('collect/api') . '?' . http_build_query($param);
                 $ref = $_SERVER["HTTP_REFERER"];
                 if(!empty($ref)){
                    $url = $ref;
@@ -3285,11 +3285,11 @@ class Collect extends Base {
                     mac_echo(lang('model/collect/is_over'));
                     unset($param['page'],$param['ids']);
                     $param['ac'] = 'list';
-                    $url = url('api') . '?' . http_build_query($param);
+                    $url = url('collect/api') . '?' . http_build_query($param);
                     mac_jump($url, $GLOBALS['config']['app']['collect_timespan']);
                 } else {
                     $param['page'] = intval($data['page']['page']) + 1;
-                    $url = url('api') . '?' . http_build_query($param);
+                    $url = url('collect/api') . '?' . http_build_query($param);
                     mac_jump($url, $GLOBALS['config']['app']['collect_timespan'] );
                 }
             }

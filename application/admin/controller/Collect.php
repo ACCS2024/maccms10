@@ -171,6 +171,24 @@ class Collect extends Base
             $param = $pp;
         }
 
+        // 防御(采集韧性)：某些路径下 cjurl 可能为空（TP8 URL 构建器对裸 action 丢控制器前缀、
+        // 分页跳转等），导致 videolist 被拼成无主机的“本地链接”，被 SSRF 安全闸拒绝
+        // （报“采集链接有误或不能为本地链接”）。此处用 cjflag 或（唯一同类源时）直接从
+        // mac_collect 恢复 collect_url，保证采集链路稳定。
+        if (empty($param['cjurl'])) {
+            $mid = (string)($param['mid'] ?? '1');
+            if ($mid === '') { $mid = '1'; }
+            $urls = \think\facade\Db::name('collect')->where('collect_mid', $mid)->column('collect_url');
+            if (!empty($param['cjflag'])) {
+                foreach ($urls as $u) {
+                    if (md5((string)$u) === (string)$param['cjflag']) { $param['cjurl'] = $u; break; }
+                }
+            }
+            if (empty($param['cjurl']) && count($urls) === 1) {
+                $param['cjurl'] = $urls[0];
+            }
+        }
+
         //分类
         $type_list = (new \app\common\model\Type())->getCache('type_list');
         $this->assign('type_list', $type_list);
