@@ -6,10 +6,18 @@
 
 - 源机：`23.225.73.50`，CentOS 7 / PHP 7.4 / MySQL 5.7。
 - 目标机：`23.225.113.34`，Debian 12 / PHP 8.3 / MySQL 8.0。
-- 第一阶段只迁流量最高的共享主站：`selangzy.com`、`beiyong.slapibf.com`、`slapibf.com` 及主站 SAN 别名。
+- 第一阶段迁移共享主站程序、数据以及仍在使用的 `beiyong.slapibf.com`、`slapibf.com`、`senlinzy*.com` SAN 别名。
 - PHP 代码、vendor、框架和后台入口不从源机复制；目标机使用 `feat/tp8-migration` 的干净代码。
 - 只迁数据库业务数据、上传文件和业务配置。明确排除 `mac_admin`、`addons.php`、版本文件、runtime、日志和历史备份。
 - 森林旧版 `ff.senlinzy.com`（MacCMS 8）和内网站 `nei.selangzy.com` 后置处理。
+
+## 已确认的域名决策
+
+- 2026-08-22 用户确认永久放弃 `selangzy.com` 和 `www.selangzy.com`。两条记录不切 CNAME、不切入新机对外服务、不作为共享主站迁移验收或回滚条件，后续操作不得再次把它们加入待切域名清单。
+- 共享主站继续通过已经命中新机的 `beiyong.slapibf.com`、`slapibf.com` 和 `senlinzy*.com` 别名提供服务；应用未配置强制主域，页面使用相对链接，不依赖已放弃域名。
+- `nei.selangzy.com` 是独立内网站和共享主站的采集源，拥有独立程序/数据库，尚未迁移。该子域名不在本次放弃范围内，完成独立迁移前不得修改其 DNS。
+- `ff.senlinzy.com` 是独立 MacCMS 8 旧站，尚未迁移；不得与当前共享主站数据库合并。
+- `slapibf1.com` 的目标站 vhost 已准备，但域名没有公开解析；它属于“未启用域名”，不是数据或程序迁移阻塞项。
 
 ## 已完成
 
@@ -75,7 +83,7 @@
 
 ## 最终切换
 
-以下步骤需要明确切换窗口和 DNS 权限后执行。2026-08-22 14:58 的实际状态是：`beiyong.slapibf.com`、`slapibf.com` 和抽查的 `senlinzy.com`、`senlinzy1.com`、`senlinzy10.com` 及 www 别名已命中新机资源标记；`selangzy.com`、`www.selangzy.com` 仍解析到老 IP，尚未完成主入口切换；`nei.selangzy.com`、`ff.senlinzy.com` 按计划留在老机；`slapibf1.com` 仍无公开解析。
+共享主站不再等待 DNS 切换。2026-08-22 的实际状态是：`beiyong.slapibf.com`、`slapibf.com` 和抽查的 `senlinzy.com`、`senlinzy1.com`、`senlinzy10.com` 及 www 别名已命中新机资源标记；`selangzy.com`、`www.selangzy.com` 已确认放弃；`nei.selangzy.com`、`ff.senlinzy.com` 按计划留在老机；`slapibf1.com` 仍无公开解析。
 
 1. 至少提前一个 TTL 周期把所有待切域名的 A 记录 TTL 降至 300 秒。
 2. 记录源库 `mac_vod`、`mac_art` 的精确 count/max(id)/max(time)，作为最终验收基线。当前基线见“定时采集”最后一条；切换窗口仍需再读一次。
@@ -86,7 +94,7 @@
 7. 核对源/目标所有业务表行数，并重点核对 vod/art/type 的 count/max(id)/max(time)；目标由新机采集产生的可解释领先属于正常状态。
 8. 清应用缓存，抽查首页、随机分类、随机详情、provide API、播放器配置和后台登录。
 9. 对唯一 Meilisearch 索引执行全量重建；索引未完成时应用可回退 MySQL 搜索，不阻塞切 DNS。
-10. 仅把尚未切换的 `selangzy.com`、`www.selangzy.com` 更新到 `origin.slapibf.com`（或直接到 `23.225.113.34`）。已命中新机的域名不要重复改动；旧机保持只读服务，覆盖 DNS 传播期。
+10. 不再修改 `selangzy.com`、`www.selangzy.com`；已命中新机的共享主站域名也不要重复改动。旧机继续承载尚未迁移的内网站和 MacCMS 8 站点。
 11. DNS 生效后为 `slapibf.com` / `slapibf1.com` 在 aaPanel 重新签发证书，再启用 HTTPS。
 12. 连续观察新机 Nginx 5xx、PHP 错误、MySQL 慢查询、Dragonfly 和 Meilisearch 任务至少 2 小时。
 13. 旧机至少保留 48 小时，不删除数据；确认无回滚需求后再下线。
@@ -94,8 +102,9 @@
 ## DNS CNAME 方案
 
 - 在 `slapibf.com` 区域新建唯一入口：`A  origin  23.225.113.34`，必须设为仅 DNS（灰云），TTL 300 秒或 Auto。
-- 下列根域名使用 Cloudflare CNAME Flattening，记录名为 `@`，目标统一为 `origin.slapibf.com`：`selangzy.com`、`senlinzy.com`、`senlinzy1.com` 至 `senlinzy10.com`、`slapibf.com`、`slapibf1.com`。
-- 下列子域名直接 CNAME 到 `origin.slapibf.com`：`www.selangzy.com`，`www.senlinzy.com`、`www.senlinzy1.com` 至 `www.senlinzy10.com`，以及 `beiyong.slapibf.com`。
+- 下列根域名使用 Cloudflare CNAME Flattening，记录名为 `@`，目标统一为 `origin.slapibf.com`：`senlinzy.com`、`senlinzy1.com` 至 `senlinzy10.com`、`slapibf.com`、`slapibf1.com`。
+- 下列子域名直接 CNAME 到 `origin.slapibf.com`：`www.senlinzy.com`、`www.senlinzy1.com` 至 `www.senlinzy10.com`，以及 `beiyong.slapibf.com`。
+- `selangzy.com` 和 `www.selangzy.com` 已永久放弃，禁止添加到本 CNAME 方案。
 - `nei.selangzy.com` 和 `ff.senlinzy.com` 是独立程序/数据库，本阶段禁止修改，继续留在旧机。
 - `slapibf1.com` 当前没有公开 NS/A 记录；若要启用，需先在注册商完成 Cloudflare NS 委派，再添加上述根 CNAME。
 - 唯一入口保持灰云可避免跨 Cloudflare 区域的代理 CNAME 风险；各业务记录继续沿用其当前代理状态。DNS 修改后立即在目标机为 `slapibf.com` / `slapibf1.com` 签发证书并复查 Cloudflare SSL 模式。
