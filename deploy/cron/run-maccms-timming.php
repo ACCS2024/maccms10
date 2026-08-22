@@ -55,7 +55,8 @@ if (!is_string($body) || $status !== 200) {
 }
 
 $plain = trim(preg_replace('/\s+/u', ' ', strip_tags($body)) ?? '');
-$applicationFailed = str_contains($plain, 'invalid or missing timming token')
+$applicationFailed = $plain === ''
+    || str_contains($plain, 'invalid or missing timming token')
     || str_contains($plain, '服务器错误')
     || preg_match('/\\?"code\\?"\s*:\s*0/', $body) === 1;
 if ($applicationFailed) {
