@@ -73,7 +73,7 @@
 ### 定时采集
 
 - 老机 root crontab 没有主站采集任务；其中每 5 分钟任务只是宝塔日志切割，其余为数据库/站点备份、rclone 和证书续签，均未误迁为业务采集。
-- 主站 `mac_collect` 唯一资源为 `https://nei.selangzy.com/api.php/provide/vod/at/xml`：XML、视频、新增并更新、图片同步选项 2。该 URL 的 MD5 与旧站 `bind.php` 分类绑定前缀一致，主站最近 100 条名称在内网站 100% 命中，确认主站确实采集内网站。
+- 主站 `mac_collect` 唯一资源原为旧域名 `nei.selangzy.com`，确认主站确实采集内网站；现已改为 `https://nei.senlinzy.com/api.php/provide/vod/at/xml`，并将 `bind.php` 中 43 条分类绑定迁移到新 URL 的 MD5 前缀。资源保持 XML、视频、新增并更新、图片同步选项 2。
 - 迁移期间曾新增 `nei_internal_vod`，按 2 小时窗口自动采集内网站；该任务在完成迁移验证后已从官网 MacCMS 定时配置中删除。
 - 当前官网与内网站采用后台按需手动同步，不再运行内网自动采集。宝塔证书续签、数据库备份以及 MacCMS 运营统计任务继续保留。
 - 首轮共处理 12 页，新增 28 条：目标视频由 251606 增至 251634，max id 由 284544 增至 284572，最新时间为 2026-08-22 13:48:35；对应 Meilisearch 增至 331933 文档。
