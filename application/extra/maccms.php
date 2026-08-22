@@ -251,6 +251,8 @@ return array (
     'play_name' => '第1集',
     'addr_mode' => 'm3u8',
     'default_status' => '0',
+    'legacy_compat' => '0',
+    'legacy_fallback_type_id' => '20',
     'category_map' => '',
     'keyword_blacklist' => '',
   ),

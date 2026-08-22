@@ -777,8 +777,11 @@ class System extends Base
             }
             $p['status']            = (string)(int)($p['status'] ?? 0);
             $p['default_status']    = (string)(int)($p['default_status'] ?? 0);
+            $p['legacy_compat']     = (int)($p['legacy_compat'] ?? 0) === 1 ? '1' : '0';
+            $p['legacy_fallback_type_id'] = (string)max(1, (int)($p['legacy_fallback_type_id'] ?? 20));
             $p['pic_fetch_timeout'] = (string)max(1, min(120, (int)($p['pic_fetch_timeout'] ?? 15)));
-            $p['addr_mode']         = in_array(($p['addr_mode'] ?? 'm3u8'), ['m3u8', 'all'], true) ? $p['addr_mode'] : 'm3u8';
+            $addrModes = $p['legacy_compat'] === '1' ? ['m3u8', 'share', 'all'] : ['m3u8', 'all'];
+            $p['addr_mode']         = in_array(($p['addr_mode'] ?? 'm3u8'), $addrModes, true) ? $p['addr_mode'] : 'm3u8';
             $p['player_flag']       = trim((string)($p['player_flag'] ?? ''));
             $p['play_name']         = trim((string)($p['play_name'] ?? '')) ?: '第1集';
 
@@ -793,6 +796,10 @@ class System extends Base
         }
 
         $cfg = config('maccms');
+        $cfg['ppvod'] = array_merge([
+            'legacy_compat' => '0',
+            'legacy_fallback_type_id' => '20',
+        ], $cfg['ppvod'] ?? []);
         // 解析后的分类映射条数，供页面提示
         $this->assign('ppvod_map_count', count(mac_ppvod_category_map()));
         $this->assign('config', $cfg);

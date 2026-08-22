@@ -21,6 +21,19 @@
         </div>
 
         <div class="layui-form-item">
+            <label class="layui-form-label">旧 Yzm 兼容</label>
+            <div class="layui-input-inline" style="width:200px !important;">
+                <input type="radio" name="ppvod[legacy_compat]" value="0" title="关闭" {if condition="$config['ppvod']['legacy_compat'] neq 1" }checked {/if}>
+                <input type="radio" name="ppvod[legacy_compat]" value="1" title="开启" {if condition="$config['ppvod']['legacy_compat'] eq 1" }checked {/if}>
+            </div>
+            <label class="layui-form-label">兜底栏目ID</label>
+            <div class="layui-input-inline" style="width:120px !important;">
+                <input type="text" name="ppvod[legacy_fallback_type_id]" value="{$config['ppvod']['legacy_fallback_type_id']}" class="layui-input">
+            </div>
+            <div class="layui-form-mid layui-word-aux">仅迁移旧单文件 Yzm.php 的站点开启；默认关闭，不影响现有业务</div>
+        </div>
+
+        <div class="layui-form-item">
             <label class="layui-form-label">播放域名</label>
             <div class="layui-input-inline w400">
                 <input type="text" name="ppvod[play_domain]" value="{$config['ppvod']['play_domain']}" class="layui-input" placeholder="https://play.example.com">
@@ -72,7 +85,8 @@
             <label class="layui-form-label">入库地址</label>
             <div class="layui-input-inline" style="width:200px !important;">
                 <select name="ppvod[addr_mode]">
-                    <option value="m3u8" {if condition="$config['ppvod']['addr_mode'] neq 'all'" }selected{/if}>仅 m3u8 地址</option>
+                    <option value="m3u8" {if condition="$config['ppvod']['addr_mode'] eq 'm3u8'" }selected{/if}>仅 m3u8 地址</option>
+                    <option value="share" {if condition="$config['ppvod']['addr_mode'] eq 'share'" }selected{/if}>仅分享地址（旧兼容）</option>
                     <option value="all" {if condition="$config['ppvod']['addr_mode'] eq 'all'" }selected{/if}>m3u8 + 分享地址</option>
                 </select>
             </div>

@@ -3,6 +3,7 @@ namespace app\api\controller;
 
 use think\facade\Db;
 use app\common\util\Pinyin;
+use app\common\util\PpvodLegacyPayload;
 
 /**
  * 转码机内容入库接口（站点侧对接组件）
@@ -12,9 +13,10 @@ use app\common\util\Pinyin;
  *   body: 转码服务产出的 JSON（orgfile / suffix / rpath / category / shareid / metadata ...）
  *
  * 【本文件不包含任何站点或基础设施信息】
- * 转码机地址、图床域名、播放域名、播放器标识、分类映射等全部来自后台
+ * 默认模式下，转码机地址、图床域名、播放域名、播放器标识、分类映射等全部来自后台
  * 「PPVOD 转码入库」配置页（$config['ppvod']，保存在本站
  * application/extra/maccms.php；仓库里那份是占位空值）。
+ * 只有显式开启旧 Yzm 兼容的站点会读取报文域名，并在入库前做严格校验。
  * 未启用或配置不完整时接口直接拒绝服务并记日志，绝不使用内置默认值兜底，
  * 以免把某一个部署的地址变成所有部署的默认值。
  */
@@ -22,7 +24,7 @@ class Ppvod extends Base
 {
     private $_param;
 
-    /** @var array 站点私有配置（application/extra/yzm.php） */
+    /** @var array 站点私有配置（application/extra/maccms.php） */
     private $_cfg = [];
 
     public function __construct()
@@ -50,7 +52,7 @@ class Ppvod extends Base
         $cfg['category_map'] = is_array($cfg['category_map'] ?? null)
             ? array_map('intval', $cfg['category_map'])
             : mac_ppvod_category_map();
-        if (empty($cfg['play_domain']) || empty($cfg['pic_domain']) || empty($cfg['category_map'])) {
+        if (!PpvodLegacyPayload::enabled($cfg) && (empty($cfg['play_domain']) || empty($cfg['pic_domain']) || empty($cfg['category_map']))) {
             $this->logError('PPVOD 配置不完整：播放域名 / 图床域名 / 分类映射均为必填');
             $this->jsonExit($this->env(0, 'config_incomplete'));
         }
@@ -163,11 +165,27 @@ class Ppvod extends Base
         $videopath  = str_replace('\\', '/', $rpath);
         $videorpath = substr_count($videopath, '/') >= 2 ? $videopath : '/' . $videopath;
 
-        // 先让图床把源站的图抓过去，再把 vod_pic 指向图床
-        if (!empty($c['transcoder_url'])) {
-            $this->fetchImageWithTryCatch(rtrim($c['transcoder_url'], '/') . $rpath . '/1.jpg');
+        $legacy = null;
+        if (PpvodLegacyPayload::enabled($c)) {
+            try {
+                $legacy = PpvodLegacyPayload::build($arr, $c, $collect, $c['category_map']);
+                $videorpath = $legacy['video_path'];
+            } catch (\InvalidArgumentException $e) {
+                $field = $e->getMessage();
+                $this->logError('旧版 Yzm 兼容报文校验失败，字段:' . $field);
+                return json($this->env(0, 'rejected', ['field' => $field]));
+            }
         }
-        $info['vod_pic'] = rtrim($c['pic_domain'], '/') . $rpath . '/1.jpg';
+
+        if ($legacy !== null) {
+            $info['vod_pic'] = $legacy['vod_pic'];
+        } else {
+            // 先让图床把源站的图抓过去，再把 vod_pic 指向图床
+            if (!empty($c['transcoder_url'])) {
+                $this->fetchImageWithTryCatch(rtrim($c['transcoder_url'], '/') . $rpath . '/1.jpg');
+            }
+            $info['vod_pic'] = rtrim($c['pic_domain'], '/') . $rpath . '/1.jpg';
+        }
 
         if ($this->transgress_keyword($info['vod_name']) > 0) {
             $this->logError('内容含有非法词汇,无法入库 视频ID:' . $info['vod_name']);
@@ -182,11 +200,15 @@ class Ppvod extends Base
         $info['vod_duration']  = $this->secondsToHour($arr['metadata']['time'] ?? 0);
         $info['vod_play_from'] = $c['player_flag'];
 
-        $playname = $c['play_name'] ?? '第1集';
-        $play     = rtrim($c['play_domain'], '/');
-        $m3u8     = $playname . '$' . $play . $videorpath . '/index.m3u8';
-        $share    = $playname . '$' . $play . '/share/' . ($arr['shareid'] ?? '');
-        $info['vod_play_url'] = (($c['addr_mode'] ?? 'm3u8') === 'all') ? ($m3u8 . '$$$' . $m3u8) : $m3u8;
+        if ($legacy !== null) {
+            $info['vod_play_url'] = $legacy['vod_play_url'];
+        } else {
+            $playname = $c['play_name'] ?? '第1集';
+            $play     = rtrim($c['play_domain'], '/');
+            $m3u8     = $playname . '$' . $play . $videorpath . '/index.m3u8';
+            $share    = $playname . '$' . $play . '/share/' . ($arr['shareid'] ?? '');
+            $info['vod_play_url'] = (($c['addr_mode'] ?? 'm3u8') === 'all') ? ($m3u8 . '$$$' . $m3u8) : $m3u8;
+        }
 
         $info['vod_blurb']       = $info['vod_name'];
         $info['vod_content']     = $info['vod_name'];
@@ -195,8 +217,8 @@ class Ppvod extends Base
         $info['vod_isend']       = '1';
         $info['vod_pubdate']     = date('Y-m-d');
         $info['vod_year']        = date('Y');
-        $info['vod_status']      = (int)($c['default_status'] ?? 0);
-        $info['vod_down_url']    = $share;
+        $info['vod_status']      = $legacy !== null ? $legacy['vod_status'] : (int)($c['default_status'] ?? 0);
+        $info['vod_down_url']    = $legacy !== null ? $legacy['vod_down_url'] : $share;
         $info['vod_plot_name']   = 'null';
         $info['vod_plot_detail'] = 'null';
 
@@ -228,12 +250,15 @@ class Ppvod extends Base
             $info['vod_content'] = mac_rep_pse_syn($collect['thesaurus'], $info['vod_content']);
         }
 
-        // category → type_id 映射来自站点配置，不内置任何业务分类
-        if (!isset($c['category_map'][$category])) {
+        // 默认模式严格拒绝未知分类；旧版兼容模式复现 Yzm.php 的兜底栏目行为。
+        if ($legacy !== null) {
+            $info['type_id'] = $legacy['type_id'];
+        } elseif (!isset($c['category_map'][$category])) {
             $this->logError('视频入库失败：未知分类 ' . $category);
             return json($this->env(0, 'bad_category', ['category' => $category]));
+        } else {
+            $info['type_id'] = (int)$c['category_map'][$category];
         }
-        $info['type_id'] = (int)$c['category_map'][$category];
 
         try {
             // 同名判重 —— 严格遵循全系统「回收站记录视同不存在」的约定（见

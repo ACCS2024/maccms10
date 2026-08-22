@@ -7,6 +7,8 @@
 bash tests/lint.sh      # 对 application/ 与入口文件做 php -l 语法检查（需 PHP 8.2+）
 ```
 
+`tests/lint.sh` 同时运行 PPVOD 旧版 Yzm 报文兼容回归测试，确认兼容模式默认关闭，并校验旧版播放、封面、MP4 与分类兜底语义。
+
 ## CI(`.github/workflows/ci.yml`,push / PR 自动跑)
 - **php-lint**:PHP 8.2 下 `php -l` 全量扫 `application/` 与入口文件 —— 拦截解析错误。
 - **schema-load**:把 `application/install/sql/install.sql` + `initdata.sql` 灌入 MySQL 5.7,

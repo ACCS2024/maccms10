@@ -7,6 +7,7 @@ fail=0
 while IFS= read -r -d '' f; do
   php -l "$f" >/dev/null || { echo "LINT FAIL: $f"; fail=1; }
 done < <(find application -name '*.php' -print0)
+php tests/ppvod_legacy_compat.php
 for f in index.php api.php admin.php install.php security_check.php; do
   [ -f "$f" ] && { php -l "$f" >/dev/null || { echo "LINT FAIL: $f"; fail=1; }; }
 done
