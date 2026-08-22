@@ -81,6 +81,12 @@
 - 修复定时任务失败语义：任务抛异常、发生 PHP fatal 或配置了不存在的 handler 时，`runtime` 自动恢复为执行前值，下一次 5 分钟检查会重试；runner 对空 HTTP 200 和应用 JSON 错误均返回非零。临时故障任务验证结果为退出码 1、runtime 保持 0。
 - 2026-08-22 14:43 使用 2 小时窗口真实执行 1/1 页成功，随后同小时检查均正常跳过；15:00 跨小时再次自动执行 1/1 页成功，15:05 正常跳过。目标 `mac_vod` 当前 251642 条、max id 284580；老主库仍为 251606 条、max id 284544，目标多出的 36 条均来自新机内网站采集。文章 80299/max 80321、分类 56/max 77 两边一致，老主库没有新的待合并增量。
 
+### 上线观察
+
+- 2026-08-22 15:18 至 15:38 连续观察 20 分钟，每 5 分钟检查 Nginx、PHP-FPM、MySQL、Dragonfly、Meilisearch、采集心跳和四个公网入口。四轮中 `beiyong.slapibf.com`、`slapibf.com`、`senlinzy.com`、`www.senlinzy10.com` 均为 HTTP 200，响应时间 0.20 至 0.30 秒；15:20、15:25、15:30、15:35 的采集检查均正常。
+- 观察期内 PHP 慢请求、MySQL 错误、Dragonfly/Meilisearch 错误和业务 FastCGI/upstream 错误均为 0。新增 78 条 Nginx error 全部是针对 `.env` 或随机不存在路径的机器人扫描，均被现有规则拒绝，不属于应用故障。
+- 三个共享 webroot vhost 已加载 `deploy/nginx/maccms-legacy-noise.conf`：`/favicon.ico` 映射到仓库内现有图标；已撤销的 `/selangadmin.php` 返回 410 且不进入 PHP。直连目标机验证首页 200、favicon 200、旧入口 410，Nginx 配置测试通过并已 reload；回滚备份位于 `/home/migration/nginx-noise-before-20260822-1518/extensions.tar.gz`。
+
 ## 最终切换
 
 共享主站不再等待 DNS 切换。2026-08-22 的实际状态是：`beiyong.slapibf.com`、`slapibf.com` 和抽查的 `senlinzy.com`、`senlinzy1.com`、`senlinzy10.com` 及 www 别名已命中新机资源标记；`selangzy.com`、`www.selangzy.com` 已确认放弃；`nei.selangzy.com`、`ff.senlinzy.com` 按计划留在老机；`slapibf1.com` 仍无公开解析。
