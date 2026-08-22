@@ -28,7 +28,7 @@ class Help extends Base
         $this->assign('newart_show', ($cfg['newart_enabled'] ?? '1') !== '0');
         $this->assign('newart_api_host_eff', !empty($cfg['newart_api_host']) ? $cfg['newart_api_host'] : ($cfg['api_host'] ?? ''));
 
-        $keys = ['mac10', 'maccms', 'seacms', 'seacms87', 'ff50player', 'player'];
+        $keys = ['mac10', 'maccms', 'seacms', 'seacms87', 'ff50player'];
         $files = [];
         foreach ($keys as $key) {
             $files[$key] = is_file(ROOT_PATH . 'upload/help/' . $key . '.zip');

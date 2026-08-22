@@ -209,9 +209,9 @@
     <div class="help-card">
       <h3>MacCMS v10 — 播放器安装</h3>
       <ol class="help-step">
-        <li>下载下方 mac10.zip 并解压，得到 <code>mac10/bfzym3u8.txt</code></li>
+        <li>下载下方 mac10.zip 并解压，得到 <code>maccms10/mac_{$cfg.player_flag}.txt</code></li>
         <li>后台 → <strong>系统</strong> → <strong>播放器管理</strong> → 点击「导入」</li>
-        <li>上传 <code>bfzym3u8.txt</code>，导入成功后可在播放器列表看到新条目</li>
+        <li>上传 <code>mac_{$cfg.player_flag}.txt</code>，导入成功后可在播放器列表看到新条目</li>
         <li>后台 → <strong>系统</strong> → <strong>缓存管理</strong> → 清除全部缓存</li>
         <li>前台播放任意视频，验证播放正常</li>
       </ol>
@@ -272,7 +272,7 @@
     <div class="help-card">
       <h3>MacCMS v8 — 播放器安装</h3>
       <ol class="help-step">
-        <li>下载 maccms.zip 并解压，得到 <code>maccms/vodplay_bfm3u8.txt</code></li>
+        <li>下载 maccms.zip 并解压，得到 <code>maccms8/vodplay_{$cfg.player_flag}.txt</code></li>
         <li>后台 → <strong>系统设置</strong> → <strong>播放器管理</strong> → 导入</li>
         <li>上传 txt 文件，导入成功后清除缓存</li>
         <li>前台播放验证</li>
@@ -326,9 +326,9 @@
     <div class="help-card">
       <h3>播放器安装（SeaCMS v9.0+）</h3>
       <ol class="help-step">
-        <li>下载 seacms.zip 并解压，得到 <code>seacms/bfzym3u8.html</code></li>
+        <li>下载 seacms.zip 并解压，得到 <code>seacms/{$cfg.player_flag}.html</code></li>
         <li>将该文件上传至网站根目录对应播放器目录</li>
-        <li>后台 → <strong>系统设置</strong> → <strong>播放器管理</strong> → 新增，路径填 <code>bfzym3u8.html</code></li>
+        <li>后台 → <strong>系统设置</strong> → <strong>播放器管理</strong> → 新增，路径填 <code>{$cfg.player_flag}.html</code></li>
         <li>绑定分类 → 清缓存 → 验证播放</li>
       </ol>
       {if $files.seacms}
@@ -341,7 +341,7 @@
     <div class="help-card">
       <h3>播放器安装（SeaCMS v8.7 及以下）</h3>
       <ol class="help-step">
-        <li>下载 seacms87.zip 并解压，得到 <code>seacms87/bfzym3u8.html</code></li>
+        <li>下载 seacms87.zip 并解压，得到 <code>seacms87/{$cfg.player_flag}.html</code></li>
         <li>上传至网站播放器目录，配置方式同 v9.0+ 教程</li>
         <li>清缓存后验证播放</li>
       </ol>
@@ -383,10 +383,10 @@
     <div class="help-card">
       <h3>飞飞5 — 播放器插件安装</h3>
       <ol class="help-step">
-        <li>下载 ff50player.zip 并解压，得到 <code>bfzym3u8.js</code> 和 <code>bfzym3u8.min.js</code></li>
+        <li>下载 ff50player.zip 并解压，得到 <code>feifei50/{$cfg.player_flag}.js</code></li>
         <li>将两个文件上传至飞飞5根目录下 <code>Public/player5.0/</code> 目录</li>
         <li>后台 → <strong>系统</strong> → <strong>播放器管理</strong> → 新增播放器</li>
-        <li>播放器文件选择 <code>bfzym3u8</code>，名称自定义，保存</li>
+        <li>播放器文件选择 <code>{$cfg.player_flag}</code>，名称自定义，保存</li>
         <li>在分类绑定该播放器 → 清缓存 → 验证播放</li>
       </ol>
       {if $files.ff50player}

@@ -71,135 +71,104 @@ class HelpCfg
      */
     public static function generateFiles(): array
     {
-        // 读取配置
-        $cfg = self::getAll();
-        $siteName   = $cfg['site_name']   ?? '';
-        $playerFlag = $cfg['player_flag'] ?? '';
-        $siteHost   = $cfg['site_host']   ?? '';
-        $playerHost = $cfg['player_host'] ?? '';
-        $playerCode = $cfg['player_code'] ?? '';
-        $apiHost    = $cfg['api_host']    ?? '';
+        // 从"线上验证可用"的模板包生成，只做 占位符→本站真实值 替换，保证与老版格式逐字节一致。
+        // 模板取自历史 help/jiexi 那批经生产验证的播放器包（占位 flag=155m3u8 / 解析=www.155jx.com）。
+        // 关键约束（否则采集方"装上点了不播"）：CMS 按【播放器标识=vod_play_from】识别播放器，故内层
+        // 文件名与字段必须等于 player_flag；解析地址必须内嵌进播放器体；maccms8 的 <code> 不能为空。
+        $cfg   = self::getAll();
+        $flag  = trim((string)($cfg['player_flag'] ?? ''));
+        $parse = trim((string)($cfg['player_host'] ?? ''));
+        if ($parse === '') {
+            $parse = trim((string)($cfg['parse_host'] ?? ''));
+        }
 
-        // 确保输出目录存在
         $outDir = ROOT_PATH . 'upload/help/';
         if (!is_dir($outDir)) {
             mkdir($outDir, 0755, true);
         }
+        $tplDir = ROOT_PATH . 'application/data/help_player_templates/';
+
+        // 模板里的固定占位符（老 155 包）
+        $OLD_PARSE   = 'https://www.155jx.com/?url=';
+        $OLD_FLAG    = '155m3u8';
+        $OLD_FLAG_UP = '155M3U8';
+
+        // 模板包 => 输出包名（对齐前端 index/Help::$knownFiles 与下载按钮）
+        $map = [
+            'maccms10.zip' => 'mac10.zip',
+            'maccms8.zip'  => 'maccms.zip',
+            'seacms.zip'   => 'seacms.zip',
+            'seacms87.zip' => 'seacms87.zip',
+            'feifei50.zip' => 'ff50player.zip',
+        ];
+
+        // 先替换解析地址（其中含 155 子串，必须先于 flag），再替换 flag 的大小写两形态
+        $sub = static function (string $s) use ($OLD_PARSE, $OLD_FLAG_UP, $OLD_FLAG, $parse, $flag): string {
+            return str_replace(
+                [$OLD_PARSE, $OLD_FLAG_UP, $OLD_FLAG],
+                [$parse, strtoupper($flag), $flag],
+                $s
+            );
+        };
 
         $generated = [];
-
-        // ── 1. mac10.zip ──────────────────────────────────────────────────
-        $siteHostNoSlash = rtrim($siteHost, '/');
-        $mac10Json = json_encode([
-            'status'  => '1',
-            'from'    => $playerFlag,
-            'show'    => $siteName,
-            'des'     => $siteName . '官网: ' . $siteHostNoSlash,
-            'target'  => '_self',
-            'ps'      => '1',
-            'parse'   => $playerHost,
-            'sort'    => '9999',
-            'tip'     => '无需安装任何插件',
-            'id'      => $playerFlag,
-            'code'    => $playerCode,
-        ], JSON_UNESCAPED_UNICODE);
-        $mac10Content = base64_encode($mac10Json);
-
-        $zipPath = $outDir . 'mac10.zip';
-        $zip = new \ZipArchive();
-        if ($zip->open($zipPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) === true) {
-            $zip->addFromString('mac10/bfzym3u8.txt', $mac10Content);
-            $zip->close();
-            $generated[] = 'mac10.zip';
+        foreach ($map as $tpl => $out) {
+            $tplPath = $tplDir . $tpl;
+            if (!is_file($tplPath)) {
+                continue;
+            }
+            $src = new \ZipArchive();
+            if ($src->open($tplPath) !== true) {
+                continue;
+            }
+            $dst = new \ZipArchive();
+            if ($dst->open($outDir . $out, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== true) {
+                $src->close();
+                continue;
+            }
+            for ($i = 0; $i < $src->numFiles; $i++) {
+                $name = (string)$src->getNameIndex($i);
+                if ($name === '' || substr($name, -1) === '/') {
+                    continue; // 目录项由 addFromString 的路径自动重建
+                }
+                $content = $src->getFromIndex($i);
+                if ($content === false) {
+                    $content = '';
+                }
+                if (strpos($name, 'maccms10/') === 0) {
+                    // maccms10 播放器包体是 base64(JSON)。JSON 里斜杠被转义为 \/，
+                    // 直接串替换匹配不到解析地址 —— 必须先 json_decode 成真值再替换字段，
+                    // 否则 code 里的解析地址仍指向老 155（表现为采集方能识别播放器但播放走错解析）。
+                    $json = base64_decode($content, true);
+                    $arr  = $json !== false ? json_decode($json, true) : null;
+                    if (is_array($arr)) {
+                        foreach ($arr as $kk => $vv) {
+                            if (is_string($vv)) {
+                                $arr[$kk] = $sub($vv);
+                            }
+                        }
+                        $content = base64_encode(json_encode($arr, JSON_UNESCAPED_UNICODE));
+                    } elseif ($json !== false) {
+                        // 退路：JSON 解析失败时按字符串替换，兼顾转义斜杠形态
+                        $content = base64_encode(strtr($json, [
+                            $OLD_PARSE                            => $parse,
+                            str_replace('/', '\\/', $OLD_PARSE)   => str_replace('/', '\\/', $parse),
+                            $OLD_FLAG_UP                          => strtoupper($flag),
+                            $OLD_FLAG                             => $flag,
+                        ]));
+                    }
+                } else {
+                    $content = $sub($content);
+                }
+                // 内层文件名里的 flag 占位也替换成本站 flag（CMS 按文件名识别播放器）
+                $dst->addFromString(str_replace($OLD_FLAG, $flag, $name), $content);
+            }
+            $src->close();
+            $dst->close();
+            $generated[] = $out;
         }
 
-        // ── 2. maccms.zip ─────────────────────────────────────────────────
-        $flagSafe = htmlspecialchars($playerFlag, ENT_XML1, 'UTF-8');
-        $hostSafe = htmlspecialchars($siteHost, ENT_QUOTES, 'UTF-8');
-        $maccmsContent = "<status>1</status><sort></sort>"
-            . "<from>{$flagSafe}</from><show>{$flagSafe}</show>"
-            . "<des>{$hostSafe}</des><tip></tip><code></code>";
-
-        $zipPath = $outDir . 'maccms.zip';
-        $zip = new \ZipArchive();
-        if ($zip->open($zipPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) === true) {
-            $zip->addFromString('maccms/vodplay_bfm3u8.txt', $maccmsContent);
-            $zip->close();
-            $generated[] = 'maccms.zip';
-        }
-
-        // ── 3. seacms.zip ─────────────────────────────────────────────────
-        $seacmsTemplate = <<<'NOWDOC'
-<!DOCTYPE html><html xmlns="http://www.w3.org/1999/xhtml">
-<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-<style>*{margin:0;padding:0}html,body,#play_box{width:100%;height:100%}</style></head>
-<body><div id="play_box"><div id="player"></div></div>
-<script>
-var playerh=parent.playerh?parent.playerh-33:window.innerHeight;
-var str=parent.now||'';
-document.getElementById('player').innerHTML='<iframe width="100%" height="'+playerh+'" src="__PH__'+str+'" frameborder="0" allowfullscreen="true"></iframe>';
-</script></body></html>
-NOWDOC;
-        $seacmsContent = str_replace('__PH__', addslashes($playerHost), $seacmsTemplate);
-
-        $zipPath = $outDir . 'seacms.zip';
-        $zip = new \ZipArchive();
-        if ($zip->open($zipPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) === true) {
-            $zip->addFromString('seacms/seacms/bfzym3u8.html', $seacmsContent);
-            $zip->close();
-            $generated[] = 'seacms.zip';
-        }
-
-        // ── 4. seacms87.zip ───────────────────────────────────────────────
-        $zipPath = $outDir . 'seacms87.zip';
-        $zip = new \ZipArchive();
-        if ($zip->open($zipPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) === true) {
-            $zip->addFromString('seacms87/seacms87/bfzym3u8.html', $seacmsContent);
-            $zip->close();
-            $generated[] = 'seacms87.zip';
-        }
-
-        // ── 5. ff50player.zip ─────────────────────────────────────────────
-        $ff50Template = <<<'NOWDOC'
-function $Showhtml(){player='<iframe width="100%" height="'+Player.Height+'" src="__PH__'+Player.Url+'" frameborder="0" border="0" scrolling="no" allowfullscreen="true"></iframe>';return player;}
-Player.Show();
-NOWDOC;
-        $ff50Content = str_replace('__PH__', addslashes($playerHost), $ff50Template);
-
-        $zipPath = $outDir . 'ff50player.zip';
-        $zip = new \ZipArchive();
-        if ($zip->open($zipPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) === true) {
-            $zip->addFromString('ff50player/bfzym3u8.js', $ff50Content);
-            $zip->addFromString('ff50player/bfzym3u8.min.js', $ff50Content);
-            $zip->close();
-            $generated[] = 'ff50player.zip';
-        }
-
-        // ── 6. player.zip ─────────────────────────────────────────────────
-        $playerTemplate = <<<'NOWDOC'
-<!DOCTYPE html><html xmlns="http://www.w3.org/1999/xhtml">
-<head><meta http-equiv="Content-Type" content="text/html; charset=gb2312" />
-<style>body{margin:0;padding:0}</style></head>
-<body><div id="player"></div>
-<script>
-var playurlinfo=window.parent.playurl||'';
-var playerh=window.parent.pHeight?window.parent.pHeight-30:window.innerHeight;
-document.getElementById('player').innerHTML='<iframe width="100%" height="'+playerh+'" src="__PH__'+playurlinfo+'" frameborder="0" allowfullscreen="true"></iframe>';
-</script></body></html>
-NOWDOC;
-        $playerContent = str_replace('__PH__', addslashes($playerHost), $playerTemplate);
-
-        $zipPath = $outDir . 'player.zip';
-        $zip = new \ZipArchive();
-        if ($zip->open($zipPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) === true) {
-            $zip->addFromString('bfzym3u8/bfzym3u8/bfzym3u8.html', $playerContent);
-            $zip->close();
-            $generated[] = 'player.zip';
-        }
-
-        // 记录最后生成时间
         self::set('file_regen_time', (string)time());
-
         return $generated;
     }
 }

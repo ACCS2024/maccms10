@@ -33,7 +33,7 @@ class Help extends Base
         // 扫描已生成的 ZIP 文件列表
         $fileList = [];
         $helpDir = ROOT_PATH . 'upload/help/';
-        $knownFiles = ['mac10.zip', 'maccms.zip', 'seacms.zip', 'seacms87.zip', 'ff50player.zip', 'player.zip'];
+        $knownFiles = ['mac10.zip', 'maccms.zip', 'seacms.zip', 'seacms87.zip', 'ff50player.zip'];
         foreach ($knownFiles as $fname) {
             $fpath = $helpDir . $fname;
             if (is_file($fpath)) {
