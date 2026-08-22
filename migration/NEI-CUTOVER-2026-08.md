@@ -36,6 +36,16 @@
 - 推荐最终记录：在 `selangzy.com` 区域把记录名 `nei` 改为 `CNAME origin.slapibf.com`，仅 DNS（灰云），TTL `300` 或 Auto。
 - 不修改已放弃的 `selangzy.com` 根记录和 `www.selangzy.com`。
 
+## 蓝绿切换记录
+
+- 2026-08-22 约 17:00，旧机 `nei.selangzy.com` vhost 已启用 `nei-cutover-proxy.conf` 并 reload；公开 DNS 虽仍指向旧 IP，但旧 IP 的整站读写已经由新机处理。
+- 启用前距离上一条源站推送超过 20 分钟，源/目标均为视频 `250766` 条、最大 ID `483731`、最大时间 `1787387669`。
+- 等待旧 PHP-FPM 在途请求退出后再次核对，源库新增为 0，源/目标 count、max ID、max time 完全一致，最终待导入增量为 0。
+- 经旧 IP 请求 provide API 与直连新机的记录数、视频 ID 集合完全一致；经旧 IP 重放真实 Yzm 报文由新机返回 `duplicate`，目标行数不变。
+- 旧后台 `selangadmin.php` 的遗留浏览器轮询已在目标 vhost 返回 410，不再进入 PHP-FPM；随机新后台入口不受影响。
+- 17:02 至 17:05 清理预检日志后观察：旧/新 IP 首页和 API 持续 200，Meilisearch 失败任务为 0；跨过两轮旧后台轮询后 Nginx error 和应用 error 均为 0。
+- 旧机代理在 DNS 改为 CNAME 后仍需保留至少 48 小时，期间禁止恢复旧站本地 PHP 写入。
+
 ## 无双写切换顺序
 
 1. 再核对源/目标 `mac_vod` 的 count、max ID、max time；目标不得落后于上一次已同步基线。
