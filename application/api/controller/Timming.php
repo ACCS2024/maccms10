@@ -76,6 +76,13 @@ class Timming extends Base
                 }
                 $this->reset();
 
+                $taskName = (string)$v['name'];
+                $startedAt = (int)$list[$k]['runtime'];
+                $previousRuntime = (int)($v['runtime'] ?? 0);
+                $restoreRuntime = function () use ($taskName, $startedAt, $previousRuntime) {
+                    $this->restoreRuntime($taskName, $startedAt, $previousRuntime);
+                };
+
                 // 兼容旧数据：早期资源站中心写入的任务使用 type/url 字段
                 $file  = isset($v['file']) && $v['file'] !== '' ? $v['file'] : (isset($v['type']) ? $v['type'] : '');
                 $param = isset($v['param']) ? $v['param'] : '';
@@ -86,11 +93,25 @@ class Timming extends Base
                 }
 
                 if (!is_string($file) || $file === '' || !method_exists($this, $file)) {
+                    $restoreRuntime();
                     mac_echo(lang('api/task_tip_jump', [$v['name'], $status, $last]));
                     die;
                 }
 
-                $this->$file($param);
+                register_shutdown_function(function () use ($restoreRuntime) {
+                    $error = error_get_last();
+                    $fatalTypes = [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR];
+                    if ($error !== null && in_array($error['type'], $fatalTypes, true)) {
+                        $restoreRuntime();
+                    }
+                });
+
+                try {
+                    $this->$file($param);
+                } catch (\Throwable $e) {
+                    $restoreRuntime();
+                    throw $e;
+                }
                 die;
 
             }
@@ -104,6 +125,25 @@ class Timming extends Base
     {
         foreach($_REQUEST as $k=>$v){
             $_REQUEST[$k]='';
+        }
+    }
+
+    private function restoreRuntime(string $taskName, int $startedAt, int $previousRuntime): void
+    {
+        $configFile = APP_PATH . 'extra/timming.php';
+        $list = is_file($configFile) ? include $configFile : [];
+        if (!is_array($list)) {
+            return;
+        }
+
+        foreach ($list as $key => $task) {
+            if (($task['name'] ?? '') !== $taskName || (int)($task['runtime'] ?? 0) !== $startedAt) {
+                continue;
+            }
+
+            $list[$key]['runtime'] = $previousRuntime;
+            mac_arr2file($configFile, $list);
+            return;
         }
     }
 
