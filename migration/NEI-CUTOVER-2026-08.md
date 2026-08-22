@@ -13,7 +13,7 @@
 
 ## 已完成
 
-- 目标代码从 `feat/tp8-migration` 独立部署到 `/opt/maccms10-nei`，源码树当前为 `132fb89`，运行时代码包含兼容提交 `b0bd513` 和日志修复 `80746e7`；没有改动已有的 `/opt/maccms10`。
+- 目标代码从 `feat/tp8-migration` 独立部署到 `/opt/maccms10-nei`，运行时代码包含兼容提交 `b0bd513` 和日志修复 `80746e7`；没有改动已有的 `/opt/maccms10`。
 - 新建独立数据库 `nei_selangzy` 和最小权限应用账号；新管理员随机生成，旧 `mac_admin` 未迁移。
 - 安装记录和随机后台入口分别保存在目标机 `/root/nei-selangzy-install.json`、`/root/nei-selangzy-admin-entry`，权限为 `0600`。
 - 旧库快照先导入隔离库 `nei_selangzy_legacy`，再按共有字段迁入 25 张业务表；旧 `mac_tmpvod` 未迁入，新版功能表保留。
