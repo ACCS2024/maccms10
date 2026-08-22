@@ -32,7 +32,7 @@
 			<div class="reg-group">
 				<label>验证码</label>
 				<input type="text" class="reg-control w150" id="verify" name="verify" placeholder="请输入验证码">
-				<img class="fr mr10 mt10" src="{:url('verify/index')}" onClick="this.src=this.src+'?'"  alt="单击刷新" />
+				<img class="fr mr10 mt10 js-verify-refresh" src="{:url('verify/index')}" alt="单击刷新" />
 			</div>
 			<input type="button" id="btn_send" class="btn-brand btn-sub" style="margin-top:5px;" value="发送验证码">
 		</form>

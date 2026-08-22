@@ -22,13 +22,13 @@
 			<li><a href="{:url('user/orders')}">充值记录</a></li>
 		</ul>
 	</div>
-    <div id="right">
+	    <div id="right" class="js-log-page" data-delete-url="{:url('user/ulog_del')}" data-log-type="2">
 		<h2>我的收藏</h2>
 		<div class="gong">
-		<a href="javascript:;" onClick="MAC.CheckBox.All('ids[]');">全选</a>
-		<a href="javascript:;" onClick="MAC.CheckBox.Other('ids[]');">反选</a>
-		<a href="javascript:;" id="btnDel">删除</a>
-		<a href="javascript:;" id="btnClear">清空</a>
+		<a href="#" class="js-check-all">全选</a>
+		<a href="#" class="js-check-other">反选</a>
+		<a href="#" class="js-log-delete-selected">删除</a>
+		<a href="#" class="js-log-clear">清空</a>
 		</div>
 		<table width="770" border="0" cellspacing="1" cellpadding="0" class="table">
 		  <tr>
@@ -53,7 +53,7 @@
 				<a target="_blank" href="{$vo.data.link}">{$vo.data.name}</a>
 				{/if}
 			</td>
-			<td align="center" valign="middle" bgcolor="#FFFFFF"><a href="javascript:;" onclick="delData({$vo.ulog_id},0)" class="delete">删除</a></td>
+			<td align="center" valign="middle" bgcolor="#FFFFFF"><a href="#" data-id="{$vo.ulog_id|intval}" class="delete js-log-delete">删除</a></td>
 		  </tr>
 		  {/if}
 			  {/volist}
@@ -76,35 +76,6 @@
 		</div>
     </div>
 </div>
-<script>
-	function delData(ids,all){
-		var msg ='删除';
-		if(all==1){
-			msg='清空';
-		}
-		if(confirm('确定要'+msg+'记录吗')){
-			$.post("{:url('user/ulog_del')}",{ids:ids,type:2,all:all},function(data) {
-				if (data.code == '1') {
-					alert('删除成功');
-					location.reload();
-				}else {
-					alert('删除失败：' + data.msg);
-				}
-			}, 'json')
-		}
-	}
-	$("#btnClear").click(function(){
-		delData('',1);
-	});
-	$("#btnDel").click(function(){
-		var ids = MAC.CheckBox.Ids('ids[]');
-		if(ids==''){
-			alert("请至少选择一个数据");
-			return;
-		}
-		delData(ids,0);
-	});
-</script>
 {include file="user/foot" /}
 </body>
 </html>

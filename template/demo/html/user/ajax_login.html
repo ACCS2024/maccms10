@@ -11,7 +11,7 @@
         {if condition="$GLOBALS['config']['user']['login_verify'] eq 1"}
         <div class="login_form_group clearfix">
             <input type="text" class="mac_u_verify" name="verify" placeholder="请输入验证码">
-            <img class="mac_verify_img" src="{:url('verify/index')}" onclick="this.src = this.src+'?'">
+            <img class="mac_verify_img" src="{:url('verify/index')}" alt="单击刷新">
         </div>
         {/if}
         <div class="login_form_link">
