@@ -1,4 +1,4 @@
-# maccms10 Docker 部署(含性能基线:OPcache / Redis / InnoDB)
+# maccms10 Docker 部署(含性能基线:PHP 8.3 / MySQL 8.0 / OPcache / Redis / InnoDB)
 
 可复现的本地/演示环境,默认即开启 **OPcache**;并预置 **Redis** 与 **Meilisearch** 供"缓存/会话/搜索"按需启用。
 
@@ -22,9 +22,9 @@ docker compose up -d --build
 ## 在 bare metal(非 docker)启用 OPcache
 把 `php/opcache.ini` 复制到 PHP 的 `conf.d` 目录后 reload:
 ```bash
-# 以 Debian/Ubuntu PHP-FPM 7.4 为例
-cp php/opcache.ini /etc/php/7.4/fpm/conf.d/zz-opcache.ini
-systemctl reload php7.4-fpm     # 或 apache2(mod_php)
+# 以 Debian/Ubuntu PHP-FPM 8.3 为例
+cp php/opcache.ini /etc/php/8.3/fpm/conf.d/zz-opcache.ini
+systemctl reload php8.3-fpm     # 或 apache2(mod_php)
 php -i | grep -i opcache.enable # 确认 On
 ```
 默认 `validate_timestamps=1 + revalidate_freq=60`:`git pull` 升级 60 秒内自动生效。
