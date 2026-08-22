@@ -8,25 +8,27 @@
 - 目标机：`23.225.113.34`，新站目录 `/home/wwwroot/nei.selangzy.com`。
 - `nei.selangzy.com` 是独立站、独立数据库，也是共享主站的采集源。
 - 迁移只搬业务数据、白名单配置和 JPG 上传资源。旧 PHP、旧 `RX03` 主题、旧框架、旧 `vendor`、日志、runtime 和 `mac_admin` 均不迁移。
-- 当前系统已经集成的 Yzm/Ppvod 控制器、历史路由和响应契约保持原样，本次迁移不修改这些文件。
+- 不复制旧站单文件 `Yzm.php`。当前系统继续使用集成的 Ppvod 控制器、历史路由和 JSON 响应契约，并通过默认关闭的站点级兼容开关承接旧报文语义。
 - DNS 切换前旧站继续接收推送；正式切换必须先把旧 vhost 整站反代到新机，避免双写并确保主站采集不会读到停止更新的旧库。
 
 ## 已完成
 
-- 目标代码从 `feat/tp8-migration` 的 `cb61d50` 独立部署到 `/opt/maccms10-nei`，没有改动已有的 `/opt/maccms10`。
+- 目标代码从 `feat/tp8-migration` 独立部署到 `/opt/maccms10-nei`，当前为 `80746e7`，没有改动已有的 `/opt/maccms10`。
 - 新建独立数据库 `nei_selangzy` 和最小权限应用账号；新管理员随机生成，旧 `mac_admin` 未迁移。
 - 安装记录和随机后台入口分别保存在目标机 `/root/nei-selangzy-install.json`、`/root/nei-selangzy-admin-entry`，权限为 `0600`。
 - 旧库快照先导入隔离库 `nei_selangzy_legacy`，再按共有字段迁入 25 张业务表；旧 `mac_tmpvod` 未迁入，新版功能表保留。
 - 快照基线为视频 `250764` 条、最大 ID `483729`；首轮增量后为 `250766` 条、最大 ID `483731`。
 - 42 个分类和全部旧业务配置通过纯 JSON 白名单合并。数据库连接、新安全密钥和当前系统主题 `vozy` 保持新安装值。
-- Yzm/Ppvod 只配置本站私有播放、图片、分类映射和接口开关，没有修改共享控制器代码。
+- 已逐行核对旧单文件 `Yzm.php` 与当前 Ppvod：本站私有配置开启 `legacy_compat=1`，恢复报文 `domain/picdomain/mp4domain`、MP4 下载地址、采集发布状态和未知分类栏目 20 兜底；仓库及其他站点默认均为关闭。
+- 兼容分支保留当前系统的常量时间密码校验、参数化判重、回收站语义、注入拦截、JSON 回执和 Meilisearch 增量同步；报文域名只允许 HTTP(S)，路径和标识符进入数据库前会严格校验。
 - 上传资源已同步 `27746` 个 JPG，共 `3361874498` 字节；源目录没有 PHP、脚本或软链接。
 - FTP 使用目标站实际配置从新机登录成功。
 - Dragonfly 健康检查为 `PONG`；Meilisearch 使用独立索引 `maccms_nei_selangzy`，已重建 `250766` 个视频文档。
 - 目标 vhost 使用 PHP 8.3 和独立日志，证书有效至 2026-11-05；敏感目录和上传脚本请求被 Nginx 拒绝。
 - 目标 aaPanel 已登记独立站点和 `nei.selangzy.com` 域名记录；登记前面板数据库备份保存在目标机 `/root/default.db.before-nei-registration-20260822`，现有已验证 vhost 未被面板重建。
 - 首页、provide XML API 均为 HTTP 200；新旧最近两小时 API 的记录数和视频 ID 集合一致。
-- 最新真实推送报文在目标历史路由重放返回 `duplicate`，数据库行数不变。
+- 最新真实推送报文在目标历史路由重放返回 `duplicate`，活跃同名记录前后均为 1；其封面、播放、MP4 下载、状态、分类和播放器 6 项均与旧版兼容构造结果一致。
+- 恶意 `javascript:` 报文域名实测返回 `rejected/domain`。Ppvod 独立日志已改到 Nginx 禁止访问且运行用户可写的 `runtime/api/ppvod/`，部署后 PHP/runtime 致命和未定义变量错误均为 0。
 - 随机后台入口、验证码、随机管理员、Dragonfly 会话和仪表盘真实登录通过；默认 `admin.php` 返回 404。
 - 旧站两个历史定时任务 `aa`（采集）和 `bb`（生成）均为关闭，宝塔无启用的 nei 计划任务，因此不复制。共享主站的内网采集任务仍由共享主站负责。
 
@@ -46,6 +48,13 @@
 - 旧后台 `selangadmin.php` 的遗留浏览器轮询已在目标 vhost 返回 410，不再进入 PHP-FPM；随机新后台入口不受影响。
 - 17:02 至 17:05 清理预检日志后观察：旧/新 IP 首页和 API 持续 200，Meilisearch 失败任务为 0；跨过两轮旧后台轮询后 Nginx error 和应用 error 均为 0。
 - 旧机代理在 DNS 改为 CNAME 后仍需保留至少 48 小时，期间禁止恢复旧站本地 PHP 写入。
+
+## 当前剩余动作
+
+- 业务迁移和无双写切换已完成；公开 DNS 仍经过旧机反代，功能请求实际已由新机处理。
+- DNS 唯一待操作项：`nei.selangzy.com` 改为 `CNAME origin.slapibf.com`，仅 DNS，TTL `300`。不要修改已放弃的根域名和 `www`。
+- 继续观察下一条真实新推送是否返回 `inserted`，并核对 `mac_vod` 最大 ID、Ppvod 日志和 Meilisearch 任务；无需为了测试向生产库制造临时内容。
+- DNS 修改后保留旧机整站反代至少 48 小时，再根据日志决定是否下线旧站资源。
 
 ## 无双写切换顺序
 
