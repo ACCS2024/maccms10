@@ -200,6 +200,10 @@ a:hover
 .header_list ul li a {
 	font-size:14px
 }
+.header_list .resource-status {
+	color:#666;
+	font-weight:bold
+}
 .header_list .domain-update-link {
 	color:#fe0085;
 	font-weight:bold
