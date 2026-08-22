@@ -2,6 +2,7 @@
 <div class="page-container p10">
 
     <form class="layui-form " method="post" action="{:url('sync')}" id="movementTable">
+        <input type="hidden" name="__token__" value="{:mac_token()}" />
         <input type="hidden" name="tab" value="{$tab}">
         <fieldset class="layui-elem-field">
             <legend>{:lang('admin/images/sync_range')}</legend>
