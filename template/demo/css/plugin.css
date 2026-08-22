@@ -1,6 +1,12 @@
 *{padding:0;margin:0}
 i,em{font-style: unset;}
 li,ul{list-style:none}
+.layui-main{position:relative;width:1140px;margin:0 auto}
+.layui-btn{display:inline-block;height:38px;line-height:38px;padding:0 18px;border:0;border-radius:2px;background:#009688;color:#fff;font-size:14px;text-align:center;white-space:nowrap;vertical-align:middle;cursor:pointer;box-sizing:border-box}
+.layui-btn:hover{color:#fff;opacity:.8}
+.layui-btn-danger{background:#ff5722}
+.layui-icon{font-size:16px;font-style:normal}
+.layui-icon-face-smile:before{content:"\263a"}
 .dropdown-content{position: absolute;display: none;top: 49px;left: 0;background-color: #fff;overflow: hidden;border: 1px solid #2c4278;}
 .dropdown:hover .dropdown-content{display:block}
 .addition-content{
