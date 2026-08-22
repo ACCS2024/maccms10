@@ -24,6 +24,7 @@
 - FTP 使用目标站实际配置从新机登录成功。
 - Dragonfly 健康检查为 `PONG`；Meilisearch 使用独立索引 `maccms_nei_selangzy`，已重建 `250766` 个视频文档。
 - 目标 vhost 使用 PHP 8.3 和独立日志，证书有效至 2026-11-05；敏感目录和上传脚本请求被 Nginx 拒绝。
+- 目标 aaPanel 已登记独立站点和 `nei.selangzy.com` 域名记录；登记前面板数据库备份保存在目标机 `/root/default.db.before-nei-registration-20260822`，现有已验证 vhost 未被面板重建。
 - 首页、provide XML API 均为 HTTP 200；新旧最近两小时 API 的记录数和视频 ID 集合一致。
 - 最新真实推送报文在目标历史路由重放返回 `duplicate`，数据库行数不变。
 - 随机后台入口、验证码、随机管理员、Dragonfly 会话和仪表盘真实登录通过；默认 `admin.php` 返回 404。
