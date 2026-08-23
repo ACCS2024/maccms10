@@ -25,6 +25,9 @@ class Ftp
             'ftp_pwd' =>$settings['pwd'],
             'ftp_dir'=>$settings['path'],
             'ftp_timeout'=>max(3, (int)($settings['timeout'] ?? 30)),
+            // 被动模式：图床 FTP 服务器多在 NAT/防火墙后，主动模式(PORT)数据连接会被挡，
+            // ftp_put 静默失败→图片只落本地不进图床。默认开启被动，可用 ftp 设置的 pasv=0 关闭。
+            'ftp_pasv'=> !isset($settings['pasv']) || (string)$settings['pasv'] !== '0',
         ];
 
         $connectionKey = hash('sha256', serialize($ftp_config));
