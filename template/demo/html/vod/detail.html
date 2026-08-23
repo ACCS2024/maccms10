@@ -47,7 +47,7 @@
 <a title="{$vo2.name}" href="javascript:;" class="copy_text">
 <font color="red">{$vo2.name}${$vo2.url}</font></a>
 <a class="bugs" data-vod-id="{$obj.vod_id|intval}" data-vod-name="{$obj.vod_name|htmlspecialchars}" href="javascript:;">我要报错</a>
-<a  class="bugs" href="{:mac_url_vod_play($obj)}">点击播放</a>
+<a class="playbtn" style="float:right;height:21px;line-height:21px;padding:0 11px;background:#fff;border:1px #00f solid;border-radius:3px;color:#00f;display:inline-block;text-decoration:none;font-size:12px;outline:0;" href="{:mac_url_vod_play($obj)}">点击播放</a>
 
 </li>
 {/maccms:foreach}
