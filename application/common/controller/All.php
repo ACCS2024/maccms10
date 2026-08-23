@@ -809,7 +809,15 @@ class All
         }
         else {
             $this->assign('player_data', '<script type="text/javascript">var player_aaaa=' . json_encode($player_info) . '</script>');
-            $this->assign('player_js', '<script type="text/javascript" src="' . MAC_PATH . 'static/js/playerconfig.js?t='.$this->_tsp.'"></script><script type="text/javascript" src="' . MAC_PATH . 'static/js/player.js?t=a'.$this->_tsp.'"></script>');
+            // 缓存串按文件 mtime，而非 date('Ymd')：后台改播放器→playerconfig.js 重建→mtime 变→URL 变，
+            // CDN(Cloudflare)/浏览器立刻取新文件。否则同一天内 ?t 不变，CDN 会一直吐旧的 player_list，
+            // 表现＝新加的播放器前台"不支持的播放来源"（强刷也没用，因为强刷绕不过 CDN 边缘缓存）。
+            $_pcRoot = (defined('ROOT_PATH') ? ROOT_PATH : './');
+            $_pcFile = $_pcRoot . 'static/js/playerconfig.js';
+            $_pjFile = $_pcRoot . 'static/js/player.js';
+            $_pcVer  = @is_file($_pcFile) ? @filemtime($_pcFile) : $this->_tsp;
+            $_pjVer  = @is_file($_pjFile) ? @filemtime($_pjFile) : $this->_tsp;
+            $this->assign('player_js', '<script type="text/javascript" src="' . MAC_PATH . 'static/js/playerconfig.js?t='.$_pcVer.'"></script><script type="text/javascript" src="' . MAC_PATH . 'static/js/player.js?t=a'.$_pjVer.'"></script>');
         }
         $this->assign('comment_mid', 1);
         $this->assign('comment_rid', $info['vod_id']);
