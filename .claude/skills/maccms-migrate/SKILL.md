@@ -20,10 +20,36 @@ description: 迁移 maccms10(苹果CMS / ThinkPHP8)站群到新服务器(如 宝
 - **目标机就绪**：PHP 8.x;内存/核数(装 Dragonfly 必须限 `proactor_threads`,多核否则要十几 G 内存拒启)。
 
 ## 2. 基础设施(目标机)
-- MySQL 8.0(推荐)、php-redis(面板装)。
-- **Meilisearch**：装 + 建 key,迁完全量重建索引。
-- **Dragonfly**(缓存,Redis 协议兼容)：password 文件 + flagfile;`cache_mode=true`、`maxmemory`、
-  **`proactor_threads` 必须限**。脚本参考 scratchpad/install_cache.sh。
+装齐 4 样:**MySQL 8.0、php-redis、Meilisearch(搜索)、Dragonfly(缓存,Redis 协议)**。前两个走面板装;后两个用
+仓库 `migration/infra/` 下的一键脚本(裸机二进制 + systemd,幂等,`install/status/upgrade/uninstall` 子命令,
+secrets 运行时 `openssl rand` 生成、不入库)。
+
+### Dragonfly(缓存/会话) — `migration/infra/dragonfly.sh`
+```bash
+sudo bash migration/infra/dragonfly.sh install   # 装+起(自动按机器资源算 maxmemory/proactor_threads)
+sudo bash migration/infra/dragonfly.sh status    # 版本/健康/口令位置
+```
+- 版本锁 `DF_VERSION`(当前 **v1.40.1**);监听 **127.0.0.1:6379**;systemd 服务 `dragonfly`(User=dragonfly)。
+- flagfile `/etc/dragonfly/dragonfly.conf`:`--requirepass`(口令存 `/etc/dragonfly/password`,640 root:dragonfly)、
+  `--maxmemory`、`--cache_mode=true`、`--proactor_threads`、`--dir=/var/lib/dragonfly`。
+- **`proactor_threads` 必须限**:脚本保证每线程 ≥256MiB,否则高核机(如 56 核)要十几 G 内存**拒启**。
+  覆盖:`sudo DF_MAXMEMORY_MB=4096 DF_PROACTOR_THREADS=4 bash dragonfly.sh install`。
+
+### Meilisearch(搜索) — `migration/infra/meilisearch.sh`
+```bash
+sudo bash migration/infra/meilisearch.sh install  # 全新装(生成 master key,起服务)
+sudo bash migration/infra/meilisearch.sh status   # 版本/健康/文档数 + "后台该填什么"
+sudo bash migration/infra/meilisearch.sh upgrade  # 仅在改了顶部 MEILI_VERSION 后:dump→迁移→导入新版(失败自动回滚)
+```
+- **版本锁死**(`MEILI_VERSION`,当前 **v1.47.0**),systemd 托管,**绝不自动升级**——防「被动升级后 data.ms 版本
+  不兼容拒启」。升级只改这一个变量再 `upgrade`,走官方 dump→import 迁移。
+- 监听 **127.0.0.1:7700**;env `/etc/meilisearch/meilisearch.env`(含 `MEILI_MASTER_KEY`);数据 `/var/lib/meilisearch`。
+- **maccms 与 Meili 不同机**:`sudo MEILI_BIND=0.0.0.0 bash meilisearch.sh install` + 配防火墙白名单。
+
+### 装完接进 maccms(别漏)
+- **缓存**:`config`/`.env` 把 cache 驱动指向 Redis `127.0.0.1:6379` + Dragonfly 口令(取自 `/etc/dragonfly/password`)。
+- **搜索**:`application/extra/maccms.php` 的 `meilisearch` 段填 host=`127.0.0.1:7700` + master key(取自 env 文件),
+  然后**全量重建索引**(后台搜索设置触发)。`meilisearch.sh status` 会直接打印后台各字段该填的值。
 
 ## 3. 干净部署 + 导数据
 - 本仓库 CLI `bin/maccms`：`new <路径> --db-name --site-name`(部署+装)；
@@ -103,6 +129,7 @@ CF 域名注意静态资源缓存(见陷阱 1)。
 - Cloudflare 上把老 `help.<域>` 子域 **301 到新 `/index.php/help.html`**,退掉老 help 机。
 
 # 关联
+- `migration/infra/dragonfly.sh`、`migration/infra/meilisearch.sh` — 缓存/搜索一键部署脚本(install/status/upgrade/uninstall)
 - `migration/SENLIN-CUTOVER-2026-08.md` — 主站切换样例(范围/域名决策/最终切换/回滚/DNS CNAME)
 - `migration/NEI-CUTOVER-2026-08.md` — 独立站蓝绿切换 + 无双写顺序 + 回滚
 - `migration/HELP-MODULE-MIGRATION.md` — 帮助中心站内化(删 help/、mac_help_cfg、mac_help_url)
