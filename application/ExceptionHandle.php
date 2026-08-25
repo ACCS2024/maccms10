@@ -8,6 +8,7 @@ use think\exception\HttpException;
 use think\exception\HttpResponseException;
 use think\facade\Log;
 use think\facade\View;
+use think\template\exception\TemplateNotFoundException;
 use think\Request;
 use think\Response;
 use Throwable;
@@ -73,16 +74,17 @@ class ExceptionHandle extends Handle
 
         $status  = $this->resolveStatus($e);
         $errorId = $this->generateErrorId();
+        $message = $this->messageFor($status, $e);
 
         $this->writeLog($e, $status, $errorId, $request);
 
         // API 请求（ENTRANCE=api 或 Accept/X-Requested-With 标识 JSON 客户端）→ JSON
         if ($this->isApiRequest($request)) {
-            return $this->jsonError($status, $errorId);
+            return $this->jsonError($status, $errorId, $message);
         }
 
         // 浏览器请求 → 主题 HTML 页
-        return $this->htmlError($status, $errorId);
+        return $this->htmlError($status, $errorId, $message);
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -170,15 +172,15 @@ class ExceptionHandle extends Handle
     /**
      * JSON 错误响应（API 专用）
      */
-    private function jsonError(int $status, string $errorId): Response
+    private function jsonError(int $status, string $errorId, ?array $message = null): Response
     {
-        [$title, $desc] = $this->statusText($status);
-        $body = json_encode([
+        [$title, $desc] = $message ?? $this->statusText($status);
+        $body = [
             'code'     => 0,
             'msg'      => $title,
             'detail'   => $desc,
             'error_id' => $errorId,
-        ], JSON_UNESCAPED_UNICODE);
+        ];
 
         return Response::create($body, 'json', $status)
             ->header(['Content-Type' => 'application/json; charset=utf-8']);
@@ -187,9 +189,9 @@ class ExceptionHandle extends Handle
     /**
      * HTML 错误响应：尝试主题模板 → 纯 HTML 降级 → 最小内联 HTML
      */
-    private function htmlError(int $status, string $errorId): Response
+    private function htmlError(int $status, string $errorId, ?array $message = null): Response
     {
-        [$title, $desc] = $this->statusText($status);
+        [$title, $desc] = $message ?? $this->statusText($status);
 
         // 第一层：尝试渲染主题模板
         try {
@@ -306,5 +308,21 @@ HTML;
     {
         return self::STATUS_MAP[$status]
             ?? ['服务器错误', '服务器发生了一点小问题，我们已记录，请稍后重试'];
+    }
+
+    /**
+     * 为常见的部署/主题问题提供可行动的提示，同时不向访客泄露文件路径。
+     * 完整异常仍由 writeLog() 记录，便于管理员按 error_id 定位缺失模板。
+     */
+    private function messageFor(int $status, Throwable $e): array
+    {
+        if ($e instanceof TemplateNotFoundException) {
+            return [
+                '页面暂时不可用',
+                '当前页面暂时无法访问，请稍后重试。',
+            ];
+        }
+
+        return $this->statusText($status);
     }
 }
