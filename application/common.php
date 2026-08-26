@@ -1168,9 +1168,9 @@ function mac_db_add_index_if_absent($table, $indexName, array $cols)
 }
 
 /**
- * 性能(P2):API 层关键词搜索统一接入 Meilisearch。
- * 返回改写后的 [where, order, total](命中ID集 + 相关性排序 + Meili 预估总数)或 false(由调用方走原 LIKE)。
- * 安全:Meili 未启用 / 无关键词 / 桥接异常 / 无命中 / where 含无法映射的过滤 一律返回 false → 回退原 LIKE,绝不改变既有结果集语义。
+ * 性能(P2):API 层视频列表与关键词搜索统一接入 Meilisearch。
+ * 返回改写后的 [where, order, total](命中ID集 + 相关性/时间排序 + Meili 预估总数)或 false(由调用方走原查询)。
+ * 安全:Meili 未启用 / 桥接异常 / where 含无法映射的过滤 一律返回 false → 回退原查询,绝不改变既有结果集语义。
  *
  * 注意分页:命中 where 形如 `pk IN(本页ID)`,即 Meili 已按 $page/$num/$start 完成分页。
  *   - 调用方用 getListByCond 时:Meili 命中后 offset 必须传 0(否则二次分页,第 2 页起为空)。
@@ -1178,7 +1178,7 @@ function mac_db_add_index_if_absent($table, $indexName, array $cols)
  *
  * @param string $module vod|art|manga|actor|role|website
  * @param array  $where  原始查询条件(含关键词 LIKE,桥接会自行剥离文本搜索键)
- * @param string $kw     关键词
+ * @param string $kw     关键词；视频 API 为空时也走 Meili 的过滤/排序列表
  * @param int    $page   页码(1 起)
  * @param int    $num    每页条数
  * @param mixed  $order  当前排序(未命中相关性时透传)
@@ -1188,7 +1188,15 @@ function mac_db_add_index_if_absent($table, $indexName, array $cols)
 function mac_meili_api_apply($module, $where, $kw, $page = 1, $num = 20, $order = '', $start = 0)
 {
     $kw = trim((string)$kw);
-    if ($kw === '' || !class_exists('\\app\\common\\util\\MeilisearchService') || !\app\common\util\MeilisearchService::enabled()) {
+    $is_vod_list = $kw === '' && $module === 'vod';
+    if (!$is_vod_list && $kw === '') {
+        return false;
+    }
+    if ($is_vod_list) {
+        // Keep the keyword path unchanged while dispatching the empty video list.
+        $kw = ' ';
+    }
+    if (!class_exists('\\app\\common\\util\\MeilisearchService') || !\app\common\util\MeilisearchService::enabled()) {
         return false;
     }
     $page  = $page > 0 ? (int)$page : 1;
@@ -1197,7 +1205,11 @@ function mac_meili_api_apply($module, $where, $kw, $page = 1, $num = 20, $order 
     try {
         $B = '\\app\\common\\util\\MeilisearchListBridge';
         switch ($module) {
-            case 'vod':     $m = $B::applyForVod($where, $kw, '', '', '', '', '', $page, $num, $start, $order); break;
+            case 'vod':
+                $m = $is_vod_list
+                    ? $B::applyForVodList($where, $page, $num, $start, $order)
+                    : $B::applyForVod($where, $kw, '', '', '', '', '', $page, $num, $start, $order);
+                break;
             case 'art':     $m = $B::applyForArt($where, $kw, '', '', '', $page, $num, $start, $order); break;
             case 'manga':   $m = $B::applyForManga($where, $kw, '', '', '', $page, $num, $start, $order); break;
             case 'actor':   $m = $B::applyForActor($where, $kw, '', $page, $num, $start, $order); break;

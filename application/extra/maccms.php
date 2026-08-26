@@ -435,7 +435,7 @@ return array (
       'imgurl' => 'http://img.test.com/',
       'typefilter' => '',
       'datafilter' => ' vod_status=1',
-      'cachetime' => '',
+      'cachetime' => '30',
       'from' => '',
       'auth' => 'test.com#163.com',
     ),

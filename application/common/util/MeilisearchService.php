@@ -171,6 +171,9 @@ class MeilisearchService
                 'ts',
             ],
             'sortableAttributes' => ['hits_month', 'ts'],
+            // API pages use the legacy pg parameter. Keep deep pages on Meili rather than
+            // letting them fall back to an unbounded MySQL OFFSET scan.
+            'pagination' => ['maxTotalHits' => 400000],
             'rankingRules' => [
                 'words',
                 'typo',
@@ -359,12 +362,16 @@ class MeilisearchService
     /**
      * @return array{ok:bool,hits:array<int,array>,estimatedTotalHits:int}
      */
-    public static function search($q, $filter, $limit, $offset)
+    public static function search($q, $filter, $limit, $offset, $sort = [])
     {
         if (!self::enabled()) {
             return ['ok' => false, 'hits' => [], 'estimatedTotalHits' => 0];
         }
-        $memoKey = md5((string)$q . "\x1e" . (string)$filter . "\x1e" . (int)$limit . "\x1e" . (int)$offset, true);
+        if (is_string($sort) && trim($sort) !== '') {
+            $sort = [trim($sort)];
+        }
+        $sort = is_array($sort) ? array_values(array_filter(array_map('strval', $sort))) : [];
+        $memoKey = md5((string)$q . "\x1e" . (string)$filter . "\x1e" . (int)$limit . "\x1e" . (int)$offset . "\x1e" . implode(',', $sort), true);
         $memoKey = 'ms1:' . base64_encode($memoKey);
         if (isset(self::$searchMemo[$memoKey])) {
             return self::$searchMemo[$memoKey];
@@ -378,6 +385,9 @@ class MeilisearchService
         ];
         if ($filter !== '') {
             $baseBody['filter'] = $filter;
+        }
+        if (!empty($sort)) {
+            $baseBody['sort'] = $sort;
         }
 
         // 索引侧 title_t2s/title_s2t + 查询侧 OpenCC 变体，双端保证繁简互通。

@@ -10,6 +10,78 @@ use think\facade\Db;
 class MeilisearchListBridge
 {
     /**
+     * 普通视频 API 列表：由 Meili 完成过滤、排序和分页，MySQL 仅回表本页主键。
+     * 带自定义 SQL 或播放组过滤时保留原查询语义，避免过滤条件被放大。
+     *
+     * @return array|null {where, order, total}
+     */
+    public static function applyForVodList($where, $page, $num, $start, $currentOrder)
+    {
+        if (!MeilisearchService::enabled() || !is_array($where) || isset($where['vod_id'])) {
+            return null;
+        }
+        $filterWhere = $where;
+        if (isset($filterWhere['_string'])) {
+            // The default API datafilter is already represented by the published filter.
+            if (!preg_match('/^\\s*vod_status\\s*=\\s*1\\s*$/i', (string)$filterWhere['_string'])) {
+                return null;
+            }
+            unset($filterWhere['_string']);
+        }
+
+        $allowed = [
+            'type_id', 'type_id|type_id_1', 'vod_level', 'group_id', 'vod_isend', 'vod_plot',
+            'vod_year', 'vod_area', 'vod_lang', 'vod_state', 'vod_version',
+            'vod_time', 'vod_time_add', 'vod_time_hits',
+        ];
+        foreach ($filterWhere as $key => $value) {
+            if (!in_array($key, $allowed, true) || $value instanceof \Closure) {
+                return null;
+            }
+        }
+
+        if (!is_string($currentOrder) || !preg_match('/^vod_time\s+(asc|desc)$/i', trim($currentOrder), $m)) {
+            return null;
+        }
+
+        $page = max(1, (int)$page);
+        $num = max(1, min(100, (int)$num));
+        $start = max(0, (int)$start);
+        $offset = ($page - 1) * $num + $start;
+        $filter = self::buildVodFilter($filterWhere);
+        if ($filter === null) {
+            return null;
+        }
+
+        $sr = MeilisearchService::search('', $filter, $num, $offset, ['ts:' . strtolower($m[1])]);
+        if (!$sr['ok']) {
+            return null;
+        }
+        $hitRows = isset($sr['hits']) && is_array($sr['hits']) ? $sr['hits'] : [];
+        $ids = [];
+        foreach ($hitRows as $hit) {
+            if (isset($hit['id']) && is_string($hit['id']) && preg_match('/^vod_(\d+)$/', $hit['id'], $idMatch)) {
+                $ids[] = (int)$idMatch[1];
+            }
+        }
+        $total = max(0, (int)($sr['estimatedTotalHits'] ?? 0));
+        $ids = self::refineMeiliPrimaryIds($ids, 'vod');
+        if (self::shouldAbortMeiliForStaleHits($hitRows, $ids)) {
+            $where['vod_id'] = -1;
+            return ['where' => $where, 'order' => $currentOrder, 'total' => 0];
+        }
+
+        if (empty($ids)) {
+            $where['vod_id'] = -1;
+            $order = $currentOrder;
+        } else {
+            $where['vod_id'] = $ids;
+            $order = Db::raw('FIELD(vod_id,' . implode(',', $ids) . ')');
+        }
+        return ['where' => $where, 'order' => $order, 'total' => $total];
+    }
+
+    /**
      * @return array|null {where, order, total}
      */
     public static function applyForVod($where, $wd, $name, $tag, $class, $actor, $director, $page, $num, $start, $currentOrder)

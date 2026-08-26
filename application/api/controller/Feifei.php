@@ -116,7 +116,7 @@ class Feifei extends Base
             // 而 Meili 索引了拼音、首字母与繁简互换字段，召回明显更全
             // （实测 wd=JKSR：LIKE 142 条，Meili 220 条），且耗时从 ~1.3s 降到 ~50ms。
             $wd    = trim((string)($this->_param['wd'] ?? ''));
-            $meili = $wd !== '' ? mac_meili_api_apply('vod', $where, $wd, $pg, $pagesize, $order, 0) : false;
+            $meili = mac_meili_api_apply('vod', $where, $wd, $pg, $pagesize, $order, 0);
 
             if ($meili !== false) {
                 $res = (new \app\common\model\Vod())->listData($meili[0], $meili[1], 1, $pagesize, 0, $field, 0, 0);

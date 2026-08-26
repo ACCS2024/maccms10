@@ -117,7 +117,7 @@ class Seacms extends Base
             }
 
             // Meilisearch 双轨：命中则替换 where+order+total；未命中/未启用自动用 LIKE 回退
-            $meili = $wd !== '' ? mac_meili_api_apply('vod', $where, $wd, $pg, $pagesize, $order, 0) : false;
+            $meili = mac_meili_api_apply('vod', $where, $wd, $pg, $pagesize, $order, 0);
 
             if ($meili !== false) {
                 $res           = (new \app\common\model\Vod())->listData($meili[0], $meili[1], 1, $pagesize, 0, $field, 0, 0);
