@@ -1,0 +1,324 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>替换助手 - {$site_name}</title>
+{include file="block/include"}
+<style>
+.rep-wrap{padding:20px 0 40px;}
+.rep-toolbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;background:#fff;border:1px solid #e8e8e8;border-radius:4px;padding:14px 18px;margin-bottom:16px;}
+.rep-toolbar h1{font-size:18px;color:#333;font-weight:bold;margin:0;}
+.rep-toolbar p{color:#888;font-size:13px;margin:2px 0 0;}
+.rep-stats{display:flex;gap:16px;}
+.rep-stat{text-align:center;background:#f5f5f5;border-radius:4px;padding:8px 16px;min-width:64px;}
+.rep-stat strong{display:block;font-size:20px;font-weight:bold;color:#0b87e7;}
+.rep-stat span{font-size:12px;color:#999;}
+.rep-stat.stat-new strong{color:#e74c3c;}
+.rep-stat.stat-ok strong{color:#27ae60;}
+.rep-tip{background:#fffbe6;border:1px solid #ffe58f;border-radius:4px;padding:10px 16px;margin-bottom:16px;font-size:13px;color:#795500;display:flex;align-items:flex-start;justify-content:space-between;gap:10px;}
+.rep-tip-close{background:none;border:none;cursor:pointer;font-size:16px;color:#aaa;line-height:1;padding:0;flex-shrink:0;}
+.rep-tip-close:hover{color:#666;}
+.rep-empty{background:#fff;border:1px solid #e8e8e8;border-radius:4px;padding:60px 20px;text-align:center;color:#aaa;}
+.rep-empty .rep-empty-icon{font-size:48px;display:block;margin-bottom:12px;}
+/* 当前生效值总览 */
+.rep-cur-label{font-size:12px;color:#999;font-weight:bold;letter-spacing:1px;margin:0 0 10px;}
+.rep-cur-wrap{display:grid;grid-template-columns:repeat(auto-fit,minmax(238px,1fr));gap:12px;margin-bottom:24px;}
+.rep-cur{background:#fff;border:1px solid #e8e8e8;border-top:2px solid #0b87e7;border-radius:4px;padding:13px 16px;}
+.rep-cur .cur-cat{display:flex;align-items:center;justify-content:space-between;font-size:13px;color:#333;font-weight:bold;margin-bottom:9px;}
+.rep-cur .cur-cat .cnt{font-size:11px;color:#aaa;font-weight:normal;}
+.rep-cur .cur-val{display:flex;align-items:center;gap:8px;}
+.rep-cur .cur-val .v{flex:1;font-family:Consolas,Menlo,monospace;font-size:15px;color:#1a7340;font-weight:bold;word-break:break-all;line-height:1.4;}
+.rep-cur .cur-date{font-size:11px;color:#aaa;margin-top:8px;}
+.rep-copy{border:1px solid #dcdcdc;background:#f7f7f7;color:#666;border-radius:3px;padding:4px 9px;font-size:12px;cursor:pointer;white-space:nowrap;line-height:1.4;}
+.rep-copy:hover{border-color:#0b87e7;color:#0b87e7;}
+.rep-copy.done{border-color:#27ae60;color:#27ae60;}
+/* 分类标签 */
+.rep-tabs{display:flex;gap:2px;flex-wrap:wrap;border-bottom:1px solid #e8e8e8;margin-bottom:18px;}
+.rep-tab{background:none;border:none;border-bottom:2px solid transparent;color:#888;cursor:pointer;font-size:14px;padding:8px 14px;margin-bottom:-1px;}
+.rep-tab:hover{color:#333;}
+.rep-tab.on{color:#0b87e7;font-weight:bold;border-bottom-color:#0b87e7;}
+.rep-tab .n{font-size:11px;color:#bbb;}
+.rep-tab.on .n{color:#7bbdf0;}
+/* 分类分区 */
+.rep-cat-head{display:flex;align-items:baseline;gap:8px;margin:0 0 10px;}
+.rep-cat-head h2{font-size:15px;color:#333;font-weight:bold;margin:0;}
+.rep-cat-head .fld{font-size:12px;color:#aaa;font-family:Consolas,Menlo,monospace;}
+.rep-card{background:#fff;border:1px solid #e8e8e8;border-radius:4px;margin-bottom:10px;transition:box-shadow .2s;cursor:pointer;}
+.rep-card:hover{box-shadow:0 2px 8px rgba(0,0,0,.1);}
+.rep-card.is-viewed{opacity:.7;}
+.rep-card.is-current{border-color:#bde0ff;}
+.rep-card-body{padding:14px 16px;}
+.rep-card-meta{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:11px;}
+.rep-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:12px;line-height:18px;}
+.rep-badge.b-new{background:#e74c3c;color:#fff;}
+.rep-badge.b-viewed{background:#bbb;color:#fff;}
+.rep-badge.b-applied{background:#27ae60;color:#fff;}
+.rep-badge.b-current{background:#0b87e7;color:#fff;}
+.rep-badge.b-hidden{display:none;}
+.rep-date{color:#999;font-size:12px;margin-left:auto;}
+.rep-flow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px;}
+.rep-val{font-family:Consolas,Menlo,monospace;font-size:13px;padding:6px 10px;border-radius:3px;word-break:break-all;line-height:1.4;}
+.rep-val.o{background:#fff5f5;border:1px solid #ffd6d6;color:#c0392b;text-decoration:line-through;text-decoration-color:#e5a9a1;}
+.rep-val.n{background:#f0fff4;border:1px solid #b7ebc8;color:#1a7340;font-weight:bold;}
+.rep-arrow{color:#bbb;flex-shrink:0;}
+.rep-card-foot{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.rep-btn{display:inline-block;padding:5px 13px;border-radius:3px;font-size:13px;cursor:pointer;border:none;line-height:1.6;transition:opacity .15s;}
+.rep-btn:hover{opacity:.85;}
+.rep-btn.btn-green{background:#27ae60;color:#fff;}
+.rep-btn.btn-blue{background:#0b87e7;color:#fff;}
+.rep-note{font-size:12px;color:#999;font-style:italic;margin-left:auto;}
+.rep-hidden{display:none;}
+.rep-more{width:100%;text-align:center;background:#f5f5f5;border:1px dashed #d5d5d5;color:#888;cursor:pointer;font-size:13px;padding:9px;border-radius:4px;margin-bottom:12px;}
+.rep-more:hover{color:#0b87e7;border-color:#0b87e7;}
+.rep-modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9000;align-items:center;justify-content:center;}
+.rep-modal-bg.show{display:flex;}
+.rep-modal{background:#fff;border-radius:6px;width:90%;max-width:600px;max-height:90vh;overflow-y:auto;box-shadow:0 4px 20px rgba(0,0,0,.2);}
+.rep-modal-head{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid #eee;}
+.rep-modal-head h3{font-size:16px;font-weight:bold;color:#333;margin:0;}
+.rep-modal-close{background:none;border:none;font-size:20px;color:#aaa;cursor:pointer;line-height:1;}
+.rep-modal-close:hover{color:#333;}
+.rep-modal-body{padding:16px 18px;}
+.rep-sql-block{background:#1a1a2e;border-radius:4px;padding:14px;margin-bottom:12px;overflow-x:auto;}
+.rep-sql-block pre{color:#4ecca3;font-size:13px;font-family:Consolas,monospace;margin:0;white-space:pre-wrap;word-break:break-all;}
+.rep-warn{background:#fffbe6;border:1px solid #ffe58f;border-radius:3px;padding:8px 12px;font-size:12px;color:#795500;margin-bottom:12px;}
+.rep-modal-foot{display:flex;gap:10px;}
+.rep-modal-foot .rep-btn{flex:1;text-align:center;padding:8px;}
+.btn-gray{background:#e8e8e8;color:#555;}
+.rep-tutorial h4{font-size:15px;font-weight:bold;margin-bottom:12px;color:#333;}
+.rep-tutorial ol{padding-left:20px;color:#555;font-size:13px;line-height:2;}
+.rep-tutorial code{background:#f0f0f0;padding:1px 5px;border-radius:2px;font-size:12px;}
+.rep-tutorial .tip-box{background:#e8f4ff;border-left:3px solid #0b87e7;padding:8px 12px;border-radius:0 3px 3px 0;font-size:12px;color:#1a5fa8;margin:8px 0;}
+</style>
+</head>
+{include file="block/head"}
+<div class="container rep-wrap">
+
+  <div class="rep-toolbar">
+    <div>
+      <h1>替换助手</h1>
+      <p>站长发布的数据替换记录，采集方照最新记录同步自己的库即可</p>
+    </div>
+    <div class="rep-stats">
+      <div class="rep-stat stat-new"><strong id="statNew">0</strong><span>新记录</span></div>
+      <div class="rep-stat stat-ok"><strong id="statViewed">0</strong><span>已查看</span></div>
+      <div class="rep-stat"><strong>{$list|count}</strong><span>全部</span></div>
+    </div>
+  </div>
+
+  <div class="rep-tip" id="repTip">
+    <span id="repTipText">正在计算新记录数量…</span>
+    <button class="rep-tip-close js-hide-tip" type="button">✕</button>
+  </div>
+
+  {if empty($cats)}
+  <div class="rep-empty">
+    <span class="rep-empty-icon">📭</span>
+    <strong>暂无替换记录</strong>
+    <p style="margin-top:8px;font-size:13px;">管理员暂未发布替换内容，请稍后查看</p>
+  </div>
+  {else/}
+
+  <!-- ① 当前生效值总览：每类最新值置顶，一眼可见 -->
+  <p class="rep-cur-label">当前生效值</p>
+  <div class="rep-cur-wrap">
+    {foreach $cats as $c}
+    {if !empty($c.current)}
+    <div class="rep-cur">
+      <div class="cur-cat">{$c.name|htmlspecialchars} <span class="cnt">{$c.count} 条历史</span></div>
+      <div class="cur-val">
+        <span class="v">{$c.current.rep_replacement|htmlspecialchars}</span>
+        <button class="rep-copy js-copy" type="button" data-copy="{$c.current.rep_replacement|htmlspecialchars}">复制</button>
+      </div>
+      <div class="cur-date">更新于 {:date('Y-m-d', $c['current']['rep_create_time'])}</div>
+    </div>
+    {/if}
+    {/foreach}
+  </div>
+
+  <!-- ② 分类标签 -->
+  <div class="rep-tabs" id="repTabs">
+    <button class="rep-tab on" type="button" data-f="all">全部 <span class="n">{$list|count}</span></button>
+    {foreach $cats as $ci => $c}
+    <button class="rep-tab" type="button" data-f="cat-{$ci}">{$c.name|htmlspecialchars} <span class="n">{$c.count}</span></button>
+    {/foreach}
+  </div>
+
+  <!-- ③ 分类分区 + 时间线（新→旧，当前高亮，历史折叠） -->
+  {foreach $cats as $ci => $c}
+  <div class="rep-cat" data-cat="cat-{$ci}">
+    <div class="rep-cat-head"><h2>{$c.name|htmlspecialchars}</h2>{if !empty($c.field)}<span class="fld">{$c.field|htmlspecialchars}</span>{/if}</div>
+    {foreach $c.records as $i => $item}
+    <div class="rep-card{if $i eq 0} is-current{/if}{if $i gt 3} rep-hidden{/if}" data-cat="cat-{$ci}" data-id="{$item.rep_id|intval}" data-ts="{$item.rep_create_time|intval}">
+      <div class="rep-card-body">
+        <div class="rep-card-meta">
+          {if $i eq 0}<span class="rep-badge b-current">当前</span>{/if}
+          <span class="rep-badge b-new b-hidden">★ 新</span>
+          <span class="rep-badge b-viewed b-hidden">✓ 已看</span>
+          {if $item.rep_applied eq 1}<span class="rep-badge b-applied">✔ 站长已执行</span>{/if}
+          <span class="rep-date">{:date('Y-m-d', $item['rep_create_time'])}</span>
+        </div>
+        <div class="rep-flow">
+          <span class="rep-val o">{$item.rep_original|htmlspecialchars}</span>
+          <span class="rep-arrow">→</span>
+          <span class="rep-val n">{$item.rep_replacement|htmlspecialchars}</span>
+        </div>
+        <div class="rep-card-foot">
+          {if $item.rep_type eq '播放器替换'}
+          <button class="rep-btn btn-green js-show-tutorial" type="button" data-rep-type="{$item.rep_type|htmlspecialchars}">后台设置（推荐）</button>
+          {else/}
+          <button class="rep-btn btn-green js-show-tutorial" type="button" data-rep-type="{$item.rep_type|htmlspecialchars}">后台操作（推荐）</button>
+          <button class="rep-btn btn-blue js-show-sql" type="button" data-rep-type="{$item.rep_type|htmlspecialchars}" data-rep-o="{$item.rep_original|htmlspecialchars}" data-rep-n="{$item.rep_replacement|htmlspecialchars}">复制 SQL（进阶）</button>
+          {/if}
+          {if !empty($item.rep_note)}<span class="rep-note">备注：{$item.rep_note|htmlspecialchars}</span>{/if}
+        </div>
+      </div>
+    </div>
+    {/foreach}
+    {if $c.more gt 0}<button class="rep-more js-more" type="button" data-cat="cat-{$ci}">展开全部历史（另有 {$c.more} 条）</button>{/if}
+  </div>
+  {/foreach}
+
+  {/if}
+
+</div>
+
+<!-- SQL 弹窗 -->
+<div class="rep-modal-bg" id="sqlModal">
+  <div class="rep-modal">
+    <div class="rep-modal-head">
+      <h3>SQL 命令</h3>
+      <button class="rep-modal-close js-close-modal" type="button" data-modal="sqlModal">✕</button>
+    </div>
+    <div class="rep-modal-body">
+      <div class="rep-sql-block"><pre id="sqlContent"></pre></div>
+      <div class="rep-warn">⚠ 执行前请备份数据库。将 SQL 粘贴到 phpMyAdmin 或 MacCMS 后台「数据库」中执行。</div>
+      <div class="rep-modal-foot">
+        <button class="rep-btn btn-blue js-copy-sql" type="button">复制 SQL</button>
+        <button class="rep-btn btn-gray js-close-modal" type="button" data-modal="sqlModal">关闭</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 教程弹窗 -->
+<div class="rep-modal-bg" id="tutorialModal">
+  <div class="rep-modal">
+    <div class="rep-modal-head">
+      <h3>操作教程</h3>
+      <button class="rep-modal-close js-close-modal" type="button" data-modal="tutorialModal">✕</button>
+    </div>
+    <div class="rep-modal-body">
+      <div class="rep-tutorial" id="tutorialContent"></div>
+      <div class="rep-modal-foot" style="margin-top:16px;">
+        <button class="rep-btn btn-gray js-close-modal" type="button" data-modal="tutorialModal">关闭</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{include file="block/foot"}
+<script>
+var repList = {php}echo json_encode($list, JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_UNESCAPED_UNICODE);{/php};
+
+function closeModal(id){document.getElementById(id).classList.remove('show');}
+document.querySelectorAll('.rep-modal-bg').forEach(function(m){
+  m.addEventListener('click',function(e){if(e.target===m)m.classList.remove('show');});
+});
+document.querySelectorAll('.js-close-modal').forEach(function(b){
+  b.addEventListener('click',function(){closeModal(b.dataset.modal);});
+});
+
+// SQL 生成（按 rep_type，泛用）
+var typeSQL={
+  '文章图片替换':function(o,r){return"UPDATE mac_art SET art_pic=REPLACE(art_pic,'"+esc(o)+"','"+esc(r)+"');\nUPDATE mac_art SET art_content=REPLACE(art_content,'"+esc(o)+"','"+esc(r)+"');";},
+  '视频封面替换':function(o,r){return"UPDATE mac_vod SET vod_pic=REPLACE(vod_pic,'"+esc(o)+"','"+esc(r)+"');";},
+  '视频播放地址':function(o,r){return"UPDATE mac_vod SET vod_play_url=REPLACE(vod_play_url,'"+esc(o)+"','"+esc(r)+"');";},
+  '播放器替换':function(o,r){return"UPDATE mac_vod SET vod_play_from=REPLACE(vod_play_from,'"+esc(o)+"','"+esc(r)+"');\nUPDATE mac_vod SET vod_play_server=REPLACE(vod_play_server,'"+esc(o)+"','"+esc(r)+"');";},
+  '域名替换':function(o,r){return"UPDATE mac_vod SET vod_play_url=REPLACE(vod_play_url,'"+esc(o)+"','"+esc(r)+"');\nUPDATE mac_vod SET vod_pic=REPLACE(vod_pic,'"+esc(o)+"','"+esc(r)+"');\nUPDATE mac_art SET art_content=REPLACE(art_content,'"+esc(o)+"','"+esc(r)+"');\nUPDATE mac_art SET art_pic=REPLACE(art_pic,'"+esc(o)+"','"+esc(r)+"');";}
+};
+function esc(s){return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'");}
+function showSQL(btn){
+  var t=btn.dataset.repType,o=btn.dataset.repO,r=btn.dataset.repN,fn=typeSQL[t];
+  document.getElementById('sqlContent').textContent=fn?fn(o,r):"-- 自定义替换，请根据需求修改字段\nUPDATE 表名 SET 字段=REPLACE(字段,'"+esc(o)+"','"+esc(r)+"');";
+  document.getElementById('sqlModal').classList.add('show');
+}
+function copyText(t,btn){
+  var ok=function(){if(btn){btn.classList.add('done');var o=btn.textContent;btn.textContent='已复制';setTimeout(function(){btn.classList.remove('done');btn.textContent=o;},1300);}};
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(ok).catch(function(){fbCopy(t,ok);});}
+  else{fbCopy(t,ok);}
+}
+function fbCopy(t,ok){var ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');ok();}catch(e){alert('复制失败，请手动选择复制');}document.body.removeChild(ta);}
+function copySQL(){var t=document.getElementById('sqlContent').textContent;copyText(t);alert('SQL 已复制！');}
+
+// 教程（按 rep_type，泛用）
+var tutorials={
+  '文章图片替换':'<h4>文章图片替换</h4><div class="tip-box">推荐使用 MacCMS 后台自带的数据批量替换功能</div><ol><li>登录 MacCMS 管理后台</li><li>后台 → 数据库 → 数据批量替换</li><li>选择表 <code>mac_art</code>，字段 <code>art_pic</code>，填入原内容和新内容，点执行</li><li>重复，字段改为 <code>art_content</code></li><li>清理缓存，前台验证图片正常</li></ol>',
+  '视频封面替换':'<h4>视频封面替换</h4><div class="tip-box">推荐使用 MacCMS 后台自带的数据批量替换功能</div><ol><li>登录 MacCMS 管理后台</li><li>后台 → 数据库 → 数据批量替换</li><li>选择表 <code>mac_vod</code>，字段 <code>vod_pic</code>，填入原内容和新内容，点执行</li><li>清理缓存，前台验证封面正常</li></ol>',
+  '视频播放地址':'<h4>视频播放地址替换</h4><div class="tip-box">推荐使用 MacCMS 后台自带的数据批量替换功能</div><ol><li>登录 MacCMS 管理后台</li><li>后台 → 数据库 → 数据批量替换</li><li>选择表 <code>mac_vod</code>，字段 <code>vod_play_url</code>，填入原内容和新内容，点执行</li><li>随机选几个视频播放测试</li></ol>',
+  '播放器替换':'<h4>播放器接口替换</h4><div class="tip-box">播放器替换通过后台播放器管理完成，无需操作数据库</div><ol><li>登录 MacCMS 管理后台</li><li>视频 → 播放器，找到当前使用的播放器</li><li>点编辑，修改解析接口地址为新地址</li><li>保存，前台播放测试</li></ol>',
+  '域名替换':'<h4>域名批量替换</h4><div class="tip-box">推荐使用 MacCMS 后台自带的数据批量替换功能</div><ol><li>登录 MacCMS 管理后台</li><li>后台 → 数据库 → 数据批量替换</li><li>依次替换：<code>mac_vod</code> 的 <code>vod_play_url</code>、<code>vod_pic</code>，以及 <code>mac_art</code> 的 <code>art_content</code>、<code>art_pic</code></li><li>清理缓存，全站验证</li></ol>'
+};
+function showTutorial(type){
+  document.getElementById('tutorialContent').innerHTML=tutorials[type]||'<p style="color:#999;font-size:13px;">请根据类型在后台进行相应操作。</p>';
+  document.getElementById('tutorialModal').classList.add('show');
+}
+function hideTip(){document.getElementById('repTip').style.display='none';}
+
+document.querySelector('.js-hide-tip').addEventListener('click',hideTip);
+document.querySelectorAll('.js-copy').forEach(function(b){b.addEventListener('click',function(e){e.stopPropagation();copyText(b.dataset.copy,b);});});
+document.querySelectorAll('.rep-card').forEach(function(card){card.addEventListener('click',function(){markViewed(card);});});
+document.querySelectorAll('.js-show-tutorial').forEach(function(b){b.addEventListener('click',function(e){e.stopPropagation();showTutorial(b.dataset.repType);});});
+document.querySelectorAll('.js-show-sql').forEach(function(b){b.addEventListener('click',function(e){e.stopPropagation();showSQL(b);});});
+document.querySelector('.js-copy-sql').addEventListener('click',copySQL);
+document.querySelectorAll('.js-more').forEach(function(b){b.addEventListener('click',function(){
+  document.querySelectorAll('.rep-card[data-cat="'+b.dataset.cat+'"].rep-hidden').forEach(function(c){c.classList.remove('rep-hidden');});b.remove();});});
+
+// 分类标签筛选
+document.getElementById('repTabs').addEventListener('click',function(e){
+  var t=e.target.closest('.rep-tab');if(!t)return;
+  document.querySelectorAll('.rep-tab').forEach(function(x){x.classList.remove('on');});
+  t.classList.add('on');
+  var f=t.dataset.f;
+  document.querySelectorAll('.rep-cat').forEach(function(cat){cat.style.display=(f==='all'||cat.dataset.cat===f)?'':'none';});
+});
+
+// 已读状态（localStorage，泛用）
+var SK='macrep_v4',LK='macrep_lv4';
+function getViewed(){try{return JSON.parse(localStorage.getItem(SK)||'[]');}catch(e){return[];}}
+function saveViewed(id){var v=getViewed();if(v.indexOf(String(id))<0){v.push(String(id));localStorage.setItem(SK,JSON.stringify(v));}}
+function markViewed(el){
+  saveViewed(el.dataset.id);
+  el.querySelector('.b-new')&&el.querySelector('.b-new').classList.add('b-hidden');
+  el.querySelector('.b-viewed')&&el.querySelector('.b-viewed').classList.remove('b-hidden');
+  el.classList.add('is-viewed');
+  updateStats();
+}
+function updateStats(){
+  var t=document.querySelectorAll('.rep-card').length;
+  var v=document.querySelectorAll('.rep-card.is-viewed').length;
+  document.getElementById('statNew').textContent=t-v;
+  document.getElementById('statViewed').textContent=v;
+}
+$(function(){
+  var lastVisit=localStorage.getItem(LK),viewed=getViewed(),newCnt=0,viewedCnt=0;
+  document.querySelectorAll('.rep-card').forEach(function(el){
+    var id=el.dataset.id,ts=parseInt(el.dataset.ts)*1000;
+    if(viewed.indexOf(String(id))>=0){
+      el.querySelector('.b-new')&&el.querySelector('.b-new').classList.add('b-hidden');
+      el.querySelector('.b-viewed')&&el.querySelector('.b-viewed').classList.remove('b-hidden');
+      el.classList.add('is-viewed');viewedCnt++;
+    } else if(!lastVisit||ts>parseInt(lastVisit)){
+      el.querySelector('.b-new')&&el.querySelector('.b-new').classList.remove('b-hidden');newCnt++;
+    }
+  });
+  document.getElementById('statNew').textContent=newCnt;
+  document.getElementById('statViewed').textContent=viewedCnt;
+  var tip=document.getElementById('repTipText');
+  if(newCnt>0){tip.innerHTML='<strong>💡 提示：</strong>发现 <strong style="color:#e74c3c">'+newCnt+'</strong> 条新记录，只需执行这些新增替换，无需重复已完成的操作。点击记录可标记为已查看。';}
+  else if(repList.length>0&&viewedCnt===repList.length){tip.innerHTML='<strong>✅ 全部已查看，</strong>当前没有需要执行的新操作。';}
+  else{tip.innerHTML='<strong>💡 提示：</strong>点击记录可标记为已查看，只需执行未查看的替换记录。';}
+  localStorage.setItem(LK,Date.now().toString());
+});
+</script>
+</body>
+</html>
