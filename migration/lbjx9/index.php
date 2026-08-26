@@ -1,4 +1,3 @@
-<?php
 declare(strict_types=1);
 
 $source = trim((string)($_GET['url'] ?? ''));
