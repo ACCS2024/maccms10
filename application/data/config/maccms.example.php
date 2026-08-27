@@ -1,4 +1,17 @@
 <?php
+// ─────────────────────────────────────────────────────────────────────────────
+// application/extra/maccms.php 的【中性样板】。
+//
+// 真正生效的是 application/extra/maccms.php —— 那是每站独有的运行时配置
+// (站名/域名/主题/图床/各类密钥),已 .gitignore,不入库。
+//
+// config/maccms.php 会在真实文件缺失时自动播种:
+//     runtime 影子备份  →  本样板
+// 所以全新克隆/误删也能起得来,再进安装或后台把各站真实值填上。
+//
+// 本文件由 deploy/make-extra-config-example.php 生成,请勿手工塞入任何站点真实值。
+// ─────────────────────────────────────────────────────────────────────────────
+
 return array (
   'db' => 
   array (
@@ -8,7 +21,7 @@ return array (
     'port' => '3306',
     'name' => 'maccms10',
     'user' => 'maccms',
-    'pass' => 'MacCms@2026#Smoke',
+    'pass' => '',
     'tablepre' => 'mac_',
     'backup_path' => './application/data/backup/database/',
     'part_size' => 20971520,
@@ -17,25 +30,25 @@ return array (
   ),
   'site' => 
   array (
-    'site_name' => '免费短剧电影电视剧、小说漫画 - 最新全集在线观看',
-    'site_url' => '216.180.225.139',
-    'site_wapurl' => '216.180.225.139',
-    'site_keywords' => '短视频,搞笑视频,视频分享,免费视频,在线视频,预告片',
-    'site_description' => '提供最新最快的视频分享数据',
-    'site_icp' => 'icp123',
-    'site_qq' => '123456',
-    'site_email' => '123456@test.cn',
+    'site_name' => 'MacCMS',
+    'site_url' => '',
+    'site_wapurl' => '',
+    'site_keywords' => '',
+    'site_description' => '',
+    'site_icp' => '',
+    'site_qq' => '',
+    'site_email' => '',
     'install_dir' => '/',
     'site_logo' => 'static/images/logo.jpg',
     'site_waplogo' => 'static/images/logo.jpg',
     'site_banner' => '',
     'site_app_launch_image' => '',
-    'template_dir' => 'vozy',
-    'html_dir' => 'vo20w2',
+    'template_dir' => 'default',
+    'html_dir' => 'html',
     'site_polyfill' => '0',
     'mob_status' => '0',
-    'mob_template_dir' => 'vozy',
-    'mob_html_dir' => 'vo20w2',
+    'mob_template_dir' => 'default',
+    'mob_html_dir' => 'html',
     'site_tj' => '统计代码',
     'site_status' => '1',
     'site_close_tip' => '站点暂时关闭，请稍后访问',
@@ -43,6 +56,8 @@ return array (
     'new_version' => '',
     'ads_dir' => 'ads',
     'mob_ads_dir' => 'ads',
+    'site_tel' => '',
+    'site_wx' => '',
   ),
   'app' => 
   array (
@@ -192,12 +207,12 @@ return array (
     'thumb_type' => '1',
     'watermark' => '0',
     'watermark_location' => '7',
-    'watermark_content' => 'test',
+    'watermark_content' => '',
     'watermark_size' => '40',
     'watermark_color' => '#FF0000',
     'protocol' => 'http',
     'mode' => 'local',
-    'remoteurl' => 'http://img.test.com/',
+    'remoteurl' => '',
     'api' => 
     array (
       'ftp' => 
@@ -205,7 +220,7 @@ return array (
         'host' => '',
         'port' => '21',
         'user' => 'test',
-        'pwd' => 'test',
+        'pwd' => '',
         'path' => '/',
         'url' => '',
       ),
@@ -259,7 +274,7 @@ return array (
   'interface' => 
   array (
     'status' => 0,
-    'pass' => 'E4UMURASOGWCLH8C',
+    'pass' => '',
     'vodtype' => '动作片=动作',
     'arttype' => '头条=头条',
     'actortype' => '',
@@ -432,12 +447,12 @@ return array (
       'charge' => '0',
       'detail_inc_hits' => '1',
       'pagesize' => '20',
-      'imgurl' => 'http://img.test.com/',
+      'imgurl' => '',
       'typefilter' => '',
       'datafilter' => ' vod_status=1',
       'cachetime' => '30',
       'from' => '',
-      'auth' => 'test.com#163.com',
+      'auth' => '',
     ),
     'art' => 
     array (
@@ -513,13 +528,13 @@ return array (
     array (
       'status' => '0',
       'key' => 'aa',
-      'secret' => 'bb',
+      'secret' => '',
     ),
     'weixin' => 
     array (
       'status' => '0',
       'key' => 'cc',
-      'secret' => 'dd',
+      'secret' => '',
     ),
   ),
   'weixin' => 
@@ -527,7 +542,7 @@ return array (
     'status' => '1',
     'duijie' => 'wx.test.com',
     'sousuo' => 'wx.test.com',
-    'token' => 'qweqwe',
+    'token' => '',
     'guanzhu' => '欢迎关注',
     'wuziyuan' => '没找到资源，请更换关键词或等待更新',
     'wuziyuanlink' => 'demo.test.com',
@@ -664,8 +679,8 @@ plotdetail/<id>   => plot/detail',
       'user_reg_body' => '【{$maccms.site_name}】的会员您好，注册验证码为：{$code}，请在{$time}分钟内完成验证。',
       'user_bind_title' => '【{$maccms.site_name}】的会员您好，请认真阅读邮件正文并按要求操作完成绑定',
       'user_bind_body' => '【{$maccms.site_name}】的会员您好，绑定验证码为：{$code}，请在{$time}分钟内完成验证。',
-      'user_findpass_title' => '【{$maccms.site_name}】的会员您好，请认真阅读邮件正文并按要求操作完成找回',
-      'user_findpass_body' => '【{$maccms.site_name}】的会员您好，找回验证码为：{$code}，请在{$time}分钟内完成验证。',
+      'user_findpass_title' => '',
+      'user_findpass_body' => '',
     ),
     'phpmailer' => 
     array (
@@ -673,7 +688,7 @@ plotdetail/<id>   => plot/detail',
       'port' => '587',
       'secure' => 'tls',
       'username' => 'test@qq.com',
-      'password' => 'test',
+      'password' => '',
     ),
   ),
   'play' => 
@@ -700,7 +715,7 @@ plotdetail/<id>   => plot/detail',
     'sign' => '我的网站',
     'tpl_code_reg' => 'SMS_144850895',
     'tpl_code_bind' => 'SMS_144940283',
-    'tpl_code_findpass' => 'SMS_144851023',
+    'tpl_code_findpass' => '',
     'aliyun' => 
     array (
       'appid' => '',
@@ -752,8 +767,8 @@ plotdetail/<id>   => plot/detail',
   array (
     'enabled' => '1',
     'host' => 'http://127.0.0.1:7700',
-    'api_key' => '638ef93e842cf196be687e77f04ff8c73c07fbe451c694093b121383e3df43dd',
-    'index_uid' => 'maccms_contents',
+    'api_key' => '',
+    'index_uid' => '',
     'timeout' => '8',
     'ssl_verify' => '1',
     'sync_on_save' => '1',
@@ -767,11 +782,11 @@ plotdetail/<id>   => plot/detail',
   array (
     'baidu' => 
     array (
-      'token' => '111',
+      'token' => '',
     ),
     'baidufast' => 
     array (
-      'token' => '222',
+      'token' => '',
     ),
   ),
 );
