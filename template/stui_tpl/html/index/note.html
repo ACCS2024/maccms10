@@ -1,0 +1,175 @@
+<style>
+.lebo-notice-panel {
+    --lebo-ink: #243247;
+    --lebo-muted: #728096;
+    --lebo-line: #e7edf4;
+    --lebo-accent: #ff8a34;
+    --lebo-accent-dark: #e5681d;
+    overflow: hidden;
+}
+.lebo-notice-panel .lebo-notice-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 18px 20px;
+    background: linear-gradient(120deg, #fff8ed 0%, #fff 58%, #f3f8ff 100%);
+    border-bottom: 1px solid var(--lebo-line);
+}
+.lebo-notice-panel .lebo-notice-heading {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+.lebo-notice-panel .lebo-notice-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    flex: 0 0 40px;
+    border-radius: 12px;
+    color: #fff;
+    background: linear-gradient(135deg, var(--lebo-accent), var(--lebo-accent-dark));
+    box-shadow: 0 8px 18px rgba(229, 104, 29, .24);
+    font-size: 20px;
+    font-weight: 700;
+}
+.lebo-notice-panel .lebo-notice-title {
+    margin: 0;
+    color: var(--lebo-ink);
+    font-size: 18px;
+    line-height: 1.4;
+}
+.lebo-notice-panel .lebo-notice-subtitle {
+    margin: 3px 0 0;
+    color: var(--lebo-muted);
+    font-size: 12px;
+}
+.lebo-notice-panel .lebo-notice-replace {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    flex: 0 0 auto;
+    padding: 9px 12px;
+    border: 1px solid #ffd0ad;
+    border-radius: 999px;
+    color: #c65c1d;
+    background: #fff7ef;
+    font-size: 13px;
+    transition: .2s ease;
+}
+.lebo-notice-panel .lebo-notice-replace:hover {
+    color: #a94410;
+    background: #ffeddc;
+    border-color: #ffb77f;
+}
+.lebo-notice-panel .lebo-notice-replace strong { font-weight: 600; }
+.lebo-notice-panel .lebo-notice-replace i { font-style: normal; font-size: 16px; }
+.lebo-notice-panel .lebo-notice-body { padding: 16px 20px 18px; }
+.lebo-notice-panel .lebo-notice-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 14px;
+}
+.lebo-notice-panel .lebo-notice-card {
+    min-width: 0;
+    padding: 13px 14px;
+    border: 1px solid var(--lebo-line);
+    border-radius: 10px;
+    background: #fbfcfe;
+}
+.lebo-notice-panel .lebo-notice-card-label {
+    display: block;
+    margin-bottom: 7px;
+    color: var(--lebo-muted);
+    font-size: 12px;
+}
+.lebo-notice-panel .lebo-notice-card strong {
+    display: block;
+    margin-bottom: 5px;
+    color: var(--lebo-ink);
+    font-size: 14px;
+}
+.lebo-notice-panel .lebo-notice-card a,
+.lebo-notice-panel .lebo-notice-card code {
+    color: #2374b8;
+    font-size: 12px;
+    word-break: break-all;
+}
+.lebo-notice-panel .lebo-notice-card code {
+    display: block;
+    padding: 6px 8px;
+    border-radius: 6px;
+    background: #eef5fb;
+    font-family: inherit;
+}
+.lebo-notice-panel .lebo-notice-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding-top: 13px;
+    border-top: 1px dashed var(--lebo-line);
+    color: var(--lebo-muted);
+    font-size: 12px;
+}
+.lebo-notice-panel .lebo-notice-footer p { margin: 0; }
+.lebo-notice-panel .lebo-notice-help {
+    display: inline-block;
+    padding: 7px 11px;
+    border-radius: 7px;
+    color: #fff;
+    background: #2374b8;
+    white-space: nowrap;
+}
+.lebo-notice-panel .lebo-notice-help:hover { color: #fff; background: #195f98; }
+@media (max-width: 767px) {
+    .lebo-notice-panel .lebo-notice-head { align-items: flex-start; flex-direction: column; padding: 14px 10px; }
+    .lebo-notice-panel .lebo-notice-body { padding: 12px 10px 14px; }
+    .lebo-notice-panel .lebo-notice-grid { grid-template-columns: 1fr; gap: 9px; }
+    .lebo-notice-panel .lebo-notice-footer { align-items: flex-start; flex-direction: column; }
+}
+</style>
+
+<div class="stui-pannel lebo-notice-panel clearfix" aria-label="乐播资源公告">
+    <div class="lebo-notice-head">
+        <div class="lebo-notice-heading">
+            <span class="lebo-notice-badge" aria-hidden="true">!</span>
+            <div>
+                <h3 class="lebo-notice-title">乐播资源 · 服务入口</h3>
+                <p class="lebo-notice-subtitle">域名、采集和播放配置以本公告及帮助中心为准</p>
+            </div>
+        </div>
+        <a class="lebo-notice-replace" href="{:mac_rep_url()}" target="_blank" rel="noopener">
+            <span>域名替换</span><strong>{:mac_rep_last_update()}</strong><i aria-hidden="true">→</i>
+        </a>
+    </div>
+
+    <div class="lebo-notice-body">
+        <div class="lebo-notice-grid">
+            <div class="lebo-notice-card">
+                <span class="lebo-notice-card-label">播放器解析</span>
+                <strong>HTTPS M3U8 解析接口</strong>
+                <a href="https://lbjx9.com/?url=" target="_blank" rel="noopener">https://lbjx9.com/?url=</a>
+            </div>
+            <div class="lebo-notice-card">
+                <span class="lebo-notice-card-label">主采集接口</span>
+                <strong>XML 资源采集</strong>
+                <code>https://lbapi9.com/api.php/provide/vod/at/xml/</code>
+            </div>
+            <div class="lebo-notice-card">
+                <span class="lebo-notice-card-label">备用采集接口</span>
+                <strong>XML 资源采集备用入口</strong>
+                <code>https://lbapiby.com/api.php/provide/vod/at/xml/</code>
+            </div>
+        </div>
+
+        <div class="lebo-notice-footer">
+            <p>图片采集后建议下载到本地，降低外部图片失效风险。</p>
+            <a class="lebo-notice-help" href="{:mac_help_url()}" target="_blank" rel="noopener">查看帮助中心</a>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,46 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="renderer" content="webkit">
+<link rel="shortcut icon" href="/favicon.ico" type="image/x-icon" />
+    <title>{$obj.type_name} - {$maccms.site_name}</title>
+    <meta name="keywords" content="{$obj.type_key}" />
+    <meta name="description" content="{$obj.type_des}" />
+ {include file="public/include"}
+</head>
+<body>{include file="public/head"}
+<div class="container">
+<div class="list-nav">
+	<span>当前位置：<a href="/">首页</a>&nbsp;&nbsp;&raquo;&nbsp;&nbsp;<a href="{:mac_url_type($obj['type']??[])}">{$obj.type_name}</a></span>
+</div>
+<div class="addition-content">
+	<p class="videotitle">
+		<span class="videoName" style="width:640px;">文章标题</span>
+		<span class="category">分类</span>
+		<span class="address">人气</span>
+		<span class="time">更新时间</span>
+	</p>
+<ul class="videoContent">
+ {maccms:art num="30" paging="yes" type="current" order="desc" by="time"}
+
+<li>
+<a class="videoName" target="_blank" href="{:mac_url_art_detail($vo)}" style="width:640px;">{$vo.art_name}</a>
+			<span class="category type">{$vo['type']['type_name']??''}</span>
+			<span class="address">{$vo.art_hits}</span>
+			<span class="time1">{:mac_day($vo['art_time'],'color')}</span>
+</li>
+{/maccms:art}
+</ul>
+</div>
+<div class="clear"></div>
+<div class="kscont">
+	<div class="pages">
+		{include file="public/paging"}
+	</div>
+</div>
+</div>
+<div class="clear"></div>
+{include file="public/foot"}
+</body>
+</html>

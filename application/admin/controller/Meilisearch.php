@@ -104,7 +104,12 @@ class Meilisearch extends Base
         $row = [
             'enabled' => isset($meili['enabled']) && (string)$meili['enabled'] === '1' ? '1' : '0',
             'host' => rtrim($sanitize(isset($meili['host']) ? $meili['host'] : ''), '/'),
-            'index_uid' => $sanitize(isset($meili['index_uid']) ? $meili['index_uid'] : 'maccms_contents'),
+            // 表单没提交 index_uid 时【绝不能】回落到历史共享名 maccms_contents ——
+            // 那是个全局共用的索引名,多站共用一台 Meili 会互相覆盖文档;更要命的是
+            // 本机根本没有叫这个名字的索引,写进去等于让 Meili 永远 404、全站静默
+            // 回落 MySQL(2026-08-26 乐播熔断事故就是这么来的)。
+            // 这里留空,交给下面的「派生本站唯一名 + 派生失败就报错」分支兜底。
+            'index_uid' => $sanitize(isset($meili['index_uid']) ? $meili['index_uid'] : ''),
             'timeout' => (string)max(1, intval(isset($meili['timeout']) ? $meili['timeout'] : 8)),
             'ssl_verify' => isset($meili['ssl_verify']) && (string)$meili['ssl_verify'] === '0' ? '0' : '1',
             'sync_on_save' => isset($meili['sync_on_save']) && (string)$meili['sync_on_save'] === '0' ? '0' : '1',

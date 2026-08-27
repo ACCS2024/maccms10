@@ -132,9 +132,19 @@ class MeilisearchService
         if (!self::enabled()) {
             return ['ok' => false, 'msg' => 'disabled'];
         }
+        // MeilisearchSync 在【每一次】文档保存前都会调一次本方法,而它内部是一次
+        // GET /indexes/{uid} 网络往返。采集高峰一小时几千次入库时,等于把对 Meili 的
+        // HTTP 调用翻倍,纯属浪费 —— 索引只要确认存在过一次,本进程内就不必再问。
+        // 只记忆「确认存在」这一种结果:失败不记忆,下次仍会重试(Meili 恢复后能自愈)。
+        static $verified = [];
+        $memoKey = self::host() . '|' . self::indexUid();
+        if (isset($verified[$memoKey])) {
+            return ['ok' => true, 'created' => false, 'memo' => true];
+        }
         $uid = rawurlencode(self::indexUid());
         $r = MeilisearchHttp::request(self::host(), 'GET', '/indexes/' . $uid, self::apiKey(), null, self::timeout(), self::sslVerify());
         if (!empty($r['ok'])) {
+            $verified[$memoKey] = true;
             return ['ok' => true, 'created' => false];
         }
         $create = MeilisearchHttp::request(self::host(), 'POST', '/indexes', self::apiKey(), [
@@ -142,6 +152,7 @@ class MeilisearchService
             'primaryKey' => 'id',
         ], self::timeout(), self::sslVerify());
         if (!empty($create['ok'])) {
+            $verified[$memoKey] = true;
             self::updateSettings();
         }
         return ['ok' => !empty($create['ok']), 'created' => true, 'response' => $create['data'] ?? null];
@@ -345,6 +356,12 @@ class MeilisearchService
         }
         $uid = rawurlencode(self::indexUid());
         $r = MeilisearchHttp::request(self::host(), 'POST', '/indexes/' . $uid . '/documents', self::apiKey(), $docs, self::timeout(), self::sslVerify());
+        // 写入侧此前是纯静默的:8 个 MeilisearchSync 调用点没有一个检查返回值,
+        // 外面还套着 catch(\Throwable){} 。采集高峰时 Meili 一旦不可用,新入库的片子
+        // 就永久不进索引,而且没有任何痕迹 —— 与 2026-08-26 查询侧静默失败同一个病。
+        if (empty($r['ok'])) {
+            self::logSearchFailure($r, 'write');
+        }
         return ['ok' => !empty($r['ok']), 'data' => $r['data'] ?? null, 'status' => $r['status'] ?? 0];
     }
 
@@ -356,7 +373,13 @@ class MeilisearchService
         $uid = rawurlencode(self::indexUid());
         $did = rawurlencode((string)$id);
         $r = MeilisearchHttp::request(self::host(), 'DELETE', '/indexes/' . $uid . '/documents/' . $did, self::apiKey(), null, self::timeout(), self::sslVerify());
-        return ['ok' => !empty($r['ok']) || ($r['status'] ?? 0) === 404, 'status' => $r['status'] ?? 0];
+        // 404 = 文档本来就不在,属于正常结果,不算失败。
+        $ok = !empty($r['ok']) || ($r['status'] ?? 0) === 404;
+        if (!$ok) {
+            // 删除失败比新增失败更危险:下架/删除的片子会继续留在搜索结果里。
+            self::logSearchFailure($r, 'write');
+        }
+        return ['ok' => $ok, 'status' => $r['status'] ?? 0];
     }
 
     /**
@@ -424,14 +447,71 @@ class MeilisearchService
         }
 
         if ($lastFailed !== null) {
+            // 这里过去是「静默失败」:Meili 一挂就返回 ok=false,上层 Bridge 收到 null
+            // 就无声回落到 MySQL,全站没有任何告警。2026-08-26 的事故正是如此 ——
+            // api_key 失效 + index_uid 指向不存在的索引,Meili 100% 403,
+            // 于是所有列表/搜索全量砸向 MySQL 的 filesort 路径,mysqld 打满 55 核、
+            // load 冲到 298,而日志里一行错都没有。失败必须留痕。
+            self::logSearchFailure($lastFailed);
             $out = ['ok' => false, 'hits' => [], 'estimatedTotalHits' => 0];
             self::$searchMemo[$memoKey] = $out;
 
             return $out;
-        }
-        $out = ['ok' => true, 'hits' => [], 'estimatedTotalHits' => 0];
+        }        $out = ['ok' => true, 'hits' => [], 'estimatedTotalHits' => 0];
         self::$searchMemo[$memoKey] = $out;
 
         return $out;
+    }
+
+    /**
+     * Meili 调用失败时留痕。按 (场景+host+index+status+错误码) signature 每 60 秒最多写一条,
+     * 避免高 QPS 下把磁盘写满 —— 事故当天是 24 req/s,不限流会瞬间刷爆日志。
+     *
+     * $scene: 'search' = 查询侧(失败会静默回落 MySQL);
+     *         'write'  = 写入侧(失败会让索引与数据库永久漂移,直到全量重建)。
+     */
+    private static function logSearchFailure(array $failed, string $scene = 'search'): void
+    {
+        try {
+            $status = (int)($failed['status'] ?? 0);
+            $err    = (string)($failed['error'] ?? '');
+            $body   = $failed['data'] ?? null;
+            $code   = is_array($body) ? (string)($body['code'] ?? '') : '';
+            $msg    = is_array($body) ? (string)($body['message'] ?? '') : '';
+
+            $sig  = md5($scene . '|' . self::host() . '|' . self::indexUid() . '|' . $status . '|' . $code);
+            $stamp = sys_get_temp_dir() . '/maccms_meili_alert_' . $sig . '.ts';
+            $now  = time();
+            if (is_file($stamp) && ($now - (int)@filemtime($stamp)) < 60) {
+                return;
+            }
+            @touch($stamp);
+            @chmod($stamp, 0666);
+
+            $hint = '';
+            if ($status === 403 || $code === 'invalid_api_key') {
+                $hint = ' | HINT: api_key 失效,后台「Meilisearch 配置」重填 key';
+            } elseif ($status === 404 || $code === 'index_not_found') {
+                $hint = ' | HINT: index_uid 指向的索引不存在,核对索引名或重建索引';
+            } elseif ($status === 0) {
+                $hint = ' | HINT: 连不上 Meili,检查 systemctl status meilisearch';
+            }
+
+            \think\facade\Log::error(
+                '[MEILI-DOWN] '
+                . ($scene === 'write'
+                    ? 'document write failed —— 索引将与数据库漂移,修好后需全量重建'
+                    : 'search failed, falling back to MySQL')
+                . ' host=' . self::host()
+                . ' index=' . self::indexUid()
+                . ' status=' . $status
+                . ($code !== '' ? ' code=' . $code : '')
+                . ($msg !== '' ? ' msg=' . $msg : '')
+                . ($err !== '' ? ' curl=' . $err : '')
+                . $hint
+            );
+        } catch (\Throwable $e) {
+            // 告警本身绝不能影响请求
+        }
     }
 }

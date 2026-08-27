@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+    {include file="seo/vod_detail"}   
+	{include file="block/include"}
+</head>
+<body>	
+	{include file="block/head"}
+    <div class="container">
+        <div class="row">   
+
+        	<!-- 详细信息 -->
+			<div class="stui-pannel clearfix">
+				<div class="stui-content clearfix">
+					<div class="stui-content__thumb">											
+						<a class="thumb" href="{:mac_url_vod_play($obj,['sid'=>1,'nid'=>1])}" title="{$obj.vod_name}">
+							<!-- 图片 --><img class="img-responsive" src="{:mac_url_img($obj.vod_pic)}" alt="{$obj.vod_name}"/><!-- end 图片 -->							
+						</a>
+						<p class="margin-0 text-center hidden-xs"><a class="copy_btn text-muted" href="javascript:;" data-text="{:mac_url_img($obj.vod_pic)}">复制图片地址</a></p>						
+					</div>
+					<div class="stui-content__detail">
+						<h1 class="title"><!-- 名称 -->{$obj.vod_name}<!-- end 名称 --> <small class="text-red"><!-- 评分 -->{$obj.vod_score}<!-- end 评分 --></small></h1>
+						<p class="data"><span class="text-muted">别名：</span><!-- 别名 -->{$obj.vod_en|mac_default='内详'}<!-- end 别名 --></p>
+						<p class="data">
+							<span class="text-muted">状态：</span><span class="text-red"><!-- 更新 -->{$obj.vod_remarks}<!-- end 更新 --></span>
+							<span class="split-line hidden-xs"></span>
+							<span class="text-muted hidden-xs">时间：</span><span class="text-red hidden-xs"><!-- 时间 -->{$obj.vod_time|mac_day}<!-- end 时间 --></span>
+						</p>					
+						<p class="data"><span class="text-muted">主演：</span><!-- 主演 -->{$obj.vod_actor|mac_default='内详'}<!-- end 主演 --></p>
+						<p class="data"><span class="text-muted">导演：</span><!-- 导演 -->{$obj.vod_director|mac_default='内详'}<!-- end 导演 --></p>
+						<p class="data hidden-xs">
+							<span class="text-muted">类型：</span><!-- 分类 -->{$obj.type.type_name|mac_default='内详'}<!-- end 分类 -->
+							<span class="split-line"></span>
+							<span class="text-muted">扩展：</span><!-- 扩展 -->{$obj.vod_class|mac_default='内详'}<!-- end 扩展 -->
+							<span class="split-line"></span>
+							<span class="text-muted">地区：</span><!-- 地区 -->{$obj.vod_area|mac_default='内详'}<!-- end 地区 -->
+							<span class="split-line"></span>
+							<span class="text-muted">年份：</span><!-- 年份 -->{$obj.vod_year|mac_default='内详'}	<!-- end 年份 -->	
+						</p>
+						<p class="data hidden-xs">
+							<span class="text-muted">语言：</span><!-- 语言 -->{$obj.vod_lang|mac_default='内详'}<!-- end 语言 -->
+							<span class="split-line"></span>
+							<span class="text-muted">集数：</span><!-- 集数 -->{$obj.vod_total}<!-- end 集数 -->
+							<span class="split-line"></span>
+							<span class="text-muted">时长：</span><!-- 时长 -->{$obj.vod_duration|mac_default='内详'}<!-- end 时长 -->
+							<span class="split-line"></span>
+							<span class="text-muted">点击：</span><!-- 点击 -->{$obj.vod_hits}<!-- end 点击 -->
+						</p>													    
+					</div>	
+				</div>				
+			</div>
+			<!-- end 详细信息 -->
+
+			<div class="stui-pannel clearfix" id="desc">
+				<div class="stui-pannel__head clearfix">
+					<h3 class="title">
+						剧情介绍
+					</h3>						
+				</div>																		
+				<div class="stui-content__desc col-pd clearfix">
+					<!-- 剧情 -->{$obj.vod_content|mac_url_content_img}<!-- end 剧情 -->
+				</div>				
+			</div>	
+			
+			{include file="vod/urllist"}<!-- 链接地址 -->
+			
+
+        </div>
+    </div>
+    
+    <span class="mac_hits hits hide" data-mid="{$maccms.mid}" data-id="{$obj.vod_id}{$obj.art_id}{$obj.topic_id}" data-type="hits"></span>
+    
+	{include file="block/foot"}
+</body>
+</html>
+

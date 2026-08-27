@@ -35,7 +35,9 @@ class MeilisearchSync
                 MeilisearchService::addDocuments([$doc]);
             }
         } catch (\Throwable $e) {
-            // 静默失败，避免影响后台保存
+            // 不能让索引同步失败影响后台保存/采集入库,但也【不能一声不吭】——
+            // 吞掉异常等于这条数据永远不进索引且无人知晓。留痕后继续。
+            self::logSyncException($e);
         }
     }
 
@@ -65,6 +67,7 @@ class MeilisearchSync
                 MeilisearchService::addDocuments([$doc]);
             }
         } catch (\Throwable $e) {
+            self::logSyncException($e);
         }
     }
 
@@ -94,6 +97,7 @@ class MeilisearchSync
                 MeilisearchService::addDocuments([$doc]);
             }
         } catch (\Throwable $e) {
+            self::logSyncException($e);
         }
     }
 
@@ -147,6 +151,7 @@ class MeilisearchSync
                 MeilisearchService::addDocuments([$doc]);
             }
         } catch (\Throwable $e) {
+            self::logSyncException($e);
         }
     }
 
@@ -176,6 +181,7 @@ class MeilisearchSync
                 MeilisearchService::addDocuments([$doc]);
             }
         } catch (\Throwable $e) {
+            self::logSyncException($e);
         }
     }
 
@@ -205,6 +211,7 @@ class MeilisearchSync
                 MeilisearchService::addDocuments([$doc]);
             }
         } catch (\Throwable $e) {
+            self::logSyncException($e);
         }
     }
 
@@ -234,6 +241,7 @@ class MeilisearchSync
                 MeilisearchService::addDocuments([$doc]);
             }
         } catch (\Throwable $e) {
+            self::logSyncException($e);
         }
     }
 
@@ -379,5 +387,33 @@ class MeilisearchSync
             }
         }
         return $totalDocs;
+    }
+
+    /**
+     * 索引同步过程中抛出的 PHP 异常留痕(按 类名+消息 每 60 秒最多一条)。
+     *
+     * HTTP 层的失败已由 MeilisearchService::addDocuments/deleteDocument 打 [MEILI-DOWN];
+     * 这里补的是 PHP 层 —— 取行失败、文档组装失败等。此前这些 catch 全是空的,
+     * 结果就是「这条数据永远不进索引,而且没有任何痕迹」。
+     */
+    private static function logSyncException(\Throwable $e): void
+    {
+        try {
+            $sig   = md5(get_class($e) . '|' . $e->getMessage());
+            $stamp = sys_get_temp_dir() . '/maccms_meili_syncerr_' . $sig . '.ts';
+            if (is_file($stamp) && (time() - (int)@filemtime($stamp)) < 60) {
+                return;
+            }
+            @touch($stamp);
+            @chmod($stamp, 0666);
+
+            \think\facade\Log::error(
+                '[MEILI-SYNC] 索引同步异常,该条数据未进索引 | '
+                . get_class($e) . ': ' . $e->getMessage()
+                . ' in ' . $e->getFile() . ':' . $e->getLine()
+            );
+        } catch (\Throwable $ignore) {
+            // 告警本身绝不能影响入库
+        }
     }
 }

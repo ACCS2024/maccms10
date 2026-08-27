@@ -100,7 +100,13 @@ class AppInit
                 'enabled'       => '0',
                 'host'          => 'http://127.0.0.1:7700',
                 'api_key'       => '',
-                'index_uid'     => 'maccms_contents',
+                // 仅当 meilisearch 配置块整个缺失时才走到这里(且 enabled=0,不会真去查)。
+                // 这里留空而不是写死历史共享名 maccms_contents:那个名字全局共用,
+                // 多站共用一台 Meili 会互相覆盖文档,而且本机通常根本没有这个索引,
+                // 一旦被人照抄进真实配置就会让 Meili 永远 404、全站静默回落 MySQL
+                // (2026-08-26 乐播熔断事故的起点)。留空后由 indexUid() 在真正用到时
+                // 惰性派生本站唯一名,不在中间件里引入数据库依赖。
+                'index_uid'     => '',
                 'timeout'       => '8',
                 'sync_on_save'  => '1',
                 'search_only_wd' => '1',

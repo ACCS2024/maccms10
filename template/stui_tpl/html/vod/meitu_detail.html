@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+    {include file="seo/vod_detail"}   
+	{include file="block/include"}
+	
+<style>
+.tp img {
+max-width:800px;CURSOR: hand;width:expression(onreadystatechange=function(){if(this.width>800)this.width=800;});
+BORDER-RIGHT: #F0F0F0 1px solid; PADDING-RIGHT: 4px; BORDER-TOP: #F0F0F0 1px solid; PADDING-LEFT: 4px; PADDING-BOTTOM: 5px; BORDER-LEFT: #F0F0F0 1px solid; PADDING-TOP: 5px; BORDER-BOTTOM: #F0F0F0 1px solid; BACKGROUND-COLOR: #F0F0F0
+}
+</style>
+
+</head>
+<body>	
+	{include file="block/head"}
+    <div class="container">
+        <div class="row">
+
+			<div class="stui-pannel clearfix" id="desc">
+				<div class="stui-pannel__head clearfix">
+					<h3 class="title">{$obj.art_name}</h3>						
+				</div>																		
+				<div class="stui-content__mtxs col-pd clearfix">
+					<div class="tp">
+					<!-- 美图 -->{$obj.art_content|mac_url_content_img}<!-- end 美图 -->
+					</div>
+				</div>
+			</div>	
+			
+			{include file="vod/urllist"}<!-- 链接地址 -->
+			
+
+        </div>
+    </div>
+    
+    <span class="mac_hits hits hide" data-mid="{$maccms.mid}" data-id="{$obj.art_id}{$obj.art_id}{$obj.topic_id}" data-type="hits"></span>
+    
+	{include file="block/foot"}
+</body>
+</html>
+

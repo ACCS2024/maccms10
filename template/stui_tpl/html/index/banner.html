@@ -1,0 +1,38 @@
+<!--<link rel="stylesheet" type="text/css" href="https://cdn.staticfile.org/flickity/2.1.2/flickity.min.css"/>-->
+<link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/flickity/2.2.1/flickity.min.css"/>
+<!--<script src="https://cdn.staticfile.org/flickity/2.1.2/flickity.pkgd.min.js" type="text/javascript" charset="utf-8"></script>-->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/flickity/2.2.1/flickity.pkgd.min.js" type="text/javascript" charset="utf-8"></script>
+<div class="stui-pannel clearfix">
+	<div class="stui-pannel__head clearfix">
+		<h3 class="title">
+			推荐影片
+		</h3>						
+	</div>	
+	<div class="col-pd clearfix">
+		<div class="banner clearfix">
+			{maccms:vod num="10" type="all" order="desc" by="time" level="9"}
+	    	<div style="width: 50%;">
+				<a href="{:mac_url_vod_detail($vo)}" title="{$vo.vod_name}">	
+					<img class="img-responsive" style="height: 240px;" src="{:mac_url_img($vo.vod_pic)}"/>
+				</a>
+				<h4 style="margin-bottom: 0;">
+					<a href="{:mac_url_vod_detail($vo)}" title="{$vo.vod_name}">{$vo.vod_name}</a>
+				</h4>
+			</div>	
+			{/maccms:vod}
+		</div>
+	</div>
+</div>
+<script type="text/javascript">
+	$('.banner').flickity({
+	  	cellAlign: 'left',
+	  	wrapAround: true,
+	  	contain: true,
+	  	pageDots: false
+	});
+</script>
+<style type="text/css">
+	@media (max-width: 767px){
+		.flickity-prev-next-button{ display: none;}
+	}
+</style>

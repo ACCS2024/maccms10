@@ -20,6 +20,17 @@ class MeilisearchListBridge
         if (!MeilisearchService::enabled() || !is_array($where) || isset($where['vod_id'])) {
             return null;
         }
+        // 「仅关键词 wd 时启用 Meilisearch」这个开关必须同样约束【空关键词列表】。
+        // 此前只有 applyForVod 等带 wd 的分支遵守它,本方法却无条件接管了纯列表,
+        // 于是采集 API /api.php/provide/vod?ac=detail&t=0&pg=N 全量走 Meili。
+        // 但 Meili 的 sort+offset 复杂度是 O(offset):offset=30 万实测 7.2s;
+        // 同一形态走 MySQL 覆盖索引 idx_vod_status_recycle_time 的延迟回表只要 0.22s。
+        // 该开关本意就是「列表交给 MySQL,只有关键词检索交给 Meili」,这里必须遵守,
+        // 否则深分页会被 Meili 拖成秒级并占满 php-fpm worker。
+        $c = MeilisearchService::cfg();
+        if (!empty($c['search_only_wd']) && (string)$c['search_only_wd'] === '1') {
+            return null;
+        }
         $filterWhere = $where;
         if (isset($filterWhere['_string'])) {
             // The default API datafilter is already represented by the published filter.

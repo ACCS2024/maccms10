@@ -1,0 +1,212 @@
+<div class="stui-header__top clearfix">
+	<div class="container">
+        <div class="row">
+			<div class="stui-header__logo">
+				<a class="logo" href="{$maccms.path}"></a>										  
+			</div>				
+			<div class="stui-header__search"> 
+				 <form id="search" name="search" method="POST" action="{:mac_url('vod/search')}" onSubmit="return qrsearch();">
+					<input type="text" id="wd" name="wd" class="mac_wd form-control" value="{$param.wd}" placeholder="请输入关键词..."/>
+					<button class="submit" id="searchbutton" type="submit" name="submit"></button>							
+				</form>
+			</div>
+			<ul class="stui-header__more hidden-sm hidden-xs">
+				<li>
+					今日更新：<span class="text">
+	<script>
+      document.write({:mac_data_count(0,'today','vod')} +{:mac_data_count(0,'today','art')});
+	</script> 部</span>
+				</li>
+				<li>
+					本站共有：<span class="text">
+	<script>
+      document.write({:mac_data_count(0,'all','vod')} +{:mac_data_count(0,'all','art')});
+	</script> 部</span>
+				</li>
+				
+			</ul>
+		</div>
+    </div>
+</div>
+<div class="stui-header__bar clearfix">
+	<div class="container">
+        <div class="row">  	
+			<ul class="stui-header__menu clearfix">	  		
+				<li class="active"><a href="/">乐播电影</a></li>
+						        <li >
+		        	<a href="/index.php/vod/type/id/1.html">亚洲情色</a>
+		        	<ul class="dropdown">
+		        				        	</ul>
+		        </li>
+		        		        <li >
+		        	<a href="/index.php/vod/type/id/2.html">国产主播</a>
+		        	<ul class="dropdown">
+		        				        	</ul>
+		        </li>
+		        		        <li >
+		        	<a href="/index.php/vod/type/id/3.html">国产自拍</a>
+		        	<ul class="dropdown">
+		        				        	</ul>
+		        </li>
+		        		        <li >
+		        	<a href="/index.php/vod/type/id/4.html">无码专区</a>
+		        	<ul class="dropdown">
+		        				        	</ul>
+		        </li>
+		        		        <li >
+		        	<a href="/index.php/vod/type/id/5.html">欧美性爱</a>
+		        	<ul class="dropdown">
+		        				        	</ul>
+		        </li>
+		        		        <li >
+		        	<a href="/index.php/vod/type/id/6.html">熟女人妻</a>
+		        	<ul class="dropdown">
+		        				        	</ul>
+		        </li>
+		        		        <li >
+		        	<a href="/index.php/vod/type/id/7.html">强奸乱伦</a>
+		        	<ul class="dropdown">
+		        				        	</ul>
+		        </li>
+		        		        <li >
+		        	<a href="/index.php/vod/type/id/8.html">巨乳美乳</a>
+		        	<ul class="dropdown">
+		        				        	</ul>
+		        </li>
+		                        </ul>
+			<ul class="stui-header__menu clearfix">
+				<li class="active"><a href="#">乐播电影</a></li>
+						        <li >
+		        		        <li >
+		        	<a href="/index.php/vod/type/id/9.html">中文字幕</a>
+		        	<ul class="dropdown">
+		        				        	</ul>
+		        </li>
+		        		        <li >
+		        	<a href="/index.php/vod/type/id/10.html">制服诱惑</a>
+		        	<ul class="dropdown">
+		        				        	</ul>
+		        </li>
+		        		        <li >
+		        	<a href="/index.php/vod/type/id/11.html">女同性恋</a>
+		        	<ul class="dropdown">
+		        				        	</ul>
+		        </li>
+		        		        <li >
+		        	<a href="/index.php/vod/type/id/12.html">卡通动画</a>
+		        	<ul class="dropdown">
+		        				        	</ul>
+		        </li>
+		        		        <li >
+		        	<a href="/index.php/vod/type/id/13.html">视频伦理</a>
+		        	<ul class="dropdown">
+		        				        	</ul>
+		        </li>
+		        		        <li >
+		        	<a href="/index.php/vod/type/id/14.html">少女萝莉</a>
+		        	<ul class="dropdown">
+		        				        	</ul>
+		        </li>
+		        		        <li >
+		        	<a href="/index.php/vod/type/id/15.html">重口色情</a>
+		        	<ul class="dropdown">
+		        				        	</ul>
+		        </li>
+		        		        <li >
+		        	<a href="/index.php/vod/type/id/16.html">人兽性交</a>
+		        	<ul class="dropdown">
+		        				        	</ul>
+		        </li>
+		                        </ul>
+			<ul class="stui-header__menu clearfix">
+				<li class="active"><a href="#">小说美文</a></li>
+						        <li >
+		        		        <li >
+		        	<a href="/index.php/art/type/id/17.html">暴力虐待</a>
+		        	<ul class="dropdown">
+		        				        	</ul>
+		        </li>
+		        		        <li >
+		        	<a href="/index.php/art/type/id/18.html">学生校园</a>
+		        	<ul class="dropdown">
+		        				        	</ul>
+		        </li>
+		        		        <li >
+		        	<a href="/index.php/art/type/id/19.html">玄幻仙侠</a>
+		        	<ul class="dropdown">
+		        				        	</ul>
+		        </li>
+		        		        <li >
+		        	<a href="/index.php/art/type/id/20.html">明星偶像</a>
+		        	<ul class="dropdown">
+		        				        	</ul>
+		        </li>
+		        		        <li >
+		        	<a href="/index.php/art/type/id/21.html">生活都市</a>
+		        	<ul class="dropdown">
+		        				        	</ul>
+		        </li>
+		        		        <li >
+		        	<a href="/index.php/art/type/id/22.html">不伦恋情</a>
+		        	<ul class="dropdown">
+		        				        	</ul>
+		        </li>
+		        		        <li >
+		        	<a href="/index.php/art/type/id/23.html">经验故事</a>
+		        	<ul class="dropdown">
+		        				        	</ul>
+		        </li>
+		        		        <li >
+		        	<a href="/index.php/art/type/id/24.html">科学幻想</a>
+		        	<ul class="dropdown">
+		        				        	</ul>
+		        </li>
+		                        </ul>
+			<ul class="stui-header__menu clearfix">
+				<li class="active"><a href="#">图文欣赏</a></li>
+						        <li >
+		        		        <li >
+		        	<a href="/index.php/art/type/id/25.html">唯美清纯</a>
+		        	<ul class="dropdown">
+		        				        	</ul>
+		        </li>
+		        		        <li >
+		        	<a href="/index.php/art/type/id/26.html">网友自拍</a>
+		        	<ul class="dropdown">
+		        				        	</ul>
+		        </li>
+		        		        <li >
+		        	<a href="/index.php/art/type/id/27.html">亚洲性爱</a>
+		        	<ul class="dropdown">
+		        				        	</ul>
+		        </li>
+		        		        <li >
+		        	<a href="/index.php/art/type/id/28.html">欧美激情</a>
+		        	<ul class="dropdown">
+		        				        	</ul>
+		        </li>
+		        		        <li >
+		        	<a href="/index.php/art/type/id/29.html">露出偷窥</a>
+		        	<ul class="dropdown">
+		        				        	</ul>
+		        </li>
+		        		        <li >
+		        	<a href="/index.php/art/type/id/30.html">高跟丝袜</a>
+		        	<ul class="dropdown">
+		        				        	</ul>
+		        </li>
+		        		        <li >
+		        	<a href="/index.php/art/type/id/31.html">卡通漫画</a>
+		        	<ul class="dropdown">
+		        				        	</ul>
+		        </li>
+		        		        <li >
+		        	<a href="/index.php/art/type/id/32.html">Gif动图</a>
+		        	<ul class="dropdown">
+		        				        	</ul>
+		        </li>
+		                        </ul>
+        	{include file="index/note"}<!-- 公告 -->
+		</div>
+    </div>
+</div>

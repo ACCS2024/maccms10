@@ -1,0 +1,83 @@
+<!-- 播放模块 -->
+{maccms:foreach name="obj.vod_play_list" id="vo"}		
+<div class="stui-pannel clearfix" id="playlist">
+	<div class="stui-pannel__head clearfix">
+		<span class="more text-muted pull-right hidden-xs">{$vo.player_info.tip}</span>
+		<h3 class="title">
+			播放类型：<!-- 播放器 -->{$vo.player_info.show}<!-- end 播放器 -->				
+		</h3>						
+	</div>																		
+	<ul class="stui-content__playlist clearfix">
+		<!-- 播放地址 -->	
+		{maccms:foreach name="vo.urls" id="vo2"}								
+        <li {if condition="$param.sid eq $vo.sid && $param.nid eq $vo2.nid"}class="active"{/if}>
+        	<a class="text-muted pull-right" href="{:mac_url_vod_play($obj,['sid'=>$vo.sid,'nid'=>$vo2.nid])}">{if condition="$param.sid eq $vo.sid && $param.nid eq $vo2.nid"}正在{/if}播放 &gt;</a>
+        	<input type="checkbox" name="copy_url_{$key}" value="{$vo2.name}${$vo2.url}" checked>
+        	<a href="javascript:;" class="copy_text"><!-- 播放集数 -->{$vo2.name}<!-- end 播放集数 --><span class="hidden-xs">$<!-- 播放集数地址 -->{$vo2.url}<!-- end 播放集数地址 --></span></a>
+        </li>
+        {/maccms:foreach}
+       	<!-- end 播放地址 -->
+	</ul>
+	<div class="stui-pannel__foot clearfix">
+		<span class="text-muted pull-right hidden-xs">tips：点击链接可以复制哦</span>
+		<input type="checkbox" name="checkall" checked> 全选 &nbsp; &nbsp;<a class="copy_checked text-red" href="javascript:;">复制选中</a>
+	</div>
+</div>
+{/maccms:foreach}
+<!-- end 播放模块 -->
+
+<script type="text/javascript" src="/statics/js/jquery.zclip.min.js"></script>
+
+<script type="text/javascript">	
+	$(".copy_btn").each(function(){
+		$(this).zclip({
+			path: "/statics/js/ZeroClipboard.swf",
+			copy: function(){
+				return $(this).attr("data-text");
+			},
+			afterCopy: function(){
+			   alert("复制成功!");
+			}
+		});	
+	});	
+	
+	$(".copy_text").each(function(){
+		$(this).zclip({
+			path: "/statics/js/ZeroClipboard.swf",
+			copy: function(){
+				return $(this).text();
+			},
+			afterCopy: function(){
+			   alert("复制成功!");
+			}
+		});
+	});
+	
+	$("input[name='checkall']").on("click",function(){
+		$(this).parent().parent().find("li").find("input[name^='copy_url_']").each(function(){
+			if($(this).is(":checked")){
+				$(this).prop("checked", false);
+				$(this).removeAttr("checked");
+			}else{
+				$(this).prop("checked", true);
+				$(this).attr("checked","checked");
+			}
+		});
+	});	
+		
+	$(".copy_checked").each(function(){	
+		$(this).zclip({
+			path: "/statics/js/ZeroClipboard.swf",
+			copy: function(){
+				var checked_url=[];						
+				$(this).parent().parent().find("li").find("input[name^='copy_url_']:checked").each(function(){
+					checked_url.push($(this).val());
+				});	
+				return checked_url.join('\n');
+			},
+			afterCopy: function(){
+			   alert("复制成功!");
+			}
+		});
+	});
+</script>

@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+    {include file="seo/vod_detail"}   
+	{include file="block/include"}
+</head>
+<body>	
+	{include file="block/head"}
+    <div class="container">
+        <div class="row">
+
+			<div class="stui-pannel clearfix" id="desc">
+				<div class="stui-pannel__head clearfix">
+					<h3 class="title">{$obj.art_name}</h3>						
+				</div>																		
+				<div class="stui-content__mtxs col-pd clearfix">
+					<!-- 小说 -->{$obj.art_content}<!-- end 小说 -->
+				</div>				
+			</div>	
+			
+			{include file="vod/urllist"}<!-- 链接地址 -->
+			
+
+        </div>
+    </div>
+    
+    <span class="mac_hits hits hide" data-mid="{$maccms.mid}" data-id="{$obj.art_id}{$obj.art_id}{$obj.topic_id}" data-type="hits"></span>
+    
+	{include file="block/foot"}
+</body>
+</html>
+

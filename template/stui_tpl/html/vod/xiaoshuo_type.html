@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+    {include file="seo/vod_type"}   
+	{include file="block/include"}
+</head>
+<body>
+	{include file="block/head"}
+    <div class="container">
+        <div class="row">
+        	       	
+			<div class="stui-pannel clearfix">		
+				<!-- 列表 -->			
+				<ul class="stui-vodlist clearfix">
+					<li class="active clearfix hidden-xs">
+						<span class="title">
+							影片名称
+						</span>
+						<span class="type">
+							影片类别
+						</span>
+						<span class="time">
+							更新时间
+						</span>	
+					</li>
+					{maccms:vod num="36" paging="yes" type="current" order="desc" by="sort"}
+<li class="clearfix">
+	<h3 class="title">
+		<a href="{:mac_url_vod_detail($vo)}" title="{$vo.art_name}" target="_blank">{$vo.art_name}{if condition="$vo.art_remarks neq ''"} <em>[{$vo.art_remarks}]</em>{/if}</a>
+	</h3>
+	<span class="type">
+		<a href="{:mac_url_type($vo,[],'type')}" target="_blank">{$vo.type.type_name}</a>
+	</span>
+	<span class="time">
+		{$vo.art_time|mac_day}
+	</span>	
+</li>
+
+					{/maccms:vod}	 
+				</ul>
+				<!-- end 列表 -->
+			</div>			
+			{include file="block/page"}<!-- 翻页-->		
+        </div>
+    </div>
+	{include file="block/foot"}
+</body>
+</html>
