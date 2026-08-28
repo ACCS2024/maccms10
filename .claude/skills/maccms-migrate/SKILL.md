@@ -179,6 +179,12 @@ CF 域名注意静态资源缓存(见陷阱 1)。
       超范围截断),MySQL 8 默认 `STRICT_TRANS_TABLES` 直接报错。**修**:`config/database.php` 的
       连接 `params` 加 `\PDO::MYSQL_ATTR_INIT_COMMAND => "SET SESSION sql_mode='NO_ENGINE_SUBSTITUTION'"`
       —— 每连接放宽,不动全局、不用重启、不影响别的库(app 账号也没 SUPER 权限改全局)。
+      **为什么非严格是 maccms 的设计基线(不是纵容垃圾)**:maccms 大量 NOT NULL 列没默认值
+      (vod_content 等),入库不总带全,非严格时 MySQL 自动填 ''、严格时报 `1364 doesn't have
+      a default value`;要全严格得挨个补默认值,面太大,故非严格保留为基线。
+      **同时补「格式化」才是干净正解**:`application/common/validate/Vod.php::formatDataBeforeDb()`
+      原本只格式化字符串字段,已补上数字/decimal 列(空/非数字→0、转对类型、钳到列范围),
+      让 score/type_id 这类字段即使严格模式也干净入库。两者配合。
     - **TP5→TP8 字符串 `limit`**:`TypeError: BaseQuery::limit(): Argument #1 must be of type int, string given`。
       TP5 的 `->limit("0,50000")` 在 TP8 不认(要 `->limit(0, 50000)` 两个 int)。乐播是
       `application/common/model/VodSearch.php:135`(`checkAndUpdateTopResults` 更新搜索热词表时)。

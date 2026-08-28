@@ -79,6 +79,45 @@ class Vod extends Validate
             $data[$field] = mac_filter_xss($data[$field]);
             $data[$field] = mb_substr($data[$field], 0, $length);
         }
+
+        // ── 数字/decimal 列格式化(补 formatDataBeforeDb 原本只管字符串的缺口)──────────
+        // 采集方常发空串或超范围值,严格模式(MySQL 8 默认)会 1366/1264 直接 500。
+        // 这里空串/非数字 → 0,转对类型,钳到列上限,让数据本身就干净,不靠放宽 sql_mode。
+        // 注:type_id 只保证是合法 smallint;落到哪个分类仍取决于 interface.vodtype
+        //     采集↔本地映射(未配时会被钳成 32767=不存在的分类,内容进库但前台不可见)。
+        $int_fields = [
+            // tinyint unsigned 0..255
+            'vod_status' => [0, 255], 'vod_isend' => [0, 255], 'vod_lock' => [0, 255],
+            'vod_level' => [0, 255], 'vod_copyright' => [0, 255], 'vod_plot' => [0, 255],
+            // smallint signed -32768..32767
+            'type_id' => [-32768, 32767],
+            // smallint unsigned 0..65535
+            'type_id_1' => [0, 65535], 'group_id' => [0, 65535], 'vod_points' => [0, 65535],
+            'vod_points_play' => [0, 65535], 'vod_points_down' => [0, 65535], 'vod_trysee' => [0, 65535],
+            // mediumint unsigned 0..16777215
+            'vod_total' => [0, 16777215], 'vod_hits' => [0, 16777215], 'vod_hits_day' => [0, 16777215],
+            'vod_hits_week' => [0, 16777215], 'vod_hits_month' => [0, 16777215], 'vod_up' => [0, 16777215],
+            'vod_down' => [0, 16777215], 'vod_score_all' => [0, 16777215], 'vod_score_num' => [0, 16777215],
+            // int unsigned 0..4294967295
+            'vod_time' => [0, 4294967295], 'vod_time_add' => [0, 4294967295], 'vod_time_hits' => [0, 4294967295],
+            'vod_time_make' => [0, 4294967295], 'vod_recycle_time' => [0, 4294967295], 'vod_douban_id' => [0, 4294967295],
+        ];
+        foreach ($int_fields as $field => $range) {
+            if (!array_key_exists($field, $data)) {
+                continue;
+            }
+            $n = is_numeric($data[$field]) ? (int)$data[$field] : 0;
+            $data[$field] = max($range[0], min($range[1], $n));
+        }
+        // decimal(3,1) unsigned 0..99.9
+        foreach (['vod_score', 'vod_douban_score'] as $field) {
+            if (!array_key_exists($field, $data)) {
+                continue;
+            }
+            $n = is_numeric($data[$field]) ? round((float)$data[$field], 1) : 0.0;
+            $data[$field] = max(0, min(99.9, $n));
+        }
+
         return $data;
     }
 
