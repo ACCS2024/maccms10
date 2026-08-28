@@ -10,7 +10,12 @@ return [
             'password'        => env('DB_PASS', ''),
             'hostport'        => env('DB_PORT', '3306'),
             'dsn'             => '',
-            'params'          => [],
+            'params'          => [
+                // maccms 按非严格 MySQL 设计(空串当 0、超范围截断)。MySQL 8 默认
+                // STRICT_TRANS_TABLES 会让采集入库因 vod_douban_score='' / type_id 超范围直接 500。
+                // 每连接放宽为非严格,不动全局、不用重启、不影响别的库。
+                \PDO::MYSQL_ATTR_INIT_COMMAND => "SET SESSION sql_mode='NO_ENGINE_SUBSTITUTION'",
+            ],
             'charset'         => env('DB_CHARSET', 'utf8mb4'),
             'prefix'          => env('DB_PREFIX', 'mac_'),
             // 'debug' 在 think-orm 4 里已经没有读取点了(TP5 用它兜住 SQL 监听),

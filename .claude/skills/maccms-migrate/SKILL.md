@@ -172,6 +172,19 @@ CF 域名注意静态资源缓存(见陷阱 1)。
 
 15. **改主题文件保留原行尾**。用 `str_replace`/`perl` 逐串替换,别用会翻转 CRLF↔LF 的编辑器整文件重写,否则 diff 全是行尾噪声。
 
+16. 🔴 **采集入库(`/api.php/receive/*`)全 500 —— 两个 TP8/MySQL8 迁移真因**(2026-08-28 乐播)。
+    发布程序打进来认证过了,但入库崩 500。按 error_id 去 `runtime/api/log/*.log` 查,常见两条:
+    - **MySQL 8 严格模式**:`SQLSTATE 1366 Incorrect decimal value: ''`(空串塞 `vod_douban_score` 等
+      decimal 列)、`1264 Out of range`(源站 `type_id` 超 smallint)。老机 MySQL 非严格(空串当 0、
+      超范围截断),MySQL 8 默认 `STRICT_TRANS_TABLES` 直接报错。**修**:`config/database.php` 的
+      连接 `params` 加 `\PDO::MYSQL_ATTR_INIT_COMMAND => "SET SESSION sql_mode='NO_ENGINE_SUBSTITUTION'"`
+      —— 每连接放宽,不动全局、不用重启、不影响别的库(app 账号也没 SUPER 权限改全局)。
+    - **TP5→TP8 字符串 `limit`**:`TypeError: BaseQuery::limit(): Argument #1 must be of type int, string given`。
+      TP5 的 `->limit("0,50000")` 在 TP8 不认(要 `->limit(0, 50000)` 两个 int)。乐播是
+      `application/common/model/VodSearch.php:135`(`checkAndUpdateTopResults` 更新搜索热词表时)。
+      扫隐患:`grep -rnE 'limit\(\s*["'"'"'][^"'"'"']*,' application --include=*.php`。
+    两条都已进本仓库(`config/database.php`、`VodSearch.php`),新部署自带;老库迁移后务必回归一遍采集入库。
+
 # 老机退役
 - 退役前 `curl -sD-` 验主站已**零真实流量**(只剩 CF 探测 + `.git`/`wp-login` 类爬虫扫描 = 正常噪声,可放心退)。
 - 把老机备份(`/www/backup`、`/home/{migration,dbbak}`、`wwwroot_*.tar.gz`、`rclone.conf`、`safemac` 隔离体)
