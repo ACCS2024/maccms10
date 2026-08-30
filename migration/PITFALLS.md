@@ -304,3 +304,114 @@ perl -i -pe "s/= \['eq', (.+?)\];$/= \$1;/g" application/common/model/XXX.php
 ```
 
 完整替换需用 PHP 脚本或逐文件处理，不建议无脑 sed 全量替换。
+
+---
+
+## 迁移「老站」时才会暴露的坑（2026-08-30 番号站群迁移新增）
+
+> 上面 F1–F10 / F-A–F-G 是代码层的 TP5→TP8 破坏性变更。
+> 下面这三条不同：代码本身没错，是**把一个 TP5 时代的老站搬进来**才触发的，
+> 全新装的站不会遇到，所以之前几次迁移都没发现。
+
+| ID | 问题 | 影响面 | 提交 |
+|----|------|--------|------|
+| M1 | 老主题 `\|date='Y-m-d',###` 编译成 PHP 语法错误 | 用到该写法的页面全部 500 | 49fe6e0 |
+| M2 | `mac_vod` / `mac_art` 缺列表复合索引，而代码 `force()` 了其中一个 | 深分页直接 500（不是变慢） | 49fe6e0 |
+| M3 | 内链形态从 TP5 pathinfo 变成短链 | 老站 SEO 重复收录 | 49fe6e0 |
+
+### M1：`|date='...',###` —— think-template v3 的 date 特例
+
+**危险级别：Fatal（页面 500）**
+
+苹果CMS 老主题里 `{$vo.vod_time|date='Y-m-d',###}` 是标准写法（`###` 是
+think-template 的变量占位符）。TP8 带的 think-template v3 在
+`Template::parseVarFunction()` 里给 `date` 加了一个**特例分支**，而它跑在通用的
+`###` 替换**之前**：
+
+```php
+case 'date':
+    $name = 'date(' . $args[1] . ',!is_numeric(' . $name . ')? strtotime(' . $name . ') : ' . $name . ')';
+    break;
+```
+
+`$args[1]` 是 `'Y-m-d',###`，于是编译产物变成：
+
+```php
+date('Y-m-d',###,!is_numeric($vo['vod_time'])? strtotime(...) : ...)
+```
+
+`###` 永远没被替换 → `ParseError: syntax error, unexpected token ";"`。
+TP5 侧没有这个 `date` 分支，走通用分支，所以老站一直是好的。
+
+**只有 `date` 受影响**：`str_replace='X',Y,###`、`explode=',',###` 走通用分支，
+`###` 正常替换，**不要动它们**。
+
+**修法**：删掉 `date` 过滤器后面多余的 `,###`（`date` 分支自己会把变量塞进去，
+输出完全相同）：
+
+```bash
+php migration/normalize-legacy-theme.php --theme-dir=/path/to/template/xxx \
+    --backup-dir=/somewhere/theme-backup [--dry-run]
+```
+
+幂等，可反复跑。番号站实测 81 个模板文件里 19 个命中、共 21 处。
+
+**注意**：后台「模板管理」里重新上传原始主题会让问题复发，改完记得别再覆盖回去。
+
+### M2：`force()` 了一个安装脚本从不创建的索引
+
+**危险级别：Fatal（`SQLSTATE[42000] 1176`）**
+
+`application/common/model/Vod.php` 的深分页快车道写的是：
+
+```php
+Db::name('Vod')->force('idx_vod_status_recycle_time')
+```
+
+而这个索引（连同另外 11 个列表用复合索引）**从来没有出现在 install.sql 里**。
+乐播那台之所以没事，是因为 2026-08-26 熔断事故处理时手工建过。
+
+也就是说：**任何按 install.sql 全新装出来的站，首页翻到第 2 页就 500。**
+FORCE INDEX 指向不存在的索引不是"优化器少一个选择"，是直接报错。
+
+已修：`install.sql` 补齐 `mac_vod` 9 个 + `mac_art` 3 个索引定义。
+存量库用幂等脚本补（在站点根目录跑，自动读 `.env`）：
+
+```bash
+php migration/add-missing-list-indexes.php [--dry-run]
+```
+
+⚠️ 注意 `idx_st_level_time`（`vod_status,vod_level,vod_time`）是**有害索引**
+（`vod_level` 基数常为 1，优化器会误选它去 filesort，正是乐播熔断的直接诱因）。
+但代码里有 4 处引用了它，删掉会 500 —— 所以仍然建，靠别处的 FORCE INDEX 绕开。
+
+### M3：内链形态变化导致重复收录
+
+仓库默认注册的是短链（`voddetail/<id>`），TP5 时代的苹果CMS 生成的是
+`/index.php/vod/detail/id/123.html`。两种形态**都能访问**（老形态由 TP8 自动路由
+`controller/action/key/value` 接住），但 `url()` 反查走 `Url::getRuleUrl()`，它
+`foreach` 规则表取第一条参数能满足的 —— 先注册的赢，所以内链默认输出短链。
+
+苹果CMS 模板普遍不输出 `<link rel="canonical">`，靠自然搜索吃饭的老站内链一换形态
+就是两套 URL 各自被收录。
+
+**开关**：站点配置 `app.legacy_pathinfo_url = '1'`，TP5 形态提前注册。
+默认关闭（新站保持短链更好看）。
+
+⚠️ 两个实现细节，踩过：
+
+1. **multi-app 模式下 `Http::loadRoutes()` 只加载 `application/<app>/route/`**
+   （`MultiApp` 在中间件里把 routePath 改掉了）。根目录 `route/index.php` 在 web
+   请求里**根本不生效** —— 往 `route/` 目录里另放文件也不会被加载。
+   开关必须写在 `application/index/route/web.php` 里。
+2. 打开后会暴露 `mac_url()` 拼出空 `?page=` 的老问题：第 1 页被归一成空串，短链路由
+   的 `<page?>` 是可选变量、分隔符是 `-`，TP 的 `rtrim($url,'?-')` 连分隔符一起吃掉，
+   所以从没暴露；TP5 形态的 `/id/<id>` 规则里没有 page 变量，空串就被当剩余参数拼成
+   `?page=`。已在 `mac_url()` 收口处统一抹掉。
+
+### 附：写注释时别把 PHP 标签写死
+
+这次连续踩了两次同一个低级错误：注释里引用老代码写了 `<?php echo $x;?>` 或
+路由变量 `<page?>`，其中的 `?>` **会直接关闭 PHP 标签**，即使在 `//` 注释里也一样。
+表现是文件后半段被当成 HTML 原样输出、或报 "Unclosed '{'"。
+注释里要提 `?>` 就转写（例如写成 `{echo $x}`），改完 `php -l` 一遍。
