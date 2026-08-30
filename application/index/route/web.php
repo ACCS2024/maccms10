@@ -2,6 +2,36 @@
 
 use think\facade\Route;
 
+// ---------------------------------------------------------------------------
+// 可选:内链沿用 TP5 时代的 pathinfo 形态(maccms 配置 app.legacy_pathinfo_url = 1)
+//
+// 本文件下方注册的是短链形态(voddetail/<id>、vodtype/<id> …),而 TP5 时代的
+// 苹果CMS 生成的是 /index.php/vod/detail/id/123.html。两种形态都能「访问」
+// —— 老形态由 TP8 的自动路由 controller/action/key/value 接住 —— 但 url()
+// 反查走 Url::getRuleUrl(),它 foreach 规则表取第一条参数能满足的,也就是
+// 先注册的那条赢,所以内链默认输出短链。
+//
+// 从老 maccms 迁过来、靠自然搜索吃饭的站,内链形态一变就会造成重复收录
+// (苹果CMS 模板普遍不输出 canonical)。开启本开关后 TP5 形态提前注册,
+// url() 优先选它,迁移前后内链逐字一致。新站不要开,保持短链更好看。
+//
+// 注意:multi-app 模式下 MultiApp 会把 routePath 改成 application/<app>/route/,
+// 所以真正被加载的是本文件,根目录 route/index.php 在 web 请求里不生效。
+// ---------------------------------------------------------------------------
+if ((string) config('maccms.app.legacy_pathinfo_url') === '1') {
+    Route::any('vod/detail/id/<id>', 'vod/detail');
+    Route::any('vod/type/id/<id>/page/<page>', 'vod/type');
+    Route::any('vod/type/id/<id>', 'vod/type');
+    Route::any('vod/play/id/<id>/sid/<sid>/nid/<nid>', 'vod/play');
+    Route::any('vod/down/id/<id>/sid/<sid>/nid/<nid>', 'vod/down');
+    Route::any('vod/search', 'vod/search');
+    Route::any('art/detail/id/<id>', 'art/detail');
+    Route::any('art/type/id/<id>/page/<page>', 'art/type');
+    Route::any('art/type/id/<id>', 'art/type');
+    Route::any('index/index/page/<page>', 'index/index');
+    Route::any('index/index', 'index/index');
+}
+
 Route::any('sitehome', 'index/home');
 Route::any('publish-<id>', 'index/publish_group');
 

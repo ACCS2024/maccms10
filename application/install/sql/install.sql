@@ -173,7 +173,11 @@ CREATE TABLE `mac_art` (
   KEY `art_lock` (`art_lock`),
   KEY `art_score` (`art_score`),
   KEY `art_score_all` (`art_score_all`),
-  KEY `art_score_num` (`art_score_num`)
+  KEY `art_score_num` (`art_score_num`),
+  -- 与 mac_vod 同理:文章列表/分类页的排序分页需要复合索引,单列索引带不动。
+  KEY `idx_art_st_time` (`art_status`,`art_time`),
+  KEY `idx_art_type_st_time` (`type_id`,`art_status`,`art_time`),
+  KEY `idx_art_type1_st_time` (`type_id_1`,`art_status`,`art_time`)
 ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 ;
 
 -- ----------------------------
@@ -911,7 +915,21 @@ CREATE TABLE `mac_vod` (
   KEY `vod_score` (`vod_score`) USING BTREE,
   KEY `vod_version` (`vod_version`),
   KEY `vod_state` (`vod_state`),
-  KEY `vod_isend` (`vod_isend`)
+  KEY `vod_isend` (`vod_isend`),
+  -- 复合索引:列表/排行/深分页的实际执行计划靠它们,缺一个就退化成十几万行 filesort。
+  -- idx_vod_status_recycle_time 尤其不能少 —— application/common/model/Vod.php 的
+  -- 深分页快车道写的是 ->force('idx_vod_status_recycle_time'),FORCE INDEX 指向不存在的
+  -- 索引不是"慢一点",是直接抛 SQLSTATE 1176 让页面 500。
+  -- (2026-08-26 乐播熔断的根因之一就是这批索引只在那台机器上手工建过,没进安装脚本。)
+  KEY `idx_vod_status_recycle_time` (`vod_status`,`vod_recycle_time`,`vod_time`),
+  KEY `idx_st_time` (`vod_status`,`vod_time`),
+  KEY `idx_type_st_time` (`type_id`,`vod_status`,`vod_time`),
+  KEY `idx_type1_st_time` (`type_id_1`,`vod_status`,`vod_time`),
+  KEY `idx_type_st_hits` (`type_id`,`vod_status`,`vod_hits`),
+  KEY `idx_st_hits_day` (`vod_status`,`vod_hits_day`),
+  KEY `idx_st_hits_week` (`vod_status`,`vod_hits_week`),
+  KEY `idx_st_hits_month` (`vod_status`,`vod_hits_month`),
+  KEY `idx_st_level_time` (`vod_status`,`vod_level`,`vod_time`)
 ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 ;
 
 -- ----------------------------

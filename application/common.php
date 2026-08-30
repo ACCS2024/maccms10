@@ -3844,6 +3844,22 @@ function mac_url($model,$param=[],$info=[])
         }
     }
 
+    // 去掉无意义的空 page 查询参数。
+    //
+    // 本函数开头会把第 1 页归一成 $param['page'] = ''，而下面十几个 case 统一写
+    // url($model,['id'=>$id,'page'=>($param['page'] ?? 1)])。短链路由里的 page
+    // 是可选变量、分隔符又是 '-'，TP 的 rtrim($url,'?-') 会把它连同分隔符吃掉，
+    // 所以一直没人发现问题；一旦路由规则里没有 page 变量(例如迁移站开了
+    // app.legacy_pathinfo_url 用 TP5 的 /art/detail/id/{id} 形态)，这个空串就会
+    // 被 TP 当作剩余参数拼成 "?page="，凭空多出一批重复 URL。
+    //
+    // "?page=" 空值任何时候都没有语义，这里统一抹掉。
+    if ($url !== '' && strpos($url, 'page=') !== false) {
+        $url = preg_replace('/([?&])page=(?=&|$)/', '$1', $url);
+        $url = preg_replace('/[?&]$/', '', $url);
+        $url = str_replace('?&', '?', $url);
+    }
+
     return $url;
 }
 function mac_url_page($url,$num)
