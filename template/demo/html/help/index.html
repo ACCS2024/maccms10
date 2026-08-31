@@ -601,6 +601,21 @@ $(function(){
     $('#tab-'+tab).show();
   });
 
+  // 支持用 URL hash 直达某个分页,例如 /index.php/help.html#tab-mac10
+  // 老站(静态帮助页)的外链锚点是 #MacCms10 / #FeiFei5 这类,这里做一次别名映射,
+  // 免得旧链接点进来停在主页 tab、看不到目标章节。
+  var tabAlias={more:'home',maccms10:'mac10',maccms8:'maccms',feifei5:'ff50',
+                feifei:'ff50',seacms:'seacms',maxcms:'maxcms',zanpian:'zanpian',iycms:'iycms'};
+  function activateFromHash(){
+    var h=(location.hash||'').replace(/^#/,'').replace(/^tab-/,'').toLowerCase();
+    if(!h) return;
+    var name=tabAlias[h]||h;
+    var $t=$('.help-tabs a[data-tab="'+name+'"]');
+    if($t.length) $t.trigger('click');
+  }
+  activateFromHash();
+  $(window).on('hashchange',activateFromHash);
+
   $(document).on('click','.copy-btn',function(){
     var btn=$(this);
     var text=btn.data('text')||btn.prev('.api-box').text().trim();
