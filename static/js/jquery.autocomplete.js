@@ -513,8 +513,8 @@ $.browser = navigator.userAgent;
         function movePosition(step) {
             active += step;
             if (active < 0) {
-                active = listItems.size() - 1;
-            } else if (active >= listItems.size()) {
+                active = listItems.length - 1;
+            } else if (active >= listItems.length) {
                 active = 0;
             }
         }
@@ -559,8 +559,8 @@ $.browser = navigator.userAgent;
                 }
             },
             pageDown: function() {
-                if (active != listItems.size() - 1 && active + 8 > listItems.size()) {
-                    moveSelect(listItems.size() - 1 - active);
+                if (active != listItems.length - 1 && active + 8 > listItems.length) {
+                    moveSelect(listItems.length - 1 - active);
                 } else {
                     moveSelect(8);
                 }
