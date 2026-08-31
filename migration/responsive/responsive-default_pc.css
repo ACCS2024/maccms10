@@ -1,0 +1,197 @@
+@charset "utf-8";
+/* ===========================================================================
+ * responsive.css —— default_pc 主题响应式覆盖层
+ * 2026-08-31
+ *
+ * 设计原则(为什么这么做,而不是重写主题):
+ *   本主题是 2010 年代的固定宽 float 布局(body:1000px / .area:1160px /
+ *   .outside:1120px / .index-bar:920px,全站 145 处 float),83 个模板、日均百万级请求。
+ *   直接改原 CSS 或重写模板 = 高风险。这里改成"覆盖层":
+ *
+ *   1. 本文件最后加载,且【所有规则都写在 @media (max-width:…) 里】
+ *      → 宽度 >1200px 时本文件一条规则都不生效,桌面端渲染逐像素不变。
+ *   2. 原有 head.css / home.css / foot.css 一个字节都没动。
+ *   3. 回滚 = 删掉 public/include.html 里那一行 <link>。
+ *
+ * 断点:
+ *   ≤1200px  容器流体化(大平板/小笔记本)
+ *   ≤992px   两栏降级
+ *   ≤768px   手机:彻底取消 float、纵向堆叠、放大点击区
+ *   ≤480px   小屏微调
+ * =========================================================================== */
+
+/* ---------------------------------------------------------------------------
+ * ≤1200px:把写死的容器宽度改成流体
+ * 只动"容器",不动内部排版,风险最低。
+ * ------------------------------------------------------------------------- */
+@media screen and (max-width: 1200px) {
+  html { overflow-x: hidden; }
+  body { width: auto !important; min-width: 0 !important; }
+
+  /* 顶层容器:1160/1120/1000 → 满宽但保留上限 */
+  .area,
+  .head_inside,
+  .outside,
+  .box,
+  .warp,
+  .foot_inside,
+  .index-bartop1,
+  .index-bartop1 .area,
+  .dr_menubox_m,
+  .dr_m_nav,
+  .xing_top,
+  .xing_vb,
+  #sddm,
+  .container .nvc,
+  .ibox.playBox,
+  .foot .footb {
+    width: auto !important;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  /* 靠静态溢出分析(375px 视口)补出来的一批:这些也是写死 1090~1120px 的主结构,
+     漏掉任何一个手机上就会出现横向滚动条。 */
+  .banner1,
+  .nr,
+  .ml,
+  .top_inside,
+  .list_pic,
+  .yq,
+  .pag2 {
+    width: auto !important;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  /* 左右留一点边距,免得贴边 */
+  .area, .head_inside, .outside, .foot_inside { padding-left: 10px; padding-right: 10px; }
+
+  /* 图片一律不许撑破容器 */
+  img { max-width: 100%; height: auto; }
+
+  /* 宽内容(表格/代码/预格式)自己滚,页面 body 不许横向滚 */
+  table { max-width: 100%; }
+  pre, code { max-width: 100%; overflow-x: auto; }
+
+  /* 顶部导航条:920px → 跟随父容器 */
+  .index-bar,
+  .index-bar .area { width: auto !important; max-width: 100%; float: none !important; }
+  /* 下拉大菜单面板 1120px → 自适应 */
+  .index-bar .div_box ul div,
+  .index-bartop1 .div_box ul div { width: auto !important; max-width: 100%; }
+}
+
+/* ---------------------------------------------------------------------------
+ * ≤992px:两栏/三栏开始降级
+ * ------------------------------------------------------------------------- */
+@media screen and (max-width: 992px) {
+  /* 详情页:封面(320,左浮) + 简介(387,左浮) + 广告位(300,右浮) → 上下排 */
+  .vodImg, .vodImg img,
+  .vodInfo, .vodInfo .vodh, .vodinfobox {
+    width: auto !important; max-width: 100%; float: none !important;
+  }
+  .vodAd { display: none !important; }   /* 右侧 300px 广告位:窄屏直接不占地方 */
+
+  /* 首页三栏 200/600/200 → 通栏 */
+  .xing_top li.xing_top_left,
+  .xing_top li.xing_top_center,
+  .xing_top li.xing_top_right,
+  .xing_vb li span.xing_vb1,
+  .xing_vb li span.xing_vb2,
+  .xing_vb li span.xing_vb4 {
+    width: auto !important; max-width: 100%; float: none !important; display: block;
+  }
+
+  /* 页脚左右两块 → 上下 */
+  .foot_inside_left,
+  .foot_inside_right,
+  .foot_inside_right span { width: auto !important; max-width: 100%; float: none !important; }
+  .foot, .foot_inside { height: auto !important; }
+
+  /* 搜索框 */
+  .s_Div, .search-inner { width: auto !important; max-width: 100%; float: none !important; }
+  .search-text, .bdcs-search-form, .bdcs-search-form input {
+    width: auto !important; max-width: 100%; box-sizing: border-box;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * ≤768px:手机。float 全部取消,纵向堆叠,点击区放大到 44px 级别
+ * ------------------------------------------------------------------------- */
+@media screen and (max-width: 768px) {
+  /* 本主题靠 float 排版;窄屏一律改成块级堆叠 */
+  .head_inside, .area, .outside, .box,
+  .index-bar, .index-bartop1, .content,
+  .foot_inside, .warp {
+    float: none !important;
+    width: auto !important;
+    max-width: 100%;
+  }
+
+  /* 导航项:102px 固定格 → 每行 3 个,手指点得中 */
+  .index-bar .div_box,
+  .index-bartop1 .div_box,
+  .div_box {
+    width: 33.333% !important;
+    float: left !important;
+    box-sizing: border-box;
+    padding: 2px;
+  }
+  .index-bar .div_box a,
+  .index-bartop1 .div_box a,
+  .div_box a {
+    width: auto !important;
+    display: block;
+    line-height: 40px;
+    min-height: 40px;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* logo 不要挤 */
+  .head_inside .qy, .head_inside h1 { float: none !important; text-align: center; }
+  .head_inside .qy img, h1.qy img { max-width: 70%; height: auto; }
+
+  /* 首页那张黄色公告表:字号收一档,别撑破 */
+  .head table { width: 100% !important; }
+  .head table td { font-size: 12px !important; word-break: break-word; }
+
+  /* 列表行:原来靠固定 px 分栏(如 width:730px 的片名列) */
+  .box ul.nr li,
+  ul.nr li { display: block; width: auto !important; }
+  ul.nr li span { width: auto !important; max-width: 100%; display: inline-block; }
+  ul.nr li span.hours { display: inline-block; min-width: 5.5em; }
+
+  /* 分页:点击区 */
+  .pag2 a, .pagelink_a, .pagelink_b {
+    display: inline-block; min-width: 34px; line-height: 32px;
+    margin: 2px; text-align: center;
+  }
+
+  /* 播放器容器 */
+  .ibox.playBox, #playleft, #playbox { width: auto !important; max-width: 100%; }
+  #playleft iframe, #playbox iframe { width: 100% !important; height: 56.25vw !important; max-height: 60vh; }
+
+  /* 帮助中心 / 替换助手(这两页是新加的自包含模块) */
+  .help-wrap, .rep-wrap { padding-left: 8px; padding-right: 8px; }
+  .help-tabs, .rep-tabs { overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; }
+  .help-tabs a, .rep-tab { display: inline-block; float: none; }
+  .api-box, .rep-val { word-break: break-all; }
+  .rep-cur-wrap { grid-template-columns: 1fr !important; }
+}
+
+/* ---------------------------------------------------------------------------
+ * ≤480px:小屏
+ * ------------------------------------------------------------------------- */
+@media screen and (max-width: 480px) {
+  body { font-size: 13px; }
+  /* 导航一行 2 个,免得字被挤成省略号 */
+  .index-bar .div_box,
+  .index-bartop1 .div_box,
+  .div_box { width: 50% !important; }
+  .head table td { font-size: 11px !important; }
+  .head_inside .qy img, h1.qy img { max-width: 85%; }
+}
