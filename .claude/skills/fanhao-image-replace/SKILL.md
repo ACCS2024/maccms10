@@ -1,6 +1,6 @@
 ---
 name: fanhao-image-replace
-description: 番号站群(fhzy1.com / fhapi9.com / bjgx,主题 default_pc,新机 85.149.233.11)换封面图床域名时使用 —— 批量改 mac_vod.vod_pic、往前台「替换助手」mac_rep 登记、并且**同步改发布程序 ffcore 的 picDomain**(最容易漏的一步,不改则下一批新内容又带回旧域名)。含安全闸(新域名必须返回同一张图,md5 比对)、三站共库但配置各一份的坑、相对路径封面靠 upload.remoteurl 的坑、缓存前缀分站清。是 maccms-replace 针对番号的落地特化;通用框架见 maccms-replace,乐播版见 lebozy-image-replace,155 版见 155-image-replace。
+description: 番号站群(fhzy1.com / fhapi9.com / bjgx,主题 default_pc,新机 85.149.233.11)换**封面图床域名**或做**播放域名按月轮转**时使用 —— 批量改 mac_vod.vod_pic、往前台「替换助手」mac_rep 登记、并且**同步改发布程序 ffcore 的 picDomain**(最容易漏的一步,不改则下一批新内容又带回旧域名)。含安全闸(新域名必须返回同一张图,md5 比对)、三站共库但配置各一份的坑、相对路径封面靠 upload.remoteurl 的坑、缓存前缀分站清。另含播放域名轮转(vod_play_url,按 URL 路径里的内容日期定 26MM.fhbbff.com;裸 REPLACE 会毁数据,因为 2607 也出现在路径日期 20260701 里)。是 maccms-replace 针对番号的落地特化;通用框架见 maccms-replace,乐播版见 lebozy-image-replace,155 版见 155-image-replace。
 ---
 
 # 番号封面图床域名迁移运行手册
@@ -107,10 +107,82 @@ curl -s https://fhzy1.com/index.php/macrep.html | grep -o 'fh[0-9]*\.top'    # �
 匹配不到就整站跳过——这个主题是 2019 年的 SMZY 老模板,`<font>` 嵌套很乱,
 删错一行会把整个公告区的标签拆坏。
 
+---
+
+# 附:播放域名日常轮转(vod_play_url)
+
+封面之外,**播放域名是按月轮转的**,属于日常工作。命名规则 `26MM.fhbbff.com`
+(26=年,MM=月),域名由**内容日期决定**,而内容日期写在 URL 路径里:
+
+```
+https://2607.fhbbff.com/20260701/dZCmzzHi/index.m3u8
+        └─ 域名按内容月份  └─ 内容日期 YYYYMMDD
+```
+
+2026-09-03 实测的规则:5/6月→`2605`、7/8月→`2607`、9月→`2609`。
+
+## 🔴 最大的坑:绝对不能用裸 REPLACE
+
+用户说"把 2607 换成 2609",按字面写
+
+```sql
+UPDATE mac_vod SET vod_play_url=REPLACE(vod_play_url,'2607','2609.fhbbff.com');  -- ❌ 灾难
+```
+
+**会毁掉 6149 行**:`2607` 这四个字符同时出现在**路径日期** `/20260701/` 里
+(`20260701` 的第 3~6 位就是 `2607`),替换后变成 `/202609.fhbbff.com01/`,整批播不了。
+
+正确姿势:**WHERE 按路径月份限定 + REPLACE 只替换域名串**(域名带 `/` 边界):
+
+```sql
+UPDATE mac_vod SET vod_play_url = REPLACE(vod_play_url,'2605.fhbbff.com','2607.fhbbff.com')
+WHERE vod_play_url LIKE '%2605.fhbbff.com/%'
+  AND SUBSTRING(SUBSTRING_INDEX(SUBSTRING_INDEX(vod_play_url,'/',4),'/',-1),1,6) IN ('202607','202608');
+```
+
+## 用法
+
+```bash
+# ① 安全闸:每个迁移桶各抽 N 条,验「换域名后返回同一份 m3u8」(md5 + #EXTM3U 双重校验)
+bash scripts/play-domain-gate.sh 4
+
+# ② 执行(内置错配矩阵复核,改完打印"域名 × 路径月"是否全部一致)
+bash scripts/play-domain-rotate.sh            # 预演
+bash scripts/play-domain-rotate.sh --apply
+```
+
+规则变了就改 `play-domain-rotate.sh` 里那三行 `run_bucket`。
+
+## 别忘了发布程序
+
+`playDomain` 决定**今后新内容**的播放域名,和 `picDomain` 一样存在 ffcore 的 tasks 表里:
+
+```bash
+node scripts/upd_publisher.js 旧域名 新域名 --field=playDomain --apply
+```
+
+> 2026-09-03 这次:改库前去读是 `2605`,改完再读已经是 `2609` —— 用户自己先轮转过了。
+> **所以每次都要先读一遍再决定改不改**,别照着记忆里的值动手。
+
+## 实测数据(2026-09-03,供估算)
+
+| 桶 | 行数 | 耗时 |
+|---|---|---|
+| 2605 → 2607(7/8月) | 9,789 | 合计 ~40s |
+| 2604 → 2605(5/6月) | 1,082 | |
+| 2605 → 2609(9月) | 260 | |
+
+每行恰好一个播放地址(无多集/多播放组),所以 `REPLACE` 一次到位。
+另注意:「九月更新」有两种口径 —— `vod_time>=9/1`(记录更新时间)是 376 行,
+路径日期是 9 月的只有 260 行。**轮转按内容日期,取后者。**
+
+未覆盖:路径月 `202602/202603/202604` 共 5,091 行的规则用户没给,保持原样。
+
 ## 回滚
 
 ```bash
-mysql ... < /home/migrate-fanhao-20260828/imgrep-<时间戳>/rollback.sql
+mysql ... < /home/migrate-fanhao-20260828/imgrep-<时间戳>/rollback.sql      # 封面
+mysql ... < /home/migrate-fanhao-20260828/playrot-<时间戳>/rollback.sql     # 播放域名
 ```
 反向 `REPLACE` + 把那条 `mac_rep` 置 `rep_status=0`。
 别忘了把 ffcore 的 `picDomain` 也改回去(备份在 `/home/dev/ffcore/server/data/task2-config-backup-*.json`)。
