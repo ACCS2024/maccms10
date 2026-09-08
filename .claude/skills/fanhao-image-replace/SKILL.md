@@ -1,6 +1,6 @@
 ---
 name: fanhao-image-replace
-description: 番号站群(fhzy1.com / fhapi9.com / bjgx,主题 default_pc,新机 85.149.233.11)换**封面图床域名**或做**播放域名按月轮转**时使用 —— 批量改 mac_vod.vod_pic、往前台「替换助手」mac_rep 登记、并且**同步改发布程序 ffcore 的 picDomain**(最容易漏的一步,不改则下一批新内容又带回旧域名)。含安全闸(新域名必须返回同一张图,md5 比对)、三站共库但配置各一份的坑、缓存前缀分站清。**封面分两批必须都换**:vod_pic 里写死域名的 16.8 万行(replace-multi.sh)+ 靠 upload.remoteurl 拼域名的 6.2 万行相对路径(upd_remoteurl.sh)。另含播放域名轮转(vod_play_url,按 URL 路径里的内容日期定 26MM.fhbbff.com;裸 REPLACE 会毁数据,因为 2607 也出现在路径日期 20260701 里)。是 maccms-replace 针对番号的落地特化;通用框架见 maccms-replace,乐播版见 lebozy-image-replace,155 版见 155-image-replace。
+description: 番号站群(fhzy1.com / fhapi9.com / bjgx,主题 default_pc,新机 85.149.233.11)换**封面图床域名**或做**播放域名按月轮转**时使用 —— 批量改 mac_vod.vod_pic、往前台「替换助手」mac_rep 登记、并且**同步改发布程序 ffcore 的 picDomain**(最容易漏的一步,不改则下一批新内容又带回旧域名)。含安全闸(新域名必须返回同一张图,md5 比对)、三站共库但配置各一份的坑、缓存前缀分站清。**封面分两批必须都换**:vod_pic 里写死域名的 16.8 万行(replace-multi.sh)+ 靠配置拼域名的 6.2 万行相对路径(upd_remoteurl.sh,一次改 upload.remoteurl / api.vod.imgurl / upload.api.ftp.url 三个键)。含全站残留扫描。另含播放域名轮转(vod_play_url,按 URL 路径里的内容日期定 26MM.fhbbff.com;裸 REPLACE 会毁数据,因为 2607 也出现在路径日期 20260701 里)。是 maccms-replace 针对番号的落地特化;通用框架见 maccms-replace,乐播版见 lebozy-image-replace,155 版见 155-image-replace。
 ---
 
 # 番号封面图床域名迁移运行手册
@@ -116,16 +116,31 @@ ssh root@216.180.225.138 'cd /home/dev/ffcore && node /tmp/upd_publisher.js 旧�
 服务每轮 `SELECT * FROM tasks WHERE id=?` 读配置,**改库即可,不用重启**。
 下一轮跑批(每 2 小时一次,但上游每天只出一批,真正发布的是北京时间 14:20 那次)自动生效。
 
-## 3. ★ 相对路径封面:三站 upload.remoteurl / api.vod.imgurl
+## 3. ★ 三站配置里的封面基址(三个键)
 
 **这一步和第 1 步管的是两批不同的封面,都要做**:
 
 | | 库里存什么 | 数量 | 靠什么定域名 | 用哪个脚本 |
 |---|---|---|---|---|
 | 绝对地址封面 | `https://<域名>/xxx.jpg` | 16.8 万 | `vod_pic` 里写死 | `replace-multi.sh` |
-| **相对路径封面** | `upload/vod/xxx.jpg` | **6.2 万**(另 6 万 thumb/slide) | **`upload.remoteurl` 拼** | **`upd_remoteurl.sh`** |
+| **相对路径封面** | `upload/vod/xxx.jpg` | **6.2 万**(另 6 万 thumb/slide) | **配置拼** | **`upd_remoteurl.sh`** |
 
 只做第 1 步 = 6.2 万张封面仍留在老图床上。
+
+`upd_remoteurl.sh` 一次改三个键:
+
+| 键 | 作用 | 现在会不会被读 |
+|---|---|---|
+| `upload.remoteurl` | 相对路径封面拼域名(`common.php` `mac_url_img`,`mode=='remote'` 分支) | ✅ 会 |
+| `api.vod.imgurl` | 采集 API 吐给下游的封面基址 | ✅ 会 |
+| `upload.api.ftp.url` | FTP 图床对外基址(`Ftp.php:61` `return $settings['url'].'/'.$file_path`) | ⚠ 只在 `upload.mode` 切成 `ftp` 时 |
+
+**注意 `ftp` 挂在 `upload.api.ftp`,不是顶层 `api.ftp`** —— `Ftp.php:20` 读的是
+`$GLOBALS['config']['upload']['api']['ftp']`,顶层 `$c['api']['ftp']` 是**不存在**的。
+`Upload.php:38` 那句 `if(!in_array($config['mode'],['local','remote']))` 决定它走不走驱动;
+三站现在都是 `remote`,所以这个键是**死配置**,一并填是为了将来后台切保存方式时
+不会落到空基址(`url=''` 会拼出 `/upload/...` 指向本站)。
+另外它的值**不带尾斜杠**(Ftp.php 自己拼 `'/'`),和另外两个键不一样。
 
 ```bash
 bash scripts/upd_remoteurl.sh <新域名>          # 预演
@@ -135,15 +150,21 @@ bash scripts/upd_remoteurl.sh <新域名> --apply  # 执行
 **三站配置各一份、值还不一样**(2026-09-08 之前:`fhzy1.com`/`bjgx` = `fan.lefhao20250923.top`,
 `fhapi9.com` = `fh.lbfh2025.com`),所以脚本按**各站自己的当前值**去替换,不写死旧域名。
 
-### 两条硬约束(脚本已内建,手工改务必照做)
+### 怎么改才安全(脚本已内建)
 
-1. **不能用 `sed 's/imgurl.*/…/'`** —— 配置里 `'imgurl'` 出现 **6 次**,只有 `api.vod` 那处
-   (约 449 行)有值,其余 5 处(art/actor/role/website/link)是 `''`。写脏了 = 采集方拿到错域名。
-   正确做法:**按该站当前的确切 URL 原值整串替换**,只会命中 `remoteurl` + `api.vod.imgurl` 那 2 处。
-   脚本会先报"旧值在配置里出现几次",**>2 就中止**。
-2. **改的是被 `include` 的 PHP 文件,写坏 = 整站 500**。脚本每站都
-   备份 → 改 → `php -l` → 重新 include 复核键值 → **任一步失败立刻还原**,
-   并复核那 5 个空 `imgurl` 没被写脏。
+**不要用 `sed`。** 配置里 `'imgurl'` 出现 **6 次**,只有 `api.vod` 那处(约 449 行)有值,
+其余 5 处(art/actor/role/website/link)是 `''`;`'url'` 更是遍地都是(ftp/qiniu/s3/upyun…)。
+按名字匹配几乎必然误伤,**写脏 = 采集方拿到错域名**。而 `ftp.url` 本来是空串,
+"按原值替换"这招也用不了。
+
+脚本的做法是**整份配置数组 `var_export` 回盘** —— 这正是 maccms 后台保存自己走的路径
+(`common.php` `mac_arr2file`:`var_export` + `opcache_invalidate`)。
+实测该配置是纯 var_export 产物,**重新导出与原文件逐字节一致**(792 行只差结尾换行),
+所以不会打乱格式。
+
+**改的是被 `include` 的 PHP,写坏 = 整站 500**,所以每站都:
+备份 → 改 → `php -l` → 重新 include → **逐键递归 diff,断言只有那 3 个目标键变了** → 否则立刻还原。
+递归 diff 比数 grep 命中强:它能证明其余 780 行、包括那 5 个空 `imgurl`,一个值都没动。
 
 ### 安全闸
 
@@ -156,7 +177,34 @@ bash scripts/upd_remoteurl.sh <新域名> --apply  # 执行
 2026-09-08 实测 **20/20 同图**(两个 base 各 10 条),thumb/slide 的 GIF 也在新域名上 → 放行。
 
 > 决策沿革:前两次轮转(fh260401→fh200831)没动 remoteurl,因为它看起来是另一套稳定图床。
-> **2026-09-08 用户明确要求一并换过来**,此后它就是轮转的固定一环。
+> **2026-09-08 用户明确要求一并换过来**(同日又要求补上 `upload.api.ftp.url`,
+> 目标是"保证对外渲染都是新域名"),此后这三个键就是轮转的固定一环。
+
+## 3.5 收尾必做:全站残留扫描
+
+改完跑一遍,证明"对外渲染无一漏网"。三处都要扫:
+
+```bash
+# ① 全库:枚举所有 varchar/text 列逐列 count,不要只盯 vod_pic
+mysql ... -N -B -e "select concat(table_name,'|',column_name) from information_schema.columns
+  where table_schema='<库>' and data_type in ('varchar','text','mediumtext','longtext');" |
+while IFS='|' read -r t c; do
+  n=$(mysql ... -N -B -e "select count(*) from \`$t\` where \`$c\` like '%<旧域名>%';")
+  [ "$n" -gt 0 ] && echo "$t.$c : $n 行"
+done
+# ② 主题:grep -rlF <旧域名> /home/wwwroot/<站>/template/
+# ③ 配置:grep -cF <旧域名> /home/wwwroot/<站>/application/extra/maccms.php
+```
+
+**`mac_rep` 命中是正常的,不要清** —— 那几行就是给采集方看的替换规则本身
+(`老域名 → 新域名`),清了采集方就不知道该怎么改。
+
+2026-09-08 实测结果:除 `mac_rep` 3 行外,全库 / 三站主题 / 三站配置**零残留**。
+
+### 渲染面其实只有两处
+`default_pc` 的**首页和列表页是纯文字列表,根本不渲染封面**(只有 logo、采集插件图
+那类本站静态图)。封面只出现在**详情页**和**采集 API**。
+验收盯这两处就够,别在首页 grep 不到图片就以为出错了。
 
 ## 4. 收尾
 
