@@ -1570,7 +1570,11 @@ function mac_curl_get($url,$heads=array(),$cookie='',$timeout=10)
     curl_setopt($ch, CURLOPT_REFERER, $url);
     curl_setopt($ch, CURLOPT_POST, 0);
     curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 1);
+    // VERIFYHOST 只接受 0 或 2：值 1 在 PHP 8 会抛
+    // "no longer accepts the value 1"，被本项目的错误处理器转成 ErrorException，
+    // 于是任何 https 采集源直接崩掉（http 源不触发，所以长期没暴露）。
+    // 取 2 与同文件的 mac_curl_post() 一致（两者同为 VERIFYPEER=0）。
+    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
     if(!empty($cookie)){
         curl_setopt($ch, CURLOPT_COOKIE, $cookie);
     }
