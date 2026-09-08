@@ -53,50 +53,51 @@ foreach ($domains as $d) {
 }
 echo "  合计 $total 行\n";
 
-echo "\n═══ 3. 更新 upload.remoteurl(相对路径封面 + 今后新图)═══\n";
-// 各站的相对路径封面 upload/vod/... 不带域名,靠本站 upload.remoteurl 补;
-// 只改 vod_pic 不改这里 => 那 52% 老封面 + 今后新图仍打旧域名。必须同步改。
+echo "\n═══ 3. 更新图床渲染域名配置(remoteurl + api.ftp.url,都归到 https://B/)═══\n";
+// 对外渲染封面用到两处配置,必须都指新域名,否则会漏:
+//   · upload.remoteurl —— 相对路径封面 upload/vod/... 不带域名,靠它拼;新图也靠它显示。
+//   · upload.api.ftp.url —— 启用 FTP 图床回传时,新上传封面用它拼 URL。乐播现在是空的(不走
+//     FTP,采集封面是完整 URL),这里防御性同步:今后一旦启用 FTP 图床,新图也走新域名。
+$newUrl  = "https://$NEW/";
 $cfgFile = $root . "/application/extra/maccms.php";
 if (!is_file($cfgFile)) {
     echo "  ⚠ 配置文件不存在,跳过: $cfgFile\n";
 } else {
     $src = file_get_contents($cfgFile);
     $orig = $src;
-    $backedUp = false;
+    // 3a. 先把任何残留旧域名(不限 remoteurl)整域替新
     foreach ($domains as $d) {
-        foreach (["https://$d/", "http://$d/"] as $oldUrl) {
-            if (strpos($src, $oldUrl) !== false) {
-                if (!$backedUp) {
-                    $bak = $cfgFile . ".bak-remoteurl-" . date("Ymd-His");
-                    @copy($cfgFile, $bak);
-                    echo "  备份: $bak\n";
-                    $backedUp = true;
-                }
-                $src = str_replace($oldUrl, "https://$NEW/", $src);
-                echo "  改: $oldUrl -> https://$NEW/\n";
-            }
-        }
+        $src = str_replace(["https://$d/", "http://$d/"], $newUrl, $src);
     }
-    if ($src !== $orig) {
-        // 语法自检:确保改完仍是合法 PHP(否则整站崩)
-        $tmp = $cfgFile . ".tmp." . getmypid();
+    // 3b. 强制 upload.remoteurl = 新域名(即便原本为空/其它,也拉到新;单行,顶层键)
+    $src = preg_replace("/('remoteurl'\s*=>\s*)'[^']*'/", "\${1}'$newUrl'", $src, 1);
+    // 3c. 强制 upload.api.ftp.url = 新域名。锚定在 'ftp' => array( ... ) 块内的第一个 'url',
+    //     避免误伤同名的 qiniu/upyun 'url'。/s 让 . 跨行;.*? 非贪婪停在 ftp 块内首个 url。
+    $src = preg_replace("/('ftp'\s*=>\s*array\s*\(.*?'url'\s*=>\s*)'[^']*'/s", "\${1}'$newUrl'", $src, 1);
+
+    if ($src === $orig) {
+        echo "  remoteurl / api.ftp.url 已是 $newUrl,无需改动\n";
+    } else {
+        // 语法自检:tmp 必须写在 extra/ 外 —— application/middleware/Begin.php 反webshell
+        // 中间件会在每次 HTTP 请求里把 extra/ 内非白名单文件删掉,并发请求会在 php -l 前
+        // 把 extra/ 里的 tmp 删掉("文件打不开")。放到系统 temp 目录规避。
+        $tmp = sys_get_temp_dir() . "/maccms_cfg_lint_" . getmypid() . ".php";
         file_put_contents($tmp, $src);
         exec("php -l " . escapeshellarg($tmp) . " 2>&1", $lintOut, $lintRc);
+        @unlink($tmp);
         if ($lintRc !== 0) {
-            @unlink($tmp);
             echo "  ❌ 改后语法错,已放弃写入(保持原配置):" . implode(" ", $lintOut) . "\n";
         } else {
-            rename($tmp, $cfgFile);
+            $bak = $cfgFile . ".bak-remoteurl-" . date("Ymd-His");
+            @copy($cfgFile, $bak);          // 备份到 extra/ 内也会被 Begin 扫掉,但这是瞬时的;真备份见 §1 gz
+            file_put_contents($cfgFile, $src);   // 直接覆盖白名单文件本身(maccms.php 在白名单,不会被扫)
             // 关键坑:root 写过的配置必须 chown 回 www,否则后台/采集/上传保存全静默失败
             @chown($cfgFile, "www"); @chgrp($cfgFile, "www");
-            if (preg_match('/[\'"]remoteurl[\'"]\s*=>\s*[\'"]([^\'"]*)[\'"]/', $src, $m)) {
-                echo "  ✅ 写入并 chown www:www;现 remoteurl = " . $m[1] . "\n";
-            } else {
-                echo "  ✅ 写入并 chown www:www\n";
-            }
+            // 回读确认最终值(读 $src 内容,不 include —— 避 CLI opcache 读到旧文件)
+            preg_match("/'remoteurl'\s*=>\s*'([^']*)'/", $src, $mr);
+            preg_match("/'ftp'\s*=>\s*array\s*\(.*?'url'\s*=>\s*'([^']*)'/s", $src, $mf);
+            printf("  ✅ 写入并 chown www:www;remoteurl=%s  api.ftp.url=%s\n", $mr[1] ?? "?", $mf[1] ?? "?");
         }
-    } else {
-        echo "  remoteurl 当前不含待迁域名,无需改动(可能已改过)\n";
     }
 }
 

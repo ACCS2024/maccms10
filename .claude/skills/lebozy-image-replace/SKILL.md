@@ -1,6 +1,6 @@
 ---
 name: lebozy-image-replace
-description: 乐播站群(lebozy.com,采集 API 站,主题 stui_tpl)封面图床域名收敛/迁移时使用 —— 把 mac_vod.vod_pic 里那一堆 lb* 轮换域名批量归一到一个新图床域名,并同步更新 upload.remoteurl(管相对路径老封面 + 今后新图)与前台「替换助手」mac_rep。含最关键的安全闸(逐域名分三类:同图可换/旧死新活=恢复/旧活新无=需先同步),强制收敛策略,vip3 式"待同步清单"导出,备份与回滚。是 maccms-replace 针对乐播的落地特化;通用框架见 maccms-replace,155 版见 155-image-replace。
+description: 乐播站群(lebozy.com,采集 API 站,主题 stui_tpl)封面图床域名收敛/按月轮转(lbYYMMDD)时使用 —— 把 mac_vod.vod_pic 里那一堆 lb* 轮换域名批量归一到当月新图床域名,并**把三处渲染配置全部同步到新域名以保证对外渲染无一漏网:upload.remoteurl(相对路径封面 upload/vod/... 靠它拼)+ upload.api.ftp.url(FTP 上传封面前缀,防御性)+ 前台「替换助手」mac_rep(引导下游采集方)**。replace.php 一条命令幂等跑完(登记+vod_pic替换+remoteurl/api.ftp.url改+chown www+清缓存)。含最关键的安全闸(逐域名分三类:同图可换/旧死新活=恢复/旧活新无=需先同步)、强制收敛策略、备份与回滚,以及 Begin.php 会扫删 extra/ 内非白名单 tmp 的坑。是 maccms-replace 针对乐播的落地特化;通用框架见 maccms-replace,155 版见 155-image-replace,番号版见 fanhao-image-replace。
 ---
 
 # 乐播封面图床域名收敛运行手册
@@ -9,9 +9,10 @@ description: 乐播站群(lebozy.com,采集 API 站,主题 stui_tpl)封面图床
 `lb260817.top`、`f.lbp2025.com`、`fw.lbbf9.com`…),隔一段时间换一个。任务通常是
 **把它们全部归一到当前那个活的新域名**(2026-08 是 `lb260817.top`;**2026-09 已轮到 `lb260908.top`**,域名按 `lbYYMMDD` 命名=当月轮转日)。
 
-**目标是所有封面收敛到一个域名 + 今后新图也走它。** 两处一起改才算完整:
-1. `mac_vod.vod_pic` 存量(SQL REPLACE);
-2. `upload.remoteurl`(那 52% 相对路径 `upload/vod/...` 靠它补域名,新图也靠它)。
+**目标是所有封面收敛到一个域名 + 今后新图也走它。** 要改的地方(replace.php 一次全做):
+1. `mac_vod.vod_pic` 存量写死域名(SQL REPLACE);
+2. `upload.remoteurl`(那 52% 相对路径 `upload/vod/...` 靠它补域名,新图也靠它);
+3. `upload.api.ftp.url`(FTP 上传封面的对外前缀;乐播 FTP 未启用,防御性同步保证今后也走新域名)。
 外加前台 `mac_rep`「替换助手」登记,引导下游采集方跟着换。
 
 ## 乐播现场速查(实测 2026-08)
@@ -62,7 +63,7 @@ N=$(curl -sm10 -o/dev/null -w '%{http_code}/%{size_download}' "$(echo "$OLD_URL"
 php scripts/backup_rows.php <webroot> <旧域名逗号分隔>   # 写 /tmp 再由 root mv 到 /root
 # ② 主替换:改脚本头 CONFIG($NEW/$domains/$repRegister)后跑,一次做完 5 步:
 php scripts/replace.php <webroot>
-#    1 mac_rep 登记  2 vod_pic 域名替换  3 upload.remoteurl 改+chown www  4 清缓存/影子  5 域名分布
+#    1 mac_rep 登记  2 vod_pic 域名替换  3 remoteurl + api.ftp.url 改+chown www  4 清缓存/影子  5 域名分布
 ```
 `replace.php` 的每一步都是**幂等**的(已登记则跳过、无待迁域名则 0 行、remoteurl 已改则不动),
 重复跑安全。要点:
@@ -71,6 +72,12 @@ php scripts/replace.php <webroot>
   (番号站踩过裸 `REPLACE('2607')` 毁 `20260701` 的坑,本脚本没有)。
 - 步骤 3 改完配置**自动 `chown www:www`**——踩过的坑:root 写过的 `maccms.php` 若不 chown 回 www,
   **后台/采集/上传保存全静默失败**;并带 `php -l` 语法自检,改坏就放弃写入保原样。
+- 步骤 3 **两处渲染域名都改**:`upload.remoteurl`(相对路径封面+新图)**和** `upload.api.ftp.url`
+  (FTP 上传封面的对外前缀;乐播 FTP 未启用,此为防御性——今后启用也走新域名)。api.ftp.url 用
+  锚定在 `'ftp'=>array(...)` 块内的正则改,不碰同名的 qiniu/upyun `'url'`。
+- 坑:配置语法自检的 tmp 文件**必须写在 `application/extra/` 外**(用 sys_get_temp_dir())——
+  `middleware/Begin.php` 反webshell 每次 HTTP 请求都扫删 extra/ 内非白名单文件,并发会在 `php -l`
+  前把 extra/ 里的 tmp 删掉(表现"文件打不开")。最终只覆盖白名单文件 maccms.php 本身。
 - `upload.api.ftp.*` 乐播是**空的**(新采集封面是完整 URL,不走 FTP 回传),故只需 `remoteurl`;
   若哪天启用 FTP 图床,`api.ftp.url` 也要一起改。
 - **前置**:跑前 classify.php 已确认 B 能返回相对路径那批图(`curl https://B/upload/vod/2019/.../x.jpg`=200)。
