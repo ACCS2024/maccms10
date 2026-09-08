@@ -52,34 +52,30 @@ N=$(curl -sm10 -o/dev/null -w '%{http_code}/%{size_download}' "$(echo "$OLD_URL"
   → 交图床运营方同步到新域名同路径 → 再强制 REPLACE(站长语:"同步完就是新的了")。
   清单存 `/root/lebozy-incident-*/backups/`,别丢。
 
-## 1-2. 执行(全程备份;脚本在 webroot 用 www 账号跑)
-```bash
-# 备份将被改的行(vod_id+vod_pic,gz)——真反悔时按主键回灌
-php scripts/backup_rows.php <域名1,域名2,...>       # 写 /tmp 再 mv 到 /root(www 写不了 /root)
-# 主替换 + mac_rep 登记
-php scripts/replace.php                              # 见脚本头部 $NEW / $domains / $repRegister
-```
-`replace.php` 的 UPDATE **把 http 和 https 一并归一到 `https://B`**(很多老域名是 http,新域名走 https):
-```sql
-UPDATE mac_vod
-SET vod_pic = REPLACE(REPLACE(vod_pic,'https://D','https://B'),'http://D','https://B')
-WHERE vod_pic LIKE '%D%';
--- 'http://D' 不是 'https://D' 的子串(s 隔开),不会二次误替
-```
-量大无妨(15 万行 ~秒级)。
+## 1-3. 执行(一条命令跑完,全程幂等)
+🔴 **封面分两批,replace.php 一次都覆盖**(别只改一批):
+- **写死域名的**(`https://旧域名/...`,乐播约 16 万行)→ SQL REPLACE(步骤 2)
+- **相对路径的**(`upload/vod/...` 不带域名,约 52%/17 万行)→ 靠本站 `upload.remoteurl` 拼域名 → 改配置(步骤 3)
 
-## 3. 关联配置(**别漏,否则相对路径老图 + 新图仍打旧域名**)
 ```bash
-# upload.remoteurl:唯一带旧图床域名的地方,管 52% 相对路径封面 + 今后新图显示
-#   application/extra/maccms.php: 'upload'=>['remoteurl'=>'https://<旧>/'] → 'https://B/'
+# ① 备份将被改的行(vod_id+vod_pic,gz)——真反悔时按主键回灌
+php scripts/backup_rows.php <webroot> <旧域名逗号分隔>   # 写 /tmp 再由 root mv 到 /root
+# ② 主替换:改脚本头 CONFIG($NEW/$domains/$repRegister)后跑,一次做完 5 步:
+php scripts/replace.php <webroot>
+#    1 mac_rep 登记  2 vod_pic 域名替换  3 upload.remoteurl 改+chown www  4 清缓存/影子  5 域名分布
 ```
-- 改前先确认 B 能返回相对路径那批图:`curl https://B/upload/vod/2019/.../x.jpg` 要 200。
-- `upload.api.ftp.*` 乐播是**空的**(不走 FTP 回传,新采集封面是完整 URL),所以只需改 `remoteurl`;
-  若哪天启用了 FTP 图床,`api.ftp.url` 也要一起改成 B。
-- 改完**同步影子备份**:`rm runtime/config-shadow/maccms.php`(下次请求按新配置自动重建;
-  见 `config/maccms.php` 自愈桩)。
+`replace.php` 的每一步都是**幂等**的(已登记则跳过、无待迁域名则 0 行、remoteurl 已改则不动),
+重复跑安全。要点:
+- vod_pic 的 UPDATE **把 http 和 https 一并归一到 `https://B`**(老域名常是 http),
+  **全域名带 scheme 匹配**(`https://D`/`http://D`),只碰 host 位,**不会误伤路径里的数字日期**
+  (番号站踩过裸 `REPLACE('2607')` 毁 `20260701` 的坑,本脚本没有)。
+- 步骤 3 改完配置**自动 `chown www:www`**——踩过的坑:root 写过的 `maccms.php` 若不 chown 回 www,
+  **后台/采集/上传保存全静默失败**;并带 `php -l` 语法自检,改坏就放弃写入保原样。
+- `upload.api.ftp.*` 乐播是**空的**(新采集封面是完整 URL,不走 FTP 回传),故只需 `remoteurl`;
+  若哪天启用 FTP 图床,`api.ftp.url` 也要一起改。
+- **前置**:跑前 classify.php 已确认 B 能返回相对路径那批图(`curl https://B/upload/vod/2019/.../x.jpg`=200)。
 
-## 4. 前台「替换助手」mac_rep 登记(引导下游采集方)
+## 4. 前台「替换助手」mac_rep 登记(replace.php 步骤 1 已自动做;此处讲原理)
 ```sql
 INSERT INTO mac_rep (rep_type,rep_original,rep_replacement,rep_note,rep_status,rep_applied,rep_applied_time,rep_create_time)
 VALUES ('视频封面替换','<旧大域名>','<B>','封面图床域名迁移至 <B>',1,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
@@ -88,20 +84,17 @@ VALUES ('视频封面替换','<旧大域名>','<B>','封面图床域名迁移至
   **杂七杂八很少的(几十上百条的)不用写**——站长明确要求,免得替换助手一堆噪声记录。
 - 前台 `index/Rep` 按 rep_type 取「该类最新一条的 replacement」当「当前生效值」,所以登记后自动显示 B。
 
-## 5. 验证(权威=详情页 + 首页封面直连)
+## 5. 验证(权威=详情页 + 首页封面直连;清缓存 replace.php 步骤 4 已做)
 ```bash
-# 清缓存
-rm -f  $ROOT/runtime/index/temp/*.php
-rm -rf $ROOT/runtime/cache/*
-# 域名分布应只剩 B(+ 明确排除项)
-SELECT ... GROUP BY d;                              # 见 §0 那条
+# 域名分布应只剩 B(+ 明确排除项)—— replace.php 步骤 5 已打印,也可自己再查
+SELECT SUBSTRING_INDEX(SUBSTRING_INDEX(vod_pic,'/',3),'//',-1) d,COUNT(*) c
+FROM mac_vod WHERE vod_pic LIKE 'http%' GROUP BY d ORDER BY c DESC;
 # 首页/详情页 img 全是 B 且 200
-curl -s -H 'Host: www.lebozy.com' http://127.0.0.1/ | grep -oE 'src="https://B[^"]*"' | while read ...; do curl ...; done
-# 详情页取相对路径片 + 各源域名片各一,确认 200
+curl -s -H 'Host: www.lebozy.com' http://127.0.0.1/ | grep -oE 'src="https://B[^"]*"' | while read u; do curl -s -o/dev/null -w "%{http_code} $u\n" "$u"; done
+# 详情页取【相对路径片(走 remoteurl)+ 完整URL片】各一,确认 200 —— 两批都要验
 # /index.php/macrep.html「当前生效值」已是 B
 ```
-opcache 若 `validate_timestamps=On`(乐播是)则配置改动自动生效,无需 reload php-fpm;
-关掉的话要 reload。
+opcache 若 `validate_timestamps=On`(乐播是)则配置改动自动生效,无需 reload php-fpm;关掉的话要 reload。
 
 ## 回滚
 - vod_pic:`UPDATE mac_vod SET vod_pic=REPLACE(vod_pic,'B','<某旧域名>') ...`——但多域名归一后
