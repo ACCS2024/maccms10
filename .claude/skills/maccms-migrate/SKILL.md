@@ -191,6 +191,55 @@ CF 域名注意静态资源缓存(见陷阱 1)。
       扫隐患:`grep -rnE 'limit\(\s*["'"'"'][^"'"'"']*,' application --include=*.php`。
     两条都已进本仓库(`config/database.php`、`VodSearch.php`),新部署自带;老库迁移后务必回归一遍采集入库。
 
+17. 🔴 **只看 HTTP 状态码的冒烟测试会漏掉「200 但页面不可用」**(2026-09 杏吧,站主当场打脸)。
+    19 项状态码全绿,站主一开首页就发现**列表全空 + 站内链接全 404**。两条真因:
+    - **`rewrite.status/route_status` 默认 '1',但本仓库不发 nginx 伪静态规则** →
+      `mac_url()` 生成 `/vodtype/71.html` 全部 404。本项目既定约定就是不走伪静态
+      (`mac_rep_url`/`mac_help_url` 都写死 `/index.php/<route>.html`),**样板改 '0'**。
+    - **PHP 8 字符串比较语义**(见 #18)。
+    **正确做法**:① **爬页面真实生成的链接**,别自己拼 URL —— 主题里
+    `artdetail-<id>` 是**连字符**、`voddetail/<id>` 是**斜杠**,拼错会误报 404;
+    ② **双判据**:状态码 + **正文非空**(内容链接数 / 可见文本长度),只看状态码等于没测;
+    ③ 分类页要**逐个**验(56 个分类逐个查有无内容),别抽样。
+
+18. 🔴 **PHP 7→8 字符串比较语义变更 —— 静默变空,最阴险**(2026-09 杏吧)。
+    ```php
+    if($type=='current'){ $type = intval($GLOBALS['type_id']); }  // 首页 → int 0
+    if($type!='all') { ...按分类筛选... }
+    ```
+    PHP 7 里 `0 == 'all'` 为**真**(非数字字符串按 0 比较)→ 整段筛选被跳过 = 不限分类;
+    PHP 8 为**假** → 只筛顶级分类,而内容都挂子分类 → **一条都查不到**。
+    **不抛异常、不写日志、HTTP 200**,靠状态码和错误日志永远发现不了。
+    Vod/Art/Actor/Website/Manga 五个模型同一条链(已修)。
+    迁移后**扫一遍 `== 'all'` / `!= 'all'` 这类与可能为整数 0 的变量比较**;
+    有 `!empty()` 守卫的(如 `$ids`/`$level`)不受影响。
+
+19. 🔴 **`vendor/` 不入 git,坏了会靠 rsync 传染到每台新机**(2026-09 杏吧)。
+    `composer.lock` 里有 `topthink/think-view`+`think-template`,但
+    `vendor/composer/installed.json` 与 `autoload_psr4.php` 都没注册它们(包目录是手工塞的)→
+    整站 500 `Driver [Think] not supported.`,而 `php -l` 全绿、文件都在。
+    `bin/maccms` 已加 `verify_autoload()`:**清单层**(lock vs installed.json)+
+    **类探针层**(真的 require 再 class_exists,防"清单对了但 psr-4 没生成"),
+    检出即按 lock 跑 `composer install`,修不好就中止安装。
+
+20. **会员组分类权限要两个字段同时满足**:`mac_group.group_type`(`,id,id,` 逗号白名单)
+    **和** `group_popedom[type_id][p]`。杏吧三个组原本都只覆盖 32 个分类,导致
+    2872 部视频 + 77401 篇文章**无人可访问**(与源站一致,是站点历史遗漏)。
+    ⚠️ **从备份恢复数据会覆盖 `mac_group`,恢复后必须重新补权限**,再清缓存。
+
+21. **从宝塔历史备份恢复被删数据**(2026-09 杏吧被攻击者删了 19,072 部影片)。
+    备份在 `/www/backup/database/mysql/<库>/`(手动)与 `.../crontab_backup/<库>/`(每日 cron)。
+    - **先按体积排时间线**定位删除窗口(杏吧:09-08 08:00 是 691.9M,15:35 骤降到 544.6M)。
+    - **数真实行数**再决定用哪份:`zcat x.gz | awk 'index($0,"INSERT INTO `表` VALUES")==1{c+=gsub(/\),\(/,"")+1} END{print c}'`。
+      ⚠️ mysqldump **按字母序**导表,`mac_art` 在 `mac_vod` **之前** —— 计数脚本别在 mac_art 处 `exit`,否则得 0。
+    - 恢复走「**导入临时库 → 公共字段 `INSERT...SELECT` 重灌生产库**」,保住新库的
+      InnoDB/utf8mb4 结构与本次部署的配置成果,**跳过 `mac_admin`**;恢复前先整库备份。
+    - `SET @@GLOBAL.GTID_PURGED` 报 `ERROR 3546` 用 `--force` 跳过,不影响数据。
+
+22. **老机可能同时装了两套 nginx**(2026-09 杏吧:PATH 里的 `nginx` 是 lecdn 的 openresty,
+    实际跑的是 `/www/server/nginx/sbin/nginx`)。**测配置和 reload 必须用绝对路径**,
+    否则改了个根本不生效的配置还以为成功了(`nginx -t` 会显示它测的是哪个 conf,看一眼)。
+
 # 老机退役
 - 退役前 `curl -sD-` 验主站已**零真实流量**(只剩 CF 探测 + `.git`/`wp-login` 类爬虫扫描 = 正常噪声,可放心退)。
 - 把老机备份(`/www/backup`、`/home/{migration,dbbak}`、`wwwroot_*.tar.gz`、`rclone.conf`、`safemac` 隔离体)
