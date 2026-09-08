@@ -22,6 +22,33 @@ class Collect extends Base {
     protected $insert     = [];
     protected $update     = [];
 
+
+    /**
+     * 采集配置的默认值。老站保存的 extra/maccms.php 可能早于某些键(后加的功能),
+     * 而 PHP 8 把「读未定义数组键」从警告升级为 ErrorException —— 少一个键
+     * 就会让整次采集崩掉。这里按模块补默认值,取值与
+     * application/data/config/maccms.example.php 保持一致。
+     */
+    private static function collectDefaults(string $module): array
+    {
+        $common = [
+            'status'       => '0',  'hits_start' => '1',   'hits_end'     => '1000',
+            'updown_start' => '1',  'updown_end' => '1000','score'        => '1',
+            'pic'          => '0',  'tag'        => '0',   'class_filter' => '1',
+            'psename'      => '0',  'psernd'     => '0',   'psesyn'       => '0',
+            'urlrole'      => '0',  'inrule'     => '',    'uprule'       => '',
+            'filter'       => '',   'namewords'  => '',    'thesaurus'    => '',
+            'words'        => '',
+        ];
+        if ($module === 'vod') {
+            return $common + [
+                'pseplayer'  => '0', 'psearea'   => '0', 'pselang'   => '0',
+                'playerwords'=> '',  'areawords' => '',  'langwords' => '',
+            ];
+        }
+        return $common;
+    }
+
     public function listData($where,$order,$page=1,$limit=20,$start=0)
     {
         $page = $page > 0 ? (int)$page : 1;
@@ -194,14 +221,14 @@ class Collect extends Base {
     public function vod_xml($param,$html='')
     {
         $url_param = [];
-        $url_param['ac'] = $param['ac'];
-        $url_param['t'] = $param['t'];
-        $url_param['pg'] = is_numeric($param['page']) ? $param['page'] : '';
-        $url_param['h'] = $param['h'];
-        $url_param['ids'] = $param['ids'];
-        $url_param['wd'] = $param['wd'];
+        $url_param['ac'] = $param['ac'] ?? '';
+        $url_param['t'] = $param['t'] ?? '';
+        $url_param['pg'] = is_numeric($param['page'] ?? '') ? $param['page'] : '';
+        $url_param['h'] = $param['h'] ?? '';
+        $url_param['ids'] = $param['ids'] ?? '';
+        $url_param['wd'] = $param['wd'] ?? '';
         if(empty($param['h']) && !empty($param['rday'])){
-            $url_param['h'] = $param['rday'];
+            $url_param['h'] = $param['rday'] ?? '';
         }
 
         if($param['ac']!='list'){
@@ -261,7 +288,7 @@ class Collect extends Base {
         $array_data = [];
         foreach($xml->list->video as $video){
             $bind_key = $param['cjflag'] .'_'.(string)$video->tid;
-            if($bind_list[$bind_key] >0){
+            if(($bind_list[$bind_key] ?? 0) >0){
                 $array_data[$key]['type_id'] = $bind_list[$bind_key];
             }
             else{
@@ -346,12 +373,12 @@ class Collect extends Base {
     public function vod_json($param)
     {
         $url_param = [];
-        $url_param['ac'] = $param['ac'];
-        $url_param['t'] = $param['t'];
-        $url_param['pg'] = is_numeric($param['page']) ? $param['page'] : '';
-        $url_param['h'] = $param['h'];
-        $url_param['ids'] = $param['ids'];
-        $url_param['wd'] = $param['wd'];
+        $url_param['ac'] = $param['ac'] ?? '';
+        $url_param['t'] = $param['t'] ?? '';
+        $url_param['pg'] = is_numeric($param['page'] ?? '') ? $param['page'] : '';
+        $url_param['h'] = $param['h'] ?? '';
+        $url_param['ids'] = $param['ids'] ?? '';
+        $url_param['wd'] = $param['wd'] ?? '';
 
         if($param['ac']!='list'){
             $url_param['ac'] = 'videolist';
@@ -394,7 +421,7 @@ class Collect extends Base {
         foreach($json['list'] as $key=>$v){
             $array_data[$key] = $v;
             $bind_key = $param['cjflag'] .'_'.$v['type_id'];
-            if($bind_list[$bind_key] >0){
+            if(($bind_list[$bind_key] ?? 0) >0){
                 $array_data[$key]['type_id'] = $bind_list[$bind_key];
             }
             else{
@@ -637,7 +664,8 @@ class Collect extends Base {
 
         $config = config('maccms.collect');
         $config = $config['vod'];
-        $config_sync_pic = $param['sync_pic_opt'] > 0 ? $param['sync_pic_opt'] : $config['pic'];
+        $config += self::collectDefaults('vod');
+        $config_sync_pic = ($param['sync_pic_opt'] ?? 0) > 0 ? $param['sync_pic_opt'] : $config['pic'];
         $filter_year = !empty($param['filter_year']) ? $param['filter_year'] : '';
         $filter_year_list = $filter_year ? get_array_unique_id_list(explode(',', $filter_year)) : [];
         $players = config('vodplayer');
@@ -1350,12 +1378,12 @@ class Collect extends Base {
     public function art_json($param)
     {
         $url_param = [];
-        $url_param['ac'] = $param['ac'];
-        $url_param['t'] = $param['t'];
-        $url_param['pg'] = is_numeric($param['page']) ? $param['page'] : '';
-        $url_param['h'] = $param['h'];
-        $url_param['ids'] = $param['ids'];
-        $url_param['wd'] = $param['wd'];
+        $url_param['ac'] = $param['ac'] ?? '';
+        $url_param['t'] = $param['t'] ?? '';
+        $url_param['pg'] = is_numeric($param['page'] ?? '') ? $param['page'] : '';
+        $url_param['h'] = $param['h'] ?? '';
+        $url_param['ids'] = $param['ids'] ?? '';
+        $url_param['wd'] = $param['wd'] ?? '';
 
         if($param['ac']!='list'){
             $url_param['ac'] = 'detail';
@@ -1399,7 +1427,7 @@ class Collect extends Base {
         foreach($json['list'] as $key=>$v){
             $array_data[$key] = $v;
             $bind_key = $param['cjflag'] .'_'.$v['type_id'];
-            if($bind_list[$bind_key] >0){
+            if(($bind_list[$bind_key] ?? 0) >0){
                 $array_data[$key]['type_id'] = $bind_list[$bind_key];
             }
             else{
@@ -1425,12 +1453,12 @@ class Collect extends Base {
     public function manga_json($param)
     {
         $url_param = [];
-        $url_param['ac'] = $param['ac'];
-        $url_param['t'] = $param['t'];
-        $url_param['pg'] = is_numeric($param['page']) ? $param['page'] : '';
-        $url_param['h'] = $param['h'];
-        $url_param['ids'] = $param['ids'];
-        $url_param['wd'] = $param['wd'];
+        $url_param['ac'] = $param['ac'] ?? '';
+        $url_param['t'] = $param['t'] ?? '';
+        $url_param['pg'] = is_numeric($param['page'] ?? '') ? $param['page'] : '';
+        $url_param['h'] = $param['h'] ?? '';
+        $url_param['ids'] = $param['ids'] ?? '';
+        $url_param['wd'] = $param['wd'] ?? '';
 
         if($param['ac']!='list'){
             $url_param['ac'] = 'detail';
@@ -1474,7 +1502,7 @@ class Collect extends Base {
         foreach($json['list'] as $key=>$v){
             $array_data[$key] = $v;
             $bind_key = $param['cjflag'] .'_'.$v['type_id'];
-            if($bind_list[$bind_key] >0){
+            if(($bind_list[$bind_key] ?? 0) >0){
                 $array_data[$key]['type_id'] = $bind_list[$bind_key];
             }
             else{
@@ -1505,7 +1533,8 @@ class Collect extends Base {
 
         $config = config('maccms.collect');
         $config = $config['art'];
-        $config_sync_pic = $param['sync_pic_opt'] > 0 ? $param['sync_pic_opt'] : $config['pic'];
+        $config += self::collectDefaults('art');
+        $config_sync_pic = ($param['sync_pic_opt'] ?? 0) > 0 ? $param['sync_pic_opt'] : $config['pic'];
 
         $type_list = (new \app\common\model\Type())->getCache('type_list');
         $filter_arr = explode(',',$config['filter']); $filter_arr = array_filter($filter_arr);
@@ -1770,12 +1799,12 @@ class Collect extends Base {
     public function actor_json($param)
     {
         $url_param = [];
-        $url_param['ac'] = $param['ac'];
-        $url_param['t'] = $param['t'];
-        $url_param['pg'] = is_numeric($param['page']) ? $param['page'] : '';
-        $url_param['h'] = $param['h'];
-        $url_param['ids'] = $param['ids'];
-        $url_param['wd'] = $param['wd'];
+        $url_param['ac'] = $param['ac'] ?? '';
+        $url_param['t'] = $param['t'] ?? '';
+        $url_param['pg'] = is_numeric($param['page'] ?? '') ? $param['page'] : '';
+        $url_param['h'] = $param['h'] ?? '';
+        $url_param['ids'] = $param['ids'] ?? '';
+        $url_param['wd'] = $param['wd'] ?? '';
 
         if($param['ac']!='list'){
             $url_param['ac'] = 'detail';
@@ -1818,7 +1847,7 @@ class Collect extends Base {
         foreach($json['list'] as $key=>$v){
             $array_data[$key] = $v;
             $bind_key = $param['cjflag'] .'_'.$v['type_id'];
-            if($bind_list[$bind_key] >0){
+            if(($bind_list[$bind_key] ?? 0) >0){
                 $array_data[$key]['type_id'] = $bind_list[$bind_key];
             }
             else{
@@ -1849,7 +1878,8 @@ class Collect extends Base {
 
         $config = config('maccms.collect');
         $config = $config['actor'];
-        $config_sync_pic = $param['sync_pic_opt'] > 0 ? $param['sync_pic_opt'] : $config['pic'];
+        $config += self::collectDefaults('actor');
+        $config_sync_pic = ($param['sync_pic_opt'] ?? 0) > 0 ? $param['sync_pic_opt'] : $config['pic'];
 
         $type_list = (new \app\common\model\Type())->getCache('type_list');
         $filter_arr = explode(',',$config['filter']); $filter_arr = array_filter($filter_arr);
@@ -2075,12 +2105,12 @@ class Collect extends Base {
     public function role_json($param)
     {
         $url_param = [];
-        $url_param['ac'] = $param['ac'];
-        $url_param['t'] = $param['t'];
-        $url_param['pg'] = is_numeric($param['page']) ? $param['page'] : '';
-        $url_param['h'] = $param['h'];
-        $url_param['ids'] = $param['ids'];
-        $url_param['wd'] = $param['wd'];
+        $url_param['ac'] = $param['ac'] ?? '';
+        $url_param['t'] = $param['t'] ?? '';
+        $url_param['pg'] = is_numeric($param['page'] ?? '') ? $param['page'] : '';
+        $url_param['h'] = $param['h'] ?? '';
+        $url_param['ids'] = $param['ids'] ?? '';
+        $url_param['wd'] = $param['wd'] ?? '';
 
         if($param['ac']!='list'){
             $url_param['ac'] = 'detail';
@@ -2134,7 +2164,8 @@ class Collect extends Base {
 
         $config = config('maccms.collect');
         $config = $config['role'];
-        $config_sync_pic = $param['sync_pic_opt'] > 0 ? $param['sync_pic_opt'] : $config['pic'];
+        $config += self::collectDefaults('role');
+        $config_sync_pic = ($param['sync_pic_opt'] ?? 0) > 0 ? $param['sync_pic_opt'] : $config['pic'];
 
         $filter_arr = explode(',',$config['filter']); $filter_arr = array_filter($filter_arr);
         $pse_rnd = explode('#',$config['words']); $pse_rnd = array_filter($pse_rnd);
@@ -2378,12 +2409,12 @@ class Collect extends Base {
     public function website_json($param)
     {
         $url_param = [];
-        $url_param['ac'] = $param['ac'];
-        $url_param['t'] = $param['t'];
-        $url_param['pg'] = is_numeric($param['page']) ? $param['page'] : '';
-        $url_param['h'] = $param['h'];
-        $url_param['ids'] = $param['ids'];
-        $url_param['wd'] = $param['wd'];
+        $url_param['ac'] = $param['ac'] ?? '';
+        $url_param['t'] = $param['t'] ?? '';
+        $url_param['pg'] = is_numeric($param['page'] ?? '') ? $param['page'] : '';
+        $url_param['h'] = $param['h'] ?? '';
+        $url_param['ids'] = $param['ids'] ?? '';
+        $url_param['wd'] = $param['wd'] ?? '';
 
         if($param['ac']!='list'){
             $url_param['ac'] = 'detail';
@@ -2426,7 +2457,7 @@ class Collect extends Base {
         foreach($json['list'] as $key=>$v){
             $array_data[$key] = $v;
             $bind_key = $param['cjflag'] .'_'.$v['type_id'];
-            if($bind_list[$bind_key] >0){
+            if(($bind_list[$bind_key] ?? 0) >0){
                 $array_data[$key]['type_id'] = $bind_list[$bind_key];
             }
             else{
@@ -2457,7 +2488,8 @@ class Collect extends Base {
 
         $config = config('maccms.collect');
         $config = $config['website'];
-        $config_sync_pic = $param['sync_pic_opt'] > 0 ? $param['sync_pic_opt'] : $config['pic'];
+        $config += self::collectDefaults('website');
+        $config_sync_pic = ($param['sync_pic_opt'] ?? 0) > 0 ? $param['sync_pic_opt'] : $config['pic'];
 
         $type_list = (new \app\common\model\Type())->getCache('type_list');
         $filter_arr = explode(',',$config['filter']); $filter_arr = array_filter($filter_arr);
@@ -2686,12 +2718,12 @@ class Collect extends Base {
     public function comment_json($param)
     {
         $url_param = [];
-        $url_param['ac'] = $param['ac'];
-        $url_param['t'] = $param['t'];
-        $url_param['pg'] = is_numeric($param['page']) ? $param['page'] : '';
-        $url_param['h'] = $param['h'];
-        $url_param['ids'] = $param['ids'];
-        $url_param['wd'] = $param['wd'];
+        $url_param['ac'] = $param['ac'] ?? '';
+        $url_param['t'] = $param['t'] ?? '';
+        $url_param['pg'] = is_numeric($param['page'] ?? '') ? $param['page'] : '';
+        $url_param['h'] = $param['h'] ?? '';
+        $url_param['ids'] = $param['ids'] ?? '';
+        $url_param['wd'] = $param['wd'] ?? '';
 
         if($param['ac']!='list'){
             $url_param['ac'] = 'detail';
@@ -2745,7 +2777,8 @@ class Collect extends Base {
 
         $config = config('maccms.collect');
         $config = $config['comment'];
-        $config_sync_pic = $param['sync_pic_opt'] > 0 ? $param['sync_pic_opt'] : $config['pic'];
+        $config += self::collectDefaults('comment');
+        $config_sync_pic = ($param['sync_pic_opt'] ?? 0) > 0 ? $param['sync_pic_opt'] : $config['pic'];
 
         $filter_arr = explode(',',$config['filter']); $filter_arr = array_filter($filter_arr);
         $pse_rnd = explode('#',$config['words']); $pse_rnd = array_filter($pse_rnd);
@@ -2975,14 +3008,14 @@ class Collect extends Base {
     public function manga_xml($param,$html='')
     {
         $url_param = [];
-        $url_param['ac'] = $param['ac'];
-        $url_param['t'] = $param['t'];
-        $url_param['pg'] = is_numeric($param['page']) ? $param['page'] : '';
-        $url_param['h'] = $param['h'];
-        $url_param['ids'] = $param['ids'];
-        $url_param['wd'] = $param['wd'];
+        $url_param['ac'] = $param['ac'] ?? '';
+        $url_param['t'] = $param['t'] ?? '';
+        $url_param['pg'] = is_numeric($param['page'] ?? '') ? $param['page'] : '';
+        $url_param['h'] = $param['h'] ?? '';
+        $url_param['ids'] = $param['ids'] ?? '';
+        $url_param['wd'] = $param['wd'] ?? '';
         if(empty($param['h']) && !empty($param['rday'])){
-            $url_param['h'] = $param['rday'];
+            $url_param['h'] = $param['rday'] ?? '';
         }
 
         if($param['ac']!='list'){
@@ -3041,7 +3074,7 @@ class Collect extends Base {
         $array_data = [];
         foreach($xml->list->manga as $manga){
             $bind_key = $param['cjflag'] .'_'.(string)$manga->tid;
-            if($bind_list[$bind_key] >0){
+            if(($bind_list[$bind_key] ?? 0) >0){
                 $array_data[$key]['type_id'] = $bind_list[$bind_key];
             }
             else{
@@ -3122,7 +3155,8 @@ class Collect extends Base {
 
         $config = config('maccms.collect');
         $config = $config['manga'];
-        $config_sync_pic = $param['sync_pic_opt'] > 0 ? $param['sync_pic_opt'] : $config['pic'];
+        $config += self::collectDefaults('manga');
+        $config_sync_pic = ($param['sync_pic_opt'] ?? 0) > 0 ? $param['sync_pic_opt'] : $config['pic'];
 
         $type_list = (new \app\common\model\Type())->getCache('type_list');
         $filter_arr = explode(',',$config['filter']);
