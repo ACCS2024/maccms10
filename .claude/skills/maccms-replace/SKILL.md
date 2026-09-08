@@ -44,10 +44,24 @@ UPDATE mac_vod SET vod_pic=REPLACE(vod_pic,'A','B') WHERE vod_pic LIKE '%A%';
 ```
 量大无妨（实测 25 万行 ~8s）。要极致平滑可按主键分批，逻辑见 `Rep::plan()`（主键开窗口，避免每批全表扫）。
 
-### 3. ③ 关联配置（按类型，别漏——否则"新数据又变回老域名"）
-- **封面/播放 = 图床域名迁移**：若 `application/extra/maccms.php` 的 `upload.api.ftp.url` 还是老域名 A，
-  **今后新采集/上传的封面会继续打 A** → 按需把两站的 `upload.api.ftp.url` 改成 B（**前提：A、B 指同一图床**）。
-- **播放器解析变了**：后台「播放器」改解析接口地址；自定义源要 `ps=1`+填解析（见 `maccms-migrate` 陷阱 2、3）。
+### 3. ③ 关联配置（别漏——否则"新数据又变回老域名"或"相对路径封面挂掉"）
+**封面在库里有两种存储形态，域名来源不同，都要照顾到**（`mac_url_img()` common.php:2924 的逻辑）：
+- **形态 A：域名写死在 vod_pic**（`https://<域名>/…` 或 `mac://<域名>/…`）。`mac://` 显示时只把 `mac:`
+  换成 `upload.protocol`(http/https)、**保留内嵌域名** → **靠第 ② 步 REPLACE 换掉**（REPLACE 不分 scheme,
+  http 和 mac:// 一起换）。
+- **形态 B：相对路径**（`upload/vod/…`，vod_pic 不带域名）。显示时 `mac_url_img` 拼域名——
+  **仅当 `upload.mode=='remote'` 用 `upload.remoteurl`**；否则(如 `mode=Ftp`)用 `MAC_PATH`(站根)。
+  → **remote 模式的采集站(乐播/番号)有大量相对封面**，必须把 `application/extra/maccms.php` 的
+  `upload.remoteurl` 也改成 B，否则这批继续走老域名 / 默认 `img.test.com`。
+  先 `SELECT COUNT(*) FROM mac_vod WHERE vod_pic LIKE 'upload/%' OR vod_pic LIKE '/upload/%'` 看有没有。
+- **新上传出口 `upload.api.ftp.url`**（FTP 存储模式）：不改则今后新采集/上传的封面继续打老域名 A →
+  改成 B（前提 A、B 同图床）。
+- ⚠️ **`mode=Ftp` 的站(如森林)**：封面走形态 A（`mac://` 带域名，REPLACE 管），`remoteurl` 是默认
+  `img.test.com` 但**空转不生效**；为卫生/防日后切 remote 也一并设成 B，但真正起作用的是 `ftp.url`。
+- **播放器解析变了**：后台「播放器」改解析接口地址；自定义源 `ps=1`+填解析（见 `maccms-migrate` 陷阱 2、3）。
+
+> 落地特化里两种形态都有现成脚本：番号 `fanhao-image-replace`（vod_pic 写死域名 replace-multi.sh
+> + 相对路径 upd_remoteurl.sh，两批都换）、乐播 `lebozy-image-replace`（remote 模式、remoteurl 为主）。
 
 ### 4. ④ 收尾
 - 清 runtime 缓存（both sites）：`find $ROOT/runtime -path '*cache*' -o -path '*temp*' -name '*.php' -delete`。
