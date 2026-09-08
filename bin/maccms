@@ -54,7 +54,7 @@ maccms-cli —— 一键建站 / 快速部署
         删除站点目录;加 --drop-db 时同时删库/账号(需 --db-name)。
 
   doctor
-        体检 PHP 版本 / 扩展 / rsync。
+        体检 PHP 版本 / 扩展 / rsync / vendor 自动加载完整性。
 
   help
         显示本帮助。
@@ -123,6 +123,10 @@ case "$cmd" in
     log "部署代码 → $dest"
     provision_code "$SRC_ROOT" "$dest"
     ensure_writable "$dest"
+    # rsync 把源码树整份带过来,vendor 也一起 —— 源树的 vendor 若缺 composer
+    # 自动加载注册,新站会以整站 500 "Driver [Think] not supported." 收场。
+    # 在安装前拦下,必要时按 composer.lock 重建。
+    verify_autoload "$dest" || die "vendor 自动加载不完整,已中止安装(详见上方提示)"
     log "开始安装…"
     rp="$(read_root_pass)"
     MACCMS_DB_ROOT_PASS="$rp" "$(php_bin)" "$dest/think" site:install ${DEFAULTS[@]+"${DEFAULTS[@]}"} "$@" </dev/null
@@ -131,6 +135,7 @@ case "$cmd" in
 
   install)
     ensure_writable "$SRC_ROOT"
+    verify_autoload "$SRC_ROOT" || die "vendor 自动加载不完整,已中止安装(详见上方提示)"
     rp="$(read_root_pass)"
     MACCMS_DB_ROOT_PASS="$rp" "$(php_bin)" "$SRC_ROOT/think" site:install ${DEFAULTS[@]+"${DEFAULTS[@]}"} "$@" </dev/null
     ;;

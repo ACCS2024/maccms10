@@ -59,6 +59,101 @@ provision_code() {
   fi
 }
 
+# ── vendor/ 自动加载完整性校验 + 自愈 ─────────────────────────────────────────
+# 为什么需要:vendor/ 在 .gitignore 里,不随 git 走,是各机自行拼装的;而
+# provision_code 用 rsync 整树同步,一台机器的坏 vendor 会原样传染到每台新机。
+# 真实事故(2026-09 杏吧迁移):composer.lock 里有 topthink/think-view +
+# think-template,但 vendor/composer/installed.json 与 autoload_psr4.php 都没有
+# 它们 —— 包目录是手工塞进 vendor/topthink/ 的,自动加载器从没注册过。
+# 表现是整站 500 "Driver [Think] not supported.",且 php -l 全绿、文件都在,
+# 极难一眼看出。故在部署路径上强制校验。
+verify_autoload() {
+  local root="$1" php; php="$(php_bin)"
+
+  if [ ! -f "$root/composer.lock" ]; then
+    warn "无 composer.lock,跳过自动加载校验"
+    return 0
+  fi
+  if [ ! -f "$root/vendor/autoload.php" ]; then
+    warn "vendor/autoload.php 缺失 —— 需要 composer install"
+    _repair_autoload "$root" || return 1
+  fi
+
+  local report
+  report="$("$php" -r '
+    $root = $argv[1];
+    $lock = @json_decode(@file_get_contents("$root/composer.lock"), true);
+    $instF = "$root/vendor/composer/installed.json";
+    $inst = @json_decode(@file_get_contents($instF), true);
+    if (!is_array($lock) || !is_array($inst)) { echo "UNREADABLE"; exit; }
+    $have = [];
+    foreach (($inst["packages"] ?? $inst) as $p) {
+      if (isset($p["name"])) { $have[$p["name"]] = true; }
+    }
+    $miss = [];
+    foreach (($lock["packages"] ?? []) as $p) {
+      if (isset($p["name"]) && empty($have[$p["name"]])) { $miss[] = $p["name"]; }
+    }
+    echo $miss ? implode(",", $miss) : "OK";
+  ' "$root" 2>/dev/null)"
+
+  if [ "$report" = "UNREADABLE" ]; then
+    warn "composer.lock / installed.json 读取失败,尝试重建"
+    _repair_autoload "$root" || return 1
+  elif [ "$report" != "OK" ] && [ -n "$report" ]; then
+    warn "vendor 自动加载缺失包: $report"
+    _repair_autoload "$root" || return 1
+  fi
+
+  # 仅比对清单还不够:清单对了但 psr-4 映射没生成也会 500。这里真正 new 一次
+  # 类,把「能不能加载」这件事验到底。view 驱动是本项目实际栽过的那一个。
+  local probe
+  probe="$("$php" -r '
+    $root = $argv[1];
+    require "$root/vendor/autoload.php";
+    $need = ["think\\view\\driver\\Think", "think\\App", "think\\Template"];
+    $bad = [];
+    foreach ($need as $c) { if (!class_exists($c)) { $bad[] = $c; } }
+    echo $bad ? implode(",", $bad) : "OK";
+  ' "$root" 2>/dev/null)"
+
+  if [ "$probe" != "OK" ]; then
+    if [ -z "$probe" ]; then
+      warn "自动加载探针无法运行 —— vendor/autoload.php 本身已损坏"
+    else
+      warn "关键类无法自动加载: $probe"
+    fi
+    _repair_autoload "$root" || return 1
+    probe="$("$php" -r '
+      $root = $argv[1];
+      require "$root/vendor/autoload.php";
+      echo class_exists("think\\view\\driver\\Think") ? "OK" : "STILL_BROKEN";
+    ' "$root" 2>/dev/null)"
+    [ "$probe" = "OK" ] || die "vendor 自动加载修复失败。请在 $root 手动执行:
+    composer install --no-dev --optimize-autoloader"
+  fi
+
+  log "vendor 自动加载完整 ✅"
+}
+
+# 用 composer 按 lock 重建 vendor;没有 composer 就明确报错,不静默放过
+_repair_autoload() {
+  local root="$1" composer=""
+  for c in composer composer.phar /usr/local/bin/composer; do
+    command -v "$c" >/dev/null 2>&1 && { composer="$c"; break; }
+  done
+  if [ -z "$composer" ]; then
+    warn "未找到 composer,无法自动修复"
+    return 1
+  fi
+  log "按 composer.lock 重建 vendor(composer install --no-dev)…"
+  ( cd "$root" && COMPOSER_ALLOW_SUPERUSER=1 "$composer" install --no-dev --optimize-autoloader --no-interaction ) >&2 || {
+    warn "composer install 失败"
+    return 1
+  }
+  return 0
+}
+
 # 环境体检
 check_env() {
   local php; php="$(php_bin)"
@@ -68,4 +163,5 @@ check_env() {
   for ext in "${need[@]}"; do "$php" -m | grep -qi "^${ext}$" || miss+=("$ext"); done
   if [ "${#miss[@]}" -gt 0 ]; then warn "缺少扩展: ${miss[*]}"; else log "扩展齐全: ${need[*]}"; fi
   command -v rsync >/dev/null 2>&1 && log "rsync: 可用" || warn "rsync 不可用(new 将回落到 cp)"
+  verify_autoload "${MACCMS_DOCTOR_ROOT:-$PWD}" || warn "自动加载校验未通过"
 }
