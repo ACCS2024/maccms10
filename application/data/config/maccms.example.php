@@ -58,6 +58,11 @@ return array (
     'mob_ads_dir' => 'ads',
     'site_tel' => '',
     'site_wx' => '',
+    'site_publish_status' => '0',
+    'site_publish_links' => '',
+    'site_publish_groups' => '',
+    'site_publish_permanent_text' => '',
+    'site_publish_permanent_url' => '',
   ),
   'app' => 
   array (
@@ -151,6 +156,11 @@ return array (
     'anti_scrape_index_enabled' => '0',
     'anti_scrape_index_window_sec' => '60',
     'anti_scrape_index_max' => '90',
+    'count_cache_sec' => '60',
+    'rnd_window_size' => '0',
+    'search_manga_rule' => '',
+    'legacy_pathinfo_url' => '0',
+    'timming_token' => '',
   ),
   'user' => 
   array (
@@ -179,6 +189,8 @@ return array (
     'portrait_status' => '1',
     'portrait_size' => '100x100',
     'filter_words' => 'admin,cao,sex,xxx',
+    'manga_points_type' => '1',
+    'reg_group' => '1',
   ),
   'gbook' => 
   array (
@@ -314,6 +326,21 @@ return array (
       'type' => '1,2',
       'act' => '2',
     ),
+    'epay' => 
+    array (
+      'appid' => '',
+      'appkey' => '',
+      'api_url' => '',
+    ),
+    'jeepay' => 
+    array (
+      'api_url' => '',
+      'mch_no' => '',
+      'appid' => '',
+      'appkey' => '',
+      'way_codes' => '',
+      'verify_ssl' => '1',
+    ),
   ),
   'collect' => 
   array (
@@ -331,6 +358,9 @@ return array (
       'psename' => '1',
       'psernd' => '0',
       'psesyn' => '0',
+      'pseplayer' => '0',
+      'psearea' => '0',
+      'pselang' => '0',
       'urlrole' => '0',
       'inrule' => ',f,g',
       'uprule' => ',a',
@@ -338,6 +368,9 @@ return array (
       'namewords' => '第1季=第一季#第2季=第二季#第3季=第三季#第4季=第四季',
       'thesaurus' => ' =',
       'words' => 'aaa#bbb#ccc#ddd#eee',
+      'playerwords' => '',
+      'areawords' => '',
+      'langwords' => '',
     ),
     'art' => 
     array (
@@ -413,6 +446,7 @@ return array (
       'status' => '0',
       'updown_start' => '1',
       'updown_end' => '100',
+      'pic' => '0',
       'psernd' => '0',
       'psesyn' => '0',
       'inrule' => ',b',
@@ -582,6 +616,9 @@ return array (
     'vod_play' => '0',
     'vod_down' => '0',
     'art_detail' => '0',
+    'actor_detail' => '0',
+    'manga_detail' => '0',
+    'website_detail' => '0',
   ),
   'path' => 
   array (
@@ -664,6 +701,7 @@ label-<file> => label/index
 
 plotdetail/<id>-<page?>   => plot/plot
 plotdetail/<id>   => plot/detail',
+    'manga_id' => '0',
   ),
   'email' => 
   array (
@@ -726,6 +764,7 @@ plotdetail/<id>   => plot/detail',
       'appid' => '',
       'appkey' => '',
     ),
+    'content' => '',
   ),
   'extra' => 
   array (
@@ -788,5 +827,9 @@ plotdetail/<id>   => plot/detail',
     array (
       'token' => '',
     ),
+  ),
+  'website' => 
+  array (
+    'refer_visit_num' => '1',
   ),
 );
