@@ -90,6 +90,17 @@ bash scripts/replace.sh <旧域名> <新域名> --apply
 (`rep_type='视频封面替换'`,判重)、跑 `UPDATE ... REPLACE()`。
 16.7 万行实测 **2 秒**。
 
+**但 `replace.sh` 是单域名 + 无边界 REPLACE** —— 遇到 0.5 节那两种情况会出事。
+有零散域名或畸形 URL 时改用:
+
+```bash
+bash scripts/replace-multi.sh          # 预演
+bash scripts/replace-multi.sh --apply  # 执行
+```
+
+它按桶执行、替换串自带 `//…/` 边界、每桶单独备份并追加 rollback、最后打印域名分布复核。
+改 `NEW=` 和那几行 `run` 即可复用。
+
 ## 2. ★ 同步改发布程序(最容易漏的一步)
 
 ffcore 的任务配置**存在 SQLite 里**(`server/data/ffcore.db` 的 `tasks` 表),
