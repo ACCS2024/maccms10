@@ -636,8 +636,8 @@ return array (
   'rewrite' => 
   array (
     'suffix_hide' => '0',
-    'route_status' => '1',
-    'status' => '1',
+    'route_status' => '0',
+    'status' => '0',
     'encode_key' => 'abcdefg',
     'encode_len' => '6',
     'vod_id' => '0',
