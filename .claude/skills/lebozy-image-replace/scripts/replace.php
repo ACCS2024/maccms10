@@ -11,13 +11,12 @@
 require __DIR__ . "/_db.php";
 $root = $argv[1] ?? "/home/wwwroot/lebozy.com";
 
-// ── CONFIG ───────────────────────────────────────────────────────────────
-$NEW = "lb260817.top";                    // 新图床域名(目标)
+// ── CONFIG(2026-09 轮转:lb260817.top → lb260908.top)─────────────────────
+$NEW = "lb260908.top";                    // 新图床域名(目标,当前月轮转域名)
 $domains = [                              // 要替换的源域名(来自 classify.php:swap+recover)
-    "jh.lb260522.top", "fmlb.netlbtu.com", "f.lbp2025.com",
-    "lb260401.top", "le.lebsltu2025627.com", "fm.lbtup2025.com", "fw.lbbf9.com",
+    "lb260817.top",                       // 上月已收敛到此,本月整域迁到 lb260908
 ];
-$repRegister = ["jh.lb260522.top", "fmlb.netlbtu.com"];  // 只登记体量大的;杂七杂八的别写
+$repRegister = ["lb260817.top"];          // 只登记体量大的;杂七杂八的别写
 // ─────────────────────────────────────────────────────────────────────────
 
 $pdo = lb_pdo($root);
