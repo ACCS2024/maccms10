@@ -279,7 +279,12 @@ class Website extends Base {
             if($type=='current'){
                 $type = intval( $GLOBALS['type_id'] );
             }
-            if($type!='all') {
+            // PHP 7 里 0 == 'all' 为真(非数字字符串按 0 比较),所以"无当前分类"
+            // (首页 type="current" → intval('') → 0)时整段筛选被跳过 = 不限分类。
+            // PHP 8 改了字符串比较语义(0 == 'all' 变为假),于是首页会筛成
+            // "只要顶级分类"—— 而内容都挂在子分类下,结果一条都查不到,
+            // 且【无报错无警告】,页面 200 但列表全空。这里显式还原旧语义。
+            if($type !== 'all' && (string)$type !== '0' && (string)$type !== '') {
                 $tmp_arr = explode(',', $type);
                 $type_list = (new \app\common\model\Type())->getCache('type_list');
                 $type = [];
