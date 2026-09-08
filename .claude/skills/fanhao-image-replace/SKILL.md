@@ -12,7 +12,7 @@ description: 番号站群(fhzy1.com / fhapi9.com / bjgx,主题 default_pc,新机
 | 站点 | `fhzy1.com`(前台) / `fhapi9.com`(采集API) / `bjgx`(入库口 :35728) —— **三站共用库 `fhzy1_com`** |
 | 机器 | 新机 `85.149.233.11`,webroot `/home/wwwroot/<站>`,PHP `/www/server/php/83/bin/php` |
 | MySQL | root 口令取自 aaPanel:`sqlite3 /www/server/panel/data/default.db "select mysql_root from config"` |
-| **要改的字段** | **只有 `mac_vod.vod_pic`**(16.7 万行)。实测 `vod_pic_thumb/slide/screenshot`、`mac_art.*`、`mac_topic/actor/role/website/type/link` **全为 0**,别浪费时间全表扫 |
+| **要改的字段** | **实际只有 `mac_vod.vod_pic`**(16.8 万行)。⚠ `vod_pic_thumb`/`vod_pic_slide` **2026-09-08 起各有 6 万行非空了**(2026-08-31 时还是 0),但**几乎全是相对路径**,带域名的只有 17 行(全在 fhbf9,不迁);`mac_art.*` 与其它表仍为 0。**每次都要重新数一遍,别照抄这一行** |
 | 相对路径封面 | 6.2 万行是 `upload/...`,**不带域名**,靠各站 `upload.remoteurl` 拼 —— 换的是那个域名才需要改配置 |
 | 发布程序 | ffcore,在冒烟机 `216.180.225.138`,`/home/dev/ffcore`,服务 `ffcore-publisher.service` |
 | 主题 | `default_pc`,公告区在 `template/default_pc/ht#E@8eml/public/head.html` |
@@ -36,6 +36,48 @@ mysql -uroot -pXXX fhzy1_com -N -B \
 ```
 
 顺带确认**旧域名是否仍可访问**:仍活着 = 即使漏改也不会挂图、回滚更从容;已死 = 必须一次做干净。
+
+## 0.5 🔴 两个必查的坑(2026-09-08 踩到)
+
+### ① 逐域名分三类,不能一把梭
+库里除了主力域名,总有一堆零散老域名。**必须逐个抽样判定**(和乐播那套一样):
+
+| 判定 | 含义 | 动作 |
+|---|---|---|
+| 旧活 + 新同图 | 同一图床的新域名 | ✓ 换 |
+| 旧死 + 新活 | 新图床有这批图 | ✓ 换,**顺带修好死链** |
+| 旧活 + 新 404 | 新图床没有这批图 | ✗ **别动,换了就挂** |
+
+2026-09-08 实测(总计 168,767 行迁移):
+
+```
+fh200831.top      168,494  旧活/新同图    ✓ 换
+fh.lbfh2025.com       217  旧活/新同图    ✓ 换
+fmtu.netfhtu.com       44  旧404/新200    ✓ 换(修好 44 张死图)
+vip2.fhbf9.com         17  旧活/新404     ✗ 留
+fh2.fhbf9.com           6  旧死/新404     ✗ 留(两边都没有)
+```
+
+### ② 域名互为前缀 → 无边界 REPLACE 会污染
+库里有 12 行**畸形 URL**:`http://fmtu.netfhtu.comupload/vod/...`(少了域名后的 `/`)。
+`fmtu.netfhtu.com` 是 `fmtu.netfhtu.comupload` 的**前缀**,所以
+
+```sql
+REPLACE(vod_pic,'fmtu.netfhtu.com','fh260908.top')   -- ❌ 得到 fh260908.topupload/vod/...
+```
+
+正确做法两条:
+1. **替换串带边界**:用 `//fmtu.netfhtu.com/` → `//fh260908.top/`,不要裸域名;
+2. **先修畸形再换规范形态** —— 顺序反了就污染。
+   本次:`fmtu.netfhtu.comupload/` → `fh260908.top/upload/`(实测修好后 200,真图 120~185KB)。
+
+执行前跑这条自检,**总命中 ≠ 规范形态 就说明有畸形行**:
+
+```sql
+select sum(vod_pic like '%<旧域名>%') 总命中, sum(vod_pic like '%//<旧域名>/%') 规范形态 from mac_vod;
+```
+
+改完再验一次没被污染:`sum(vod_pic like '%<新域名>upload%')` 必须为 0。
 
 ## 1. 执行(备份 → 登记 rep → 改存量)
 
@@ -68,7 +110,13 @@ ssh root@216.180.225.138 'cd /home/dev/ffcore && node /tmp/upd_publisher.js 旧�
 - 换的是 `upload.remoteurl` 指的那个域名 → 三站**分别**改
   `application/extra/maccms.php` 的 `upload.remoteurl` 与 `api.vod.imgurl`。
   注意三站不一样:`fhzy1.com`/`bjgx` = 一个域名,`fhapi9.com` = 另一个。改错站 = 采集方拿到错域名。
-- 换的只是 `vod_pic` 里写死的域名(本次情形)→ **不用动配置**。
+- 换的只是 `vod_pic` 里写死的域名(历次轮转都是这种)→ **不用动配置**。
+
+**`upload.remoteurl` 不属于这个轮转。** 6.2 万行相对路径封面由它拼域名,
+历次轮转(fh260401→fh200831→fh260908)它一直是 `fan.lefhao20250923.top`(fhzy1/bjgx)
+和 `fh.lbfh2025.com`(fhapi9),**是另一套稳定图床,不要顺手一起换**。
+2026-09-08 实测新域名上那棵 upload 树 3/3 同图,**技术上可以并过来,但那是另一个决定** ——
+动它等于改采集方收到的 6.2 万张封面地址,先问用户。
 
 ## 4. 收尾
 
