@@ -338,6 +338,10 @@ configure_service() {
 # ============================ 子命令 ============================
 cmd_install() {
   need_root
+  # 目录/用户必须先于 fetch_binary：install(1) 不会创建父目录，
+  # 全新机上 $DF_BIN_DIR 不存在会直接失败。两者幂等，configure_service 里再调一次无害。
+  ensure_user
+  ensure_dirs
   fetch_binary "$DF_VERSION"
   link_binary "$DF_VERSION"
   configure_service
