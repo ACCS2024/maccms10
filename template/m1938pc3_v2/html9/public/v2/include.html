@@ -1,0 +1,12 @@
+{php}
+$zy = include MAC_ROOT_TEMPLATE . '../settings.php';
+$zy_type_id = (int)($obj['type_id'] ?? 0);
+$zy_parent_id = (int)($obj['type_pid'] ?? ($obj['type']['type_pid'] ?? 0));
+if (!$zy_parent_id) { $zy_parent_id = $zy_type_id; }
+{/php}
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="renderer" content="webkit">
+<link rel="shortcut icon" href="{$maccms.path_tpl}image/favicon.ico">
+<link rel="stylesheet" href="{$maccms.path_tpl}assets/v2/theme.css?v={$zy.version}">
+<script defer src="{$maccms.path_tpl}assets/v2/theme.js?v={$zy.version}"></script>

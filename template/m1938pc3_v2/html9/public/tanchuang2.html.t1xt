@@ -1,0 +1,113 @@
+<div class="popup-box" id="popup_mask" style="display: block;">
+	<div class="kefu-title tx-flex-col2 pd15">
+		<section class="tx-c2" style="text-align: center;">
+			<h2 class="f-22">公告</h2>
+			<p class="f-13">2025/8/25</p>
+			<p class="f-13"> 杏吧资源站！</p>
+		</section>
+	</div>
+	<div class="pd15" style="height:400px;overflow:scroll;">
+		<div class="tx-flex-col1 tx-flex-st mb15">
+			<section>
+				<p class="tx-bg3 bo-r5 ov-h pd10" style="text-align:center;font-size:16px;line-height:28px;">
+					1.采集杏吧资源站的站长请保存好域名 
+					<br>永久域名：sex8zy.com
+					<br>M3U8解析接口:https://xbww888.com/?url=
+					<br> 采集XML接口:https://xingba222.com/api.php/provide/vod/at/xml
+					<br> JSON采集接口:https://xingba222.com/api.php/provide/vod/
+					<span style="color:blue"> </span>
+					<br>
+				</p>
+			</section>
+		</div>
+		<div class="tx-flex-col1 tx-flex-st mb20"></div>
+		<ul class="form-obj">
+			<button id="popup_close" type="button" class="tx-btn tx-bg popup-close">我知道了</button>
+		</ul>
+	</div>
+</div>
+
+
+
+
+
+<style>
+	.popup-box {
+	    position: fixed;
+	    z-index: 9999;
+	    margin: auto;
+	    left: 0;
+	    top: 200px;
+	    right: 0;
+	    padding-left: 0px;
+	    padding-right: 0px;
+	    bottom: auto;
+	    visibility: visible;
+	    opacity: 1;
+	    width: 400px;
+	    background-color: #fff;
+	    border: 1px solid #3a3636;
+	    border-radius: 5px;
+	    overflow: hidden;
+	    transition: all .35s ease 0s;
+	    display: none;
+	}
+	.kefu-title {
+	    background-color: #d4d2d2;
+	}
+	a, .tx-c2 {
+	    color: #383634;
+	}
+	.f-22 {
+	    font-size: 1.57em;
+	}
+	.f-13 {
+	    font-size: .92em;
+	}
+	.pd15 {
+	    padding: 15px;
+	}
+	.popup-close {
+	    right: 0;
+	    left: 25%;
+	    width: 50%;
+	}
+	.tx-btn {
+	    display: -webkit-inline-box;
+	    display: -webkit-inline-flex;
+	    display: -ms-inline-flexbox;
+	    display: inline-flex;
+	    line-height: 2.6;
+	    height: 2.6em;
+	    padding: 0 1.6em;
+	    background-color: var(--tx-color);
+	    color: #fff;
+	    white-space: nowrap;
+	    -webkit-box-pack: center;
+	    -webkit-justify-content: center;
+	    -ms-flex-pack: center;
+	    justify-content: center;
+	    -webkit-box-align: center;
+	    -webkit-align-items: center;
+	    -ms-flex-align: center;
+	    align-items: center;
+	    border: 0;
+	    border-radius: 2px;
+	    cursor: pointer;
+	    -webkit-appearance: none;
+	    -webkit-user-select: none;
+	    -ms-user-select: none;
+	    -moz-user-select: none;
+	    -webkit-transition: all .35s ease 0s;
+	    transition: all .35s ease 0s;
+	    position: relative;
+	}
+	.tx-bg {
+	    background-color: #ff5b82;
+	}
+</style>
+<script>
+	document.getElementById("popup_mask").addEventListener("click", function() {
+	    this.style.display = 'none'
+	});
+</script>

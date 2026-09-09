@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="zh-CN"><head>
+{include file="public/v2/include"}
+<title>图文资源 - {$maccms.site_name|htmlspecialchars}</title>
+<meta name="keywords" content="{$maccms.site_keywords|htmlspecialchars}"><meta name="description" content="{$maccms.site_description|htmlspecialchars}">
+</head><body class="zy-page">
+{include file="public/v2/head"}
+<main class="wrap">
+<nav class="breadcrumbs" aria-label="当前位置"><a href="{:mac_url('index/index')}">首页</a><span aria-hidden="true">›</span><span>图文资源</span></nav>
+<section id="resources" class="resources" aria-labelledby="resource-title"><div class="resource-toolbar"><div class="section-name"><span class="section-marker" aria-hidden="true"></span><h1 id="resource-title">图文资源</h1><span id="filter-label">全部资源</span></div><div class="list-controls"><button id="density" aria-pressed="false" title="切换紧凑列表"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 4h14M3 10h14M3 16h14"></path></svg><span>紧凑</span></button><form class="sort-form" method="get"><input type="hidden" name="by" value="time"><label><span class="sr-only">更新时间排序</span><select name="order" data-sort-submit><option value="desc" {if condition="($param['order']??'desc') neq 'asc'"}selected{/if}>按更新时间 ↓</option><option value="asc" {if condition="($param['order']??'desc') eq 'asc'"}selected{/if}>按更新时间 ↑</option></select></label></form></div></div>
+<table class="resource-table"><colgroup><col class="cover-col"><col><col class="type-col"><col class="updated-col"></colgroup><thead><tr><th scope="col">封面</th><th scope="col">名称</th><th scope="col">类型</th><th scope="col">更新时间</th></tr></thead><tbody>
+{maccms:art num="40" paging="yes" pageurl="art/index" order="desc" by="time"}
+{include file="public/v2/art-row"}
+{/maccms:art}
+</tbody></table>
+{include file="public/v2/paging"}
+</section></main>
+{include file="public/v2/foot"}
+</body></html>

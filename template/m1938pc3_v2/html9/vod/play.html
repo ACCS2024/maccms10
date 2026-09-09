@@ -1,0 +1,10 @@
+<!doctype html>
+<html lang="zh-CN"><head>{include file="public/v2/include"}
+<title>在线播放 {$obj.vod_name|htmlspecialchars} - {$maccms.site_name|htmlspecialchars}</title>
+{include file="public/v2/mac-support"}
+</head><body class="zy-page">{include file="public/v2/head"}
+<main class="wrap" id="resources"><nav class="breadcrumbs" aria-label="当前位置"><a href="{:mac_url('index/index')}">首页</a><span>›</span><a href="{:mac_url_vod_detail($obj)}">{$obj.vod_name|htmlspecialchars}</a><span>›</span><span>在线播放</span></nav>
+<section class="player-section"><div class="player-heading"><h1>{$obj.vod_name|htmlspecialchars}</h1><a class="text-link" href="{:mac_url_vod_detail($obj)}#play-addresses">返回地址列表</a></div><div class="player-stage">{$player_data}{$player_js}</div></section>
+<section class="detail-section"><h2>影片简介</h2><div class="description">{$obj.vod_blurb|default='暂无简介。'|htmlspecialchars|nl2br}</div></section>
+<span class="mac_hits hits" data-mid="{$maccms.mid}" data-id="{$obj.vod_id}" data-type="hits" hidden></span>
+</main>{include file="public/v2/foot"}</body></html>

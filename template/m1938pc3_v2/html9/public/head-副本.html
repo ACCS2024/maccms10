@@ -1,0 +1,191 @@
+ 
+ 
+ 
+ <div class="head_box">
+    <div style="
+    background: linear-gradient(135deg, #ff4757 0%, #ff3838 100%);
+    color: white;
+    padding: 15px 25px;
+    margin: 20px auto;
+    border-radius: 12px;
+    text-align: center;
+    max-width: 500px;
+    box-shadow: 0 8px 25px rgba(255, 71, 87, 0.4);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    position: relative;
+    overflow: hidden;
+    animation: glow 2s ease-in-out infinite alternate;
+">
+    <style>
+        @keyframes glow {
+            from { box-shadow: 0 8px 25px rgba(255, 71, 87, 0.4), 0 0 0 0 rgba(255, 71, 87, 0.4); }
+            to { box-shadow: 0 8px 35px rgba(255, 71, 87, 0.6), 0 0 20px 5px rgba(255, 71, 87, 0.2); }
+        }
+        .notice-link {
+            color: white;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 1.1em;
+            display: block;
+            padding: 5px;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+        .notice-link:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: scale(1.02);
+        }
+        .date-badge {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            margin-bottom: 8px;
+            display: inline-block;
+        }
+        .important-badge {
+            background: #ffd700;
+            color: #333;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.8em;
+            font-weight: bold;
+            margin-left: 8px;
+            animation: blink 1.5s infinite;
+        }
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0.7; }
+        }
+    </style>
+
+    
+    
+     <div class="date-badge">2026/04/30</div>
+    <a href="https://file.zhuyitai.com/feedback/202604/30/198673793b7950db02c419330f5a5bb5.html" class="notice-link">
+       图片域名替换
+        <span class="important-badge">重要</span>
+    </a>
+    
+</div>
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+  {include file="index/notice"}
+<div class="head container">
+	<a href="{$maccms.path}">
+		<img src="{$maccms.path_tpl}image/logo.gif" alt="logo" class="logo">
+	</a>
+	<form id="search" name="search" method="get" action="{:mac_url('vod/search')}" onsubmit="return qrsearch();">
+		<div class="search">
+			<img src="{$maccms.path_tpl}image/search.png" alt="搜索">
+			<input style="border:0.5px solid #00d3ff" id="wd" type="text" name="wd" placeholder="整站资源任你搜" class="limit" required="">
+			<input style="background-color:#00d3ff;" type="submit" id="searchbutton" value="搜索">
+			<p>CMS采集碰到问题请参阅 ：
+				<a href="https://sex8zy.com/template/help/" style="color:red">{$maccms.site_name} 采集帮助中心</a>
+			</p>
+		</div>
+	</form>
+	<div class="head-right">
+<!--		<p>
+			<a href="https://t.me/xbxbxbzy">Telegram群</a>&nbsp;&nbsp;|&nbsp;&nbsp;
+		</p>
+		<p>QQ群：<span></span></p>-->
+		<p>今日更新：<span>{:mac_data_count(0,'today','vod')}</span></p>
+		<p>本站共有影片：<span>{:mac_data_count(0,'all','vod')}</span></p>
+		<p>本站共有资讯：<span>{:mac_data_count(0,'all','art')}</span></p>
+	</div>
+</div>
+
+<div class="nav1" style="background-color:#00d3ff;">
+	<ul>
+		<li>
+			<a href="{$maccms.path}" class="actave" style="background-color:#00d3ff;"><strong style="font-size:18px;">首页</strong></a>
+		</li>
+		<li>
+			<a target="_blank" href="https://sex8zy.com/template/help/" class="actave" style="background-color:#00d3ff;"><strong style="font-size:18px;">采集教程</strong></a>
+		</li>
+		<li>
+			<a target="_blank" href="https://t.me/xbxbxbzy" class="actave" style="background-color:#00d3ff;"><strong style="font-size:18px;">TG交流群</strong></a>
+		</li>
+				<li>
+			<a target="_blank" href="https://t.me/xbww888" class="actave" style="background-color:#00d3ff;"><strong style="font-size:18px;">TG成人频道</strong></a>
+			
+			
+			
+
+			
+			</li>
+		<li>
+			<a target="_blank" href="https://p3-tt.byteimg.com/obj/tos-cn-i-jcdsk5yqko/a77e5de21b004c8f9262f53b2482e956" class="actave" style="background-color:#00d3ff;"><strong style="font-size:18px;">播放加载失败？</strong></a>
+			
+	
+			
+			
+		</li>
+	</ul>
+
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div class="nav" style="background-color:#00b7ff;max-width:1200px;">
+	{maccms:type order="asc" by="sort" ids="parent"}
+	<ul class="container" style="background-color:#00b7ff;border-bottom: 1px dashed #ccc;">
+		<li>
+			<a href="{:mac_url_type($vo)}" class="actave" style="background-color: #008fc7;border-radius: 5px;"><strong style="color:#fff;font-size: 16px;">{$vo.type_name}</strong></a>
+		</li>
+		{maccms:type parent="'.$vo['type_id'].'" order="asc" id="vo2" key="key2"}
+		<li style="background-color:#00b7ff;">
+			<a href="{:mac_url_type($vo2)}" style="background-color:#00b7ff;"><strong style="color:#fff;font-size: 16px;">{$vo2.type_name}</strong></a>
+		</li>
+		{/maccms:type}
+
+	</ul>
+	{/maccms:type}
+
+</div>

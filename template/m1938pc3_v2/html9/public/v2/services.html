@@ -1,0 +1,19 @@
+<section class="service-board" id="interfaces" aria-label="站点公告与采集接口">
+  <div class="site-info"><div class="small-heading"><h2>站点公告</h2><span>请收藏永久地址</span></div>
+    <div class="official-line"><span>永久官网</span><a class="domain" href="https://{$zy.permanent|htmlspecialchars}" target="_blank" rel="noopener noreferrer">{$zy.permanent|htmlspecialchars}</a><button class="copy-button" data-copy="{$zy.permanent|htmlspecialchars}">复制</button></div>
+    <div class="mirror-line"><span>镜像地址</span><div id="mirrors">{volist name="zy.mirrors" id="mirror"}<button data-copy="{$mirror|htmlspecialchars}" aria-label="复制镜像地址 {$mirror|htmlspecialchars}">{$mirror|htmlspecialchars}</button>{/volist}</div></div>
+    <p class="site-note"><span>采集提醒</span>本站图片地址采集的同时，请把图片下载到本地，以免日后出现图片失效的情况。</p>
+    <details class="site-promise"><summary>站点说明与服务承诺</summary><p>杏吧资源永久免费采集，资源永久免费，不含任何广告、水印。欢迎测试播放速度。采集配置及域名替换说明请参阅采集教程。</p></details>
+  </div>
+  <div class="interface-directory" data-endpoints data-json="{$zy.json|htmlspecialchars}" data-json-backup="{$zy.json_backup|htmlspecialchars}" data-xml="{$zy.xml|htmlspecialchars}" data-xml-backup="{$zy.xml_backup|htmlspecialchars}">
+    <div class="small-heading"><h2>采集接口</h2><div class="format-tabs" role="group" aria-label="接口格式"><button data-format="json" aria-pressed="true">JSON</button><button data-format="xml" aria-pressed="false">XML</button></div></div>
+    <div class="interface-row"><span class="endpoint-label">主采集接口</span><code data-endpoint-value="main">{$zy.json|htmlspecialchars}</code><button class="copy-button" data-endpoint-copy="main" aria-label="复制主采集接口">复制</button></div>
+    <div class="interface-row"><span class="endpoint-label">备用接口</span><code data-endpoint-value="backup">{$zy.json_backup|htmlspecialchars}</code><button class="copy-button" data-endpoint-copy="backup" aria-label="复制备用接口">复制</button></div>
+    <div class="interface-row"><span class="endpoint-label">M3U8 解析</span><code>{$zy.parser|htmlspecialchars}</code><button class="copy-button" data-copy="{$zy.parser|htmlspecialchars}" aria-label="复制 M3U8 解析接口">复制</button></div>
+    <div class="interface-row player-row"><span class="endpoint-label">播放器标识</span><code>{$zy.player|htmlspecialchars}</code><a class="text-link player-download" href="{$zy.player_download|htmlspecialchars}" target="_blank" rel="noopener noreferrer">下载播放器 ↗</a><button class="copy-button" data-copy="{$zy.player|htmlspecialchars}" aria-label="复制播放器标识">复制</button></div>
+    <noscript><div class="interface-row"><span class="endpoint-label">XML 接口</span><code>{$zy.xml|htmlspecialchars}</code></div><div class="interface-row"><span class="endpoint-label">备用 XML</span><code>{$zy.xml_backup|htmlspecialchars}</code></div></noscript>
+  </div>
+  <div class="service-foot"><span><b>{$zy.migration_date|htmlspecialchars}</b>播放域名 / 图片域名替换教程已更新</span><a class="text-link" href="{$zy.migration|htmlspecialchars}" target="_blank" rel="noopener noreferrer">查看教程 ›</a><button id="legacy-toggle" class="text-link" aria-controls="legacy" aria-expanded="false">小说图片接口与历史地址 ⌄</button></div>
+  <div id="legacy" hidden><div class="interface-row"><span class="endpoint-label">小说 / 图片</span><code>{$zy.art_api|htmlspecialchars}</code><button class="copy-button" data-copy="{$zy.art_api|htmlspecialchars}">复制</button></div><div class="interface-row"><span class="endpoint-label">旧解析接口</span><code>{$zy.parser_legacy|htmlspecialchars}</code><button class="copy-button" data-copy="{$zy.parser_legacy|htmlspecialchars}">复制</button></div><p>旧解析接口部分地区屏蔽，可尝试上方 M3U8 新接口。</p></div>
+  <button id="expand-services" class="expand-services" aria-expanded="false">展开全部接口与公告 <span aria-hidden="true">⌄</span></button>
+</section>

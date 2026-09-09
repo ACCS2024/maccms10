@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html>
+<head>
+    {include file="public/include"}
+    <title>{$maccms.site_name}</title>
+    <meta name="keywords" content="{$maccms.site_keywords}" />
+    <meta name="description" content="{$maccms.site_description}" />
+    <style>
+        /* ========== 原有强制对齐样式（完全保留） ========== */
+        .list .row,
+        .list .row *,
+        .list .title,
+        .list .title * {
+            box-sizing: border-box;
+        }
+
+        .list .title.background.container {
+            display: flex !important;
+            align-items: center !important;
+            list-style: none !important;
+            margin: 0 !important;
+            padding: 12px 0 !important;
+            background: #f5f5f5 !important;
+            font-weight: bold !important;
+            border-bottom: 2px solid #ddd !important;
+        }
+        .list .title.background.container li {
+            flex: 1 !important;
+            text-align: left !important;
+            color: #000 !important;
+            font-size: 14px !important;
+        }
+
+        .list .row {
+            display: block !important;
+            text-decoration: none !important;
+        }
+        .list .row .container {
+            display: flex !important;
+            align-items: center !important;
+            list-style: none !important;
+            margin: 0 !important;
+            padding: 12px 0 !important;
+            border-bottom: 1px solid #eee !important;
+            min-height: 84px !important;
+        }
+        .list .row .container li {
+            flex: 1 !important;
+            text-align: left !important;
+            color: #000 !important;
+            font-size: 14px !important;
+            line-height: 1.4 !important;
+        }
+        .list .row .container li:first-child {
+            display: flex !important;
+            align-items: center !important;
+            gap: 5px !important;
+            flex-wrap: nowrap !important;      /* 改为 nowrap，强制同行 */
+        }
+        .list .row .container li:first-child img:first-child {
+            width: 80px !important;
+            height: 60px !important;
+            object-fit: cover !important;
+            border-radius: 4px !important;
+            display: block !important;
+            flex-shrink: 0 !important;         /* 防止图片被压缩 */
+        }
+        .list .row .container li:first-child .vod-name {
+            color: #000 !important;
+            font-weight: 500 !important;
+            flex: 1 !important;                /* 占据剩余空间，允许换行 */
+            word-break: break-word !important; /* 长标题自动换行 */
+        }
+        .list .row .container li:first-child .new-icon {
+            display: inline-block !important;
+            margin-left: 2px !important;
+            flex-shrink: 0 !important;
+        }
+        .list .row .container li.red {
+            color: red !important;
+        }
+
+        .page {
+            margin-top: 20px !important;
+            text-align: center !important;
+        }
+
+        @media (max-width: 1200px) {
+            .list .row .container li:first-child img:first-child {
+                width: 70px !important;
+                height: 52px !important;
+            }
+        }
+        @media (max-width: 900px) {
+            .list .row .container li:first-child img:first-child {
+                width: 60px !important;
+                height: 45px !important;
+            }
+            .list .row .container li {
+                font-size: 13px !important;
+            }
+        }
+
+        /* ========== 视觉美化（去除类型/时间的胶囊样式，避免影响布局） ========== */
+        body {
+            background: #f8fafc;
+            font-family: 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+        }
+
+        /* 公告区域美化 */
+        .bread-crumbs {
+            background: linear-gradient(135deg, #fff, #fef7e0);
+            border-bottom: 1px solid #e2e8f0;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+        }
+        .bread-crumbs .announcement {
+            background: rgba(255,245,215,0.7);
+            border-radius: 20px;
+            padding: 16px 24px;
+            backdrop-filter: blur(2px);
+        }
+        .bread-crumbs .announcement p {
+            color: #4a3b1f;
+        }
+        .bread-crumbs .announcement a {
+            color: #e67e22;
+            border-bottom: 1px dotted #e67e22;
+        }
+        .bread-crumbs .limit {
+            color: #5b6e8c;
+        }
+        .bread-crumbs .limit a {
+            color: #e67e22;
+        }
+
+        /* 列表容器 */
+        .list {
+            max-width: 1280px;
+            margin: 30px auto;
+            padding: 0 20px;
+        }
+
+        /* 表头美化 */
+        .list .title.background.container {
+            background: #ffffff !important;
+            border-radius: 16px !important;
+            border-bottom: none !important;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.03) !important;
+            margin-bottom: 12px !important;
+            color: #1e293b !important;
+        }
+
+        /* 数据行卡片化 */
+        .list .row .container {
+            background: #ffffff !important;
+            border-radius: 14px !important;
+            border-bottom: none !important;
+            margin-bottom: 8px !important;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.03), 0 1px 3px rgba(0,0,0,0.03) !important;
+            transition: all 0.2s ease !important;
+        }
+        .list .row:hover .container {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 20px rgba(0,0,0,0.08) !important;
+            background: #fefefe !important;
+        }
+
+        /* 缩略图美化 */
+        .list .row .container li:first-child img:first-child {
+            border-radius: 10px !important;
+            transition: transform 0.2s, box-shadow 0.2s !important;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+        .list .row:hover .container li:first-child img:first-child {
+            transform: scale(1.02);
+            box-shadow: 0 8px 15px rgba(0,0,0,0.1);
+        }
+
+        /* 影片名美化 */
+        .list .row .container li:first-child .vod-name {
+            color: #0f172a !important;
+            font-weight: 600 !important;
+            letter-spacing: -0.2px;
+        }
+        .list .row:hover .vod-name {
+            color: #e67e22 !important;
+        }
+
+        /* 影片类型：普通文本，向右移动20px */
+        .list .row .container li:nth-child(2) {
+            color: #334155 !important;
+            font-weight: normal !important;
+            background: none !important;
+            padding: 0 0 0 120px !important;
+            border-radius: 0 !important;
+        }
+
+        /* 更新时间：只保留红色，略微右移12px */
+        .list .row .container li.red {
+            color: #e67e22 !important;
+            background: none !important;
+            padding: 0 0 0 120px !important;
+            border-radius: 0 !important;
+            font-weight: 500 !important;
+        }
+
+        /* 表头同步增加左间距，保持对齐 */
+        .list .title.background.container li:nth-child(2) {
+            padding-left: 120px !important;
+        }
+        .list .title.background.container li:nth-child(3) {
+            padding-left: 120px !important;
+        }
+
+        /* 分页美化 */
+        .page a, .page span {
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 30px;
+            padding: 6px 14px;
+            margin: 0 4px;
+            color: #334155;
+            transition: all 0.2s;
+        }
+        .page a:hover, .page .active {
+            background: #e67e22;
+            border-color: #e67e22;
+            color: #fff;
+        }
+
+        /* 移动端微调 */
+        @media (max-width: 640px) {
+            .list {
+                padding: 0 12px;
+            }
+            .list .row .container {
+                padding: 10px 12px !important;
+            }
+            .list .row .container li {
+                font-size: 12px !important;
+            }
+            .list .row .container li:first-child .vod-name {
+                font-size: 13px !important;
+            }
+            .list .row .container li:first-child img:first-child {
+                width: 55px !important;
+                height: 40px !important;
+            }
+            /* 移动端适当减小右移距离 */
+            .list .row .container li:nth-child(2) {
+                padding-left: 12px !important;
+            }
+            .list .title.background.container li:nth-child(2) {
+                padding-left: 12px !important;
+            }
+            /* 移动端如果空间不足，允许第一列换行（可选） */
+            .list .row .container li:first-child {
+                flex-wrap: wrap !important;
+            }
+        }
+    </style>
+</head>
+<body>
+
+{include file="public/head"}
+
+<div class="bread-crumbs">
+    <!-- 原公告内容保持不变 -->
+    <html>
+    <head>
+    <meta http-equiv="Content-Language" content="zh-cn">
+    <meta http-equiv="Content-Type" content="text/html; charset=gb2312">
+    <title>新建网页 4</title>
+    </head>
+    <body>
+
+    <p>防屏蔽备用网址：sex8zy1.com sex8zy2.com sex8zy3.com sex8zy4.com sex8zy5.com 
+    sex8zy6.com sex8zy7.com sex8zy8.com sex8zy9.com<font color="#FF0000"><br>
+    　</font></p>
+    <p>郑重承诺：资源永久免费,(<font color="#FF0000">不含任何广告.水印.插播</font>)<font color=" #0000FF">观影用户最佳体验</font><br>
+    <br>
+    
+        
+     <p>
+  (<span style="color:red">小说图文采集教程</span>)
+  <a href="https://file.zhuyitai.com/feedback/202605/14/bff4170f3c36b9b81800d302ab09192a.html" target="_blank" style="color:blue">点击我查看</a>
+</p>
+    
+    <br>
+    
+    杏吧资源：永久官网<font color="#FF0000">www.sex8zy.com</font><br>
+    <br>
+    M3U8解析接口:<a href="https://xbww888.com/?url=" style="text-decoration: none">https://xbww888.com/?url=(旧有些地区屏蔽)</a><br>
+   
+    <br>
+    
+     (新)M3U8解析接口:<a href="https://xbxbw888.com/?url=" style="text-decoration: none">https://xbxbw888.com/?url=</a><br>
+    
+    <br>
+    采集XML接口:<a href="https://xingba222.com/api.php/provide/vod/at/xml" style="text-decoration: none">https://xingba222.com/api.php/provide/vod/at/xml</a><br>
+    <br>
+    备用XML接口:<a href="https://api.xgbbk8.com/api.php/provide/vod/at/xml" style="text-decoration: none">https://api.xgbbk8.com/api.php/provide/vod/at/xml</a><br>
+    <br>
+    JSON采集接口:<a href="https://json.xingba222.com/api.php/provide/vod/" style="text-decoration: none">https://json.xingba222.com/api.php/provide/vod/</a><br>
+    <br>
+    备用JSON采集接口:<a href="https://json.xgbbk8.com/api.php/provide/vod/" style="text-decoration: none">https://json.xgbbk8.com/api.php/provide/vod/</a><br>
+         <br>
+    
+   json小说美图采集接口：<a href="https://sex8zy1.com/api.php/provide/art/?ac=list" style="text-decoration: none">https://sex8zy1.com/api.php/provide/art/?ac=list</a><br>
+    <br>
+    <font color="#FF0000">🚀带宽的速度给您带来快乐，欢迎您来测试播放速度！</font><br>
+    </font></p>
+    <p><br>
+    本站图片地址采集的同时，请把图片下载到本地，以免杜绝日后出现类似图片失效的情况。</p>
+    <p>　</p>
+    </body>
+    </html>
+    <p class="limit">
+        当前位置：
+        <a href="{$maccms.path}">首页</a>
+        &nbsp;&nbsp;›&nbsp;&nbsp;
+        <a class="actave">今日更新</a>
+    </p>
+</div>
+
+<div class="list" style="margin-top: 0;">
+    <ul class="title background container">
+        <li>🎬 影片名称</li>
+        <li>📁 影片类型</li>
+        <li>⏱️ 更新时间</li>
+    </ul>
+    <div class="list-box">
+        <div class="content">
+            {maccms:vod num="70" paging="yes" pageurl="index/index" type="current" order="desc" by="time"}
+            <a href="{:mac_url_vod_detail($vo)}" class="row">
+                <ul class="container">
+                    <li>
+                        <img src="{$vo.vod_pic|mac_url_img}" alt="{$vo.vod_name}" onerror="this.src='{$maccms.path_tpl}images/nopic.png'">
+                        <span class="vod-name">{$vo.vod_name}</span>
+                        <img class="new-icon" src="{$maccms.path_tpl}image/new.gif" alt="new">
+                    </li>
+                    <li>{$vo.type.type_name}</li>
+                    <li class="red">{$vo.vod_time|mac_day=###,'color'}</li>
+                </ul>
+            </a>
+            {/maccms:vod}
+            <div class="page">
+                {include file="public/paging"}
+            </div>
+        </div>
+    </div>
+</div>
+
+{include file="public/foot"}
+
+</body>
+</html>

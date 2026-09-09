@@ -1,0 +1,8 @@
+<!doctype html>
+<html lang="zh-CN"><head>{include file="public/v2/include"}
+<title>{$obj.art_name|htmlspecialchars} - {$maccms.site_name|htmlspecialchars}</title><meta name="description" content="{$obj.art_blurb|htmlspecialchars}">
+</head><body class="zy-page">{include file="public/v2/head"}
+<main class="wrap" id="resources"><nav class="breadcrumbs" aria-label="当前位置"><a href="{:mac_url('index/index')}">首页</a><span>›</span><a href="{:mac_url_type($obj.type)}">{$obj.type.type_name|htmlspecialchars}</a><span>›</span><span>{$obj.art_name|htmlspecialchars}</span></nav>
+<article class="article-detail"><header><p class="detail-kicker">{$obj.type.type_name|htmlspecialchars}<span>{$obj.art_time|date='Y-m-d H:i'}</span></p><h1>{$obj.art_name|htmlspecialchars}</h1>{notempty name="obj.art_page_list[$param['page']]['title']"}<p>{$obj.art_page_list[$param['page']]['title']|htmlspecialchars}</p>{/notempty}</header><div class="article-content">{$obj.art_page_list[$param['page']]['content']|mac_url_content_img}</div>
+{if condition="count($obj['art_page_list']) gt 1"}<nav class="article-pages" aria-label="文章分页">{maccms:foreach name="obj.art_page_list" id="chapter" key="chapter_index"}<a href="{:mac_url_art_detail($obj,['page'=>$chapter_index])}" {if condition="$param.page eq $chapter_index"}aria-current="page"{/if}>第 {$chapter_index} 页</a>{/maccms:foreach}</nav>{/if}
+</article></main>{include file="public/v2/foot"}</body></html>

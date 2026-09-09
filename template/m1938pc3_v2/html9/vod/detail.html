@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="zh-CN"><head>
+{include file="public/v2/include"}
+<title>{$obj.vod_name|htmlspecialchars} - {$maccms.site_name|htmlspecialchars}</title>
+<meta name="keywords" content="{$obj.vod_name|htmlspecialchars},{$obj.type.type_name|htmlspecialchars}">
+<meta name="description" content="{$obj.vod_blurb|htmlspecialchars}">
+{include file="public/v2/mac-support"}
+</head><body class="zy-page">
+{include file="public/v2/head"}
+<main class="wrap" id="resources">
+<nav class="breadcrumbs" aria-label="当前位置"><a href="{:mac_url('index/index')}">首页</a><span aria-hidden="true">›</span><a href="{:mac_url_type($obj.type)}">{$obj.type.type_name|htmlspecialchars}</a><span aria-hidden="true">›</span><span>{$obj.vod_name|htmlspecialchars}</span></nav>
+<section class="detail-summary" aria-labelledby="detail-title"><img class="detail-cover" src="{$obj.vod_pic|mac_url_img|htmlspecialchars}" alt="{$obj.vod_name|htmlspecialchars}" width="180" height="240" data-fallback="{$maccms.path_tpl}images/nopic.png"><div class="detail-info"><p class="detail-kicker">{$obj.type.type_name|htmlspecialchars}<span>编号 {$obj.vod_id}</span></p><h1 id="detail-title">{$obj.vod_name|htmlspecialchars}</h1><dl><div><dt>分类</dt><dd>{$obj.vod_class|default='暂无分类'|htmlspecialchars}</dd></div><div><dt>片长</dt><dd>{$obj.vod_duration|default='未提供'|htmlspecialchars}</dd></div><div><dt>更新</dt><dd>{$obj.vod_time|date='Y-m-d H:i'}</dd></div>{notempty name="obj.vod_remarks"}<div><dt>状态</dt><dd>{$obj.vod_remarks|htmlspecialchars}</dd></div>{/notempty}</dl><div class="detail-actions"><a class="plain-button" href="#play-addresses">查看播放地址 ↓</a><button class="text-link" data-report="编号【{$obj.vod_id}】名称【{$obj.vod_name|htmlspecialchars}】不能观看，请检查修复" data-report-id="{$obj.vod_id}">资源报错</button></div></div></section>
+<section class="detail-section"><h2>影片简介</h2><div class="description">{$obj.vod_blurb|default='暂无简介。'|htmlspecialchars|nl2br}</div></section>
+<div id="play-addresses">
+{maccms:foreach name="obj.vod_play_list" id="source" key="source_key"}
+<section class="address-group detail-section" data-address-group><div class="address-heading"><h2>{$source.player_info.show|default=$source.from|htmlspecialchars}地址</h2><button class="text-link" data-reverse aria-pressed="false">倒序排列</button></div><div class="address-list" data-address-list>
+{maccms:foreach name="source.urls" id="episode" key="episode_key"}
+<div class="address-row" data-address-row><label class="address-select"><input type="checkbox" checked data-address-select><span class="sr-only">选择 {$episode.name|htmlspecialchars}</span></label><span class="episode-name">{$episode.name|htmlspecialchars}</span><input type="text" readonly data-address-value value="{$episode.name|htmlspecialchars}${$episode.url|htmlspecialchars}" aria-label="{$episode.name|htmlspecialchars}播放地址"><a class="text-link" href="{:mac_url_vod_play($obj,['sid'=>$source.sid,'nid'=>$episode.nid])}">播放</a></div>
+{/maccms:foreach}
+</div><div class="address-actions"><label><input type="checkbox" checked data-select-all> 全选</label><span data-selected-count></span><button class="plain-button" data-copy-selected>复制已选地址</button></div></section>
+{/maccms:foreach}
+{empty name="obj.vod_play_list"}<div class="empty-state"><p>暂无播放地址。</p></div>{/empty}
+</div>
+{notempty name="obj.vod_down_from"}
+{maccms:foreach name="obj.vod_down_list" id="source" key="source_key"}
+<section class="address-group detail-section" data-address-group><div class="address-heading"><h2>{$source.player_info.show|default=$source.from|htmlspecialchars}下载地址</h2><button class="text-link" data-reverse aria-pressed="false">倒序排列</button></div><div class="address-list" data-address-list>
+{maccms:foreach name="source.urls" id="episode" key="episode_key"}
+<div class="address-row" data-address-row><label class="address-select"><input type="checkbox" checked data-address-select><span class="sr-only">选择 {$episode.name|htmlspecialchars}</span></label><span class="episode-name">{$episode.name|htmlspecialchars}</span><input type="text" readonly data-address-value value="{$episode.name|htmlspecialchars}${$episode.url|htmlspecialchars}" aria-label="{$episode.name|htmlspecialchars}下载地址"></div>
+{/maccms:foreach}
+</div><div class="address-actions"><label><input type="checkbox" checked data-select-all> 全选</label><span data-selected-count></span><button class="plain-button" data-copy-selected>复制已选地址</button></div></section>
+{/maccms:foreach}
+{/notempty}
+<span class="mac_hits hits" data-mid="{$maccms.mid}" data-id="{$obj.vod_id}" data-type="hits" hidden></span>
+</main>{include file="public/v2/foot"}
+</body></html>
