@@ -240,6 +240,41 @@ CF 域名注意静态资源缓存(见陷阱 1)。
     实际跑的是 `/www/server/nginx/sbin/nginx`)。**测配置和 reload 必须用绝对路径**,
     否则改了个根本不生效的配置还以为成功了(`nginx -t` 会显示它测的是哪个 conf,看一眼)。
 
+23. **PHP8 的坑分两层,别把两层混为一谈**(2026-09 杏吧)。本项目 `application/MacApp.php` 装了
+    错误处理器,把 `E_WARNING|E_NOTICE|E_DEPRECATED` 全部吞掉记 notice(按 `文件:行` 每请求去重),
+    **只有致命级别才会冒泡成 ErrorException → 500**。所以:
+    - **读未定义数组键 ≠ 500**,是静默的 warning。全仓 1097 处裸读 `$param[...]` 不值得批量补 `??`。
+      (⚠️ 用裸 `think\App` 写 CLI 探针会得到相反结论 —— 没装那个处理器,必须用 `\app\MacApp`。)
+    - **真正 500 的是"内部函数收到错类型"**:`date($f, '2026-09-09 12:00:00')`、
+      `captcha_check(null)`(think-captcha 的 `check(string $code)` 非可空)。PHP7 只是 warning
+      + 返回 false,PHP8 是硬 TypeError。**按类型断裂找,别按缺键找。**
+    - 定位真 500 只能看 `runtime/<入口>/log/<日期>_error.log`(和普通 `<日期>.log` 是两个文件)。
+
+24. **`fields not exists:[__token__]`** = 后台表单把 `Request::post()` 整包交给 `saveData()`,
+    CSRF 隐藏域随之进了 `update()`。TP 严格模式(`fields_strict` 默认开)遇未知键直接抛。
+    别逐个 `unset` —— 在模型基类加按 `getTableFields()` 取交集的 `filterFields()`,
+    在写库语句正前方调用(不能放函数开头,会丢掉前置加工要读的伪字段)。
+    **零额外查询**:写入本身就要 `getFieldsBindType()` 拿同一份 schema,走连接内存缓存。
+    保留含 `.` / `->` 的键,与 `Builder::parseData()` 判断口径一致。
+
+25. **`Undefined array key` 的量级本身就是故障**。杏吧两天刷了 **47.5 万条**、日志目录一天 56M。
+    按 `文件:行` 聚合(而不是按消息)才能看出热点 —— 前 3 名占 97%:
+    `mac_url()` 的 `type_en`(模板里 `{:mac_url_type($obj,[],'type')}` 传的是**影片行**,
+    没有 `type_en`)和 `mac_url_vod_play()` 的 `sid`/`nid`(默认 `$param=[]`)。
+    修法是**在函数入口用 `+=` 补默认值**(只填缺失键,已有值不动,URL 逐字节不变),
+    而不是去改几十个 case 分支。⚠️ 补 `$param` 默认值要放在"清空空值"的 foreach **之后**,
+    否则当场被 unset 掉。
+    `type_en` 额外从 `$info['type']['type_en']` 兜底 —— 这不只是消噪:用 `{type_en}` 伪静态的站,
+    面包屑分类链接本来就是断的(`/vodtype/-.html`)。
+
+26. 🔴 **拿"表单往返"当回归测试会改坏生产数据**(2026-09 杏吧,我自己踩的)。
+    `Vod::saveData()` 在 POST **不含**播放字段时会**主动把 `vod_play_from/url/server/note` 清空**,
+    `type_id_1` 也按 `type_id` 重算。用脚本抓表单再回填时,只要漏抓一个字段(我的 `<option ... selected>`
+    正则要求 `selected` 在 `value` 前,而实际是 `value="55" selected`),那一列就被写成空。
+    - **测保存动作前先 dump 目标行**,测完逐字段 diff。
+    - 回滚只还原"被表单写坏的列",`vod_hits`/`admin_login_*` 这类是真实活动,别一起盖回去。
+    - DB 直接改完要**补一次 `MeilisearchSync::afterVodSave($id)`**,索引主键是 `vod_<id>` 不是 `<id>`。
+
 # 老机退役
 - 退役前 `curl -sD-` 验主站已**零真实流量**(只剩 CF 探测 + `.git`/`wp-login` 类爬虫扫描 = 正常噪声,可放心退)。
 - 把老机备份(`/www/backup`、`/home/{migration,dbbak}`、`wwwroot_*.tar.gz`、`rclone.conf`、`safemac` 隔离体)
