@@ -1,7 +1,7 @@
 <?php
 // Public theme settings. Keep site-specific endpoints together; no credentials belong here.
 return [
-    'version' => '20260909.3',
+    'version' => '20260909.4',
     'name' => '杏吧资源站',
     'permanent' => 'www.sex8zy.com',
     'mirrors' => array_map(static fn ($n) => 'sex8zy' . $n . '.com', range(1, 9)),

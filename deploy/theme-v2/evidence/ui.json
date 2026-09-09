@@ -1,0 +1,101 @@
+[
+  {
+    "width": 1440,
+    "fixture": "pass",
+    "checks": [
+      "current parent selection",
+      "horizontal tabs and keyboard",
+      "resize restores desktop categories",
+      "no overflow",
+      "copy selected per source",
+      "reversed copy order",
+      "tri-state select all",
+      "empty selection",
+      "clipboard denial fallback"
+    ]
+  },
+  {
+    "width": 768,
+    "fixture": "pass",
+    "checks": [
+      "current parent selection",
+      "horizontal tabs and keyboard",
+      "resize restores desktop categories",
+      "no overflow",
+      "copy selected per source",
+      "reversed copy order",
+      "tri-state select all",
+      "empty selection",
+      "clipboard denial fallback"
+    ]
+  },
+  {
+    "width": 390,
+    "fixture": "pass",
+    "checks": [
+      "current parent selection",
+      "horizontal tabs and keyboard",
+      "resize restores desktop categories",
+      "no overflow",
+      "copy selected per source",
+      "reversed copy order",
+      "tri-state select all",
+      "empty selection",
+      "clipboard denial fallback"
+    ]
+  },
+  {
+    "width": 360,
+    "fixture": "pass",
+    "checks": [
+      "current parent selection",
+      "horizontal tabs and keyboard",
+      "resize restores desktop categories",
+      "no overflow",
+      "copy selected per source",
+      "reversed copy order",
+      "tri-state select all",
+      "empty selection",
+      "clipboard denial fallback"
+    ]
+  },
+  {
+    "width": 1440,
+    "live": "pass",
+    "firstId": "143118",
+    "metric": {
+      "width": 1440,
+      "scrollWidth": 1440,
+      "firstRowY": 865.59375,
+      "tabsWidth": 0,
+      "tabsScroll": 0
+    },
+    "detailGroups": 1
+  },
+  {
+    "width": 390,
+    "live": "pass",
+    "firstId": "143118",
+    "metric": {
+      "width": 390,
+      "scrollWidth": 390,
+      "firstRowY": 722.125,
+      "tabsWidth": 366,
+      "tabsScroll": 588
+    },
+    "detailGroups": 1
+  },
+  {
+    "width": 360,
+    "live": "pass",
+    "firstId": "143118",
+    "metric": {
+      "width": 360,
+      "scrollWidth": 360,
+      "firstRowY": 722.125,
+      "tabsWidth": 336,
+      "tabsScroll": 588
+    },
+    "detailGroups": 1
+  }
+]

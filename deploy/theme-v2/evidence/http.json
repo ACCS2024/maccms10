@@ -1,0 +1,79 @@
+[
+  {
+    "page": "home",
+    "status": 200,
+    "rows": 70
+  },
+  {
+    "page": "home_page_2",
+    "status": 200,
+    "rows": 70
+  },
+  {
+    "page": "parent_category",
+    "status": 200,
+    "rows": 40
+  },
+  {
+    "page": "child_category",
+    "status": 200,
+    "rows": 40
+  },
+  {
+    "page": "article_category",
+    "status": 200,
+    "rows": 40
+  },
+  {
+    "page": "article_detail",
+    "status": 200,
+    "rows": 0
+  },
+  {
+    "page": "video_detail",
+    "status": 200,
+    "rows": 0
+  },
+  {
+    "page": "play_shell",
+    "status": 200,
+    "rows": 0
+  },
+  {
+    "page": "ascending_order",
+    "status": 200,
+    "rows": 70
+  },
+  {
+    "page": "sort_resets_page",
+    "status": 200,
+    "rows": 70
+  },
+  {
+    "page": "empty_search",
+    "status": 200,
+    "rows": 0
+  },
+  {
+    "page": "escaped_search",
+    "status": 200,
+    "rows": 0
+  },
+  {
+    "page": "matching_search",
+    "status": 200,
+    "rows": 1
+  },
+  {
+    "page": "missing_resource",
+    "status": 404
+  },
+  {
+    "page": "disallowed_route",
+    "status": 404
+  },
+  {
+    "page": "preview_post_block",
+    "status": 405
+  }
+]

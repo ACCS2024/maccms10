@@ -1,0 +1,12 @@
+PASS index/index
+PASS vod/index
+PASS vod/type
+PASS vod/show
+PASS vod/search
+PASS vod/detail
+PASS vod/play
+PASS art/index
+PASS art/type
+PASS art/show
+PASS art/search
+PASS art/detail
