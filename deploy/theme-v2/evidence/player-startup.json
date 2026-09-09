@@ -1,0 +1,46 @@
+[
+  {
+    "name": "malformed triple slash",
+    "status": "pass"
+  },
+  {
+    "name": "empty overlay",
+    "status": "pass"
+  },
+  {
+    "name": "backslash malformed URL",
+    "status": "pass"
+  },
+  {
+    "name": "non HTTP URL",
+    "status": "pass"
+  },
+  {
+    "name": "zero duration",
+    "status": "pass"
+  },
+  {
+    "name": "valid local overlays",
+    "status": "pass"
+  },
+  {
+    "name": "valid external overlays",
+    "status": "pass"
+  },
+  {
+    "name": "unsupported source",
+    "status": "pass"
+  },
+  {
+    "name": "deployed startup",
+    "width": 1440,
+    "status": "pass",
+    "parser": "stubbed; media decoding not tested"
+  },
+  {
+    "name": "deployed startup",
+    "width": 390,
+    "status": "pass",
+    "parser": "stubbed; media decoding not tested"
+  }
+]
