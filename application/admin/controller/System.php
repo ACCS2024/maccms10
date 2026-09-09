@@ -137,6 +137,17 @@ class System extends Base
                     $config['app']['api_jwt_secret'] = $config_old_maccms['app']['api_jwt_secret'];
                 }
             }
+            // 定时任务远程触发 Token:由「定时任务」页单独生成,本表单里没有这个字段。
+            // 下面 $config_new['app'] = $config['app'] 是【整体替换】(array_merge 只做浅合并),
+            // 不在这里显式接回来的话,站长每保存一次网站参数就把 Token 冲成空 ——
+            // 远程触发当场失效,且没有任何报错,只有下次调用才发现。与上面两个密钥同理。
+            if (!isset($config['app']['timming_token'])) {
+                $config['app']['timming_token'] = $config_old_maccms['app']['timming_token'] ?? '';
+            }
+            if (!isset($config['app']['timming_token_time'])) {
+                $config['app']['timming_token_time'] = $config_old_maccms['app']['timming_token_time'] ?? 0;
+            }
+
             if (isset($config['app']['api_jwt_enabled']) && (string)$config['app']['api_jwt_enabled'] === '1') {
                 $jwtSec = isset($config['app']['api_jwt_secret']) ? trim((string)$config['app']['api_jwt_secret']) : '';
                 if (strlen($jwtSec) < 32) {

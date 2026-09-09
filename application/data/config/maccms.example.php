@@ -161,6 +161,7 @@ return array (
     'search_manga_rule' => '',
     'legacy_pathinfo_url' => '0',
     'timming_token' => '',
+    'timming_token_time' => 0,
   ),
   'user' => 
   array (

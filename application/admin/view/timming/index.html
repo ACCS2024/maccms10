@@ -1,5 +1,91 @@
 {include file="../../../application/admin/view/public/head" /}
+<style>
+.tk-card{background:#fff;border:1px solid #e6e6e6;border-radius:3px;margin-bottom:10px}
+.tk-hd{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid #f0f0f0;flex-wrap:wrap}
+.tk-hd h3{font-size:14px;font-weight:600;margin:0;color:#333}
+.tk-hd .tk-sp{margin-left:auto}
+.tk-bd{padding:12px 14px}
+.tk-way{border:1px solid #eee;border-left:3px solid #ccc;border-radius:0 3px 3px 0;padding:9px 12px;margin-bottom:8px;background:#fcfcfc}
+.tk-way.best{border-left-color:#5FB878;background:#f6fbf7}
+.tk-way.ok{border-left-color:#1E9FFF;background:#f6fafd}
+.tk-way.warn{border-left-color:#FFB800;background:#fffcf5}
+.tk-way b{font-size:13px;color:#333;display:block;margin-bottom:3px}
+.tk-way p{color:#888;font-size:12px;margin:3px 0;line-height:1.7}
+.tk-cmd{display:flex;align-items:center;gap:8px;margin-top:6px}
+.tk-cmd code{flex:1;min-width:0;background:#2f3542;color:#e8eaed;padding:7px 10px;border-radius:3px;
+  font-family:Menlo,Consolas,monospace;font-size:12px;overflow-x:auto;white-space:nowrap;line-height:1.6}
+.tk-tokline{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 12px;background:#f7f8fa;border-radius:3px;margin-top:4px}
+.tk-tokline code{background:#fff;border:1px solid #e0e0e0;padding:6px 10px;border-radius:3px;
+  font-family:Menlo,Consolas,monospace;font-size:13px;letter-spacing:.4px;color:#333;min-width:330px}
+.tk-danger{margin-top:10px;padding:9px 12px;background:#fff4f4;border-left:3px solid #FF5722;border-radius:0 3px 3px 0}
+.tk-danger p{margin:2px 0;color:#a04040;font-size:12px;line-height:1.8}
+.tk-off{color:#999;font-size:12px;margin:0}
+</style>
 <div class="page-container p10">
+
+    {if condition="$is_super eq 1"}
+    <div class="tk-card">
+        <div class="tk-hd">
+            <h3>远程触发（HTTP Token）</h3>
+            <span class="layui-badge {if condition="$token_state.enabled eq 1"}layui-bg-green{else/}layui-bg-gray{/if}" id="tkBadge">{if condition="$token_state.enabled eq 1"}已启用{else/}未启用{/if}</span>
+            <span class="tk-sp"></span>
+            <a class="layui-btn layui-btn-sm" id="tkGen">{if condition="$token_state.enabled eq 1"}重新生成{else/}生成 Token{/if}</a>
+            {if condition="$token_state.enabled eq 1"}<a class="layui-btn layui-btn-sm layui-btn-danger" id="tkClear">停用</a>{/if}
+            <a class="layui-btn layui-btn-sm layui-btn-primary" id="tkToggle">展开说明 ⌄</a>
+        </div>
+        <div class="tk-bd" id="tkBody" style="display:none">
+
+            <div class="tk-way best">
+                <b>① 服务器计划任务（推荐，本站已配置）</b>
+                <p>不需要 Token，不对外暴露任何可触发的地址，也不受 30 秒执行上限限制（采集动辄跑几分钟）。<b style="display:inline">面板 → 计划任务</b> 里已建好 4 个，点「执行」即可手动跑一次。</p>
+                <div class="tk-cmd">
+                    <code id="tkCli">cd {$token_state.dir} &amp;&amp; php bin/timming &lt;任务名&gt; 1</code>
+                    <a class="layui-btn layui-btn-sm layui-btn-primary tk-copy" data-src="tkCli">复制</a>
+                </div>
+            </div>
+
+            <div class="tk-way ok">
+                <b>② HTTP + 请求头（需要别的机器/监控系统远程触发时用这个）</b>
+                <p>Token 放在请求头里，<b style="display:inline">不会写进 nginx 访问日志</b>，也不会出现在浏览器历史和 Referer 中。对接方只要能自定义请求头，就优先用这种。</p>
+                <div class="tk-cmd">
+                    <code id="tkHdr">curl -H 'X-Maccms-Timming-Token: &lt;Token&gt;' '{$token_state.site}{$token_state.dir}api.php/timming/index.html?enforce=1&amp;name=&lt;任务名&gt;'</code>
+                    <a class="layui-btn layui-btn-sm layui-btn-primary tk-copy" data-src="tkHdr" data-need-token="1">复制</a>
+                </div>
+            </div>
+
+            <div class="tk-way warn">
+                <b>③ HTTP + URL 参数（最不安全，仅在对接方只能填一个网址时用）</b>
+                <p>Token 会被完整写进 <b style="display:inline">nginx 访问日志</b>、浏览器地址栏与历史记录，页面跳转时还可能通过 Referer 带给第三方。用了就要当它<b style="display:inline">早晚会泄露</b>，定期重新生成。</p>
+                <div class="tk-cmd">
+                    <code id="tkUrl">{$token_state.site}{$token_state.dir}api.php/timming/index.html?enforce=1&amp;name=&lt;任务名&gt;&amp;token=&lt;Token&gt;</code>
+                    <a class="layui-btn layui-btn-sm layui-btn-primary tk-copy" data-src="tkUrl" data-need-token="1">复制</a>
+                </div>
+            </div>
+
+            <div class="tk-tokline">
+                <span style="color:#666;font-size:13px">当前 Token</span>
+                {if condition="$token_state.enabled eq 1"}
+                <code id="tkVal" data-plain="">{$token_state.masked}</code>
+                <a class="layui-btn layui-btn-sm layui-btn-primary" id="tkReveal">显示</a>
+                <a class="layui-btn layui-btn-sm layui-btn-primary tk-copy" data-src="tkVal" data-need-token="1">复制</a>
+                <span style="color:#999;font-size:12px">最近更新：{$token_state.updated}</span>
+                {else/}
+                <p class="tk-off">未启用。下方每行的「远程触发」按钮需要先生成 Token；后台手动跑任务请用面板计划任务的「执行」。</p>
+                {/if}
+            </div>
+
+            <div class="tk-danger">
+                <p><b style="display:inline">谁拿到 Token，谁就能触发本站的采集、清缓存、静态生成。</b></p>
+                <p>· 不要贴进群聊、工单、文档或截图；页面上默认只显示掩码，点「显示」才取明文。</p>
+                <p>· 换人接手、外包结束、或怀疑泄露，立刻点「重新生成」——旧 Token 当场失效，无需重启。</p>
+                <p>· 生成/显示/停用都会记进运行日志（含操作人与 IP），方便事后追溯。</p>
+                <p>· 本机 PHP-FPM 已禁用 exec，后台无法直接调用命令行，所以「远程触发」按钮必须走 Token；不想启用就用方式 ①。</p>
+            </div>
+
+        </div>
+    </div>
+    {/if}
+
     <div class="my-toolbar-box">
 
         <div class="flex gap-5 overflow-x-auto overflow-y-hidden">
@@ -20,7 +106,7 @@
                 <th width="80">{:lang('run')}</th>
                 <th width="80">{:lang('status')}</th>
                 <th width="80">{:lang('last_run_time')}</th>
-                <th width="100">{:lang('opt')}</th>
+                <th width="150">{:lang('opt')}</th>
             </tr>
             </thead>
             {volist name="list" id="vo"}
@@ -34,7 +120,7 @@
                 </td>
                 <td>{$vo.runtime|mac_day}</td>
                 <td>
-                    <a class="layui-badge-rim" style="height: 32px;line-height: 32px;padding: 0 15px;" target="_blank" href="{php}echo $GLOBALS['config']['site']['install_dir'];{/php}api.php/timming/index.html?enforce=1&name={$vo['name']|rawurlencode}" title="{:lang('test')}">{:lang('test')}</a>
+                    <a class="layui-badge-rim j-tk-run" style="height:32px;line-height:32px;padding:0 15px;" href="javascript:;" data-name="{$vo['name']|htmlspecialchars}" title="用 Token 在新窗口触发一次">远程触发</a>
                     <a class="layui-badge-rim j-iframe" data-href="{:url('info')}?id={$vo['name']|rawurlencode}" href="javascript:;" title="{:lang('edit')}">{:lang('edit')}</a>
                     <a class="layui-badge-rim j-tr-del" data-href="{:url('del')}?ids={$vo['name']|rawurlencode}" href="javascript:;" title="{:lang('del')}">{:lang('del')}</a>
                 </td>
@@ -48,7 +134,94 @@
 {include file="../../../application/admin/view/public/foot" /}
 
 <script type="text/javascript">
+layui.use(['layer'], function () {
+    var $ = layui.jquery, layer = layui.layer;
+    var TOKEN_URL = "{:url('token')}";
+    var SITE = "{$token_state.site}", DIR = "{$token_state.dir}";
+    var enabled = {$token_state.enabled};
+    var plain = '';   // 明文只活在内存里，不写进 DOM/localStorage
 
+    function post(act) {
+        return $.ajax({ url: TOKEN_URL, type: 'POST', dataType: 'json', data: { act: act } });
+    }
+    // 明文按需拉取：页面初次渲染只有掩码，避免 token 躺在 HTML 源码里被截图/缓存带走
+    function needPlain() {
+        var d = $.Deferred();
+        if (!enabled) { layer.msg('请先生成 Token'); return d.reject(); }
+        if (plain) { return d.resolve(plain); }
+        post('reveal').done(function (r) {
+            if (r.code === 1) { plain = r.data.token; d.resolve(plain); }
+            else { layer.msg(r.msg || '获取失败'); d.reject(); }
+        }).fail(function () { layer.msg('请求失败'); d.reject(); });
+        return d;
+    }
+    function copy(text) {
+        var ta = document.createElement('textarea');
+        ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+        document.body.appendChild(ta); ta.select();
+        try { document.execCommand('copy'); layer.msg('已复制'); }
+        catch (e) { layer.msg('复制失败，请手动选取'); }
+        document.body.removeChild(ta);
+    }
+
+    $('#tkToggle').on('click', function () {
+        var b = $('#tkBody'), open = b.is(':visible');
+        b.toggle(); $(this).text(open ? '展开说明 ⌄' : '收起说明 ⌃');
+    });
+
+    $(document).on('click', '.tk-copy', function () {
+        var el = $('#' + $(this).data('src')), raw = el.text();
+        if (!$(this).data('need-token')) { return copy(raw); }
+        needPlain().done(function (t) {
+            copy(el.attr('id') === 'tkVal' ? t : raw.replace(/&lt;Token&gt;|<Token>/g, t));
+        });
+    });
+
+    $('#tkReveal').on('click', function () {
+        var btn = $(this), el = $('#tkVal');
+        if (btn.text() === '隐藏') { el.text(el.data('masked')); btn.text('显示'); return; }
+        needPlain().done(function (t) {
+            el.data('masked', el.text()).text(t); btn.text('隐藏');
+        });
+    });
+
+    $('#tkGen').on('click', function () {
+        var tip = enabled
+            ? '重新生成后<b>旧 Token 立即失效</b>，所有还在用旧 Token 的外部调用都会开始报错。确定？'
+            : '将生成一个 48 位随机 Token 并写入配置。确定？';
+        layer.confirm(tip, { title: '确认' }, function (i) {
+            layer.close(i);
+            post('generate').done(function (r) {
+                layer.msg(r.msg || '完成');
+                if (r.code === 1) { setTimeout(function () { location.reload(); }, 800); }
+            });
+        });
+    });
+
+    $('#tkClear').on('click', function () {
+        layer.confirm('停用后<b>所有 HTTP 远程触发都会被拒绝</b>（服务器计划任务不受影响）。确定？',
+            { title: '确认' }, function (i) {
+                layer.close(i);
+                post('clear').done(function (r) {
+                    layer.msg(r.msg || '完成');
+                    if (r.code === 1) { setTimeout(function () { location.reload(); }, 800); }
+                });
+            });
+    });
+
+    // 列表行的「远程触发」：拿明文拼 URL 后新窗口打开。
+    // 这里不用页面里预渲染好的带 token 链接，就是为了让 token 不进 HTML 源码。
+    $(document).on('click', '.j-tk-run', function () {
+        var name = $(this).data('name');
+        if (!enabled) {
+            return layer.msg('尚未启用 Token。请先在上方生成，或直接用面板计划任务的「执行」按钮。', { time: 4000 });
+        }
+        needPlain().done(function (t) {
+            window.open(SITE + DIR + 'api.php/timming/index.html?enforce=1&name='
+                + encodeURIComponent(name) + '&token=' + encodeURIComponent(t), '_blank');
+        });
+    });
+});
 </script>
 </body>
 </html>
