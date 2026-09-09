@@ -462,3 +462,82 @@ CF 记录改回快照里的原 IP 即可（每条记录的 zone/id/原值都在�
 ## 回滚条件
 - 新机首页/详情/播放/采集/搜索任一不通 → DNS 切回源机
 - 源机在观察期内**不停机、不清理**，保留完整回退能力
+
+---
+
+# 定时任务运维（2026-09-09 补）
+
+## 现状
+新机 4 个面板计划任务（**面板 → 计划任务**，走 CLI 免 Token）：
+
+| 任务 | 时间 | 说明 |
+|---|---|---|
+| `aa` | 每天 01:10 | 采集今日数据（沿用老机时间点） |
+| `xqhc` | 每天 02:40 | 清理缓存（沿用老机时间点） |
+| `analytics_hour` | 每小时 :05 | 运营统计小时聚合 |
+| `analytics_day` | 每天 01:05 | 运营统计日聚合 |
+
+命令形如：
+```bash
+cd /home/wwwroot/xingba && flock -xn /tmp/maccms-timming-aa.lock \
+  -c '/www/server/php/83/bin/php -c /etc/maccms/php-cli.ini bin/timming aa 1' \
+  >> /var/log/maccms/timming-aa.log 2>&1
+```
+日志轮转 `/etc/logrotate.d/maccms-timming`（14 天 / 单文件 20M）。
+
+**手动跑一次**：面板 → 计划任务 → 对应任务的「执行」按钮。或 SSH：
+```bash
+cd /home/wwwroot/xingba
+php -c /etc/maccms/php-cli.ini bin/timming --list      # 看各任务上次执行时间
+php -c /etc/maccms/php-cli.ini bin/timming aa 1        # 立即跑 aa
+```
+
+## 三种触发方式，按安全性排序
+
+| | 方式 | Token | Token 会不会泄露到日志 | 30 秒执行上限 | 适用 |
+|---|---|---|---|---|---|
+| ① | 服务器计划任务 / CLI | 不需要 | — | 不受限 | **本机定时，默认就用这个** |
+| ② | HTTP + 请求头 | 需要 | 不会 | 受限 | 别的机器 / 监控系统远程触发 |
+| ③ | HTTP + URL 参数 | 需要 | **会** | 受限 | 对接方只能填一个网址时 |
+
+② 的形式：
+```bash
+curl -H 'X-Maccms-Timming-Token: <Token>' \
+  'https://sex8zy.com/api.php/timming/index.html?enforce=1&name=aa'
+```
+
+## Token 怎么配（后台 → 定时任务，页首「远程触发」卡片）
+1. 点 **生成 Token** → 服务端用 `random_bytes(24)` 生成 48 位十六进制并写入
+   `application/extra/maccms.php` 的 `app.timming_token`。
+2. 页面**只显示掩码**（`368b••••…••c5ba`）。点 **显示** 才通过 `act=reveal` 单独取明文——
+   这样截图、浏览器缓存、误分享页面源码都带不走它。
+3. 每种方式旁边的 **复制** 按钮会在点击瞬间取明文、拼好整条命令再放进剪贴板。
+4. 列表每行的 **远程触发** 按钮：未启用 Token 时给引导，已启用时拼好 URL 新窗口打开。
+
+**只有超管（admin_id=1）能看见和操作这张卡片。**
+
+## 安全约定
+- Token 等于本站采集 / 清缓存 / 静态生成的**触发权**。不要贴进群聊、工单、文档、截图。
+- 方式 ③ 的 URL 会被完整写进 nginx 访问日志、浏览器地址栏与历史，页面跳转时还可能经
+  Referer 带给第三方。**用了就当它早晚会泄露**，定期轮换。
+- 换人接手 / 外包结束 / 疑似泄露 → 点 **重新生成**，旧 Token 当场失效，不用重启任何服务。
+- `generate` / `reveal` / `clear` 都会写 notice 日志（含操作人 `admin_id` 与 IP），
+  在 `runtime/admin/log/<日期>.log` 里 `grep '\[timming\] token'` 可查。
+- **暂时用不到远程触发就点「停用」** —— 定时任务走 CLI，完全不受影响，
+  停用后所有 HTTP 触发一律拒绝，攻击面归零。
+
+## 两个必须知道的坑
+1. **保存「网站参数」会冲掉 Token**（已修）。`System::config()` 里
+   `$config_new['app'] = $config['app']` 是整体替换，表单里没有的 `app.*` 键会丢。
+   已和 `api_jwt_secret` 一样显式接回来。**升级/合并上游代码时注意别把这段丢了。**
+2. **后台按钮绕不开 Token**。本机 PHP-FPM 的 `disable_functions` 含
+   `exec/shell_exec/proc_open/popen`，后台没法 shell 出去跑 CLI，所以"在后台点一下就触发"
+   只能自调 HTTP。要么启用 Token，要么用面板计划任务的「执行」按钮。
+
+## 排查
+- **内容停更但站点一切正常** → 先看 `select max(vod_time) from mac_vod`，
+  再 `bin/timming --list` 看「上次执行时间」。切换机器后最容易漏的就是调度没跟着迁。
+- **`invalid or missing timming token`** → Token 没启用，或调用方带的值不对。
+  注意 `timming_token` 为空时是 **fail-closed**：带不带 token 都拒绝，这是有意设计。
+- **采集只跑了一半** → HTTP 触发受 `api.php` 的 `max_execution_time=30` 限制；
+  改用 CLI（已对 CLI 放开为 0）。
