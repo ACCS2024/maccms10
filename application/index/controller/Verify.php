@@ -34,6 +34,6 @@ class Verify
 
     public function check($verify, $id = '')
     {
-        return captcha_check($verify) ? 1 : 0;
+        return captcha_check((string)($verify ?? '')) ? 1 : 0;
     }
 }

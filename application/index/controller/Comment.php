@@ -67,7 +67,7 @@ class Comment extends Base
         }
 
         if($GLOBALS['config']['comment']['verify'] == 1){
-            if(!captcha_check($param['verify'])){
+            if(!captcha_check((string)($param['verify'] ?? ''))){
                 return ['code'=>1002,'msg'=>lang('verify_err')];
             }
         }

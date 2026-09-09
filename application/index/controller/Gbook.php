@@ -45,7 +45,7 @@ class Gbook extends Base
         $param = \think\facade\Request::param();
 
         if($GLOBALS['config']['gbook']['verify'] == 1){
-            if(!captcha_check($param['verify'])){
+            if(!captcha_check((string)($param['verify'] ?? ''))){
                 return ['code'=>1002,'msg'=>lang('verify_err')];
             }
         }
