@@ -275,6 +275,38 @@ CF 域名注意静态资源缓存(见陷阱 1)。
     - 回滚只还原"被表单写坏的列",`vod_hits`/`admin_login_*` 这类是真实活动,别一起盖回去。
     - DB 直接改完要**补一次 `MeilisearchSync::afterVodSave($id)`**,索引主键是 `vod_<id>` 不是 `<id>`。
 
+27. 🔴 **改时区只改 `/etc/localtime` 是定时炸弹**(2026-09 杏吧,海外机常见)。
+    海外 VPS 出厂多是 `US/Eastern`/UTC。`timedatectl set-timezone` 或手改符号链接之后,
+    `date` 立刻正确、看不出问题 —— 但 **Debian 的 `tzdata.postinst` 不看符号链接,看 debconf**:
+    ```
+    db_get tzdata/Areas          → US
+    db_get tzdata/Zones/US       → Eastern
+    if [ "$(readlink /etc/localtime)" != "US/Eastern" ]; then ln -nsf .../US/Eastern /etc/localtime
+    ```
+    tzdata 一年升级好几次,**下次 apt 就把整机拨回美东,差 12 小时** —— cron(备份/续证/巡检)、
+    logrotate、nginx 日志、MySQL(`time_zone=SYSTEM`)全跟着偏,而且是静默的。
+    正确做法(三处一起):
+    ```bash
+    echo "tzdata tzdata/Areas select Asia"           | debconf-set-selections
+    echo "tzdata tzdata/Zones/Asia select Shanghai"  | debconf-set-selections
+    DEBIAN_FRONTEND=noninteractive dpkg-reconfigure -f noninteractive tzdata
+    timedatectl set-timezone Asia/Shanghai
+    ```
+    验证:`cat /etc/timezone`、`readlink -f /etc/localtime`、`debconf-show tzdata | grep Areas` 三者一致,
+    再跑一次 `dpkg-reconfigure` 确认不被拨回。
+    **另外必查**:常驻服务若在改时区【之前】启动,进程内缓存的仍是旧时区 —— 对比
+    `stat -c %y /etc/localtime` 与各服务 `systemctl show <svc> -p ActiveEnterTimestamp`,
+    早于前者的必须重启(cron 尤其致命:整份计划表偏移)。
+
+28. **aaPanel 的 PHP 有三份 ini,`date.timezone` 要一起改**(2026-09 杏吧):
+    `/www/server/php/<ver>/etc/php.ini`(FPM)、`.../php-cli.ini`(**裸 `php` 命令走这份,cron 用的就是它**)、
+    以及自建的 CLI 覆盖(本项目 `/etc/maccms/php-cli.ini`)。只改前一份会出现
+    "网页时间对、cron 脚本时间错"。`php --ini` 一行看出当前进程加载的是哪份。
+    另:aaPanel 默认写的是 `PRC` —— 能用,但那是 tz 库的遗留别名,规范化为 `Asia/Shanghai`。
+    改完 `systemctl reload php-fpm-<ver>`(平滑,不断连接)。
+    ⚠️ maccms 的内容时间戳全是 PHP `time()` 存 int(全仓 0 处 MySQL `NOW()`/`CURDATE()`),
+    **与 MySQL 时区解耦**,所以没必要为时区去重启 MySQL。
+
 # 老机退役
 - 退役前 `curl -sD-` 验主站已**零真实流量**(只剩 CF 探测 + `.git`/`wp-login` 类爬虫扫描 = 正常噪声,可放心退)。
 - 把老机备份(`/www/backup`、`/home/{migration,dbbak}`、`wwwroot_*.tar.gz`、`rclone.conf`、`safemac` 隔离体)
