@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>杏吧资源站 · 首页改版预览</title>
+  <link rel="stylesheet" href="style.css?v=3">
+  <script src="script.js?v=3" defer></script>
+</head>
+<body>
+<a href="#resources" class="skip">跳到资源列表</a>
+<div class="utility"><div class="wrap"><span>杏吧资源站 <i></i> 永久官网 www.sex8zy.com</span><span>2026年9月9日 <b>首页改版预览</b></span></div></div>
+<header class="masthead wrap">
+  <a class="logo" href="#" aria-label="杏吧资源站首页"><img src="assets/logo.gif" alt="杏吧资源" width="480" height="150"></a>
+  <div class="search-area">
+    <form id="search" role="search"><label class="sr-only" for="keyword">搜索影片名称或编号</label><input id="keyword" name="wd" type="search" placeholder="请输入影片名称或编号"><button type="submit"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6.5"></circle><path d="m15 15 6 6"></path></svg>搜索</button></form>
+    <p>CMS 采集遇到问题？ <button class="text-link" data-help="采集帮助">查看采集帮助</button><span>支持 XML / JSON 格式</span></p>
+  </div>
+  <div class="site-counts" aria-label="站点统计快照"><div><span>今日更新</span><strong>0</strong></div><div><span>影片总数</span><strong>112,582</strong></div><div><span>资讯总数</span><strong>77,401</strong></div></div>
+</header>
+<main class="wrap">
+  <nav class="primary-nav" aria-label="主导航"><a href="#" class="active" aria-current="page">首页</a><button data-help="采集教程">采集教程</button><button data-help="TG交流群">TG交流群</button><button data-help="TG频道">TG频道</button><button data-help="播放加载失败">播放加载失败？</button><a href="#interfaces" class="nav-api">采集接口 <span aria-hidden="true">↓</span></a></nav>
+  <section class="category-directory" aria-label="全部资源分类" data-category-directory><div class="category-tabs" aria-label="一级分类"></div><div id="category-rows" class="category-panels"></div></section>
+  <section class="service-board" id="interfaces" aria-label="站点公告与采集接口">
+    <div class="site-info">
+      <div class="small-heading"><h2>站点公告</h2><span>请收藏永久地址</span></div>
+      <div class="official-line"><span>永久官网</span><button class="domain" data-copy="www.sex8zy.com">www.sex8zy.com</button><button class="copy-button" data-copy="www.sex8zy.com" aria-label="复制永久官网">复制</button></div>
+      <div class="mirror-line"><span>镜像地址</span><div id="mirrors"></div></div>
+      <p class="site-note"><span>采集提醒</span>图片建议下载至本地保存。接口配置及域名替换说明请参阅采集教程。</p>
+      <button class="notice-link" data-help="站点公告">站点说明与服务承诺 <span aria-hidden="true">›</span></button>
+    </div>
+    <div class="interface-directory">
+      <div class="small-heading"><h2>采集接口</h2><div class="format-tabs" role="group" aria-label="接口格式"><button data-format="JSON" aria-pressed="true">JSON</button><button data-format="XML" aria-pressed="false">XML</button></div></div>
+      <div class="interface-row"><span class="endpoint-label">主采集接口</span><code id="main-endpoint"></code><button class="copy-button" id="copy-main" aria-label="复制主采集接口">复制</button></div>
+      <div class="interface-row"><span class="endpoint-label">备用接口</span><code id="backup-endpoint"></code><button class="copy-button" id="copy-backup" aria-label="复制备用接口">复制</button></div>
+      <div class="interface-row"><span class="endpoint-label">M3U8 解析</span><code>https://xbxbw888.com/?url=</code><button class="copy-button" data-copy="https://xbxbw888.com/?url=" aria-label="复制 M3U8 解析接口">复制</button></div>
+      <div class="interface-row player-row"><span class="endpoint-label">播放器标识</span><code>s8m3u8</code><button class="text-link player-download" data-help="播放器下载">下载播放器 <span aria-hidden="true">↗</span></button><button class="copy-button" data-copy="s8m3u8" aria-label="复制播放器标识">复制</button></div>
+    </div>
+    <div class="service-foot"><span><b>08-26</b> 播放域名 / 图片域名替换教程已更新</span><button class="text-link" data-help="域名替换教程">查看教程 <span aria-hidden="true">›</span></button><button id="legacy-toggle" class="text-link" aria-controls="legacy" aria-expanded="false">小说图片接口与历史地址 <span aria-hidden="true">⌄</span></button></div>
+    <div id="legacy" hidden><div class="interface-row"><span class="endpoint-label">小说 / 图片</span><code>https://sex8zy1.com/api.php/provide/art/?ac=list</code><button class="copy-button" data-copy="https://sex8zy1.com/api.php/provide/art/?ac=list">复制</button></div><div class="interface-row"><span class="endpoint-label">旧解析接口</span><code>https://xbww888.com/?url=</code><button class="copy-button" data-copy="https://xbww888.com/?url=">复制</button></div><p>旧解析接口原站标注“部分地区屏蔽”。上述地址来自原站配置，本预览未验证接口可用性。</p></div>
+    <button id="expand-services" class="expand-services" aria-expanded="false">展开全部接口与公告 <span aria-hidden="true">⌄</span></button>
+  </section>
+  <section id="resources" class="resources" aria-labelledby="resource-title">
+    <div class="resource-toolbar"><div class="section-name"><span class="section-marker" aria-hidden="true"></span><h1 id="resource-title">最近更新</h1><span id="filter-label">全部资源</span><button id="clear-filter" class="text-link" hidden>清除筛选</button></div><div class="list-controls"><button id="density" aria-pressed="false" title="切换紧凑列表"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 4h14M3 10h14M3 16h14"></path></svg><span>紧凑</span></button><label><span class="sr-only">排序方式</span><select id="sort"><option value="new">按更新时间 ↓</option><option value="old">按更新时间 ↑</option><option value="name">按影片名称</option></select></label></div></div>
+    <table class="resource-table"><colgroup><col class="cover-col"><col><col class="type-col"><col class="updated-col"></colgroup><thead><tr><th scope="col">影片封面</th><th scope="col">影片名称</th><th scope="col">影片类型</th><th scope="col">更新时间</th></tr></thead><tbody id="resource-rows"></tbody></table>
+    <div id="empty" hidden><h2>没有找到相关资源</h2><p>请更换关键词，或清除分类筛选。</p><button class="plain-button" id="reset">查看全部资源</button></div>
+    <div class="list-footer"><p id="result-count" role="status"></p><nav class="pagination" aria-label="资源分页"><button id="previous">上一页</button><span id="page-number" aria-label="当前页">1</span><button id="next">下一页</button></nav></div>
+  </section>
+  <footer class="footer"><div><strong>杏吧资源站</strong><span>永久官网：www.sex8zy.com</span></div><p>首页改版预览 · 影片与分类使用展示样例，统计为读取时快照；接口保留原站公开地址。</p><p>© 2026 杏吧资源站 <i></i> <button class="text-link" data-help="采集帮助">采集帮助</button> <button class="text-link" data-help="联系我们">联系我们</button></p></footer>
+</main>
+<dialog id="detail-dialog" aria-labelledby="dialog-title"><div class="dialog-heading"><h2 id="dialog-title"></h2><button class="close" aria-label="关闭">×</button></div><div id="dialog-content"></div></dialog>
+<dialog id="copy-dialog" aria-labelledby="copy-title"><div class="dialog-heading"><h2 id="copy-title">复制地址</h2><button class="close" aria-label="关闭">×</button></div><p>请长按或全选下方地址进行复制。</p><label class="sr-only" for="manual-copy">需要复制的地址</label><input id="manual-copy" readonly><button id="select-copy" class="plain-button">全选地址</button></dialog>
+<div id="toast" role="status" aria-live="polite" hidden></div>
+</body>
+</html>

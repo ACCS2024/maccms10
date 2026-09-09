@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html>
+<head>
+    {include file="public/include"}
+    <title>{$obj.type_name}数据列表-第{$param.page}页-{$maccms.site_name}</title>
+    <meta name="keywords" content="{$obj.type_name}数据列表-第{$param.page}页-{$maccms.site_name}" />
+    <meta name="description" content="{$obj.type_name}数据列表-第{$param.page}页-{$maccms.site_name}" />
+    <style>
+        /* ========== 强制对齐样式（与主页完全一致，修正间距） ========== */
+        .list .row,
+        .list .row *,
+        .list .title,
+        .list .title * {
+            box-sizing: border-box;
+        }
+
+        .list .title.background.container {
+            display: flex !important;
+            align-items: center !important;
+            list-style: none !important;
+            margin: 0 !important;
+            padding: 12px 0 !important;
+            background: #f5f5f5 !important;
+            font-weight: bold !important;
+            border-bottom: 2px solid #ddd !important;
+        }
+        .list .title.background.container li {
+            flex: 1 !important;
+            text-align: left !important;
+            color: #000 !important;
+            font-size: 14px !important;
+        }
+
+        .list .row {
+            display: block !important;
+            text-decoration: none !important;
+        }
+        .list .row .container {
+            display: flex !important;
+            align-items: center !important;
+            list-style: none !important;
+            margin: 0 !important;
+            padding: 12px 0 !important;
+            border-bottom: 1px solid #eee !important;
+            min-height: 84px !important;
+        }
+        .list .row .container li {
+            flex: 1 !important;
+            text-align: left !important;
+            color: #000 !important;
+            font-size: 14px !important;
+            line-height: 1.4 !important;
+        }
+        .list .row .container li:first-child {
+            display: flex !important;
+            align-items: center !important;
+            gap: 5px !important;
+            flex-wrap: nowrap !important;
+        }
+        .list .row .container li:first-child img:first-child {
+            width: 80px !important;
+            height: 60px !important;
+            object-fit: cover !important;
+            border-radius: 4px !important;
+            display: block !important;
+            flex-shrink: 0 !important;
+        }
+        .list .row .container li:first-child .vod-name {
+            color: #000 !important;
+            font-weight: 500 !important;
+            flex: 1 !important;
+            word-break: break-word !important;
+        }
+        .list .row .container li.red {
+            color: red !important;
+        }
+
+        .page {
+            margin-top: 20px !important;
+            text-align: center !important;
+        }
+
+        @media (max-width: 1200px) {
+            .list .row .container li:first-child img:first-child {
+                width: 70px !important;
+                height: 52px !important;
+            }
+        }
+        @media (max-width: 900px) {
+            .list .row .container li:first-child img:first-child {
+                width: 60px !important;
+                height: 45px !important;
+            }
+            .list .row .container li {
+                font-size: 13px !important;
+            }
+        }
+
+        /* ========== 视觉美化 ========== */
+        body {
+            background: #f8fafc;
+            font-family: 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+        }
+
+        .bread-crumbs {
+            background: linear-gradient(135deg, #fff, #fef7e0);
+            border-bottom: 1px solid #e2e8f0;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+            padding: 12px 0;
+        }
+        .bread-crumbs .limit {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 0 20px;
+            color: #5b6e8c;
+        }
+        .bread-crumbs .limit a {
+            color: #e67e22;
+        }
+
+        .list {
+            max-width: 1280px;
+            margin: 30px auto;
+            padding: 0 20px;
+        }
+
+        .list .title.background.container {
+            background: #ffffff !important;
+            border-radius: 16px !important;
+            border-bottom: none !important;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.03) !important;
+            margin-bottom: 12px !important;
+            color: #1e293b !important;
+        }
+
+        .list .row .container {
+            background: #ffffff !important;
+            border-radius: 14px !important;
+            border-bottom: none !important;
+            margin-bottom: 8px !important;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.03), 0 1px 3px rgba(0,0,0,0.03) !important;
+            transition: all 0.2s ease !important;
+        }
+        .list .row:hover .container {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 20px rgba(0,0,0,0.08) !important;
+            background: #fefefe !important;
+        }
+
+        .list .row .container li:first-child img:first-child {
+            border-radius: 10px !important;
+            transition: transform 0.2s, box-shadow 0.2s !important;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+        .list .row:hover .container li:first-child img:first-child {
+            transform: scale(1.02);
+            box-shadow: 0 8px 15px rgba(0,0,0,0.1);
+        }
+
+        .list .row .container li:first-child .vod-name {
+            color: #0f172a !important;
+            font-weight: 600 !important;
+            letter-spacing: -0.2px;
+        }
+        .list .row:hover .vod-name {
+            color: #e67e22 !important;
+        }
+
+        /* 影片类型：向右移动20px（修正） */
+        .list .row .container li:nth-child(2) {
+            color: #334155 !important;
+            font-weight: normal !important;
+            background: none !important;
+            padding: 0 0 0 220px !important;
+            border-radius: 0 !important;
+        }
+
+        /* 更新时间：向右移动12px（修正） */
+        .list .row .container li.red {
+            color: #e67e22 !important;
+            background: none !important;
+            padding: 0 0 0 10px !important;
+            border-radius: 0 !important;
+            font-weight: 500 !important;
+        }
+
+        /* 表头同步偏移（修正） */
+        .list .title.background.container li:nth-child(2) {
+            padding-left: 200px !important;
+        }
+        .list .title.background.container li:nth-child(3) {
+            padding-left: 12px !important;
+        }
+
+        .page a, .page span {
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 30px;
+            padding: 6px 14px;
+            margin: 0 4px;
+            color: #334155;
+            transition: all 0.2s;
+        }
+        .page a:hover, .page .active {
+            background: #e67e22;
+            border-color: #e67e22;
+            color: #fff;
+        }
+
+        @media (max-width: 640px) {
+            .list {
+                padding: 0 12px;
+            }
+            .list .row .container {
+                padding: 10px 12px !important;
+            }
+            .list .row .container li {
+                font-size: 12px !important;
+            }
+            .list .row .container li:first-child .vod-name {
+                font-size: 13px !important;
+            }
+            .list .row .container li:first-child img:first-child {
+                width: 55px !important;
+                height: 40px !important;
+            }
+            .list .row .container li:nth-child(2) {
+                padding-left: 12px !important;
+            }
+            .list .title.background.container li:nth-child(2) {
+                padding-left: 12px !important;
+            }
+            .list .row .container li:first-child {
+                flex-wrap: wrap !important;
+            }
+        }
+    </style>
+</head>
+<body>
+
+{include file="public/head"}
+
+<div class="bread-crumbs">
+    <p class="limit">
+        当前位置：
+        <a href="{$maccms.path}">首页</a>
+        &nbsp;&nbsp;›&nbsp;&nbsp;
+        <a class="actave">{$obj.type_name}</a>
+    </p>
+</div>
+
+<div class="list">
+    <ul class="title background container">
+        <li>🎬 影片名称</li>
+        <li>📁 影片类型</li>
+        <li>⏱️ 更新时间</li>
+    </ul>
+    <div class="list-box">
+        <div class="content">
+            {maccms:vod num="40" paging="yes" type="current" order="desc" by="time"}
+            <a href="{:mac_url_vod_detail($vo)}" class="row">
+                <ul class="container">
+                    <li>
+                        <img src="{$vo.vod_pic|mac_url_img}" alt="{$vo.vod_name}" onerror="this.src='{$maccms.path_tpl}images/nopic.png'">
+                        <span class="vod-name">{$vo.vod_name}</span>
+                        <!-- new.gif 已移除 -->
+                    </li>
+                    <li>{$vo.type.type_name}</li>
+                    <li class="red">{$vo.vod_time|date='Y-m-d'}</li>
+                </ul>
+            </a>
+            {/maccms:vod}
+            <div class="page">
+                {include file="public/paging"}
+            </div>
+        </div>
+    </div>
+</div>
+
+{include file="public/foot"}
+
+</body>
+</html>

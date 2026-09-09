@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html>
+<head>
+    {include file="public/include"}
+    <title>{$maccms.site_name}</title>
+    <meta name="keywords" content="{$maccms.site_keywords}" />
+    <meta name="description" content="{$maccms.site_description}" />
+    <style>
+        /* ========== 原有强制对齐样式（完全保留） ========== */
+        .list .row,
+        .list .row *,
+        .list .title,
+        .list .title * {
+            box-sizing: border-box;
+        }
+
+        .list .title.background.container {
+            display: flex !important;
+            align-items: center !important;
+            list-style: none !important;
+            margin: 0 !important;
+            padding: 12px 0 !important;
+            background: #f5f5f5 !important;
+            font-weight: bold !important;
+            border-bottom: 2px solid #ddd !important;
+        }
+        .list .title.background.container li {
+            flex: 1 !important;
+            text-align: left !important;
+            color: #000 !important;
+            font-size: 14px !important;
+            white-space: nowrap !important;
+        }
+        .list .title.background.container li:first-child {
+            flex: 0 0 120px !important;
+            text-align: center !important;
+        }
+        .list .title.background.container li:nth-child(2) {
+            flex: 2 !important;
+            padding-left: 10px !important;
+        }
+        .list .title.background.container li:nth-child(3) {
+            flex: 1 !important;
+            text-align: center !important;
+        }
+        .list .title.background.container li:nth-child(4) {
+            flex: 1 !important;
+            text-align: right !important;
+            padding-right: 46px !important;
+        }
+
+        .list .row {
+            display: block !important;
+            text-decoration: none !important;
+        }
+        .list .row .container {
+            display: flex !important;
+            align-items: center !important;
+            list-style: none !important;
+            margin: 0 !important;
+            padding: 12px 0 !important;
+            border-bottom: 1px solid #eee !important;
+            min-height: 84px !important;
+        }
+        .list .row .container li {
+            flex: 1 !important;
+            text-align: left !important;
+            color: #000 !important;
+            font-size: 14px !important;
+            line-height: 1.4 !important;
+        }
+        .list .row .container li:first-child {
+            flex: 0 0 80px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+        }
+        .list .row .container li:first-child img:first-child {
+            width: 80px !important;
+            height: 60px !important;
+            object-fit: cover !important;
+            border-radius: 4px !important;
+            display: block !important;
+            flex-shrink: 0 !important;
+        }
+        .list .row .container li:nth-child(2) {
+            flex: 2 !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 0px !important;
+            flex-wrap: nowrap !important;
+        }
+        .list .row .container li:nth-child(2) .vod-name {
+            color: #1a2332 !important;
+            font-weight: 600 !important;
+            flex: 1 !important;
+            max-width: 280px !important;
+            white-space: nowrap !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+            margin-left: 15px !important;
+        }
+        .list .row .container li:nth-child(2) .new-icon {
+            display: inline-block !important;
+            margin-left: 2px !important;
+            flex-shrink: 0 !important;
+        }
+        .list .row .container li:nth-child(3) {
+            flex: 1 !important;
+            text-align: center !important;
+        }
+        .list .row .container li:nth-child(4) {
+            flex: 1 !important;
+            text-align: right !important;
+            color: #667eea !important;
+            font-weight: 500 !important;
+        }
+
+        .page {
+            margin-top: 20px !important;
+            text-align: center !important;
+        }
+
+        @media (max-width: 1200px) {
+            .list .row .container li:first-child {
+                flex: 0 0 70px !important;
+            }
+            .list .row .container li:first-child img:first-child {
+                width: 70px !important;
+                height: 52px !important;
+            }
+            .list .row .container li:nth-child(2) .vod-name {
+                max-width: 200px !important;
+                margin-left: 10px !important;
+            }
+            .list .title.background.container li:first-child {
+                flex: 0 0 70px !important;
+            }
+            .list .title.background.container li:nth-child(2) {
+                padding-left: 10px !important;
+            }
+        }
+        @media (max-width: 900px) {
+            .list .row .container li:first-child {
+                flex: 0 0 60px !important;
+            }
+            .list .row .container li:first-child img:first-child {
+                width: 60px !important;
+                height: 45px !important;
+            }
+            .list .row .container li {
+                font-size: 13px !important;
+            }
+            .list .row .container li:nth-child(2) .vod-name {
+                max-width: 150px !important;
+                margin-left: 8px !important;
+            }
+            .list .title.background.container li:first-child {
+                flex: 0 0 60px !important;
+            }
+            .list .title.background.container li:nth-child(2) {
+                padding-left: 8px !important;
+            }
+        }
+
+        .bread-crumbs {
+            background: transparent !important;
+            border-bottom: none !important;
+            box-shadow: none !important;
+            padding: 20px 20px 0 20px;
+            max-width: 1240px;
+            margin: 0 auto;
+        }
+
+        .list {
+            max-width: 1200px;
+            margin: 0 auto 30px auto;
+            padding: 0 20px;
+        }
+
+        .wrapper-card {
+            background: #ffffff;
+            border-radius: 16px;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+            padding: 20px 24px;
+            margin-bottom: 16px;
+            border: 1px solid #e8ecf1;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .wrapper-card:hover {
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        }
+
+        .notice-card {
+            background: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            padding: 16px 20px;
+            margin-bottom: 12px;
+            border: 1px solid #e8ecf1;
+            transition: box-shadow 0.2s;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .notice-card:hover {
+            box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+        }
+        .notice-card:last-child {
+            margin-bottom: 0;
+        }
+
+        .notice-card--promise {
+            border-left: 4px solid #f6ad55;
+            background: #fffbef;
+        }
+        .notice-card--archived {
+            border-left: 4px solid #a0aec0;
+            background: #fafbfc;
+        }
+
+        .notice-card__head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px 12px;
+            margin-bottom: 6px;
+        }
+        .notice-card__title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #1a2332;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .notice-card__badge {
+            background: #667eea;
+            color: #fff;
+            padding: 0 12px;
+            border-radius: 30px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        .notice-card__badge--promise { background: #f6ad55; }
+        .notice-card__badge--archive { background: #a0aec0; }
+
+        .notice-card__body {
+            color: #2d3748;
+            font-size: 14px;
+            line-height: 1.7;
+        }
+        .notice-card__body .highlight { color: #dc2626; font-weight: 500; }
+
+        .notice-mirror-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px 8px;
+        }
+        .notice-mirror-list a {
+            background: #f0f2f5;
+            padding: 3px 12px;
+            border-radius: 20px;
+            font-size: 13px;
+            color: #1a2332;
+            text-decoration: none;
+            border: 1px solid #e2e8f0;
+            white-space: nowrap;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .notice-mirror-list a:hover {
+            border-color: #667eea;
+            color: #667eea;
+        }
+
+        .card-row {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 12px;
+            width: 100%;
+        }
+        .card-row .notice-card { flex: 1; margin-bottom: 0; }
+        @media (max-width: 640px) {
+            .card-row { flex-direction: column; }
+            .card-row .notice-card { width: 100%; }
+        }
+
+        .notice-api-item {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 4px 10px;
+            padding: 4px 0;
+            width: 100%;
+        }
+        .notice-api-label {
+            font-weight: 400;
+            color: #667eea;
+            font-size: 13px;
+            word-break: break-all;
+            flex: 1;
+            min-width: 0;
+        }
+
+        /* ===== 复制按钮 - 蓝色 ===== */
+        .copy-btn {
+            background: #2b7be4;
+            border: none;
+            border-radius: 4px;
+            padding: 4px 16px;
+            font-size: 13px;
+            color: #fff !important;
+            cursor: pointer;
+            transition: 0.2s;
+            font-weight: 500;
+            white-space: nowrap;
+            height: 30px;
+            flex-shrink: 0;
+            display: inline-block;
+            line-height: 20px;
+            text-decoration: none;
+        }
+        .copy-btn:hover {
+            background: #1a5fc7;
+            color: #fff !important;
+        }
+        .copy-btn.copied {
+            background: #28a745;
+            color: #fff !important;
+        }
+        .copy-btn--download {
+            background: #2b7be4;
+            color: #fff;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .copy-btn--download:hover {
+            background: #1a5fc7;
+            color: #fff !important;
+        }
+
+        /* ===== 复制框 ===== */
+        .copy-box {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 4px 0;
+            flex-wrap: wrap;
+        }
+        .copy-box input {
+            flex: 1;
+            min-width: 120px;
+            padding: 4px 8px;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            font-size: 12px;
+            color: #1a2332;
+            background: #f8fafc;
+            cursor: text;
+            height: 28px;
+        }
+        .copy-box input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .copy-box .copy-btn {
+            height: 28px;
+            padding: 0 12px;
+            font-size: 12px;
+            flex-shrink: 0;
+        }
+
+        /* 教程专用样式 - 只保留链接提示 */
+        .tutorial-link-box {
+            background: #f8fafc;
+            border-radius: 8px;
+            padding: 16px 20px;
+            border-left: 3px solid #667eea;
+            text-align: center;
+        }
+        .tutorial-link-box .main-link {
+            font-size: 18px;
+            font-weight: 600;
+            color: #667eea;
+            text-decoration: none;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 2px;
+        }
+        .tutorial-link-box .main-link:hover {
+            color: #1a5fc7;
+            border-bottom-color: #1a5fc7;
+        }
+        .tutorial-link-box .hint {
+            color: #4a5568;
+            font-size: 13px;
+            margin-top: 6px;
+        }
+        .tutorial-link-box .date-tag {
+            display: inline-block;
+            background: #e8ecf1;
+            color: #4a5568;
+            font-size: 12px;
+            padding: 2px 12px;
+            border-radius: 30px;
+            margin-top: 8px;
+        }
+
+        .notice-archive-toggle {
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0 4px 0;
+            border-top: 1px solid #e8ecf1;
+            margin-top: 4px;
+            user-select: none;
+        }
+        .notice-archive-toggle .toggle-label {
+            font-size: 15px;
+            font-weight: 600;
+            color: #667eea;
+        }
+        .notice-archive-toggle .toggle-icon {
+            font-size: 16px;
+            color: #667eea;
+            transition: transform 0.3s;
+        }
+        .notice-archive-toggle .toggle-icon.open { transform: rotate(180deg); }
+        .notice-archive-content { display: none; padding-top: 12px; }
+        .notice-archive-content.open { display: block; }
+
+        .history-item {
+            background: #f8fafc;
+            border-radius: 8px;
+            padding: 12px 16px;
+            border-left: 3px solid #a0aec0;
+            margin-bottom: 8px;
+        }
+        .history-item:last-child { margin-bottom: 0; }
+        .history-item .h-date { font-weight: 700; color: #667eea; font-size: 12px; }
+        .history-item .h-title { font-weight: 600; color: #1a2332; margin: 2px 0; font-size: 14px; }
+        .history-item .h-desc { color: #4a5568; font-size: 13px; margin: 0; }
+
+        .promise-tip {
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid #f0f2f5;
+            color: #4a5568;
+        }
+        .promise-tip p { margin: 0 0 4px 0; }
+
+        .bread-crumbs .limit {
+            margin-top: 16px;
+            color: #6b7a8f;
+            font-size: 13px;
+            padding: 0 4px;
+        }
+        .bread-crumbs .limit a {
+            color: #667eea;
+            text-decoration: none;
+        }
+
+        .list .title.background.container {
+            background: #ffffff !important;
+            border-radius: 16px !important;
+            border-bottom: none !important;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06) !important;
+            margin-bottom: 12px !important;
+            color: #1a2332 !important;
+            padding: 14px 0 !important;
+        }
+        .list .row .container {
+            background: #ffffff !important;
+            border-radius: 14px !important;
+            border-bottom: none !important;
+            margin-bottom: 8px !important;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
+            transition: all 0.2s ease !important;
+        }
+        .list .row:hover .container {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08) !important;
+        }
+        .list .row .container li:first-child img:first-child {
+            border-radius: 10px !important;
+            transition: transform 0.2s, box-shadow 0.2s !important;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.06);
+        }
+        .list .row:hover .container li:first-child img:first-child {
+            transform: scale(1.02);
+        }
+        .list .row .container li:nth-child(2) .vod-name {
+            color: #1a2332 !important;
+            font-weight: 600 !important;
+        }
+        .list .row:hover .vod-name {
+            color: #667eea !important;
+        }
+        .list .row .container li:nth-child(3) {
+            color: #4a5568 !important;
+            font-weight: normal !important;
+            background: none !important;
+            padding: 0 !important;
+            border-radius: 0 !important;
+            text-align: center !important;
+        }
+        .list .row .container li:nth-child(4) {
+            color: #667eea !important;
+            background: none !important;
+            padding: 0 !important;
+            border-radius: 0 !important;
+            font-weight: 500 !important;
+            text-align: right !important;
+        }
+
+        .page a, .page span {
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 30px;
+            padding: 6px 14px;
+            margin: 0 4px;
+            color: #4a5568;
+            transition: all 0.2s;
+        }
+        .page a:hover, .page .active {
+            background: #667eea;
+            border-color: #667eea;
+            color: #fff;
+        }
+
+        /* Toast 提示 */
+        .copy-toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1a2332;
+            color: #fff;
+            padding: 12px 32px;
+            border-radius: 40px;
+            font-size: 15px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+            z-index: 99999;
+            font-weight: 500;
+        }
+        .copy-toast.show {
+            opacity: 1;
+        }
+
+        @media (max-width: 640px) {
+            .list { padding: 0 12px; }
+            .bread-crumbs { padding: 12px 12px 0 12px; }
+            .list .title.background.container li:first-child {
+                flex: 0 0 60px !important;
+                font-size: 10px !important;
+            }
+            .list .title.background.container li:nth-child(2) {
+                flex: 1 !important;
+                font-size: 12px !important;
+                padding-left: 5px !important;
+            }
+            .list .title.background.container li:nth-child(3) {
+                flex: 0 0 70px !important;
+                font-size: 11px !important;
+                text-align: left !important;
+            }
+            .list .title.background.container li:nth-child(4) {
+                flex: 0 0 90px !important;
+                font-size: 11px !important;
+                text-align: left !important;
+            }
+            .list .row .container {
+                padding: 10px 12px !important;
+                flex-wrap: wrap !important;
+                gap: 4px 0 !important;
+            }
+            .list .row .container li {
+                font-size: 12px !important;
+                flex: 1 1 100% !important;
+                text-align: left !important;
+            }
+            .list .row .container li:first-child {
+                flex: 0 0 70px !important;
+            }
+            .list .row .container li:first-child img:first-child {
+                width: 65px !important;
+                height: 48px !important;
+            }
+            .list .row .container li:nth-child(2) {
+                flex: 1 1 100% !important;
+                flex-wrap: wrap !important;
+                gap: 0px !important;
+            }
+            .list .row .container li:nth-child(2) .vod-name {
+                font-size: 13px !important;
+                max-width: 120px !important;
+                margin-left: 5px !important;
+            }
+            .list .row .container li:nth-child(3) { text-align: left !important; }
+            .list .row .container li:nth-child(4) { text-align: left !important; }
+            .wrapper-card { padding: 14px 12px; }
+            .notice-card { padding: 14px 16px; }
+            .notice-card__head {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 4px;
+            }
+            .notice-api-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 4px;
+            }
+            .notice-api-label {
+                min-width: auto;
+                font-size: 12px;
+                flex: none;
+                width: 100%;
+            }
+            .copy-btn {
+                padding: 2px 12px;
+                font-size: 12px;
+                height: 26px;
+            }
+            .card-row { flex-direction: column; }
+            .card-row .notice-card { width: 100%; }
+            .notice-archive-toggle .toggle-label { font-size: 14px; }
+            .copy-box input { font-size: 11px; min-width: 80px; }
+            .copy-box .copy-btn { font-size: 11px; padding: 0 8px; }
+            .tutorial-link-box .main-link { font-size: 15px; }
+            .tutorial-link-box .date-tag { font-size: 11px; }
+        }
+    </style>
+</head>
+<body>
+
+{include file="public/head"}
+
+<div class="bread-crumbs">
+
+    <!-- ===== 外层大卡片 ===== -->
+    <div class="wrapper-card">
+
+        <!-- ===== 杏吧永久官网 ===== -->
+        <div class="notice-card">
+            <div class="notice-card__head">
+                <h3 class="notice-card__title">🌐 杏吧永久官网</h3>
+                <span style="font-size:13px;color:#999;">👇 点击输入框全选复制</span>
+            </div>
+            <div class="notice-card__body">
+                <div class="copy-box">
+                    <input type="text" value="www.sex8zy.com" readonly onclick="this.select();this.setSelectionRange(0,this.value.length);">
+                    <button class="copy-btn" onclick="var t=this.previousElementSibling;t.select();t.setSelectionRange(0,t.value.length);var s=document.execCommand('copy');if(s){var toast=document.getElementById('copyToast');if(toast){toast.textContent='✅ 已复制: '+t.value.substring(0,30)+(t.value.length>30?'...':'');toast.classList.add('show');clearTimeout(window.toastTimer);window.toastTimer=setTimeout(function(){toast.classList.remove('show');},1800);}var orig=this.textContent;this.textContent='✅ 已复制';this.classList.add('copied');setTimeout(function(){this.textContent=orig;this.classList.remove('copied');}.bind(this),1800);}">复制</button>
+                </div>
+                <div class="notice-mirror-list" style="margin-top:10px;">
+                    <span style="font-size:13px;color:#999;margin-right:6px;">镜像：</span>
+                    <a href="javascript:;" onclick="var t='sex8zy1.com';var temp=document.createElement('input');temp.value=t;temp.style.cssText='position:fixed;left:-9999px;top:-9999px;opacity:0;';document.body.appendChild(temp);temp.select();temp.setSelectionRange(0,t.length);var s=document.execCommand('copy');document.body.removeChild(temp);if(s){var toast=document.getElementById('copyToast');if(toast){toast.textContent='✅ 已复制: '+t;toast.classList.add('show');clearTimeout(window.toastTimer);window.toastTimer=setTimeout(function(){toast.classList.remove('show');},1800);}var orig=this.textContent;this.textContent='✅ 已复制';this.style.background='#28a745';this.style.color='#fff';setTimeout(function(){this.textContent=orig;this.style.background='';this.style.color='';}.bind(this),1800);}">sex8zy1.com</a>
+                    <a href="javascript:;" onclick="var t='sex8zy2.com';var temp=document.createElement('input');temp.value=t;temp.style.cssText='position:fixed;left:-9999px;top:-9999px;opacity:0;';document.body.appendChild(temp);temp.select();temp.setSelectionRange(0,t.length);var s=document.execCommand('copy');document.body.removeChild(temp);if(s){var toast=document.getElementById('copyToast');if(toast){toast.textContent='✅ 已复制: '+t;toast.classList.add('show');clearTimeout(window.toastTimer);window.toastTimer=setTimeout(function(){toast.classList.remove('show');},1800);}var orig=this.textContent;this.textContent='✅ 已复制';this.style.background='#28a745';this.style.color='#fff';setTimeout(function(){this.textContent=orig;this.style.background='';this.style.color='';}.bind(this),1800);}">sex8zy2.com</a>
+                    <a href="javascript:;" onclick="var t='sex8zy3.com';var temp=document.createElement('input');temp.value=t;temp.style.cssText='position:fixed;left:-9999px;top:-9999px;opacity:0;';document.body.appendChild(temp);temp.select();temp.setSelectionRange(0,t.length);var s=document.execCommand('copy');document.body.removeChild(temp);if(s){var toast=document.getElementById('copyToast');if(toast){toast.textContent='✅ 已复制: '+t;toast.classList.add('show');clearTimeout(window.toastTimer);window.toastTimer=setTimeout(function(){toast.classList.remove('show');},1800);}var orig=this.textContent;this.textContent='✅ 已复制';this.style.background='#28a745';this.style.color='#fff';setTimeout(function(){this.textContent=orig;this.style.background='';this.style.color='';}.bind(this),1800);}">sex8zy3.com</a>
+                    <a href="javascript:;" onclick="var t='sex8zy4.com';var temp=document.createElement('input');temp.value=t;temp.style.cssText='position:fixed;left:-9999px;top:-9999px;opacity:0;';document.body.appendChild(temp);temp.select();temp.setSelectionRange(0,t.length);var s=document.execCommand('copy');document.body.removeChild(temp);if(s){var toast=document.getElementById('copyToast');if(toast){toast.textContent='✅ 已复制: '+t;toast.classList.add('show');clearTimeout(window.toastTimer);window.toastTimer=setTimeout(function(){toast.classList.remove('show');},1800);}var orig=this.textContent;this.textContent='✅ 已复制';this.style.background='#28a745';this.style.color='#fff';setTimeout(function(){this.textContent=orig;this.style.background='';this.style.color='';}.bind(this),1800);}">sex8zy4.com</a>
+                    <a href="javascript:;" onclick="var t='sex8zy5.com';var temp=document.createElement('input');temp.value=t;temp.style.cssText='position:fixed;left:-9999px;top:-9999px;opacity:0;';document.body.appendChild(temp);temp.select();temp.setSelectionRange(0,t.length);var s=document.execCommand('copy');document.body.removeChild(temp);if(s){var toast=document.getElementById('copyToast');if(toast){toast.textContent='✅ 已复制: '+t;toast.classList.add('show');clearTimeout(window.toastTimer);window.toastTimer=setTimeout(function(){toast.classList.remove('show');},1800);}var orig=this.textContent;this.textContent='✅ 已复制';this.style.background='#28a745';this.style.color='#fff';setTimeout(function(){this.textContent=orig;this.style.background='';this.style.color='';}.bind(this),1800);}">sex8zy5.com</a>
+                    <a href="javascript:;" onclick="var t='sex8zy6.com';var temp=document.createElement('input');temp.value=t;temp.style.cssText='position:fixed;left:-9999px;top:-9999px;opacity:0;';document.body.appendChild(temp);temp.select();temp.setSelectionRange(0,t.length);var s=document.execCommand('copy');document.body.removeChild(temp);if(s){var toast=document.getElementById('copyToast');if(toast){toast.textContent='✅ 已复制: '+t;toast.classList.add('show');clearTimeout(window.toastTimer);window.toastTimer=setTimeout(function(){toast.classList.remove('show');},1800);}var orig=this.textContent;this.textContent='✅ 已复制';this.style.background='#28a745';this.style.color='#fff';setTimeout(function(){this.textContent=orig;this.style.background='';this.style.color='';}.bind(this),1800);}">sex8zy6.com</a>
+                    <a href="javascript:;" onclick="var t='sex8zy7.com';var temp=document.createElement('input');temp.value=t;temp.style.cssText='position:fixed;left:-9999px;top:-9999px;opacity:0;';document.body.appendChild(temp);temp.select();temp.setSelectionRange(0,t.length);var s=document.execCommand('copy');document.body.removeChild(temp);if(s){var toast=document.getElementById('copyToast');if(toast){toast.textContent='✅ 已复制: '+t;toast.classList.add('show');clearTimeout(window.toastTimer);window.toastTimer=setTimeout(function(){toast.classList.remove('show');},1800);}var orig=this.textContent;this.textContent='✅ 已复制';this.style.background='#28a745';this.style.color='#fff';setTimeout(function(){this.textContent=orig;this.style.background='';this.style.color='';}.bind(this),1800);}">sex8zy7.com</a>
+                    <a href="javascript:;" onclick="var t='sex8zy8.com';var temp=document.createElement('input');temp.value=t;temp.style.cssText='position:fixed;left:-9999px;top:-9999px;opacity:0;';document.body.appendChild(temp);temp.select();temp.setSelectionRange(0,t.length);var s=document.execCommand('copy');document.body.removeChild(temp);if(s){var toast=document.getElementById('copyToast');if(toast){toast.textContent='✅ 已复制: '+t;toast.classList.add('show');clearTimeout(window.toastTimer);window.toastTimer=setTimeout(function(){toast.classList.remove('show');},1800);}var orig=this.textContent;this.textContent='✅ 已复制';this.style.background='#28a745';this.style.color='#fff';setTimeout(function(){this.textContent=orig;this.style.background='';this.style.color='';}.bind(this),1800);}">sex8zy8.com</a>
+                    <a href="javascript:;" onclick="var t='sex8zy9.com';var temp=document.createElement('input');temp.value=t;temp.style.cssText='position:fixed;left:-9999px;top:-9999px;opacity:0;';document.body.appendChild(temp);temp.select();temp.setSelectionRange(0,t.length);var s=document.execCommand('copy');document.body.removeChild(temp);if(s){var toast=document.getElementById('copyToast');if(toast){toast.textContent='✅ 已复制: '+t;toast.classList.add('show');clearTimeout(window.toastTimer);window.toastTimer=setTimeout(function(){toast.classList.remove('show');},1800);}var orig=this.textContent;this.textContent='✅ 已复制';this.style.background='#28a745';this.style.color='#fff';setTimeout(function(){this.textContent=orig;this.style.background='';this.style.color='';}.bind(this),1800);}">sex8zy9.com</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== 郑重承诺 ===== -->
+        <div class="notice-card notice-card--promise">
+            <div class="notice-card__head">
+                <h3 class="notice-card__title">🔒 郑重承诺 <span class="notice-card__badge notice-card__badge--promise">承诺</span></h3>
+            </div>
+            <div class="notice-card__body">
+                <p>杏吧资源永久免费采集，资源永久免费，<span class="highlight">不含任何广告.水印</span>，观影用户最佳体验。本站资源全部手工采集，不涉及版权问题，请放心观看。</p>
+                <div class="promise-tip">
+                    <p>🚀 带宽的速度给您带来快乐，欢迎您来测试播放速度！本站图片地址采集的同时，请把图片下载到本地，以免日后出现类似图片失效的情况。</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== 播放器标识 + M3U8 新接口 ===== -->
+        <div class="card-row">
+            <div class="notice-card">
+                <div class="notice-card__head"><h3 class="notice-card__title" style="font-size:15px;">🎬 播放器标识</h3></div>
+                <div class="notice-card__body">
+                    <div class="copy-box">
+                        <input type="text" value="s8m3u8" readonly onclick="this.select();this.setSelectionRange(0,this.value.length);">
+                        <button class="copy-btn" onclick="var t=this.previousElementSibling;t.select();t.setSelectionRange(0,t.value.length);var s=document.execCommand('copy');if(s){var toast=document.getElementById('copyToast');if(toast){toast.textContent='✅ 已复制: '+t.value.substring(0,30)+(t.value.length>30?'...':'');toast.classList.add('show');clearTimeout(window.toastTimer);window.toastTimer=setTimeout(function(){toast.classList.remove('show');},1800);}var orig=this.textContent;this.textContent='✅ 已复制';this.classList.add('copied');setTimeout(function(){this.textContent=orig;this.classList.remove('copied');}.bind(this),1800);}">复制</button>
+                        <a class="copy-btn copy-btn--download" href="https://xingba111.com/template/help/bfq/mac_sex8zy.zip" target="_blank">下载</a>
+                    </div>
+                </div>
+            </div>
+            <div class="notice-card">
+                <div class="notice-card__head"><h3 class="notice-card__title" style="font-size:15px;">🎞️ M3U8 新接口</h3></div>
+                <div class="notice-card__body">
+                    <div class="copy-box">
+                        <input type="text" value="https://xbxbw888.com/?url=" readonly onclick="this.select();this.setSelectionRange(0,this.value.length);">
+                        <button class="copy-btn" onclick="var t=this.previousElementSibling;t.select();t.setSelectionRange(0,t.value.length);var s=document.execCommand('copy');if(s){var toast=document.getElementById('copyToast');if(toast){toast.textContent='✅ 已复制: '+t.value.substring(0,30)+(t.value.length>30?'...':'');toast.classList.add('show');clearTimeout(window.toastTimer);window.toastTimer=setTimeout(function(){toast.classList.remove('show');},1800);}var orig=this.textContent;this.textContent='✅ 已复制';this.classList.add('copied');setTimeout(function(){this.textContent=orig;this.classList.remove('copied');}.bind(this),1800);}">复制</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== XML 采集接口 + JSON 采集接口 ===== -->
+        <div class="card-row">
+            <div class="notice-card">
+                <div class="notice-card__head"><h3 class="notice-card__title" style="font-size:15px;">📦 XML 采集接口</h3></div>
+                <div class="notice-card__body">
+                    <div class="copy-box">
+                        <input type="text" value="https://xingba222.com/api.php/provide/vod/at/xml" readonly onclick="this.select();this.setSelectionRange(0,this.value.length);">
+                        <button class="copy-btn" onclick="var t=this.previousElementSibling;t.select();t.setSelectionRange(0,t.value.length);var s=document.execCommand('copy');if(s){var toast=document.getElementById('copyToast');if(toast){toast.textContent='✅ 已复制: '+t.value.substring(0,30)+(t.value.length>30?'...':'');toast.classList.add('show');clearTimeout(window.toastTimer);window.toastTimer=setTimeout(function(){toast.classList.remove('show');},1800);}var orig=this.textContent;this.textContent='✅ 已复制';this.classList.add('copied');setTimeout(function(){this.textContent=orig;this.classList.remove('copied');}.bind(this),1800);}">复制</button>
+                    </div>
+                </div>
+            </div>
+            <div class="notice-card">
+                <div class="notice-card__head"><h3 class="notice-card__title" style="font-size:15px;">📦 JSON 采集接口</h3></div>
+                <div class="notice-card__body">
+                    <div class="copy-box">
+                        <input type="text" value="https://json.xingba222.com/api.php/provide/vod/" readonly onclick="this.select();this.setSelectionRange(0,this.value.length);">
+                        <button class="copy-btn" onclick="var t=this.previousElementSibling;t.select();t.setSelectionRange(0,t.value.length);var s=document.execCommand('copy');if(s){var toast=document.getElementById('copyToast');if(toast){toast.textContent='✅ 已复制: '+t.value.substring(0,30)+(t.value.length>30?'...':'');toast.classList.add('show');clearTimeout(window.toastTimer);window.toastTimer=setTimeout(function(){toast.classList.remove('show');},1800);}var orig=this.textContent;this.textContent='✅ 已复制';this.classList.add('copied');setTimeout(function(){this.textContent=orig;this.classList.remove('copied');}.bind(this),1800);}">复制</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== 备用 XML 接口 + 备用 JSON 接口 ===== -->
+        <div class="card-row">
+            <div class="notice-card">
+                <div class="notice-card__head"><h3 class="notice-card__title" style="font-size:15px;">📦 备用 XML 接口</h3></div>
+                <div class="notice-card__body">
+                    <div class="copy-box">
+                        <input type="text" value="https://api.xgbbk8.com/api.php/provide/vod/at/xml" readonly onclick="this.select();this.setSelectionRange(0,this.value.length);">
+                        <button class="copy-btn" onclick="var t=this.previousElementSibling;t.select();t.setSelectionRange(0,t.value.length);var s=document.execCommand('copy');if(s){var toast=document.getElementById('copyToast');if(toast){toast.textContent='✅ 已复制: '+t.value.substring(0,30)+(t.value.length>30?'...':'');toast.classList.add('show');clearTimeout(window.toastTimer);window.toastTimer=setTimeout(function(){toast.classList.remove('show');},1800);}var orig=this.textContent;this.textContent='✅ 已复制';this.classList.add('copied');setTimeout(function(){this.textContent=orig;this.classList.remove('copied');}.bind(this),1800);}">复制</button>
+                    </div>
+                </div>
+            </div>
+            <div class="notice-card">
+                <div class="notice-card__head"><h3 class="notice-card__title" style="font-size:15px;">📦 备用 JSON 接口</h3></div>
+                <div class="notice-card__body">
+                    <div class="copy-box">
+                        <input type="text" value="https://json.xgbbk8.com/api.php/provide/vod/" readonly onclick="this.select();this.setSelectionRange(0,this.value.length);">
+                        <button class="copy-btn" onclick="var t=this.previousElementSibling;t.select();t.setSelectionRange(0,t.value.length);var s=document.execCommand('copy');if(s){var toast=document.getElementById('copyToast');if(toast){toast.textContent='✅ 已复制: '+t.value.substring(0,30)+(t.value.length>30?'...':'');toast.classList.add('show');clearTimeout(window.toastTimer);window.toastTimer=setTimeout(function(){toast.classList.remove('show');},1800);}var orig=this.textContent;this.textContent='✅ 已复制';this.classList.add('copied');setTimeout(function(){this.textContent=orig;this.classList.remove('copied');}.bind(this),1800);}">复制</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== 小说美图采集 + m3u8 旧接口 ===== -->
+        <div class="card-row">
+            <div class="notice-card">
+                <div class="notice-card__head"><h3 class="notice-card__title" style="font-size:15px;">🖼️ 小说美图采集</h3></div>
+                <div class="notice-card__body">
+                    <div class="copy-box">
+                        <input type="text" value="https://sex8zy1.com/api.php/provide/art/?ac=list" readonly onclick="this.select();this.setSelectionRange(0,this.value.length);">
+                        <button class="copy-btn" onclick="var t=this.previousElementSibling;t.select();t.setSelectionRange(0,t.value.length);var s=document.execCommand('copy');if(s){var toast=document.getElementById('copyToast');if(toast){toast.textContent='✅ 已复制: '+t.value.substring(0,30)+(t.value.length>30?'...':'');toast.classList.add('show');clearTimeout(window.toastTimer);window.toastTimer=setTimeout(function(){toast.classList.remove('show');},1800);}var orig=this.textContent;this.textContent='✅ 已复制';this.classList.add('copied');setTimeout(function(){this.textContent=orig;this.classList.remove('copied');}.bind(this),1800);}">复制</button>
+                    </div>
+                </div>
+            </div>
+            <div class="notice-card">
+                <div class="notice-card__head"><h3 class="notice-card__title" style="font-size:15px;">🎞️ m3u8 解析接口（旧）</h3></div>
+                <div class="notice-card__body">
+                    <div class="copy-box">
+                        <input type="text" value="https://xbww888.com/?url=" readonly onclick="this.select();this.setSelectionRange(0,this.value.length);">
+                        <button class="copy-btn" onclick="var t=this.previousElementSibling;t.select();t.setSelectionRange(0,t.value.length);var s=document.execCommand('copy');if(s){var toast=document.getElementById('copyToast');if(toast){toast.textContent='✅ 已复制: '+t.value.substring(0,30)+(t.value.length>30?'...':'');toast.classList.add('show');clearTimeout(window.toastTimer);window.toastTimer=setTimeout(function(){toast.classList.remove('show');},1800);}var orig=this.textContent;this.textContent='✅ 已复制';this.classList.add('copied');setTimeout(function(){this.textContent=orig;this.classList.remove('copied');}.bind(this),1800);}">复制</button>
+                        <span style="color:#dc2626;font-size:12px;">(部分地区屏蔽)</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== 播放域名图片域名替换 教程（含日期） ===== -->
+        <div class="notice-card notice-card--archived">
+            <div class="notice-card__head">
+                <h3 class="notice-card__title">🔧 播放域名 / 图片域名替换 <span class="notice-card__badge notice-card__badge--archive">教程</span></h3>
+            </div>
+            <div class="notice-card__body">
+                <div class="tutorial-link-box">
+                    <a href="https://sex8zy1.com/1.html" target="_blank" class="main-link">📖 查看完整图文教程 →</a>
+                    <div class="hint">点击链接查看详细配置步骤与常见问题解答</div>
+                    <span class="date-tag">📅 2026-08-26 更新</span>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- 导航路径 -->
+    <p class="limit">
+        当前位置：
+        <a href="{$maccms.path}">首页</a>
+        &nbsp;&nbsp;›&nbsp;&nbsp;
+        <a class="actave">今日更新</a>
+    </p>
+</div>
+
+<!-- ===== 影片列表 ===== -->
+<div class="list" style="margin-top: 0;">
+    <ul class="title background container">
+        <li>📷 影片封面</li>
+        <li>🎬 影片名称</li>
+        <li>📁 影片类型</li>
+        <li>⏱️ 更新时间</li>
+    </ul>
+    <div class="list-box">
+        <div class="content">
+            {maccms:vod num="70" paging="yes" pageurl="index/index" type="current" order="desc" by="time"}
+            <a href="{:mac_url_vod_detail($vo)}" class="row">
+                <ul class="container">
+                    <li>
+                        <img src="{$vo.vod_pic|mac_url_img}" alt="{$vo.vod_name}" onerror="this.src='{$maccms.path_tpl}images/nopic.png'">
+                    </li>
+                    <li>
+                        <span class="vod-name">{$vo.vod_name}</span>
+                        <img class="new-icon" src="{$maccms.path_tpl}image/new.gif" alt="new">
+                    </li>
+                    <li>{$vo.type.type_name}</li>
+                    <li class="red">{$vo.vod_time|mac_day=###,'color'}</li>
+                </ul>
+            </a>
+            {/maccms:vod}
+            <div class="page">
+                {include file="public/paging"}
+            </div>
+        </div>
+    </div>
+</div>
+
+{include file="public/foot"}
+
+<!-- ===== Toast ===== -->
+<div id="copyToast" class="copy-toast">✅ 已复制</div>
+
+</body>
+</html>

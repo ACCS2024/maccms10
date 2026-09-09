@@ -1,0 +1,67 @@
+[
+  {
+    "width": 1440,
+    "initial": {
+      "width": 1440,
+      "scrollWidth": 1440,
+      "scale": 1,
+      "firstRowY": 867.390625,
+      "categories": 7,
+      "logoLoaded": true
+    },
+    "checks": "Layout, original logo, seven category groups, pagination, category filter, search, empty/reset, sorting, density, detail, JSON/XML, legacy disclosure, copy success stub and rejected fallback",
+    "pageErrors": []
+  },
+  {
+    "width": 1024,
+    "initial": {
+      "width": 1024,
+      "scrollWidth": 1024,
+      "scale": 1,
+      "firstRowY": 906.390625,
+      "categories": 7,
+      "logoLoaded": true
+    },
+    "checks": "Layout, original logo, seven category groups, pagination, category filter, search, empty/reset, sorting, density, detail, JSON/XML, legacy disclosure, copy success stub and rejected fallback",
+    "pageErrors": []
+  },
+  {
+    "width": 768,
+    "initial": {
+      "width": 768,
+      "scrollWidth": 768,
+      "scale": 1,
+      "firstRowY": 949.1875,
+      "categories": 7,
+      "logoLoaded": true
+    },
+    "checks": "Layout, original logo, seven category groups, pagination, category filter, search, empty/reset, sorting, density, detail, JSON/XML, legacy disclosure, copy success stub and rejected fallback",
+    "pageErrors": []
+  },
+  {
+    "width": 390,
+    "initial": {
+      "width": 390,
+      "scrollWidth": 390,
+      "scale": 1,
+      "firstRowY": 722.125,
+      "categories": 7,
+      "logoLoaded": true
+    },
+    "checks": "Layout, original logo, seven category groups, pagination, category filter, search, empty/reset, sorting, density, detail, JSON/XML, legacy disclosure, copy success stub and rejected fallback",
+    "pageErrors": []
+  },
+  {
+    "width": 360,
+    "initial": {
+      "width": 360,
+      "scrollWidth": 360,
+      "scale": 1,
+      "firstRowY": 722.125,
+      "categories": 7,
+      "logoLoaded": true
+    },
+    "checks": "Layout, original logo, seven category groups, pagination, category filter, search, empty/reset, sorting, density, detail, JSON/XML, legacy disclosure, copy success stub and rejected fallback",
+    "pageErrors": []
+  }
+]

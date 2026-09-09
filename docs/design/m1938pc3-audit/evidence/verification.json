@@ -1,0 +1,106 @@
+[
+  {
+    "width": 1440,
+    "metrics": {
+      "width": 1440,
+      "scrollWidth": 1440,
+      "firstRowY": 486.75,
+      "firstRowHeight": 73.09375,
+      "rowCount": 6,
+      "scale": 1
+    },
+    "checks": [
+      "no horizontal overflow across three views",
+      "scale 1",
+      "pagination",
+      "category filter",
+      "search",
+      "empty and reset",
+      "sort",
+      "detail dialog and Escape",
+      "view navigation",
+      "disclosure",
+      "copy rejection fallback",
+      "copy success with stub"
+    ],
+    "pageErrors": []
+  },
+  {
+    "width": 768,
+    "metrics": {
+      "width": 768,
+      "scrollWidth": 768,
+      "firstRowY": 486.75,
+      "firstRowHeight": 73.09375,
+      "rowCount": 6,
+      "scale": 1
+    },
+    "checks": [
+      "no horizontal overflow across three views",
+      "scale 1",
+      "pagination",
+      "category filter",
+      "search",
+      "empty and reset",
+      "sort",
+      "detail dialog and Escape",
+      "view navigation",
+      "disclosure",
+      "copy rejection fallback",
+      "copy success with stub"
+    ],
+    "pageErrors": []
+  },
+  {
+    "width": 390,
+    "metrics": {
+      "width": 390,
+      "scrollWidth": 390,
+      "firstRowY": 579.34375,
+      "firstRowHeight": 100.1875,
+      "rowCount": 6,
+      "scale": 1
+    },
+    "checks": [
+      "no horizontal overflow across three views",
+      "scale 1",
+      "pagination",
+      "category filter",
+      "search",
+      "empty and reset",
+      "sort",
+      "detail dialog and Escape",
+      "view navigation",
+      "disclosure",
+      "copy rejection fallback",
+      "copy success with stub"
+    ],
+    "pageErrors": []
+  },
+  {
+    "width": 360,
+    "metrics": {
+      "width": 360,
+      "scrollWidth": 360,
+      "firstRowY": 600.15625,
+      "firstRowHeight": 100.1875,
+      "rowCount": 6,
+      "scale": 1
+    },
+    "checks": [
+      "no horizontal overflow across three views",
+      "scale 1",
+      "pagination",
+      "category filter",
+      "search",
+      "empty and reset",
+      "sort",
+      "detail dialog and Escape",
+      "view navigation",
+      "disclosure",
+      "copy rejection fallback",
+      "copy success with stub"
+    ],
+    "pageErrors": []
+  }
+]

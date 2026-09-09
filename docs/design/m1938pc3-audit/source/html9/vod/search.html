@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+    	<!--<head>	</head>-->
+<head>
+    {include file="public/include"}
+    <title>搜索结果{$param.wd}-{$maccms.site_name}</title>
+    <meta name="keywords" content="{$maccms.site_keywords}" />
+    <meta name="description" content="{$maccms.site_description}" />
+</head>
+
+<body>
+{include file="public/head"}
+	<div class="bread-crumbs">
+        <p class="limit">
+            当前位置：
+            <a href="{$maccms.path}">首页</a>
+            &nbsp;&nbsp;&#155;&nbsp;&nbsp;<a class="actave">"{$param.wd}" 相关的影片</a>
+        </p>
+    </div><div class="list" style="margin-top: 0;">
+        <ul class="title background container">
+            <li>影片名称</li>
+            <!--<li>影片地区</li>-->
+            <li>影片类型</li>
+            <li>更新时间</li>
+        </ul>
+        <div class="list-box">
+            <div class="content">
+               {maccms:vod num="40" paging="yes" type="current" order="desc" by="time" pageurl="vod/search"}
+			   <a href="{:mac_url_vod_detail($vo)}" class="row">
+        <ul class="container">
+            <li style="text-align:left">{$vo.vod_name}</li>
+            <!--<li>{$vo.vod_area}</li>-->
+            <li>{$vo.type.type_name}</li>
+            <li class="red">{$vo.vod_time|date='Y-m-d'}</li>
+        </ul>
+    </a>{/maccms:vod}
+
+                <div class="page">
+{include file="public/paging"}
+    </div>
+            </div>
+        </div>
+    </div>
+{include file="public/foot"}
+</body>
+
+</html>

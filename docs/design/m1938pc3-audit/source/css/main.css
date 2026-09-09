@@ -1,0 +1,1315 @@
+/* ------------------------------整体------------------------------ */
+* {
+	margin: 0 auto;
+	padding: 0px;
+	-webkit-box-sizing: border-box;
+	-moz-box-sizing: border-box;
+	box-sizing: border-box;
+	-webkit-text-size-adjust: none;
+}
+
+button,
+input[type="button"],
+input[type="submit"],
+input[type="reset"] {
+	-webkit-appearance: none;
+}
+
+textarea {
+	-webkit-appearance: none;
+}
+
+.red {
+	color: #ff473a;
+}
+
+body {
+	background-color: white;
+	line-height: 1;
+	min-width: 980px;
+}
+
+ul {
+	list-style-type: none;
+}
+
+a {
+	cursor: pointer;
+	text-decoration: none;
+}
+
+.container {
+	overflow: hidden;
+}
+
+.container:after {
+	content: "";
+	display: block;
+	clear: both;
+}
+
+.limit {
+
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	overflow: hidden;
+}
+
+.background {
+	background-position: center;
+	background-size: cover;
+	background-repeat: no-repeat;
+}
+
+
+
+/* ---------------------------------------------------------------- */
+
+/* ------------------------------搜索------------------------------ */
+.head {
+	max-width: 1200px;
+	padding: 20px 0px;
+	background-color: white;
+}
+
+.head .logo {
+	float: left;
+	width: auto;
+	height: 85px;
+}
+
+.head .logo:hover {
+	transform: translate(30px, 0px);
+	transition: all 0.5s;
+}
+
+.head .search {
+	float: left;
+	margin: 20px 0px 0px 10%;
+	width: 40%;
+}
+
+.head .search img {
+	height: 20px;
+	width: auto;
+	position: relative;
+	left: 38px;
+	margin-left: -26px;
+	top: 5px;
+}
+
+.head .search input[type="text"] {
+	font-size: 14px;
+	padding: 10px 90px 10px 40px;
+	border-radius: 3px;
+	border: 2px solid #0099cc;
+	outline: none;
+	width: 100%;
+	height: 43px;
+}
+
+.head .search input[type="submit"] {
+	float: right;
+	font-size: 14px;
+	color: #FFFFFF;
+	border-radius: 3px;
+	padding: 10px 0px;
+	background-color: #00b7ff;
+	border: 0px;
+	outline: none;
+	width: 80px;
+	bottom: 43px;
+	margin-bottom: -43px;
+	position: relative;
+	height: 43px;
+	cursor: pointer;
+}
+
+.head .search input[type="submit"]:hover {
+	background-color: #1E90FF;
+}
+
+.head .search p {
+	font-size: 12px;
+	margin-top: 5px;
+	text-align: center;
+}
+
+.head .search a {
+	color: red;
+}
+
+.head .search a:hover {
+	color: #0099CC;
+}
+
+.head .head-right {
+	float: right;
+	margin-top: 15px;
+	margin-right: 15px;
+}
+
+.head .head-right p {
+	font-size: 12px;
+	margin-top: 10px;
+}
+
+.head .head-right p a {
+	color: #000000;
+	font-weight: bold;
+
+}
+
+.head .head-right p a:hover {
+	color: #FF6699;
+}
+
+.head .head-right p span {
+	color: red;
+	font-weight: bold;
+}
+
+/* ---------------------------------------------------------------- */
+
+/* ------------------------------导航------------------------------ */
+.nav1 {
+	font-size: 16px;
+	background-color: #00b7ff;
+	width: 100%;
+	height: 42px;
+	overflow: inherit;
+	margin-bottom: 20px;
+		max-width: 1200px;
+}
+
+
+.nav1 ul {
+	max-width: 1200px;
+	position: relative;
+}
+
+.nav1 ul li {
+	height: 42px;
+	width: 16%;
+	float: left;
+	margin-left: 3%;
+	overflow: hidden;
+}
+
+.nav1 ul li:hover {
+	height: auto;
+}
+
+.nav1 ul li a {
+	color: #FFFFFF;
+	padding: 10px 0px;
+	text-align: center;
+	display: block;
+	background-color: #00b7ff;
+	position: relative;
+	height: 42px;
+}
+
+.nav1 ul .actave,
+.nav1 ul li a:hover {
+	background-color: #247cae;
+}
+.nav {
+	font-size: 20px;
+	background-color: #00b7ff;
+	width: 100%;
+
+	overflow: inherit;
+	margin-bottom: 20px;
+}
+
+
+.nav ul {
+	max-width: 1200px;
+	position: relative;
+}
+
+.nav ul li {
+	/*height: 42px;*/
+	width: 7%;
+	margin-left: 5%;
+	float: left;
+	    margin-top: 10px;
+    margin-bottom: 10px;
+    
+}
+
+.nav ul li:hover {
+	height: auto;
+}
+
+.nav ul li a {
+	color: #FFFFFF;
+	padding: 5px 0px;
+	text-align: center;
+	display: block;
+	background-color: #00b7ff;
+	position: relative;
+	/*height: 42px;*/
+}
+
+.nav ul .actave,
+.nav ul li a:hover {
+	background-color: #247cae;
+}
+
+/* ---------------------------------------------------------------- */
+
+/* ------------------------------锚链接------------------------------ */
+.bread-crumbs {
+	font-size: 16px;
+	margin-bottom: 20px;
+	max-width: 1200px;
+	font-weight: bold;
+}
+
+.bread-crumbs p,
+.bread-crumbs p a {
+	color: #666666;
+}
+
+.bread-crumbs p .actave,
+.bread-crumbs p a:hover {
+	color: #00b7ff;
+}
+
+/* ---------------------------------------------------------------- */
+
+/* ------------------------------分类--------------------------- */
+
+.sort-table {
+	background-color: #FFFFFF;
+	border-radius: 15px;
+	max-width: 1200px;
+	margin-bottom: 30px;
+	padding: 20px 0px;
+}
+
+.sort-table .sort {
+	width: 33.333333333%;
+	float: left;
+	padding: 0px 30px;
+	font-size: 15px;
+	overflow: hidden;
+	white-space: normal;
+}
+
+.sort-table .border {
+	border-left: 1px solid #666666;
+	border-right: 1px solid #666666;
+}
+
+.sort-table .sort p {
+	font-weight: bold;
+	width: 100%;
+}
+
+.sort-table .sort p,
+.sort-table .sort a {
+	float: left;
+	padding: 0px 3%;
+	line-height: 2.5;
+	color: #000000;
+}
+
+.sort-table .sort .actave,
+.sort-table .sort a:hover {
+	color: #00b7ff;
+}
+
+
+/* ---------------------------------------------------------------- */
+
+/* ------------------------------列表标题------------------------------ */
+.list {
+    position: relative;
+	max-width: 1200px;
+	font-size: 16px;
+	margin-top: 150px;
+	border-radius: 5px;
+    background-color: #fff;
+    border: 1px solid #eee;
+    box-shadow: 0 5px 10px #eee;
+}
+
+.list .title {
+	color:#fff;
+	padding: 0px 20px;
+	background-image: linear-gradient(-45deg,#00d3ff,#00b7ff);
+	/*background-image: url(../images/list.png);*/
+
+}
+
+.list .title li {
+	padding: 15px 5px;
+	text-align: center;
+	float: left;
+	width: 33.3333%;
+	
+}
+
+/* ---------------------------------------------------------------- */
+
+/* ------------------------------列表框------------------------------ */
+.list .list-box {
+	background-color: #FFFFFF;
+	border-radius: 0px 0px 10px 10px;
+	margin-bottom: 40px;
+	font-size: 15px;
+}
+
+/* ---------------------------------------------------------------- */
+
+/* ------------------------------列表内容--------------------------- */
+.list .list-box .content {
+	margin-bottom: 20px;
+	min-height: 800px;
+}
+
+.list .list-box .content .row {
+	color: #000000;
+	padding: 0px 20px;
+	display: block;
+}
+
+.list .list-box .content .row:hover {
+	background-color: #EEEEEE;
+	color: #00b7ff;
+	font-weight: bold;
+	margin-top: -1px;
+	padding-top: 1px;
+}
+
+.list .list-box .content .row ul {
+	border-bottom: 1px dashed #00b7ff;
+}
+
+.list .list-box .content .row ul:hover {
+	border-bottom: 1px solid #EEEEEE;
+}
+
+.list .list-box .content .row ul li {
+	padding: 12px 5px;
+	text-align: center;
+	float: left;
+	width: 33.3333%;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	overflow: hidden;
+}
+
+.list .list-box .content .row ul li img {
+	margin-left: 5px;
+	height: 14px;
+	width: auto;
+	margin-bottom: -1px;
+}
+
+.list .list-box .content .row ul li a {
+	color: #000000;
+}
+
+.list .list-box .content .row ul li .on {
+	color: #ff6699;
+}
+
+.list .list-box .content .result {
+	font-size: 14px;
+	text-align: center;
+	padding-top: 20%;
+}
+
+/* ---------------------------------------------------------------- */
+
+/* ------------------------------主体标题------------------------------ */
+.theme {
+	max-width: 1200px;
+	margin-bottom: 20px;
+}
+
+.theme .title {
+	color: #FFFFFF;
+	font-size: 16px;
+	padding: 15px 20px;
+	white-space: nowrap;
+}
+
+/* ---------------------------------------------------------------- */
+/* ------------------------------详情------------------------------ */
+.theme .detail {
+	background-color: #FFFFFF;
+	border-radius: 10px;
+	margin-bottom: 30px;
+	padding: 30px;
+	box-shadow: 2px 2px 5px 2px rgba(0, 0, 0, 0.2);
+}
+
+.theme .detail img {
+	float: left;
+	width: 200px;
+	height: 300px;
+	object-fit: cover;
+	overflow: hidden;
+	text-align: center;
+	margin-right: -200px;
+	box-shadow: 0px 0px 10px 0px rgba(0, 0, 0, 0.3);
+}
+
+.theme .detail .content {
+	float: left;
+	padding-left: 220px;
+	width: 100%;
+	margin-bottom: -14px;
+}
+
+.theme .detail .content .detail-title {
+	border-bottom: 1px solid #999999;
+	padding-bottom: 12px;
+	margin-bottom: 8px;
+}
+
+.theme .detail .content .detail-title h1 {
+	float: left;
+	max-width: 800px;
+	margin-left: -2px;
+}
+
+.theme .detail .content .detail-title h6 {
+	float: left;
+	font-size: 12px;
+	color: #FFFFFF;
+	background-color: #107619;
+	font-weight: normal;
+	padding: 5px 10px;
+	border-radius: 5px;
+	margin-top: 10px;
+	margin-left: 10px;
+}
+
+.theme .detail .content h1 .score a {
+	cursor: text;
+}
+
+.theme .detail .content p {
+	font-size: 15px;
+	margin-bottom: 14px;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	overflow: hidden;
+}
+
+.theme .detail .content p span {
+	margin-right: 20px;
+}
+
+/* ---------------------------------------------------------------- */
+/* ------------------------------其他框------------------------------ */
+.other {
+	background-color: #FFFFFF;
+	border-radius: 10px;
+	margin-bottom: 30px;
+	padding: 30px;
+	box-shadow: 2px 2px 5px 2px rgba(0, 0, 0, 0.2);
+	max-width: 1200px;
+}
+
+
+.other .other-title {
+	font-size: 18px;
+	padding-bottom: 10px;
+	border-bottom: 3px solid #00a0e9;
+	position: relative;
+	display: table;
+	margin: 0px;
+}
+
+.other .other-content {
+	margin-top: -1px;
+	border-top: 1px solid #999999;
+	padding-top: 20px;
+}
+
+/* ---------------------------------------------------------------- */
+/* ------------------------------简介------------------------------ */
+
+.other .introduction {
+	width: 100%;
+}
+.other .introduction img {     
+  border:0;     
+  margin:0;     
+  padding:0;     
+  max-width:950px;     
+  
+  max-height:100%;     
+   
+}   
+
+.other .introduction p {
+	font-size: 14px;
+	line-height: 2;
+	margin: -5px 0px;
+}
+
+/* ---------------------------------------------------------------- */
+/* ------------------------------下载------------------------------ */
+
+.other .download p {
+	font-size: 15px;
+	margin-bottom: 10px;
+}
+
+.other .download p button {
+	font-size: 12px;
+	padding: 0px 5px;
+	cursor: pointer;
+	border: 1px solid #999999;
+
+}
+
+.other .download input[type="checkbox"] {
+	background-color: #cccccc;
+	border: 1px solid #999999;
+}
+
+.other .download .link {
+	margin-bottom: 10px;
+}
+
+.other .download .link input[type="text"] {
+	font-size: 14px;
+	border: 0px;
+	width: 730px;
+	outline: none;
+	background-color: #FFFFFF;
+	cursor: text;
+	position: relative;
+	bottom: 2px;
+}
+
+.other .download .link a {
+	float: right;
+	font-size: 14px;
+	margin-left: 10px;
+}
+
+.other .download .link a:hover {
+	color: #000000 !important;
+}
+
+.other .download .selected span {
+	font-size: 14px;
+	position: relative;
+	bottom: 2px;
+	margin-right: 5px;
+}
+
+.other .download .selected a {
+	font-size: 12px;
+	position: relative;
+	bottom: 3px;
+	color: #FFFFFF;
+	padding: 2px 10px;
+	background-color: #00a0e9;
+	border-radius: 3px;
+}
+
+/* ---------------------------------------------------------------- */
+/* ------------------------------留言框------------------------------ */
+.theme .message-box {
+	background-color: #FFFFFF;
+	border-radius: 0px 0px 10px 10px;
+	margin-bottom: 30px;
+	padding: 30px 20px;
+	min-height: 800px;
+}
+
+.theme .message-box .write {
+	margin-bottom: 30px;
+}
+
+.theme .message-box .write img,
+.theme .message-box .read .comment img {
+	float: left;
+	width: 60px;
+	height: 60px;
+	border: 2px solid #000000;
+	border-radius: 3px;
+}
+
+.theme .message-box .write p {
+	font-size: 15px;
+	float: left;
+	margin-top: 32px;
+	font-weight: bold;
+	margin-left: 10px;
+}
+
+.theme .message-box .write input[type="text"] {
+	background-color: #eeeeee;
+	border: 1px solid #999999;
+	border-radius: 3px;
+	padding: 5px;
+	width: 100px;
+	height: 27px;
+	outline: none;
+}
+
+.theme .message-box .write textarea {
+	margin: 10px 0px;
+	resize: none;
+	border-radius: 10px;
+	width: 100%;
+	height: 100px;
+	border: 1px solid #999999;
+	outline: none;
+	padding: 10px;
+	font-size: 12px;
+}
+
+.theme .message-box .write input[type="checkbox"] {
+	float: right;
+	background-color: #eeeeee;
+	border: 1px solid #999999;
+	border-radius: 3px;
+	width: 14px;
+	height: 14px;
+	outline: none;
+	margin-top: 14px;
+	margin-right: 2px;
+}
+
+.theme .message-box .write input[type="submit"] {
+	float: right;
+	background-color: #3a9cdd;
+	border: 0px;
+	color: #FFFFFF;
+	font-size: 15px;
+	border-radius: 10px;
+	padding: 5px;
+	width: 100px;
+	height: 30px;
+	outline: none;
+	cursor: pointer;
+}
+
+.theme .message-box .write input[type="submit"]:hover {
+	background-color: #247cae;
+}
+
+.theme .message-box .write span {
+	float: right;
+	font-size: 12px;
+	color: #666666;
+	margin-top: 14px;
+	margin-right: 7px;
+}
+
+.theme .message-box .read {
+	margin-bottom: 50px;
+}
+
+.theme .message-box .read .hot {
+	margin-bottom: -1px;
+}
+
+.theme .message-box .read .hot h4 {
+	padding-bottom: 10px;
+	font-size: 16px;
+	border-bottom: 3px solid #0099ff;
+	float: left;
+}
+
+.theme .message-box .read .hot span {
+	font-size: 14px;
+	float: right;
+	color: #666666;
+}
+
+.theme .message-box .read .content {
+	border-top: 1px solid #999999;
+	padding: 30px 0px;
+}
+
+.theme .message-box .read .comment img {
+	margin-right: -60px;
+}
+
+.theme .message-box .read .content .comment p {
+	float: left;
+	font-size: 15px;
+	width: 100%;
+	padding-left: 70px;
+	margin: 7px 0px;
+}
+
+.theme .message-box .read .content .comment p .reply-text {
+	display: block;
+	line-height: 2;
+	margin-left: 45px;
+	position: relative;
+	bottom: 22px;
+	margin-bottom: -22px;
+}
+
+.theme .message-box .read .content .comment h6 {
+	float: right;
+	font-weight: normal;
+	font-size: 12px;
+	position: relative;
+	bottom: 20px;
+	margin-bottom: -20px;
+}
+
+.theme .message-box .read .content .reply {
+	margin-top: 25px;
+	background-color: #eeeeee;
+	border: 1px solid #999999;
+	padding: 8px 15px;
+}
+
+.theme .message-box .read .content .reply p {
+	color: #3a9cdd;
+	font-weight: bold;
+}
+
+.theme .message-box .read .content .reply p,
+.theme .message-box .read .content .reply span {
+	float: left;
+	font-size: 12px;
+	width: 100%;
+	line-height: 2;
+}
+
+.theme .message-box .read .content .reply h6 {
+	float: right;
+	font-weight: normal;
+	font-size: 12px;
+	position: relative;
+	bottom: 20px;
+	margin-bottom: -20px;
+
+}
+
+.theme .message-box .read .read-load {
+	width: 100%;
+	display: block;
+	background-color: #0099CC;
+	color: #FFFFFF;
+	text-align: center;
+	padding: 7px;
+	border-radius: 3px;
+}
+
+.theme .message-box .read .read-load:hover {
+	background-color: #00A0E9;
+}
+
+/* ---------------------------------------------------------------- */
+
+/* ------------------------------按钮--------------------------- */
+.page {
+	padding: 30px 0px 50px 0px;
+	text-align: center;
+	font-size: 16px;
+}
+
+.page a {
+	color: #000000;
+	padding: 2px 6px;
+	margin: 0px 1px;
+	border: 1px solid #e3e3e3;
+}
+
+.page .actave,
+.page a:hover {
+	background-color: #00b7ff;
+	color: #FFFFFF;
+}
+
+/* ---------------------------------------------------------------- */
+/* ------------------------------底部--------------------------- */
+.bottom {
+	font-size: 14px;
+	color: #FFFFFF;
+	background-color: #00b7ff;
+	text-align: center;
+	padding: 30px 10px;
+	width: 100%;
+}
+
+.bottom p {
+	line-height: 2;
+}
+
+.bottom a:hover {
+	color: #FF6699;
+}
+
+/* ---------------------------------------------------------------- */
+/* ------------------------------弹窗--------------------------- */
+
+
+.window {
+	display: none;
+	width: 500px;
+	overflow: hidden;
+	position: fixed;
+	background-color: #FFFFFF;
+	border-radius: 5px;
+	box-shadow: 0px 0px 10px 0px rgba(0, 0, 0, 0.3);
+	left: 50%;
+	margin-left: -250px;
+	margin-top: -200px;
+	top: 50%;
+	height: 275px;
+}
+
+.window .top {
+	background-color: #0099FF;
+	width: 100%;
+	border-radius: 5px 5px 0px 0px;
+	padding: 7px 10px;
+}
+
+.window .top span {
+	font-size: 14px;
+	color: #FFFFFF;
+}
+
+.window p {
+	font-size: 14px;
+	padding: 0px 2%;
+	margin-top: 10px;
+	width: 100%;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	overflow: hidden;
+
+}
+
+.window .top img {
+	height: 15px;
+	width: auto;
+	margin-bottom: -2px;
+	float: right;
+	cursor: pointer;
+}
+
+.window textarea {
+	width: 96%;
+	margin: 10px 2%;
+	height: 150px;
+	resize: none;
+	outline: none;
+	padding: 5px;
+
+}
+
+.window input[type="submit"] {
+	width: 96%;
+	margin: 0px 2%;
+	font-size: 14px;
+	color: #FFFFFF;
+	border-radius: 3px;
+	padding: 10px 0px;
+	background-color: #00b7ff;
+	border: 0px;
+	outline: none;
+	cursor: pointer;
+	margin-bottom: 10px;
+}
+
+.window input[type="submit"]:hover {
+	background-color: #FFC125;
+}
+
+/* ---------------------------------------------------------------- */
+/* -------------------------------媒体查询-------------------------- */
+/* 整体 */
+@media (max-width:1220px) {
+	body {
+		padding: 10px;
+	}
+}
+
+@media (max-width:980px) {
+
+	/* 头部 */
+	.head {
+		max-width: 1200px;
+		padding: 20px 0px;
+		background-color: white;
+	}
+
+	.head .logo {
+		height: 120px;
+	}
+
+	.head .search {
+		float: right;
+		margin: 5px 0px 0px 0px;
+		width: 500px;
+	}
+
+	.head .search img {
+		height: 30px;
+		left: 45px;
+		top: 48px;
+	}
+
+	.head .search input[type="text"] {
+		font-size: 24px;
+		padding: 10px 110px 10px 60px;
+		border-radius: 5px;
+		height: 60px;
+	}
+
+	.head .search input[type="submit"] {
+		font-size: 24px;
+		border-radius: 5px;
+		padding: 10px 0px;
+		width: 100px;
+		bottom: 60px;
+		margin-bottom: -60px;
+		height: 60px;
+	}
+
+	.head .search p {
+		display: none;
+	}
+
+	.head .head-right {
+		width: 100%;
+		margin-top: 10px;
+		margin-right: 0px;
+		margin-left: -20px;
+	}
+
+	.head .head-right p {
+		float: right;
+		font-size: 18px;
+		margin-top: 0px;
+		margin-left: 20px;
+	}
+
+	/* 导航 */
+	.nav {
+		font-size: 32px;
+		margin-bottom: 40px;
+	}
+
+	.nav ul li {
+		height: 62px;
+	}
+
+	.nav ul li a {
+		height: 62px;
+		padding: 15px 0px;
+	}
+
+	/* 锚链接 */
+	.bread-crumbs {
+		font-size: 28px;
+		margin-left: 10px;
+	}
+
+	/* 分类 */
+
+	.sort-table .sort {
+		width: 100%;
+		font-size: 24px;
+		padding-top:20px;
+		padding-bottom:20px;
+	}
+
+	.sort-table .border {
+		border-left: 0px;
+		border-right: 0px;
+	}
+
+	/* 列表 */
+	.list {
+		margin-bottom: 30px;
+		font-size: 28px;
+	}
+
+	/* 列表框 */
+	.list .list-box .content {
+		margin-bottom: 30px;
+	}
+
+	.list .list-box {
+		font-size: 28px;
+	}
+
+	.list .list-box .content .row:hover {
+		margin-top: -2px;
+		padding-top: 2px;
+	}
+
+	.list .list-box .content .row ul {
+		border-bottom: 2px dashed #00b7ff;
+	}
+
+	.list .list-box .content .row ul li {
+		padding: 20px 5px;
+	}
+
+	.list .list-box .content .result {
+		font-size: 24px;
+	}
+
+	/* 按钮 */
+	.page {
+		font-size: 28px;
+	}
+
+	.page a {
+		padding: 5px 12px;
+		margin: 0px 2px;
+	}
+
+	/* 底部 */
+	.bottom {
+		font-size: 24px;
+	}
+
+	/* 主题 */
+	.theme .title {
+		font-size: 28px;
+
+	}
+
+	/* 详情 */
+	.theme .detail img {
+		width: 300px;
+		height: 450px;
+		margin-top: 50px;
+		margin-right: -300px;
+	}
+
+	.theme .detail .content {
+		padding-left: 330px;
+		margin-bottom: -18px;
+	}
+
+	.theme .detail .content .detail-title {
+		padding-bottom: 18px;
+		margin-bottom: 14px;
+	}
+
+	.theme .detail .content .detail-title h1 {
+		font-size: 25px;
+		margin-top: 50px;
+	}
+
+	.theme .detail .content .detail-title h6 {
+		font-size: 24px;
+		padding: 8px 12px;
+		margin-left: 12px;
+	}
+
+	.theme .detail .content p {
+		font-size: 24px;
+		margin-bottom: 18px;
+	}
+
+	/* 其他框 */
+
+
+	.other .other-title {
+		font-size: 28px;
+		padding-bottom: 15px;
+		border-bottom: 5px solid #00a0e9;
+
+	}
+
+	/*简介*/
+
+	.other .introduction p {
+		font-size: 24px;
+		line-height: 1.5;
+	}
+
+	/* 下载 */
+	.other .download p {
+		font-size: 24px;
+		margin-bottom: 15px;
+	}
+
+	.other .download p button {
+		font-size: 18px;
+	}
+
+	.other .download .link {
+		margin-bottom: 15px;
+	}
+
+	.other .download input[type="checkbox"] {
+		width: 20px;
+		height: 20px;
+		margin-right: 5px;
+	}
+
+	.other .download .link input[type="text"] {
+		font-size: 22px;
+		width: 650px;
+	}
+
+	.other .download .link a {
+		font-size: 22px;
+	}
+
+	.other .download .selected span {
+		font-size: 22px;
+	}
+
+	.other .download .selected a {
+		font-size: 18px;
+		padding: 5px 12px;
+		border-radius: 5px;
+	}
+
+	/* 留言框*/
+	.theme .message-box .write img,
+	.theme .message-box .read .comment img {
+		width: 100px;
+		height: 100px;
+		border: 5px solid #000000;
+		border-radius: 5px;
+	}
+
+	.theme .message-box .write p {
+		font-size: 24px;
+		margin-top: 70px;
+	}
+
+	.theme .message-box .write input[type="text"] {
+		padding: 5px 8px;
+		width: 120px;
+		height: 34px;
+		font-size: 18px;
+		position: relative;
+		bottom: 3px;
+	}
+
+	.theme .message-box .write textarea {
+		font-size: 24px;
+	}
+
+	.theme .message-box .write input[type="checkbox"] {
+
+		width: 22px;
+		height: 22px;
+		margin-top: 17px;
+		margin-right: 7px;
+	}
+
+	.theme .message-box .write input[type="submit"] {
+		font-size: 18px;
+		border-radius: 15px;
+		padding: 7px 14px;
+		width: 120px;
+		height: 38px;
+		margin-top: 7px;
+	}
+
+	.theme .message-box .write span {
+		font-size: 24px;
+	}
+
+
+	.theme .message-box .read .hot h4 {
+		padding-bottom: 15px;
+		font-size: 24px;
+		border-bottom: 5px solid #0099ff;
+	}
+
+	.theme .message-box .read .hot span {
+		font-size: 24px;
+	}
+
+	.theme .message-box .read .content {
+		border-top: 1px solid #999999;
+		padding: 30px 0px;
+	}
+
+	.theme .message-box .read .content img {
+		margin-bottom: 20px;
+	}
+
+	.theme .message-box .read .content .comment p {
+		float: left;
+		font-size: 22px;
+		padding-left: 0px;
+	}
+
+	.theme .message-box .read .content .comment p .reply-text {
+		margin-left: 66px;
+		bottom: 33px;
+		margin-bottom: -33px;
+	}
+
+	.theme .message-box .read .content .comment h6 {
+		font-size: 22px;
+		bottom: 30px;
+		margin-bottom: -30px;
+	}
+
+	.theme .message-box .read .content .reply p,
+	.theme .message-box .read .content .reply span {
+		font-size: 22px;
+	}
+
+	.theme .message-box .read .content .reply h6 {
+		font-size: 22px;
+		bottom: 30px;
+		margin-bottom: -30px;
+	}
+
+	.theme .message-box .read .read-load {
+		font-size: 28px;
+		padding: 15px;
+		border-radius: 5px;
+	}
+
+	/* 弹窗*/
+	.window {
+		height: 300px;
+	}
+
+	.window .top {
+		padding: 10px 15px;
+	}
+
+	.window .top span {
+		font-size: 24px;
+	}
+
+	.window p {
+		font-size: 20px;
+	}
+
+	.window .top img {
+		height: 24px;
+	}
+
+	.window textarea {
+		font-size: 18px;
+
+	}
+
+	.window input[type="submit"] {
+		font-size: 18px;
+	}
+
+}
+
+
+/* ------------------------------------------------------------ */

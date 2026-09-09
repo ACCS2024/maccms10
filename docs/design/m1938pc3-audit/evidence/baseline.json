@@ -1,0 +1,220 @@
+[
+  {
+    "width": 1440,
+    "metrics": {
+      "viewportMeta": "user-scalable=no",
+      "innerWidth": 1440,
+      "clientWidth": 1440,
+      "scrollWidth": 1440,
+      "scale": 1,
+      "noticeCount": 11,
+      "rowCount": 70,
+      "head": {
+        "x": 120,
+        "y": 0,
+        "width": 1200,
+        "height": 136,
+        "radius": "0px",
+        "shadow": "none",
+        "padding": "20px 0px",
+        "fontSize": "12px"
+      },
+      "nav": {
+        "x": 120,
+        "y": 198,
+        "width": 1200,
+        "height": 357,
+        "radius": "0px",
+        "shadow": "none",
+        "padding": "0px",
+        "fontSize": "20px"
+      },
+      "wrapper": {
+        "x": 120,
+        "y": 595,
+        "width": 1200,
+        "height": 933.859375,
+        "radius": "16px",
+        "shadow": "rgba(0, 0, 0, 0.06) 0px 2px 12px 0px",
+        "padding": "20px 24px",
+        "fontSize": "16px"
+      },
+      "notice": {
+        "x": 145,
+        "y": 616,
+        "width": 1150,
+        "height": 160.1875,
+        "radius": "12px",
+        "shadow": "rgba(0, 0, 0, 0.05) 0px 2px 8px 0px",
+        "padding": "16px 20px",
+        "fontSize": "16px"
+      },
+      "list": {
+        "x": 120,
+        "y": 1557.859375,
+        "width": 1200,
+        "height": 8284,
+        "radius": "5px",
+        "shadow": "rgb(238, 238, 238) 0px 5px 10px 0px",
+        "padding": "0px 20px",
+        "fontSize": "16px"
+      },
+      "header": {
+        "x": 141,
+        "y": 1558.859375,
+        "width": 1158,
+        "height": 72,
+        "radius": "16px",
+        "shadow": "rgba(0, 0, 0, 0.06) 0px 2px 12px 0px",
+        "padding": "14px 0px",
+        "fontSize": "16px"
+      },
+      "row": {
+        "x": 161,
+        "y": 1642.859375,
+        "width": 1118,
+        "height": 107,
+        "radius": "14px",
+        "shadow": "rgba(0, 0, 0, 0.04) 0px 2px 8px 0px",
+        "padding": "12px 0px",
+        "fontSize": "15px"
+      },
+      "firstCell": {
+        "x": 161,
+        "y": 1654.859375,
+        "width": 80,
+        "height": 83,
+        "radius": "0px",
+        "shadow": "none",
+        "padding": "12px 5px",
+        "fontSize": "14px"
+      },
+      "firstHeaderCell": {
+        "x": 141,
+        "y": 1572.859375,
+        "width": 120,
+        "height": 44,
+        "radius": "0px",
+        "shadow": "none",
+        "padding": "15px 5px",
+        "fontSize": "14px"
+      },
+      "loadedCss": [
+        "http://85.149.233.2/template/m1938pc3/css/main.css",
+        "http://85.149.233.2/template/m1938pc3/css/home.css",
+        "http://85.149.233.2/static/css/home.css"
+      ]
+    },
+    "pageErrors": [],
+    "note": "线上首页；屏蔽图片、媒体与跨域请求，截图替换资源名称及分类，仅用于布局审计。"
+  },
+  {
+    "width": 390,
+    "metrics": {
+      "viewportMeta": "user-scalable=no",
+      "innerWidth": 980,
+      "clientWidth": 980,
+      "scrollWidth": 1000,
+      "scale": 0.3979591727256775,
+      "noticeCount": 11,
+      "rowCount": 70,
+      "head": {
+        "x": 0,
+        "y": 0,
+        "width": 1000,
+        "height": 188,
+        "radius": "0px",
+        "shadow": "none",
+        "padding": "20px 0px",
+        "fontSize": "12px"
+      },
+      "nav": {
+        "x": 0,
+        "y": 250,
+        "width": 1000,
+        "height": 581,
+        "radius": "0px",
+        "shadow": "none",
+        "padding": "0px",
+        "fontSize": "32px"
+      },
+      "wrapper": {
+        "x": 20,
+        "y": 891,
+        "width": 960,
+        "height": 957.65625,
+        "radius": "16px",
+        "shadow": "rgba(0, 0, 0, 0.06) 0px 2px 12px 0px",
+        "padding": "20px 24px",
+        "fontSize": "28px"
+      },
+      "notice": {
+        "x": 45,
+        "y": 912,
+        "width": 910,
+        "height": 160.1875,
+        "radius": "12px",
+        "shadow": "rgba(0, 0, 0, 0.05) 0px 2px 8px 0px",
+        "padding": "16px 20px",
+        "fontSize": "28px"
+      },
+      "list": {
+        "x": 0,
+        "y": 1877.65625,
+        "width": 1000,
+        "height": 8856,
+        "radius": "5px",
+        "shadow": "rgb(238, 238, 238) 0px 5px 10px 0px",
+        "padding": "0px 20px",
+        "fontSize": "28px"
+      },
+      "header": {
+        "x": 21,
+        "y": 1878.65625,
+        "width": 958,
+        "height": 72,
+        "radius": "16px",
+        "shadow": "rgba(0, 0, 0, 0.06) 0px 2px 12px 0px",
+        "padding": "14px 0px",
+        "fontSize": "28px"
+      },
+      "row": {
+        "x": 41,
+        "y": 1962.65625,
+        "width": 918,
+        "height": 115,
+        "radius": "14px",
+        "shadow": "rgba(0, 0, 0, 0.04) 0px 2px 8px 0px",
+        "padding": "12px 0px",
+        "fontSize": "28px"
+      },
+      "firstCell": {
+        "x": 41,
+        "y": 1974.65625,
+        "width": 70,
+        "height": 91,
+        "radius": "0px",
+        "shadow": "none",
+        "padding": "20px 5px",
+        "fontSize": "14px"
+      },
+      "firstHeaderCell": {
+        "x": 21,
+        "y": 1892.65625,
+        "width": 79.28125,
+        "height": 44,
+        "radius": "0px",
+        "shadow": "none",
+        "padding": "15px 5px",
+        "fontSize": "14px"
+      },
+      "loadedCss": [
+        "http://85.149.233.2/template/m1938pc3/css/main.css",
+        "http://85.149.233.2/template/m1938pc3/css/home.css",
+        "http://85.149.233.2/static/css/home.css"
+      ]
+    },
+    "pageErrors": [],
+    "note": "线上首页；屏蔽图片、媒体与跨域请求，截图替换资源名称及分类，仅用于布局审计。"
+  }
+]

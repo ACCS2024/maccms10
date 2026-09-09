@@ -1,0 +1,4 @@
+Preview URL: http://85.149.233.2/theme-preview-20260909-a7c4/v2/index.html
+Deployed: index.html, style.css, script.js, assets/logo.gif
+Validation: HTTP 200 and local/remote SHA-256 equality for all four files.
+Production theme configuration unchanged.

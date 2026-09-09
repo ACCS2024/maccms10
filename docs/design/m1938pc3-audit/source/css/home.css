@@ -1,0 +1,42 @@
+
+*html,*html body{background-attachment:fixed;height:100%;}
+body{margin:0;padding:0;font-size:12px;font-family:Tahoma,"hiragino sans gb",Helvetica,Arial;width:100%;width:expression(document.body.clientWidth <=1000? "1000px":"auto");min-width:1000px;background: url(../images/bg_icon.jpg);}
+form,img,ul,ol,li,dl,dt,dd,p,h1,h2,h3,h4,h5,h6{margin:0;padding:0;border:0;}
+ul,li{margin:0;padding:0;list-style:none;}
+a,div{color:#585858;}
+a:link{text-decoration:none;}
+a:visited{text-decoration:none;}
+a:hover{text-decoration:none;color:#f60;text-decoration:none;}
+a:active{text-decoration:none;}
+em,i{font-style:normal;}
+a:focus,input{outline:none;}
+textarea{resize:none;}
+.fl {float: left;}
+.input:after{clear:both;content:"";display:block;height:0;visibility:hidden;}
+/*头部*/
+.xing_top{width:1000px;margin:0 auto;margin-bottom:5px;margin-top:10px;}
+.xing_top li {display:inline;height:80px;}
+.xing_top li.xing_top_left{width:200px;float: left;}
+.xing_top li.xing_top_right{width:200px;float: right;}
+.xing_top li.xing_top_center{width:600px;float: left;}
+.xing_top .topright{float:right;}
+.xing_top .topright li {line-height:25px;height:25px;float:right;}
+.xing_top .topright li strong {color: #FF0000}
+    .index-header{
+        text-align: center;
+        background-color: #ff9800;
+        padding: 12px 0;
+    }
+     .index-card2{
+        padding: 14px;
+        display: inline-block;
+        margin: 0 auto;
+        border-radius: 6px;
+        font-size: 14px;
+        background-color: white;
+        box-shadow: 0 1px 3px 0 rgba(0,0,0,0.2), 0 1px 1px 0 rgba(0,0,0,0.14), 0 2px 1px -1px rgba(0,0,0,0.12);
+    }   
+   .index-card2 li { list-style: none} 
+   .lh35 li,.lh35 p{
+       line-height:35px;
+   }
