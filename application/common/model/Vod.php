@@ -800,11 +800,13 @@ class Vod extends Base {
             return ['code'=>1001,'msg'=>lang('param_err').'：'.$validate->getError() ];
         }
         if(isset($data['vod_jumpurl'])){ $data['vod_jumpurl'] = mac_safe_jumpurl($data['vod_jumpurl']); }
+        // vod_en 是可选字段(表单不填就没有),清缓存时缺键属正常形态
+        $__vodEn = $data['vod_en'] ?? '';
         $key = 'vod_detail_'.$data['vod_id'];
         Cache::delete($key);
-        $key = 'vod_detail_'.$data['vod_en'];
+        $key = 'vod_detail_'.$__vodEn;
         Cache::delete($key);
-        $key = 'vod_detail_'.$data['vod_id'].'_'.$data['vod_en'];
+        $key = 'vod_detail_'.$data['vod_id'].'_'.$__vodEn;
         Cache::delete($key);
 
         $type_list = (new \app\common\model\Type())->getCache('type_list');
@@ -832,7 +834,7 @@ class Vod extends Base {
         }
 
         if(empty($data['vod_blurb'])){
-            $data['vod_blurb'] = mac_substring( strip_tags($data['vod_content']) ,100);
+            $data['vod_blurb'] = mac_substring( strip_tags($data['vod_content'] ?? '') ,100);
         }
 
         if(empty($data['vod_play_url'])){
@@ -950,11 +952,13 @@ class Vod extends Base {
         if(!$validate->check($data)){
             return ['code'=>1001,'msg'=>lang('param_err').'：'.$validate->getError() ];
         }
+        // vod_en 是可选字段(表单不填就没有),清缓存时缺键属正常形态
+        $__vodEn = $data['vod_en'] ?? '';
         $key = 'vod_detail_'.$data['vod_id'];
         Cache::delete($key);
-        $key = 'vod_detail_'.$data['vod_en'];
+        $key = 'vod_detail_'.$__vodEn;
         Cache::delete($key);
-        $key = 'vod_detail_'.$data['vod_id'].'_'.$data['vod_en'];
+        $key = 'vod_detail_'.$data['vod_id'].'_'.$__vodEn;
         Cache::delete($key);
 
         if(!empty($data['vod_plot_name'])) {

@@ -236,14 +236,16 @@ class Index extends Base
     public function select()
     {
         $param = \think\facade\Request::param();
-        $tpl = $param['tpl'];
-        $tab = $param['tab'];
-        $col = $param['col'];
-        $ids = $param['ids'];
-        $url = $param['url'];
-        $val = $param['val'];
+        // 这些全是 URL 传参,缺任何一个都是合法调用形态(如 val 为空=清空该字段),
+        // 不该每次都记一条 warning —— 生产上单 val 一项就刷了 46 条。
+        $tpl = $param['tpl'] ?? '';
+        $tab = $param['tab'] ?? '';
+        $col = $param['col'] ?? '';
+        $ids = $param['ids'] ?? '';
+        $url = $param['url'] ?? '';
+        $val = $param['val'] ?? '';
 
-        $refresh = $param['refresh'];
+        $refresh = $param['refresh'] ?? '';
 
         if (empty($tpl) || empty($tab) || empty($col) || empty($ids) || empty($url)) {
             return $this->error(lang('param_err'));
@@ -680,7 +682,7 @@ class Index extends Base
             
             // /proc/meminfo 文件读取
             'proc' => function() {
-                if (!is_readable('/proc/meminfo')) {
+                if (!mac_path_in_open_basedir('/proc/meminfo') || !is_readable('/proc/meminfo')) {
                     return null;
                 }
                 $meminfo = file_get_contents('/proc/meminfo');
@@ -774,7 +776,7 @@ class Index extends Base
             
             // /proc/stat 文件读取
             'proc' => function() {
-                if (is_readable('/proc/stat')) {
+                if (mac_path_in_open_basedir('/proc/stat') && is_readable('/proc/stat')) {
                     $stats1 = file_get_contents('/proc/stat');
                     usleep(100000); // 等待100ms
                     $stats2 = file_get_contents('/proc/stat');
@@ -815,7 +817,7 @@ class Index extends Base
 
     private function _getServerLoadLinuxData()
     {
-        if (is_readable("/proc/stat")) {
+        if (mac_path_in_open_basedir("/proc/stat") && is_readable("/proc/stat")) {
             $stats = @file_get_contents("/proc/stat");
 
             if ($stats !== false) {

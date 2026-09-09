@@ -4701,7 +4701,9 @@ if (!function_exists('copydirs')) {
 
 function mac_strip_tags($string) {
     $pattern = '/&([a-zA-Z0-9#]+);/';
-    
+    // PHP8.1 起给 preg_* 的 subject 传 null 是 deprecated,PHP9 会直接报错
+    $string = (string) $string;
+
     $string = preg_replace_callback($pattern, function($matches) {
         if ($matches[0] === '&lt;') {
             return '<';
@@ -4794,6 +4796,33 @@ if (!function_exists('mac_ts')) {
             return $t === false ? 0 : $t;
         }
         return 0;
+    }
+}
+if (!function_exists('mac_path_in_open_basedir')) {
+    /**
+     * 目标路径是否落在 open_basedir 允许范围内。
+     *
+     * 后台仪表盘读 /proc/meminfo、/proc/stat 取 CPU/内存,代码本身已经用
+     * is_readable() 守过并有多级回退 —— 但 open_basedir 生效时 is_readable()
+     * 这一步自己就会告警,一次后台首页刷 6 条,而"读不到"本来就是预期结果。
+     * 先判范围再调,既不吞掉真实的权限问题,也不用为了消噪去放宽 open_basedir
+     * (放开 /proc 等于把 /proc/self/environ 里的库口令暴露给任何一个 LFI)。
+     */
+    function mac_path_in_open_basedir(string $path): bool
+    {
+        $ob = (string) ini_get('open_basedir');
+        if ($ob === '') {
+            return true;   // 未启用限制
+        }
+        foreach (explode(PATH_SEPARATOR, $ob) as $dir) {
+            $dir = trim($dir);
+            if ($dir === '') { continue; }
+            // open_basedir 是前缀匹配:目录项按 "目录/" 前缀,文件项按精确路径
+            if ($path === rtrim($dir, '/') || strncmp($path, rtrim($dir, '/') . '/', strlen(rtrim($dir, '/')) + 1) === 0) {
+                return true;
+            }
+        }
+        return false;
     }
 }
 if (!function_exists('mac_token')) {

@@ -102,7 +102,7 @@ class Collect extends Base
         $where = [];
         $where['collect_id'] = $id;
         $res = (new \app\common\model\Collect())->infoData($where);
-        $this->assign('info', $res['info']);
+        $this->assign('info', $res['info'] ?? []);
         $this->assign('title', lang('admin/collect/title'));
         return $this->fetch('admin@collect/info');
     }

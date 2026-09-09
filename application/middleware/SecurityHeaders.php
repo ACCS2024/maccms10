@@ -7,6 +7,13 @@ class SecurityHeaders
     {
         $response = $next($request);
 
+        // 采集进度页用 mac_echo() 边跑边 flush(见 common.php),响应头此刻早已发出。
+        // 再调 header_remove()/header() 只会刷 "headers already sent" 告警
+        // (一次采集刷 27 条),头是设不上去的。直接放行,语义不变。
+        if (headers_sent()) {
+            return $response;
+        }
+
         // 消除 PHP/框架版本指纹（防技术栈探测）
         if (function_exists('header_remove')) {
             header_remove('X-Powered-By');
