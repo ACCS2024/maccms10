@@ -8,7 +8,7 @@ $config['view_path'] = $root;
 $config['cache_path'] = sys_get_temp_dir() . '/maccms-theme-v2-compile/';
 $config['tpl_cache'] = false;
 @mkdir($config['cache_path'], 0755, true);
-$pages = ['index/index', 'vod/index', 'vod/type', 'vod/show', 'vod/search', 'vod/detail', 'vod/play', 'art/index', 'art/type', 'art/show', 'art/search', 'art/detail'];
+$pages = ['index/index', 'vod/index', 'vod/type', 'vod/show', 'vod/search', 'vod/detail', 'vod/play', 'art/index', 'art/type', 'art/show', 'art/search', 'art/detail', 'rep/index'];
 foreach ($pages as $page) {
     $template = new \think\Template($config);
     $content = file_get_contents($root . $page . '.html');

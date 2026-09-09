@@ -1,0 +1,46 @@
+[
+  {
+    "width": 1440,
+    "states": [
+      "empty",
+      "published",
+      "undated",
+      "disabled"
+    ],
+    "live": true,
+    "status": "pass"
+  },
+  {
+    "width": 768,
+    "states": [
+      "empty",
+      "published",
+      "undated",
+      "disabled"
+    ],
+    "live": true,
+    "status": "pass"
+  },
+  {
+    "width": 390,
+    "states": [
+      "empty",
+      "published",
+      "undated",
+      "disabled"
+    ],
+    "live": true,
+    "status": "pass"
+  },
+  {
+    "width": 360,
+    "states": [
+      "empty",
+      "published",
+      "undated",
+      "disabled"
+    ],
+    "live": true,
+    "status": "pass"
+  }
+]

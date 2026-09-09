@@ -1,7 +1,7 @@
 <?php
 // Public theme settings. Keep site-specific endpoints together; no credentials belong here.
 return [
-    'version' => '20260909.4',
+    'version' => '20260909.5',
     'name' => '杏吧资源站',
     'permanent' => 'www.sex8zy.com',
     'mirrors' => array_map(static fn ($n) => 'sex8zy' . $n . '.com', range(1, 9)),
@@ -15,7 +15,6 @@ return [
     'player' => 's8m3u8',
     'player_download' => 'https://xingba111.com/template/help/bfq/mac_sex8zy.zip',
     'migration' => 'https://sex8zy1.com/1.html',
-    'migration_date' => '2026-08-26',
     'group' => 'https://t.me/xbxbxbzy',
     'channel' => 'https://t.me/xbww888',
     'play_help' => 'https://p3-tt.byteimg.com/obj/tos-cn-i-jcdsk5yqko/a77e5de21b004c8f9262f53b2482e956',

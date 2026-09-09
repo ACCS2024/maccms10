@@ -9,7 +9,7 @@ if (!is_file($previewSiteRoot . 'vendor/autoload.php')) {
     http_response_code(503); exit('Preview installation is incomplete.');
 }
 $previewPath = trim((string)($_SERVER['PATH_INFO'] ?? $_GET['s'] ?? ''), '/');
-if ($previewPath !== '' && !preg_match('~^(?:index(?:/index)?|vod/(?:index|type|show|search|detail|play|player)|art/(?:index|type|show|search|detail)|vod(?:type|show|search|detail|play|player)|art(?:type|show|search|detail))(?:[/.\-]|$)~i', $previewPath)) {
+if ($previewPath !== '' && !preg_match('~^(?:index(?:/index)?|rep/index|macrep|vod/(?:index|type|show|search|detail|play|player)|art/(?:index|type|show|search|detail)|vod(?:type|show|search|detail|play|player)|art(?:type|show|search|detail))(?:[/.\-]|$)~i', $previewPath)) {
     http_response_code(404); exit;
 }
 chdir($previewSiteRoot);

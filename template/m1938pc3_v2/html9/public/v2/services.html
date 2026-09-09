@@ -1,3 +1,9 @@
+{php}
+$zy_rep_enabled = ($GLOBALS['config']['rep']['enabled'] ?? '1') !== '0';
+$zy_rep_latest = $zy_rep_enabled ? \app\common\model\Rep::where('rep_status', 1)
+    ->field('rep_id,rep_type,rep_create_time')->order('rep_create_time', 'desc')->order('rep_id', 'desc')->find() : null;
+$zy_rep_url = rtrim(IN_FILE, '/') . '/macrep.html';
+{/php}
 <section class="service-board" id="interfaces" aria-label="站点公告与采集接口">
   <div class="site-info"><div class="small-heading"><h2>站点公告</h2><span>请收藏永久地址</span></div>
     <div class="official-line"><span>永久官网</span><a class="domain" href="https://{$zy.permanent|htmlspecialchars}" target="_blank" rel="noopener noreferrer">{$zy.permanent|htmlspecialchars}</a><button class="copy-button" data-copy="{$zy.permanent|htmlspecialchars}">复制</button></div>
@@ -13,7 +19,8 @@
     <div class="interface-row player-row"><span class="endpoint-label">播放器标识</span><code>{$zy.player|htmlspecialchars}</code><a class="text-link player-download" href="{$zy.player_download|htmlspecialchars}" target="_blank" rel="noopener noreferrer">下载播放器 ↗</a><button class="copy-button" data-copy="{$zy.player|htmlspecialchars}" aria-label="复制播放器标识">复制</button></div>
     <noscript><div class="interface-row"><span class="endpoint-label">XML 接口</span><code>{$zy.xml|htmlspecialchars}</code></div><div class="interface-row"><span class="endpoint-label">备用 XML</span><code>{$zy.xml_backup|htmlspecialchars}</code></div></noscript>
   </div>
-  <div class="service-foot"><span><b>{$zy.migration_date|htmlspecialchars}</b>播放域名 / 图片域名替换教程已更新</span><a class="text-link" href="{$zy.migration|htmlspecialchars}" target="_blank" rel="noopener noreferrer">查看教程 ›</a><button id="legacy-toggle" class="text-link" aria-controls="legacy" aria-expanded="false">小说图片接口与历史地址 ⌄</button></div>
+  {include file="public/v2/rep-notice"}
+  <div class="service-foot"><a class="text-link" href="{$zy.migration|htmlspecialchars}" target="_blank" rel="noopener noreferrer">播放 / 图片域名替换教程 ›</a><button id="legacy-toggle" class="text-link" aria-controls="legacy" aria-expanded="false">小说图片接口与历史地址 ⌄</button></div>
   <div id="legacy" hidden><div class="interface-row"><span class="endpoint-label">小说 / 图片</span><code>{$zy.art_api|htmlspecialchars}</code><button class="copy-button" data-copy="{$zy.art_api|htmlspecialchars}">复制</button></div><div class="interface-row"><span class="endpoint-label">旧解析接口</span><code>{$zy.parser_legacy|htmlspecialchars}</code><button class="copy-button" data-copy="{$zy.parser_legacy|htmlspecialchars}">复制</button></div><p>旧解析接口部分地区屏蔽，可尝试上方 M3U8 新接口。</p></div>
   <button id="expand-services" class="expand-services" aria-expanded="false">展开全部接口与公告 <span aria-hidden="true">⌄</span></button>
 </section>

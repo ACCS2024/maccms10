@@ -1,9 +1,9 @@
 <!doctype html>
-<html>
+<html lang="zh-CN">
 <head>
 <meta charset="utf-8">
-<title>替换助手 - {$site_name}</title>
-{include file="public/include"}
+<title>替换记录 - {$site_name|htmlspecialchars}</title>
+{include file="public/v2/include"}
 <style>
 .rep-wrap{padding:20px 0 40px;}
 .rep-toolbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;background:#fff;border:1px solid #e8e8e8;border-radius:4px;padding:14px 18px;margin-bottom:16px;}
@@ -90,12 +90,13 @@
 .rep-tutorial .tip-box{background:#e8f4ff;border-left:3px solid #008fc7;padding:8px 12px;border-radius:0 3px 3px 0;font-size:12px;color:#1a5fa8;margin:8px 0;}
 </style>
 </head>
-{include file="public/head"}
-<div class="width1200 rep-wrap">
+<body class="zy-page">
+{include file="public/v2/head"}
+<main class="wrap rep-wrap" id="resources">
 
   <div class="rep-toolbar">
     <div>
-      <h1>替换助手</h1>
+      <h1>替换记录</h1>
       <p>站长发布的数据替换记录，采集方照最新记录同步自己的库即可</p>
     </div>
     <div class="rep-stats">
@@ -127,9 +128,9 @@
       <div class="cur-cat">{$c.name|htmlspecialchars} <span class="cnt">{$c.count} 条历史</span></div>
       <div class="cur-val">
         <span class="v">{$c.current.rep_replacement|htmlspecialchars}</span>
-        <button class="rep-copy js-copy" type="button" data-copy="{$c.current.rep_replacement|htmlspecialchars}">复制</button>
+        <button class="rep-copy js-copy" type="button" data-rep-copy="{$c.current.rep_replacement|htmlspecialchars}">复制</button>
       </div>
-      <div class="cur-date">更新于 {:date('Y-m-d', $c['current']['rep_create_time'])}</div>
+      <div class="cur-date">更新于 {:date('Y-m-d H:i', $c['current']['rep_create_time'])}</div>
     </div>
     {/if}
     {/foreach}
@@ -155,7 +156,7 @@
           <span class="rep-badge b-new b-hidden">★ 新</span>
           <span class="rep-badge b-viewed b-hidden">✓ 已看</span>
           {if $item.rep_applied eq 1}<span class="rep-badge b-applied">✔ 站长已执行</span>{/if}
-          <span class="rep-date">{:date('Y-m-d', $item['rep_create_time'])}</span>
+          <span class="rep-date">{:date('Y-m-d H:i', $item['rep_create_time'])}</span>
         </div>
         <div class="rep-flow">
           <span class="rep-val o">{$item.rep_original|htmlspecialchars}</span>
@@ -180,7 +181,7 @@
 
   {/if}
 
-</div>
+</main>
 
 <!-- SQL 弹窗 -->
 <div class="rep-modal-bg" id="sqlModal">
@@ -216,7 +217,7 @@
   </div>
 </div>
 
-{include file="public/foot"}
+{include file="public/v2/foot"}
 <script>
 var repList = {php}echo json_encode($list, JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_UNESCAPED_UNICODE);{/php};
 
@@ -265,7 +266,7 @@ function showTutorial(type){
 function hideTip(){document.getElementById('repTip').style.display='none';}
 
 document.querySelector('.js-hide-tip').addEventListener('click',hideTip);
-document.querySelectorAll('.js-copy').forEach(function(b){b.addEventListener('click',function(e){e.stopPropagation();copyText(b.dataset.copy,b);});});
+document.querySelectorAll('.js-copy').forEach(function(b){b.addEventListener('click',function(e){e.stopPropagation();copyText(b.dataset.repCopy,b);});});
 document.querySelectorAll('.rep-card').forEach(function(card){card.addEventListener('click',function(){markViewed(card);});});
 document.querySelectorAll('.js-show-tutorial').forEach(function(b){b.addEventListener('click',function(e){e.stopPropagation();showTutorial(b.dataset.repType);});});
 document.querySelectorAll('.js-show-sql').forEach(function(b){b.addEventListener('click',function(e){e.stopPropagation();showSQL(b);});});
@@ -274,7 +275,8 @@ document.querySelectorAll('.js-more').forEach(function(b){b.addEventListener('cl
   document.querySelectorAll('.rep-card[data-cat="'+b.dataset.cat+'"].rep-hidden').forEach(function(c){c.classList.remove('rep-hidden');});b.remove();});});
 
 // 分类标签筛选
-document.getElementById('repTabs').addEventListener('click',function(e){
+var repTabs=document.getElementById('repTabs');
+if(repTabs)repTabs.addEventListener('click',function(e){
   var t=e.target.closest('.rep-tab');if(!t)return;
   document.querySelectorAll('.rep-tab').forEach(function(x){x.classList.remove('on');});
   t.classList.add('on');
@@ -299,7 +301,7 @@ function updateStats(){
   document.getElementById('statNew').textContent=t-v;
   document.getElementById('statViewed').textContent=v;
 }
-$(function(){
+document.addEventListener('DOMContentLoaded',function(){
   var lastVisit=localStorage.getItem(LK),viewed=getViewed(),newCnt=0,viewedCnt=0;
   document.querySelectorAll('.rep-card').forEach(function(el){
     var id=el.dataset.id,ts=parseInt(el.dataset.ts)*1000;

@@ -1,0 +1,15 @@
+{if $zy_rep_enabled}
+<div class="replacement-notice" aria-label="替换记录更新">
+  <strong class="replacement-label">替换记录</strong>
+  <div class="replacement-update">
+    {if !empty($zy_rep_latest)}
+    <span>最近发布</span>
+    {if $zy_rep_latest['rep_create_time'] gt 0}<time datetime="{:date('c', (int)$zy_rep_latest['rep_create_time'])}">{:date('Y-m-d H:i', (int)$zy_rep_latest['rep_create_time'])}</time>{else/}<span>时间未记录</span>{/if}
+    <span class="replacement-type">{$zy_rep_latest.rep_type|htmlspecialchars}</span>
+    {else/}
+    <span>暂无公开替换记录</span>
+    {/if}
+  </div>
+  <a class="text-link replacement-link" href="{$zy_rep_url|htmlspecialchars}">查看替换记录 <span aria-hidden="true">›</span></a>
+</div>
+{/if}
