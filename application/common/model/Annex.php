@@ -62,10 +62,12 @@ class Annex extends Base {
         if(!empty($data['annex_id'])){
             $where=[];
             $where['annex_id'] = $data['annex_id'];
+            $data = $this->filterFields($data);
             $res = $this->where($where)->update($data);
         }
         else{
             $data['annex_time'] = time();
+            $data = $this->filterFields($data);
             $res = $this->insert($data);
         }
         if(false === $res){

@@ -48,9 +48,11 @@ class Task extends Base {
         if (!empty($data['task_id'])) {
             $where = [];
             $where['task_id'] = $data['task_id'];
+            $data = $this->filterFields($data);
             $res = $this->where($where)->update($data);
         } else {
             $data['task_time_add'] = time();
+            $data = $this->filterFields($data);
             $res = $this->insert($data);
         }
         if (false === $res) {

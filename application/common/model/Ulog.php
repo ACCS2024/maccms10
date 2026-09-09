@@ -167,9 +167,11 @@ class Ulog extends Base {
         if(!empty($data['ulog_id'])){
             $where=[];
             $where['ulog_id'] = $data['ulog_id'];
+            $data = $this->filterFields($data);
             $res = $this->where($where)->update($data);
         }
         else{
+            $data = $this->filterFields($data);
             $res = $this->insert($data);
         }
         if(false === $res){

@@ -73,10 +73,12 @@ class Msg extends Base {
         if(!empty($data['msg_id'])){
             $where=[];
             $where['msg_id'] = $data['msg_id'];
+            $data = $this->filterFields($data);
             $res = $this->where($where)->update($data);
         }
         else{
             $data['msg_time'] = time();
+            $data = $this->filterFields($data);
             $res = $this->insert($data);
         }
         if(false === $res){

@@ -73,9 +73,11 @@ class Group extends Base {
         if(!empty($data['group_id'])){
             $where=[];
             $where['group_id'] = $data['group_id'];
+            $data = $this->filterFields($data);
             $res = $this->where($where)->update($data);
         }
         else{
+            $data = $this->filterFields($data);
             $res = $this->insert($data);
         }
         if(false === $res){

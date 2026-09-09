@@ -162,10 +162,12 @@ class Gbook extends Base {
             }
             $where=[];
             $where['gbook_id'] = $data['gbook_id'];
+            $data = $this->filterFields($data);
             $res = $this->where($where)->update($data);
         }
         else{
             $data['gbook_time'] = time();
+            $data = $this->filterFields($data);
             $res = $this->insert($data);
         }
         if(false === $res){

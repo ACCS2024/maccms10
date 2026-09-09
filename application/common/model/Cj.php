@@ -60,6 +60,7 @@ class Cj {
         if(!empty($data['nodeid'])){
             $where=[];
             $where['nodeid'] = $data['nodeid'];
+            $data = $this->filterFields($data, 'cj_node');
             $res = Db::name('cj_node')->where($where)->update($data);
         }
         else{
@@ -68,6 +69,7 @@ class Cj {
             $data['sourcecharset'] = isset($data['sourcecharset']) ? (string)$data['sourcecharset'] : 'utf-8';
             $data['customize_config'] = isset($data['customize_config']) ? (string)$data['customize_config'] : '';
             $data['program_config'] = isset($data['program_config']) ? (string)$data['program_config'] : '';
+            $data = $this->filterFields($data, 'cj_node');
             $res = Db::name('cj_node')->insert($data);
         }
         if(false === $res){

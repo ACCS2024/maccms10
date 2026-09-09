@@ -48,9 +48,11 @@ class SignMilestone extends Base {
         if (!empty($data['milestone_id'])) {
             $where = [];
             $where['milestone_id'] = $data['milestone_id'];
+            $data = $this->filterFields($data);
             $res = $this->where($where)->update($data);
         } else {
             $data['milestone_time_add'] = time();
+            $data = $this->filterFields($data);
             $res = $this->insert($data);
         }
         if (false === $res) {

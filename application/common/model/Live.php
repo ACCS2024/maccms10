@@ -59,9 +59,11 @@ class Live extends Base
         if (!empty($data['live_id'])) {
             $where = [];
             $where['live_id'] = (int)$data['live_id'];
+            $data = $this->filterFields($data);
             $res = $this->where($where)->update($data);
         } else {
             $data['live_time_add'] = time();
+            $data = $this->filterFields($data);
             $res = $this->insert($data);
         }
         if (false === $res) {

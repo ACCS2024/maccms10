@@ -68,6 +68,7 @@ class Admin extends Base {
             }
             $where=[];
             $where['admin_id'] = $data['admin_id'];
+            $data = $this->filterFields($data);
             $res = $this->where($where)->update($data);
         }
         else{
@@ -76,6 +77,7 @@ class Admin extends Base {
             }
 
             $data['admin_pwd'] = mac_password_hash($data['admin_pwd']);
+            $data = $this->filterFields($data);
             $res = $this->insert($data);
         }
         if(false === $res){
@@ -125,7 +127,7 @@ class Admin extends Base {
         }
 
         if($GLOBALS['config']['app']['admin_login_verify'] !='0'){
-            if(!captcha_check($data['verify'] ?? '')){
+            if(!captcha_check((string)($data['verify'] ?? ''))){
                 return ['code'=>1002,'msg'=>lang('verify_err')];
             }
         }

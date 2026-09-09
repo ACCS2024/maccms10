@@ -620,11 +620,13 @@ class Manga extends Base {
         if(!empty($data['manga_id'])){
             $where=[];
             $where['manga_id'] = $data['manga_id'];
+            $data = $this->filterFields($data);
             $res = $this->where($where)->update($data);
         }
         else{
             $data['manga_time_add'] = time();
             $data['manga_time'] = time();
+            $data = $this->filterFields($data);
             $res = $this->insert($data);
         }
         if(false === $res){

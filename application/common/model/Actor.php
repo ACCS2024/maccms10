@@ -497,11 +497,13 @@ class Actor extends Base {
         if(!empty($data['actor_id'])){
             $where=[];
             $where['actor_id'] = $data['actor_id'];
+            $data = $this->filterFields($data);
             $res = $this->where($where)->update($data);
         }
         else{
             $data['actor_time_add'] = time();
             $data['actor_time'] = time();
+            $data = $this->filterFields($data);
             $res = $this->insert($data);
         }
         if(false === $res){

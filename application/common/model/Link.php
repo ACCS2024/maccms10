@@ -111,10 +111,12 @@ class Link extends Base {
         if(!empty($data['link_id'])){
             $where=[];
             $where['link_id'] = $data['link_id'];
+            $data = $this->filterFields($data);
             $res = $this->where($where)->update($data);
         }
         else{
             $data['link_add_time'] = time();
+            $data = $this->filterFields($data);
             $res = $this->insert($data);
         }
         if(false === $res){

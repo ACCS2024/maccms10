@@ -277,9 +277,11 @@ class Type extends Base {
         if(!empty($data['type_id'])){
             $where=[];
             $where['type_id'] = $data['type_id'];
+            $data = $this->filterFields($data);
             $res = $this->where($where)->update($data);
         }
         else{
+            $data = $this->filterFields($data);
             $res = $this->insert($data);
         }
         if(false === $res){

@@ -83,12 +83,14 @@ class Collect extends Base {
 
             $where=[];
             $where['collect_id'] = $data['collect_id'];
+            $data = $this->filterFields($data);
             $res = $this->where($where)->update($data);
         }
         else{
             if(!$validate->scene('edit')->check($data)){
                 return ['code'=>1002,'msg'=>lang('param_err').'：'.$validate->getError() ];
             }
+            $data = $this->filterFields($data);
             $res = $this->insert($data);
         }
         if(false === $res){
@@ -145,10 +147,10 @@ class Collect extends Base {
 
     public function vod($param)
     {
-        if($param['type'] == '1'){
+        if(($param['type'] ?? '') == '1'){
             return $this->vod_xml($param);
         }
-        elseif($param['type'] == '2'){
+        elseif(($param['type'] ?? '') == '2'){
             return $this->vod_json($param);
         }
         else{
@@ -242,7 +244,7 @@ class Collect extends Base {
         else{
             $url .='&';
         }
-        $url .= http_build_query($url_param). base64_decode($param['param']);
+        $url .= http_build_query($url_param). base64_decode($param['param'] ?? '');
         $result = $this->checkCjUrl($url);
         if ($result['code'] > 1) {
             return $result;
@@ -310,7 +312,7 @@ class Collect extends Base {
             $array_data[$key]['vod_content'] = (string)$video->des;
 
             $array_data[$key]['vod_status'] = 1;
-            $array_data[$key]['vod_type'] = $array_data[$key]['list_name'];
+            $array_data[$key]['vod_type'] = $array_data[$key]['list_name'] ?? '';
             $array_data[$key]['vod_time'] = (string)$video->last;
             $array_data[$key]['vod_total'] = 0;
             $array_data[$key]['vod_isend'] = 1;
@@ -391,7 +393,7 @@ class Collect extends Base {
         else{
             $url .='&';
         }
-        $url .= http_build_query($url_param). base64_decode($param['param']);
+        $url .= http_build_query($url_param). base64_decode($param['param'] ?? '');
         $result = $this->checkCjUrl($url);
         if ($result['code'] > 1) {
             return $result;
@@ -1397,7 +1399,7 @@ class Collect extends Base {
             $url .='&';
         }
 
-        $url .= http_build_query($url_param). base64_decode($param['param']);
+        $url .= http_build_query($url_param). base64_decode($param['param'] ?? '');
         $result = $this->checkCjUrl($url);
         if ($result['code'] > 1) {
             return $result;
@@ -1472,7 +1474,7 @@ class Collect extends Base {
             $url .='&';
         }
 
-        $url .= http_build_query($url_param). base64_decode($param['param']);
+        $url .= http_build_query($url_param). base64_decode($param['param'] ?? '');
         $result = $this->checkCjUrl($url);
         if ($result['code'] > 1) {
             return $result;
@@ -3029,7 +3031,7 @@ class Collect extends Base {
         else{
             $url .='&';
         }
-        $url .= http_build_query($url_param). base64_decode($param['param']);
+        $url .= http_build_query($url_param). base64_decode($param['param'] ?? '');
         $result = $this->checkCjUrl($url);
         if ($result['code'] > 1) {
             return $result;

@@ -573,11 +573,13 @@ class Website extends Base {
         if(!empty($data['website_id'])){
             $where=[];
             $where['website_id'] = $data['website_id'];
+            $data = $this->filterFields($data);
             $res = $this->where($where)->update($data);
         }
         else{
             $data['website_time_add'] = time();
             $data['website_time'] = time();
+            $data = $this->filterFields($data);
             $res = $this->insert($data);
         }
         if(false === $res){

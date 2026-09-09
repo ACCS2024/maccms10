@@ -97,6 +97,7 @@ class Cash extends Base {
         if($data['user_id']==0 ) {
             return ['code'=>1002,'msg'=>lang('param_err')];
         }
+        $data = $this->filterFields($data);
         $res = $this->insert($data);
         if(false === $res){
             return ['code'=>1004,'msg'=>lang('save_err').'：'.$this->getError() ];

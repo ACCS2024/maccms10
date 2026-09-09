@@ -156,12 +156,14 @@ class Danmaku extends Base {
         if (!empty($data['danmaku_id'])) {
             $where = [];
             $where['danmaku_id'] = $data['danmaku_id'];
+            $data = $this->filterFields($data);
             $res = $this->where($where)->update($data);
             // 更新时也清除缓存（编辑弹幕内容后前台立即生效）
             $this->_clearEpisodeCache($where);
         } else {
             $data['danmaku_send_time'] = time();
             $data['danmaku_ip'] = mac_get_ip_long();
+            $data = $this->filterFields($data);
             $res = $this->insert($data);
 
             // 清除该集弹幕缓存

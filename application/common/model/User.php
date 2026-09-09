@@ -148,6 +148,7 @@ class User extends Base
             }
             $where = [];
             $where['user_id'] = $data['user_id'];
+            $data = $this->filterFields($data);
             $res = $this->where($where)->update($data);
         } else {
             if (!$validate->scene('edit')->check($data)) {
@@ -155,6 +156,7 @@ class User extends Base
             }
 
             $data['user_pwd'] = mac_password_hash($data['user_pwd']);
+            $data = $this->filterFields($data);
             $res = $this->insert($data);
             // 新增用户后自动生成邀请码
             if ($res !== false) {
@@ -219,7 +221,7 @@ class User extends Base
         if (empty($data['user_name']) || empty($data['user_pwd']) || empty($data['user_pwd2'])) {
             return ['code' => 1002, 'msg' => lang('model/user/input_require')];
         }
-        if (!$is_from_3rdparty && !captcha_check($data['verify']) && $config['user']['reg_verify'] == 1) {
+        if (!$is_from_3rdparty && !captcha_check((string)($data['verify'] ?? '')) && $config['user']['reg_verify'] == 1) {
             return ['code' => 1003, 'msg' => lang('verify_err')];
         }
         if ($data['user_pwd'] != $data['user_pwd2']) {
@@ -376,7 +378,7 @@ class User extends Base
                 return ['code' => 1001, 'msg' =>  lang('registered')];
             }
         } elseif ($t == 'verify') {
-            if (!captcha_check($str)) {
+            if (!captcha_check((string)($str ?? ''))) {
                 return ['code' => 1002, 'msg' => lang('verify_err')];
             }
         }
@@ -636,7 +638,7 @@ class User extends Base
             if (empty($data['user_name']) || empty($data['user_pwd'])) {
                 return ['code' => 1001, 'msg' => lang('model/user/input_require')];
             }
-            if ($GLOBALS['config']['user']['login_verify'] ==1 && !captcha_check($data['verify'])) {
+            if ($GLOBALS['config']['user']['login_verify'] ==1 && !captcha_check((string)($data['verify'] ?? ''))) {
                 return ['code' => 1002, 'msg' => lang('verify_err')];
             }
             $where = [];
@@ -891,7 +893,7 @@ class User extends Base
             return ['code' => 1001, 'msg' => lang('param_err')];
         }
 
-        if (!captcha_check($data['verify'])) {
+        if (!captcha_check((string)($data['verify'] ?? ''))) {
             return ['code' => 1002, 'msg' => lang('verify_err')];
         }
 

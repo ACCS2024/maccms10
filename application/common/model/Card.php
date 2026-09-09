@@ -67,10 +67,12 @@ class Card extends Base {
         if(!empty($data['card_id'])){
             $where=[];
             $where['card_id'] = $data['card_id'];
+            $data = $this->filterFields($data);
             $res = $this->where($where)->update($data);
         }
         else{
             $data['card_add_time'] = time();
+            $data = $this->filterFields($data);
             $res = $this->insert($data);
         }
         if(false === $res){

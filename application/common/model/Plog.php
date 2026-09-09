@@ -82,9 +82,11 @@ class Plog extends Base {
         if(!empty($data['plog_id'])){
             $where=[];
             $where['plog_id'] = $data['plog_id'];
+            $data = $this->filterFields($data);
             $res = $this->where($where)->update($data);
         }
         else{
+            $data = $this->filterFields($data);
             $res = $this->insert($data);
         }
         if(false === $res){

@@ -388,11 +388,13 @@ class Role extends Base {
         if(!empty($data['role_id'])){
             $where=[];
             $where['role_id'] = $data['role_id'];
+            $data = $this->filterFields($data);
             $res = $this->where($where)->update($data);
         }
         else{
             $data['role_time_add'] = time();
             $data['role_time'] = time();
+            $data = $this->filterFields($data);
             $res = $this->insert($data);
         }
         if(false === $res){

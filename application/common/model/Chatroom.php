@@ -154,10 +154,12 @@ class Chatroom extends Base {
         if (!empty($data['chat_id'])) {
             $where = [];
             $where['chat_id'] = $data['chat_id'];
+            $data = $this->filterFields($data);
             $res = $this->where($where)->update($data);
         } else {
             $data['chat_time'] = time();
             $data['chat_ip'] = mac_get_ip_long();
+            $data = $this->filterFields($data);
             $res = $this->insert($data);
         }
 

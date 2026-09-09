@@ -446,11 +446,13 @@ class Topic extends Base {
         if(!empty($data['topic_id'])){
             $where=[];
             $where['topic_id'] = $data['topic_id'];
+            $data = $this->filterFields($data);
             $res = $this->where($where)->update($data);
         }
         else{
             $data['topic_time_add'] = time();
             $data['topic_time'] = time();
+            $data = $this->filterFields($data);
             $res = $this->insert($data);
         }
         if(false === $res){

@@ -64,9 +64,11 @@ class Order extends Base {
         if(!empty($data['order_id'])){
             $where=[];
             $where['order_id'] = $data['order_id'];
+            $data = $this->filterFields($data);
             $res = $this->where($where)->update($data);
         }
         else{
+            $data = $this->filterFields($data);
             $res = $this->insert($data);
         }
         if(false === $res){

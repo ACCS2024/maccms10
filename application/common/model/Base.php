@@ -98,6 +98,58 @@ class Base extends Model
         return $final;
     }
 
+    /**
+     * 剔除不属于目标表的键,再交给 update()/insert()。
+     *
+     * 后台表单直接把 Request::post() 整包丢给 saveData(),里面混着 __token__ 这种
+     * 非字段键;TP 的写入构造器在严格模式(fields_strict,默认开)下遇到未知键会抛
+     * "fields not exists:[__token__]" —— 后台【编辑采集/分类/管理员】保存全部 500。
+     * 这里按真实表结构过滤,顺带让今后新增的表单隐藏域(_csrf、提交按钮 name 等)
+     * 不会再打穿保存。
+     *
+     * 保留含 "." 或 "->" 的键,与 Builder::parseData() 的判断口径一致
+     * (前者是带表名的字段,后者是 JSON 路径,两者都是合法写入键)。
+     *
+     * 取表结构走 PDOConnection::getSchemaInfo() 的连接内存缓存,而写入本身就要调
+     * getFieldsBindType() 取同一份 schema —— 不产生额外查询。
+     *
+     * @param string $table 目标表(不含前缀);留空表示模型自身的表
+     */
+    protected function filterFields(array $data, string $table = ''): array
+    {
+        try {
+            $fields = $table === ''
+                ? $this->getTableFields()
+                : Db::name($table)->getTableFields();
+        } catch (\Throwable $e) {
+            // 拿不到表结构时不擅自丢数据,原样放行,交回严格模式报错
+            return $data;
+        }
+        if (empty($fields)) {
+            return $data;
+        }
+
+        $out     = [];
+        $dropped = [];
+        foreach ($data as $k => $v) {
+            $key = (string) $k;
+            if (in_array($key, $fields, true) || str_contains($key, '.') || str_contains($key, '->')) {
+                $out[$k] = $v;
+            } else {
+                $dropped[] = $key;
+            }
+        }
+
+        // 严格模式原本能暴露代码里的字段名笔误,过滤后就没人报了。丢弃表单常见的
+        // 无害键之后仍有剩余,才记一条 notice 方便排查。
+        $dropped = array_diff($dropped, ['__token__', '__csrf__', 'submit', 'file', 'ids']);
+        if ($dropped) {
+            \think\facade\Log::notice('[model] ' . static::class . ' 丢弃非表字段: ' . implode(',', $dropped));
+        }
+
+        return $out;
+    }
+
     public function transformRow($row, $extends = []) {
         return $row;
     }

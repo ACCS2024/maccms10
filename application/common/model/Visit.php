@@ -69,10 +69,12 @@ class Visit extends Base {
         if(!empty($data['visit_id'])){
             $where=[];
             $where['visit_id'] = $data['visit_id'];
+            $data = $this->filterFields($data);
             $res = $this->where($where)->update($data);
         }
         else{
             $data['visit_time'] = time();
+            $data = $this->filterFields($data);
             $res = $this->insert($data);
         }
         if(false === $res){

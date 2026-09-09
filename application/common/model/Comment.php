@@ -241,10 +241,12 @@ class Comment extends Base {
         if(!empty($data['comment_id'])){
             $where=[];
             $where['comment_id'] = $data['comment_id'];
+            $data = $this->filterFields($data);
             $res = $this->where($where)->update($data);
         }
         else{
             $data['comment_time'] = time();
+            $data = $this->filterFields($data);
             $res = $this->insert($data);
         }
         if(false === $res){
