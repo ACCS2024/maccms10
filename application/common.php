@@ -3073,6 +3073,34 @@ function mac_url_vars(array $param)
 
 function mac_url($model,$param=[],$info=[])
 {
+    // ── 入口归一化 ───────────────────────────────────────────────────────────
+    // 本函数几十个 case 分支里全是 $info['vod_id'] / $param['sid'] 这类直读,而调用方
+    // 传进来的数组千差万别:模板里 {:mac_url_type($obj,[],'type')} 传的是【影片行】
+    // (有 type_id、没有 type_en),分页路径又常常连 sid/nid/page 都不给。
+    // PHP7 时代这些缺键读出 null、当空串用,URL 照样拼得出来;PHP8 每次都记一条
+    // warning —— 生产上单是 common.php:3171 一行两天就刷了 25.4 万条日志。
+    //
+    // 用 "+=" 只补【缺失】的键,已有值一律不动,拼出来的 URL 与 PHP7 逐字节相同,
+    // 纯粹是把隐式的 null 变成显式的 ''。
+    $info  = is_array($info)  ? $info  : [];
+    $param = is_array($param) ? $param : [];
+
+    // type_en 特殊:调用方传影片/文章行时顶层没有它,但关联的 type 子数组里有。
+    // 拿它兜底才能让 {type_en} 伪静态方案下的面包屑分类链接真正拼对
+    // (否则得到 /vodtype/-.html 这种断链)。
+    if (!isset($info['type_en']) && isset($info['type']) && is_array($info['type'])) {
+        $info['type_en'] = $info['type']['type_en'] ?? '';
+    }
+    $info += [
+        'type_id' => '', 'type_en' => '', 'type' => [], 'type_1' => [],
+        'vod_id' => '', 'vod_en' => '', 'vod_time' => 0,
+        'art_id' => '', 'art_en' => '', 'art_time' => 0,
+        'manga_id' => '', 'manga_en' => '', 'manga_time' => 0,
+        'actor_id' => '', 'actor_en' => '',
+        'role_id' => '', 'role_en' => '',
+        'topic_id' => '', 'topic_en' => '',
+        'website_id' => '', 'website_en' => '',
+    ];
     foreach($param as $k=>$v){
         if(empty($v)){
             unset($param[$k]);
@@ -3085,7 +3113,12 @@ function mac_url($model,$param=[],$info=[])
         $param['page']='';
     }
 
-    ksort($param); 
+    ksort($param);
+
+    // 放在清空循环之后:上面那个 foreach 会把所有空值 unset 掉,先补就等于白补。
+    // 这四个键在下面的 case 分支里被直读,补上即可消除 sid/nid 两处各 10.3 万条/两天的
+    // warning(mac_url_vod_play() 不带 $param 调用时必然缺 sid/nid)。
+    $param += ['id' => '', 'page' => '', 'sid' => '', 'nid' => ''];
 
     $config = $GLOBALS['config'];
     
@@ -3224,7 +3257,7 @@ function mac_url($model,$param=[],$info=[])
 
                 $url = url($model,['id'=> $id ]);
             }
-            $replace_to = array_merge($replace_to,[date('Y',$info['vod_time']),date('m',$info['vod_time']),date('d',$info['vod_time'])]);
+            $replace_to = array_merge($replace_to,[date('Y',mac_ts($info['vod_time'])),date('m',mac_ts($info['vod_time'])),date('d',mac_ts($info['vod_time']))]);
             break;
         case 'manga/detail':
             $replace_to = [$info['manga_id'],$info['manga_en'],'',
@@ -3253,7 +3286,7 @@ function mac_url($model,$param=[],$info=[])
 
                 $url = url($model,['id'=> $id ]);
             }
-            $replace_to = array_merge($replace_to,[date('Y',$info['manga_time']),date('m',$info['manga_time']),date('d',$info['manga_time'])]);
+            $replace_to = array_merge($replace_to,[date('Y',mac_ts($info['manga_time'])),date('m',mac_ts($info['manga_time'])),date('d',mac_ts($info['manga_time']))]);
             break;
         case 'vod/play':
             $replace_to = [
@@ -3295,7 +3328,7 @@ function mac_url($model,$param=[],$info=[])
                 }
                 $url = url($model,['id'=>$id,'sid'=>$param['sid'],'nid'=>$param['nid']]);
             }
-            $replace_to = array_merge($replace_to,[date('Y',$info['vod_time']),date('m',$info['vod_time']),date('d',$info['vod_time']),$param['sid'],$param['nid']]);
+            $replace_to = array_merge($replace_to,[date('Y',mac_ts($info['vod_time'])),date('m',mac_ts($info['vod_time'])),date('d',mac_ts($info['vod_time'])),$param['sid'],$param['nid']]);
             break;
         case 'manga/play':
             $replace_to = [
@@ -3330,7 +3363,7 @@ function mac_url($model,$param=[],$info=[])
                 }
                 $url = url($model,['id'=>$id,'sid'=>$param['sid'],'nid'=>$param['nid']]);
             }
-            $replace_to = array_merge($replace_to,[date('Y',$info['manga_time']),date('m',$info['manga_time']),date('d',$info['manga_time']),$param['sid'],$param['nid']]);
+            $replace_to = array_merge($replace_to,[date('Y',mac_ts($info['manga_time'])),date('m',mac_ts($info['manga_time'])),date('d',mac_ts($info['manga_time'])),$param['sid'],$param['nid']]);
             break;
         case 'vod/down':
             $replace_to = [
@@ -3371,7 +3404,7 @@ function mac_url($model,$param=[],$info=[])
                 }
                 $url = url($model,['id'=>$id,'sid'=>$param['sid'],'nid'=>$param['nid']]);
             }
-            $replace_to = array_merge($replace_to,[date('Y',$info['vod_time']),date('m',$info['vod_time']),date('d',$info['vod_time']),$param['sid'],$param['nid']]);
+            $replace_to = array_merge($replace_to,[date('Y',mac_ts($info['vod_time'])),date('m',mac_ts($info['vod_time'])),date('d',mac_ts($info['vod_time'])),$param['sid'],$param['nid']]);
             break;
         case 'vod/role':
             $replace_to = [$info['vod_id'],$info['vod_en'],'',
@@ -3399,7 +3432,7 @@ function mac_url($model,$param=[],$info=[])
                 }
                 $url = url($model,['id'=>$id]);
             }
-            $replace_to = array_merge($replace_to,[date('Y',$info['vod_time']),date('m',$info['vod_time']),date('d',$info['vod_time'])]);
+            $replace_to = array_merge($replace_to,[date('Y',mac_ts($info['vod_time'])),date('m',mac_ts($info['vod_time'])),date('d',mac_ts($info['vod_time']))]);
             break;
         case 'vod/plot':
             $replace_to = [
@@ -3431,7 +3464,7 @@ function mac_url($model,$param=[],$info=[])
                 }
                 $url = url($model,['id'=>$id,'page'=>($param['page'] ?? 1)]);
             }
-            $replace_to = array_merge($replace_to,[date('Y',$info['vod_time']),date('m',$info['vod_time']),date('d',$info['vod_time'])]);
+            $replace_to = array_merge($replace_to,[date('Y',mac_ts($info['vod_time'])),date('m',mac_ts($info['vod_time'])),date('d',mac_ts($info['vod_time']))]);
             break;
         case 'art/type':
             $replace_to = [$info['type_id'],$info['type_en'],$param['page'],
@@ -3495,7 +3528,7 @@ function mac_url($model,$param=[],$info=[])
                 }
                 $url = url($model,['id'=>$id,'page'=>($param['page'] ?? 1)]);
             }
-            $replace_to = array_merge($replace_to,[date('Y',$info['art_time']),date('m',$info['art_time']),date('d',$info['art_time'])]);
+            $replace_to = array_merge($replace_to,[date('Y',mac_ts($info['art_time'])),date('m',mac_ts($info['art_time'])),date('d',mac_ts($info['art_time']))]);
             break;
         case 'topic/index':
             if(($config['view']['topic_index'] ?? 0) == 2){
@@ -3698,7 +3731,7 @@ function mac_url($model,$param=[],$info=[])
                 }
                 $url = url($model,['id'=>$id,'page'=>($param['page'] ?? 1)]);
             }
-            $replace_to = array_merge($replace_to,[date('Y',$info['vod_time']),date('m',$info['vod_time']),date('d',$info['vod_time'])]);
+            $replace_to = array_merge($replace_to,[date('Y',mac_ts($info['vod_time'])),date('m',mac_ts($info['vod_time'])),date('d',mac_ts($info['vod_time']))]);
             break;
         case 'website/index':
             if(($config['view']['website_index'] ?? 0) == 2){
@@ -4035,10 +4068,10 @@ function mac_url_manga_play($info,$param=[])
         $param['sid'] = $sid;
         $param['nid'] = $nid;
     }
-    if(intval($param['sid'])<1){
+    if(intval($param['sid'] ?? 0)<1){
         $param['sid'] = 1;
     }
-    if(intval($param['nid'])<1){
+    if(intval($param['nid'] ?? 0)<1){
         $param['nid'] = 1;
     }
 
@@ -4063,10 +4096,10 @@ function mac_url_manga_down($info,$param=[])
         $param['nid'] = $nid;
     }
 
-    if(intval($param['sid'])<1){
+    if(intval($param['sid'] ?? 0)<1){
         $param['sid'] = 1;
     }
-    if(intval($param['nid'])<1){
+    if(intval($param['nid'] ?? 0)<1){
         $param['nid'] = 1;
     }
 
@@ -4088,10 +4121,12 @@ function mac_url_vod_play($info,$param=[])
         $param['sid'] = $sid;
         $param['nid'] = $nid;
     }
-    if(intval($param['sid'])<1){
+    // $param 默认是 [](首集链接、模板里 {:mac_url_vod_play($vo)} 都不传),
+    // 直读 sid/nid 每次都记一条 warning —— 生产两天各 10.3 万条。
+    if(intval($param['sid'] ?? 0)<1){
         $param['sid'] =1;
     }
-    if(intval($param['nid'])<1){
+    if(intval($param['nid'] ?? 0)<1){
         $param['nid']=1;
     }
 
@@ -4111,10 +4146,12 @@ function mac_url_vod_down($info,$param=[])
         $param['nid'] = $nid;
     }
 
-    if(intval($param['sid'])<1){
+    // $param 默认是 [](首集链接、模板里 {:mac_url_vod_play($vo)} 都不传),
+    // 直读 sid/nid 每次都记一条 warning —— 生产两天各 10.3 万条。
+    if(intval($param['sid'] ?? 0)<1){
         $param['sid'] =1;
     }
-    if(intval($param['nid'])<1){
+    if(intval($param['nid'] ?? 0)<1){
         $param['nid']=1;
     }
 
@@ -4212,7 +4249,10 @@ function mac_label_art_detail($param)
     $where['art_status'] = 1;
     $res = (new \app\common\model\Art())->infoData($where,'*',1);
     if($res['code'] ==1){
-        if($param['page']>$res['info']['art_page_total']){ $param['page'] = $res['info']['art_page_total']; }
+        // mac_art 建表里根本没有 art_page_total 列(文章不分页),这里恒为缺键。
+        // 补 0 后 mac_page_param(0,...) 走"无分页"分支,与旧的 null 行为一致。
+        $artPageTotal = $res['info']['art_page_total'] ?? 0;
+        if($param['page']>$artPageTotal){ $param['page'] = $artPageTotal; }
     }
     $GLOBALS['type_id'] = $res['info']['type_id'];
     $GLOBALS['type_pid'] = $res['info']['type']['type_pid'];
@@ -4722,6 +4762,38 @@ if (!function_exists('url')) {
         // iterable:兼容 SafeParam 等 ArrayObject(后台 {$param} 既回显又建链),转纯数组传入
         $vars = is_array($vars) ? $vars : iterator_to_array($vars);
         return (string) \think\facade\Route::buildUrl($url, $vars)->suffix($suffix)->domain($domain);
+    }
+}
+if (!function_exists('mac_ts')) {
+    /**
+     * 把「本该是时间戳」的值规范成 int,给 date() 用。
+     *
+     * PHP7 里 date('Y', '2026-09-09 12:00:00') 只是 warning + 返回 false,悄悄产出
+     * 错误 URL;PHP8 直接 TypeError → 500。调用方(如 index/Ajax::data)可能已经把
+     * 时间字段就地改写成了 'Y-m-d H:i:s',所以这里不只是 (int) 强转 —— 那会把
+     * '2026-09-09...' 变成 2026 这种 1970 年的垃圾;识别日期串就用 strtotime 还原,
+     * 结果比 PHP7 的旧行为更正确。识别不了才退回 0。
+     */
+    function mac_ts($v): int
+    {
+        if (is_int($v)) {
+            return $v;
+        }
+        if (is_float($v)) {
+            return (int) $v;
+        }
+        if (is_string($v)) {
+            $v = trim($v);
+            if ($v === '') {
+                return 0;
+            }
+            if (preg_match('/^-?\d+$/', $v)) {
+                return (int) $v;
+            }
+            $t = strtotime($v);
+            return $t === false ? 0 : $t;
+        }
+        return 0;
     }
 }
 if (!function_exists('mac_token')) {

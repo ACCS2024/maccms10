@@ -62,28 +62,24 @@ class Ajax extends Base
         if($res['code']==1) {
             foreach ($res['list'] as $k => &$v) {
                 unset($v[$pre.'_time_hits'],$v[$pre.'_time_make']);
-                $v[$pre.'_time'] = date('Y-m-d H:i:s',$v[$pre.'_time']);
-                $v[$pre.'_time_add'] = date('Y-m-d H:i:s',$v[$pre.'_time_add']);
+                // detail_link 必须在时间字段被改写成 'Y-m-d H:i:s' 之前算完:
+                // mac_url() 的 {year}/{month}/{day} 占位符要拿 $info['vod_time'] 当时间戳,
+                // 一旦这里先格式化过去,PHP8 的 date() 收到非数字字符串直接 TypeError → 500
+                // (PHP7 只是 warning + 返回 false,悄悄生成错误 URL,所以一直没暴露)。
+                $detailLink = '';
+                if($mid=='1'){ $detailLink = mac_url_vod_detail($v); }
+                elseif($mid=='2'){ $detailLink = mac_url_art_detail($v); }
+                elseif($mid=='3'){ $detailLink = mac_url_topic_detail($v); }
+                elseif($mid=='8'){ $detailLink = mac_url_actor_detail($v); }
+                elseif($mid=='9'){ $detailLink = mac_url_role_detail($v); }
+                elseif($mid=='11'){ $detailLink = mac_url_website_detail($v); }
+                $v['detail_link'] = $detailLink;
+
+                $v[$pre.'_time'] = date('Y-m-d H:i:s',(int)$v[$pre.'_time']);
+                $v[$pre.'_time_add'] = date('Y-m-d H:i:s',(int)$v[$pre.'_time_add']);
                 if($mid=='1'){
                     unset($v['vod_play_from'],$v['vod_play_server'],$v['vod_play_note'],$v['vod_play_url']);
                     unset($v['vod_down_from'],$v['vod_down_server'],$v['vod_down_note'],$v['vod_down_url']);
-
-                    $v['detail_link'] = mac_url_vod_detail($v);
-                }
-                elseif($mid=='2'){
-                    $v['detail_link'] = mac_url_art_detail($v);
-                }
-                elseif($mid=='3'){
-                    $v['detail_link'] = mac_url_topic_detail($v);
-                }
-                elseif($mid=='8'){
-                    $v['detail_link'] = mac_url_actor_detail($v);
-                }
-                elseif($mid=='9'){
-                    $v['detail_link'] = mac_url_role_detail($v);
-                }
-                elseif($mid=='11'){
-                    $v['detail_link'] = mac_url_website_detail($v);
                 }
                 $v[$pre.'_pic'] = mac_url_img($v[$pre.'_pic']);
                 $v[$pre.'_pic_thumb'] = mac_url_img($v[$pre.'_pic_thumb']);
@@ -946,7 +942,7 @@ class Ajax extends Base
             return ['code' => 1001, 'msg' => lang('param_err')];
         }
 
-        if (!captcha_check($param['verify'])){
+        if (!captcha_check((string)($param['verify'] ?? ''))){
             return ['code' => 1002, 'msg' => lang('verify_err')];
         }
         session($param['type'].'_verify','1');
