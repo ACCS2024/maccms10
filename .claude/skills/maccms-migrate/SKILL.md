@@ -307,6 +307,28 @@ CF 域名注意静态资源缓存(见陷阱 1)。
     ⚠️ maccms 的内容时间戳全是 PHP `time()` 存 int(全仓 0 处 MySQL `NOW()`/`CURDATE()`),
     **与 MySQL 时区解耦**,所以没必要为时区去重启 MySQL。
 
+29. 🔴 **迁移必查清单漏项:maccms 的定时任务不在站点目录里**(2026-09 杏吧,切换后 36 小时没人发现)。
+    `application/extra/timming.php` 只是**任务定义**,真正的调度在**面板计划任务**里
+    (老站惯用「宝塔计划任务 → `curl 'http://<IP>/api.php/timming/index.html?enforce=1&name=<任务>'`」)。
+    rsync 站点目录不会带走它,新机于是一次都不跑 —— 而且**前台完全正常、日志无任何报错**,
+    只有内容悄悄停更。切换后必做:
+    - 老机 `crontab -l` + `grep -l timming /www/server/cron/*` 逐个看 URL,**只挑打向本站的**
+      (杏吧 5 条里只有 2 条是本站,另 3 条是老机在替别的站当调度器)。
+    - 用 `select max(vod_time) from mac_vod` 核对内容是否还在更新,别只看站点 200。
+    - 老机退役前记得这些 cron 还在往【已废弃的库】里采,既浪费又让脏机继续对外发请求。
+    新版闸门是 fail-closed(`timming_token` 空则 HTTP 一律拒绝),**别去配 token 走 HTTP**:
+    用 CLI(`bin/timming <name> [enforce]`)—— `IS_CLI` 直接过闸,不必把密钥塞进 crontab 和访问日志,
+    也不必对外多暴露一个可触发端点。另注意 `api.php` 给 HTTP 设了 `max_execution_time=30`,
+    采集跑几分钟必被截断,CLI 侧要放开(已在仓库改好)。
+
+30. **`catch (\Throwable)` 会把 ThinkPHP 的正常返回当成崩溃**(2026-09 杏吧)。
+    `success()`/`error()`/`redirect()` 都是**抛 `HttpResponseException` 来返回响应**的。
+    任何"跑任务 + 失败回滚"的包装如果一律 catch Throwable,就会把成功也判成失败 ——
+    杏吧的表现是:清理缓存任务每次都真的执行了,但 `runtime` 每次都被回滚,
+    后台"上次执行时间"永远停在旧值,不带 enforce 调用时小时级去重完全失效。
+    修法:单独 `catch (\think\exception\HttpResponseException)`,再靠
+    `All::$lastJumpCode` 区分 success/error,只有 error 才回滚。
+
 # 老机退役
 - 退役前 `curl -sD-` 验主站已**零真实流量**(只剩 CF 探测 + `.git`/`wp-login` 类爬虫扫描 = 正常噪声,可放心退)。
 - 把老机备份(`/www/backup`、`/home/{migration,dbbak}`、`wwwroot_*.tar.gz`、`rclone.conf`、`safemac` 隔离体)
