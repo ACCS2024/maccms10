@@ -1,0 +1,54 @@
+#!/usr/bin/env php
+<?php
+/**
+ * CLI 触发 maccms 定时任务。
+ *
+ *   bin/timming <name> [enforce]      # 例:bin/timming aa 1
+ *   bin/timming --list                # 列出所有任务及上次执行时间
+ *
+ * 为什么不用老办法(面板计划任务 curl `/api.php/timming/index.html?...`):
+ *  1. Timming::index() 的闸门是 fail-closed —— `timming_token` 没配时,HTTP 调用
+ *     一律拒绝(返回 "invalid or missing timming token");配了也要把密钥塞进
+ *     crontab 和访问日志里,还多暴露一个可被外部触发的端点。
+ *  2. api.php 给 HTTP 请求设了 max_execution_time=30,采集跑几分钟必被截断。
+ * CLI 下 PHP_SAPI==='cli' → IS_CLI 为真 → 闸门直接放行,且不受上述两点限制。
+ *
+ * 走的是和 HTTP 完全相同的代码路径(填好 $_SERVER/$_GET 后 require api.php),
+ * 不复制业务逻辑,升级时不会两边跑偏。
+ */
+$root = dirname(__DIR__);
+
+$args = array_slice($argv, 1);
+if (!$args || in_array($args[0], ['-h', '--help'], true)) {
+    fwrite(STDERR, "用法: bin/timming <name> [enforce]\n      bin/timming --list\n");
+    exit(1);
+}
+
+if ($args[0] === '--list') {
+    $file = $root . '/application/extra/timming.php';
+    if (!is_file($file)) { fwrite(STDERR, "找不到 {$file}\n"); exit(1); }
+    foreach ((array) include $file as $t) {
+        printf("%-18s status=%s  上次=%s\n", $t['name'] ?? '?', $t['status'] ?? '?',
+            empty($t['runtime']) ? '从未' : date('Y-m-d H:i:s', $t['runtime']));
+    }
+    exit(0);
+}
+
+$name    = (string) $args[0];
+$enforce = (string) ($args[1] ?? '1');
+
+// 伪造一次 GET /api.php/timming/index 的请求上下文
+$_SERVER['SCRIPT_NAME']    = '/api.php';
+$_SERVER['SCRIPT_FILENAME']= $root . '/api.php';
+$_SERVER['PHP_SELF']       = '/api.php/timming/index';
+$_SERVER['PATH_INFO']      = '/timming/index';
+$_SERVER['REQUEST_URI']    = '/api.php/timming/index?name=' . rawurlencode($name) . '&enforce=' . rawurlencode($enforce);
+$_SERVER['REQUEST_METHOD'] = 'GET';
+$_SERVER['HTTP_HOST']      = $_SERVER['HTTP_HOST'] ?? 'localhost';
+$_SERVER['SERVER_NAME']    = $_SERVER['SERVER_NAME'] ?? 'localhost';
+$_SERVER['REMOTE_ADDR']    = '127.0.0.1';
+$_GET     = ['name' => $name, 'enforce' => $enforce];
+$_REQUEST = $_GET;
+
+chdir($root);
+require $root . '/api.php';

@@ -1081,8 +1081,19 @@ class All
         return ['code' => 1, 'msg' => lang('controller/popedom_ok')];
     }
 
+    /**
+     * 最近一次 success()/error() 的结果码(1=成功 0=失败)。
+     *
+     * 这两个方法都是【抛 HttpResponseException 来返回响应】——那是 ThinkPHP 的正常
+     * 控制流,不是崩溃。调用方(如 api/Timming 的定时任务分发)只拿到一个异常,无法
+     * 区分"任务成功收尾"还是"任务报错收尾",于是只能一律当失败处理。留下这个标记
+     * 让调用方能判,不改变任何既有响应行为。
+     */
+    public static int $lastJumpCode = 1;
+
     protected function success($msg = '', $url = null, $data = '', $wait = 3)
     {
+        self::$lastJumpCode = 1;
         if (\think\facade\Request::isAjax()) {
             return json(['code' => 1, 'msg' => $msg, 'data' => $data]);
         }
@@ -1092,6 +1103,7 @@ class All
 
     protected function error($msg = '', $url = null, $data = '', $wait = 3)
     {
+        self::$lastJumpCode = 0;
         if (\think\facade\Request::isAjax()) {
             return json(['code' => 0, 'msg' => $msg, 'data' => $data]);
         }

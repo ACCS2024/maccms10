@@ -107,7 +107,19 @@ class Timming extends Base
                 });
 
                 try {
+                    \app\common\controller\All::$lastJumpCode = 1;
                     $this->$file($param);
+                } catch (\think\exception\HttpResponseException $e) {
+                    // ThinkPHP 靠抛这个异常来"返回响应",success()/error()/redirect() 全走它。
+                    // 它代表任务【跑完并产出了响应】,不是崩溃 —— 一律回滚 runtime 的话,
+                    // 所有以 success() 收尾的任务(清理缓存 xqhc、生成静态、URL 推送)的
+                    // "上次执行时间"就永远停在旧值:后台看不出跑没跑,不带 enforce 调用时
+                    // 每次都会重复执行(小时级去重完全失效)。
+                    // 只有确实是 error() 收尾才算失败。
+                    if (\app\common\controller\All::$lastJumpCode !== 1) {
+                        $restoreRuntime();
+                    }
+                    throw $e;   // 交回框架照常输出,响应行为零变化
                 } catch (\Throwable $e) {
                     $restoreRuntime();
                     throw $e;

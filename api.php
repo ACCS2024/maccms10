@@ -11,8 +11,13 @@ if (version_compare(PHP_VERSION, '8.0.0', '<')) {
     die('PHP >= 8.0 required');
 }
 
-ini_set('max_execution_time', '30');    // API 请求 30 秒上限，超时按超时处理而非永久占 worker
-ini_set('memory_limit', '256M');        // API 请求无需超大内存，256M 防泄漏
+// HTTP 侧:30 秒上限,超时按超时处理而非永久占 worker;256M 防泄漏。
+// CLI 侧(bin/timming 触发的定时任务)必须放开 —— 一次采集动辄几分钟、上万条,
+// 30 秒会把采集拦腰截断,而且截断点不确定,表现为"每次都只采一部分"。
+$__isCli = PHP_SAPI === 'cli';
+ini_set('max_execution_time', $__isCli ? '0'    : '30');
+ini_set('memory_limit',       $__isCli ? '1024M': '256M');
+unset($__isCli);
 
 define('ROOT_PATH',       __DIR__ . '/');
 define('APP_PATH',        __DIR__ . '/application/');
