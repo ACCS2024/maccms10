@@ -295,7 +295,8 @@ class Collect extends Base
             foreach($res['type'] as $k=>$v){
                 $key = $param['cjflag'] . '_' . $v['type_id'];
                 $res['type'][$k]['isbind'] = 0;
-                $local_id = intval($bind_list[$key]);
+                // 未绑定的分类在 bind 配置里本来就没有这个键,缺键=未绑定,不是异常
+                $local_id = intval($bind_list[$key] ?? 0);
                 if( $local_id>0 ){
                     $res['type'][$k]['isbind'] = 1;
                     $res['type'][$k]['local_type_id'] = $local_id;
@@ -349,7 +350,8 @@ class Collect extends Base
             foreach($res['type'] as $k=>$v){
                 $key = $param['cjflag'] . '_' . $v['type_id'];
                 $res['type'][$k]['isbind'] = 0;
-                $local_id = intval($bind_list[$key]);
+                // 未绑定的分类在 bind 配置里本来就没有这个键,缺键=未绑定,不是异常
+                $local_id = intval($bind_list[$key] ?? 0);
                 if( $local_id>0 ){
                     $res['type'][$k]['isbind'] = 1;
                     $res['type'][$k]['local_type_id'] = $local_id;
@@ -401,7 +403,8 @@ class Collect extends Base
             foreach($res['type'] as $k=>$v){
                 $key = $param['cjflag'] . '_' . $v['type_id'];
                 $res['type'][$k]['isbind'] = 0;
-                $local_id = intval($bind_list[$key]);
+                // 未绑定的分类在 bind 配置里本来就没有这个键,缺键=未绑定,不是异常
+                $local_id = intval($bind_list[$key] ?? 0);
                 if( $local_id>0 ){
                     $res['type'][$k]['isbind'] = 1;
                     $res['type'][$k]['local_type_id'] = $local_id;
@@ -453,7 +456,8 @@ class Collect extends Base
             foreach ($res['type'] as $k => $v) {
                 $key = $param['cjflag'] . '_' . $v['type_id'];
                 $res['type'][$k]['isbind'] = 0;
-                $local_id = intval($bind_list[$key]);
+                // 未绑定的分类在 bind 配置里本来就没有这个键,缺键=未绑定,不是异常
+                $local_id = intval($bind_list[$key] ?? 0);
                 if ($local_id > 0) {
                     $res['type'][$k]['isbind'] = 1;
                     $res['type'][$k]['local_type_id'] = $local_id;
@@ -505,7 +509,8 @@ class Collect extends Base
             foreach ($res['type'] as $k => $v) {
                 $key = $param['cjflag'] . '_' . $v['type_id'];
                 $res['type'][$k]['isbind'] = 0;
-                $local_id = intval($bind_list[$key]);
+                // 未绑定的分类在 bind 配置里本来就没有这个键,缺键=未绑定,不是异常
+                $local_id = intval($bind_list[$key] ?? 0);
                 if ($local_id > 0) {
                     $res['type'][$k]['isbind'] = 1;
                     $res['type'][$k]['local_type_id'] = $local_id;
@@ -564,7 +569,8 @@ class Collect extends Base
             foreach($res['type'] as $k=>$v){
                 $key = $param['cjflag'] . '_' . $v['type_id'];
                 $res['type'][$k]['isbind'] = 0;
-                $local_id = intval($bind_list[$key]);
+                // 未绑定的分类在 bind 配置里本来就没有这个键,缺键=未绑定,不是异常
+                $local_id = intval($bind_list[$key] ?? 0);
                 if( $local_id>0 ){
                     $res['type'][$k]['isbind'] = 1;
                     $res['type'][$k]['local_type_id'] = $local_id;

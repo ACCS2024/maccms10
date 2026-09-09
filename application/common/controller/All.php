@@ -518,7 +518,8 @@ class All
 
         $url = mac_url_art_detail($info,['page'=>'PAGELINK']);
 
-        $__PAGING__ = mac_page_param($info['art_page_total'],1,$param['page'],$url);
+        // 同上:art_page_total 不是 mac_art 的列,缺键即"不分页"。
+        $__PAGING__ = mac_page_param($info['art_page_total'] ?? 0,1,$param['page'] ?? 1,$url);
         $this->assign('__PAGING__',$__PAGING__);
 
         $this->assign('comment_mid', 2);
@@ -700,6 +701,7 @@ class All
                 'link_pre' => '',
                 'url' => '',
                 'url_next' => '',
+                'name' => (string)($info['vod_'.$flag.'_list'][$param['sid']]['urls'][$param['nid']]['name'] ?? ''),
                 'from' => '',
                 'server' => '',
                 'note' => '',
@@ -755,12 +757,22 @@ class All
         if($param['nid']>1){
             $player_info['link_pre'] = $urlfun($info,['sid'=>$param['sid'],'nid'=>$param['nid']-1]);
         }
-        if($param['nid'] < $info['vod_'.$flag.'_list'][$param['sid']]['url_count']){
+        // 影片没有这个来源时(最常见:根本没填下载地址就访问 /voddown/ 页)整段是空数组,
+        // 下面每个字段都会读到未定义键。上面无权限分支已经用 !empty() 守过一次,这里
+        // 把主分支也统一成先取出来再兜底 —— 实测一次 /voddown/ 会刷 10 条 warning。
+        $__src  = $info[$listfun][$param['sid']] ?? [];
+        $__urls = is_array($__src['urls'] ?? null) ? $__src['urls'] : [];
+
+        if($param['nid'] < ($__src['url_count'] ?? 0)){
             $player_info['link_next'] = $urlfun($info,['sid'=>$param['sid'],'nid'=>$param['nid']+1]);
         }
         // ?? '' 兜底:最后一集无「下一集」(urls[nid+1] 不存在),PHP8 下未定义键会被 TP8 升级为异常 → 500
-        $player_info['url'] = (string)($info[$listfun][$param['sid']]['urls'][$param['nid']]['url'] ?? '');
-        $player_info['url_next'] = (string)($info[$listfun][$param['sid']]['urls'][$param['nid']+1]['url'] ?? '');
+        $player_info['url'] = (string)($__urls[$param['nid']]['url'] ?? '');
+        $player_info['url_next'] = (string)($__urls[$param['nid']+1]['url'] ?? '');
+        // 当前集名。主题原本自己去 $obj.vod_down_list[sid].urls[nid].name 重算一遍,
+        // 影片没有该来源时就读到未定义键(一次 /voddown/ 刷 5 条 warning,标题还是空的)。
+        // 控制器这里已经把来源解析完了,直接给出来,主题引用 {$obj.player_info.name} 即可。
+        $player_info['name'] = (string)($__urls[$param['nid']]['name'] ?? '');
 
         if(substr($player_info['url'],0,6) == 'upload'){
             $player_info['url'] = MAC_PATH . $player_info['url'];
@@ -769,12 +781,13 @@ class All
             $player_info['url_next'] = MAC_PATH . $player_info['url_next'];
         }
 
-        $player_info['from'] = (string)$info[$listfun][$param['sid']]['from'];
-        if((string)$info[$listfun][$param['sid']]['urls'][$param['nid']]['from'] != $player_info['from']){
-            $player_info['from'] = (string)$info[$listfun][$param['sid']]['urls'][$param['nid']]['from'];
+        $player_info['from'] = (string)($__src['from'] ?? '');
+        $__epFrom = (string)($__urls[$param['nid']]['from'] ?? '');
+        if($__epFrom !== '' && $__epFrom != $player_info['from']){
+            $player_info['from'] = $__epFrom;
         }
-        $player_info['server'] = (string)$info[$listfun][$param['sid']]['server'];
-        $player_info['note'] = (string)$info[$listfun][$param['sid']]['note'];
+        $player_info['server'] = (string)($__src['server'] ?? '');
+        $player_info['note'] = (string)($__src['note'] ?? '');
 
         if($GLOBALS['config']['app']['encrypt']=='1'){
             $player_info['url'] = mac_escape($player_info['url']);
