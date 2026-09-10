@@ -165,146 +165,20 @@ class BulkTableIo
 
     public static function parseCellRef($ref)
     {
-        if (!preg_match('/^([A-Z]+)(\d+)$/i', (string)$ref, $m)) {
-            return [0, 0];
+        if (!is_string($ref) || !preg_match('/^([A-Z]{1,3})([1-9][0-9]{0,6})$/Di', $ref, $match)) {
+            throw new \InvalidArgumentException('Invalid spreadsheet cell reference');
         }
-        $letters = strtoupper($m[1]);
-        $col = 0;
-        $len = strlen($letters);
-        for ($i = 0; $i < $len; $i++) {
-            $col = $col * 26 + (ord($letters[$i]) - 64);
-        }
-        return [$col - 1, (int)$m[2] - 1];
+        $column = 0;
+        foreach (str_split(strtoupper($match[1])) as $letter) { $column = $column * 26 + ord($letter) - 64; }
+        $row = (int)$match[2];
+        if ($column > 16384 || $row > 1048576) { throw new \InvalidArgumentException('Spreadsheet reference exceeds worksheet bounds'); }
+        return [$column - 1, $row - 1];
     }
 
     public static function parseXlsx($path)
     {
-        if (!class_exists('ZipArchive')) {
-            throw new \RuntimeException('zip');
-        }
-        $zip = new \ZipArchive();
-        if ($zip->open($path) !== true) {
-            throw new \RuntimeException('zip open');
-        }
-        $sheetPath = 'xl/worksheets/sheet1.xml';
-        if ($zip->locateName($sheetPath) === false) {
-            $wb = $zip->getFromName('xl/workbook.xml');
-            $rel = $zip->getFromName('xl/_rels/workbook.xml.rels');
-            if ($wb && $rel) {
-                if (preg_match('/<sheet[^>]+r:id="([^"]+)"/', $wb, $sm)) {
-                    $rid = $sm[1];
-                    if (preg_match('/Relationship[^>]+Id="' . preg_quote($rid, '/') . '"[^>]+Target="([^"]+)"/', $rel, $tm)) {
-                        $target = str_replace('\\', '/', $tm[1]);
-                        if (strpos($target, '/') === false) {
-                            $sheetPath = 'xl/' . $target;
-                        } else {
-                            $sheetPath = 'xl/' . ltrim($target, '/');
-                        }
-                    }
-                }
-            }
-        }
-        $shared = [];
-        $ss = $zip->getFromName('xl/sharedStrings.xml');
-        if ($ss !== false) {
-            $sx = @simplexml_load_string($ss);
-            $ns = 'http://schemas.openxmlformats.org/spreadsheetml/2006/main';
-            if ($sx !== false) {
-                $sx->registerXPathNamespace('m', $ns);
-                $sis = $sx->xpath('//m:si') ?: [];
-                foreach ($sis as $si) {
-                    $shared[] = self::xlsxText($si);
-                }
-            }
-        }
-        $sheetXml = $zip->getFromName($sheetPath);
-        $zip->close();
-        if ($sheetXml === false) {
-            throw new \RuntimeException('sheet');
-        }
-        $sx = @simplexml_load_string($sheetXml);
-        if ($sx === false) {
-            return ['headers' => [], 'rows' => []];
-        }
-        $sx->registerXPathNamespace('m', 'http://schemas.openxmlformats.org/spreadsheetml/2006/main');
-        $cells = $sx->xpath('//m:sheetData//m:c');
-        if (empty($cells)) {
-            return ['headers' => [], 'rows' => []];
-        }
-        $grid = [];
-        foreach ($cells as $c) {
-            $r = (string)$c['r'];
-            if ($r === '') {
-                continue;
-            }
-            list($col, $row) = self::parseCellRef($r);
-            $t = (string)$c['t'];
-            $val = '';
-            $children = $c->children('http://schemas.openxmlformats.org/spreadsheetml/2006/main');
-            if ($t === 'inlineStr' && isset($children->is)) {
-                $val = self::xlsxText($children->is);
-            } elseif (isset($children->v)) {
-                $v = (string)$children->v;
-                if ($t === 's') {
-                    $val = isset($shared[(int)$v]) ? $shared[(int)$v] : '';
-                } else {
-                    $val = $v;
-                }
-            }
-            if (!isset($grid[$row])) {
-                $grid[$row] = [];
-            }
-            $grid[$row][$col] = $val;
-        }
-        if (empty($grid)) {
-            return ['headers' => [], 'rows' => []];
-        }
-        ksort($grid);
-        $maxRow = max(array_keys($grid));
-        $maxCol = 0;
-        foreach ($grid as $cols) {
-            if (!empty($cols)) {
-                $maxCol = max($maxCol, max(array_keys($cols)));
-            }
-        }
-        $headers = [];
-        for ($c = 0; $c <= $maxCol; $c++) {
-            $headers[$c] = isset($grid[0][$c]) ? trim((string)$grid[0][$c]) : '';
-        }
-        $rows = [];
-        for ($r = 1; $r <= $maxRow; $r++) {
-            if (!isset($grid[$r])) {
-                continue;
-            }
-            $assoc = [];
-            for ($c = 0; $c <= $maxCol; $c++) {
-                $h = $headers[$c];
-                if ($h === '') {
-                    continue;
-                }
-                $assoc[$h] = isset($grid[$r][$c]) ? $grid[$r][$c] : '';
-            }
-            $allEmpty = true;
-            foreach ($assoc as $v) {
-                if ($v !== '' && $v !== null) {
-                    $allEmpty = false;
-                    break;
-                }
-            }
-            if (!$allEmpty) {
-                $rows[] = $assoc;
-            }
-        }
-        return ['headers' => array_values($headers), 'rows' => $rows];
-    }
-
-    /** Shared and inline strings have the same rich-text shape; phonetic guides are separate data. */
-    private static function xlsxText(\SimpleXMLElement $string): string
-    {
-        $string->registerXPathNamespace('m', 'http://schemas.openxmlformats.org/spreadsheetml/2006/main');
-        $value = '';
-        foreach ($string->xpath('./m:t | ./m:r/m:t') ?: [] as $text) { $value .= (string)$text; }
-        return $value;
+        require_once __DIR__ . '/XlsxTableReader.php';
+        return XlsxTableReader::read($path);
     }
 
     public static function exportCsvDownload($basename, array $headers, array $list)

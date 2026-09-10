@@ -1,5 +1,5 @@
 <?php
-/** Ordinary XLSX strings from real ZipArchive/SimpleXML, including rich text and phonetic annotations. */
+/** Ordinary XLSX strings from real ZipArchive and XML parsing, including rich text and phonetic annotations. */
 declare(strict_types=1);
 require dirname(__DIR__).'/application/common/util/BulkTableIo.php';
 require __DIR__.'/fixtures/security_audit_test_helpers.php';
