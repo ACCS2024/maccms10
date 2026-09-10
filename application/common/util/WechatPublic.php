@@ -10,50 +10,71 @@ class WechatPublic
     }
 
     public function valid() {
-        if($this->checkSignature()){
-            echo htmlspecialchars(strip_tags($_GET["echostr"]), ENT_QUOTES);
-            exit;
+        if (!$this->checkSignature() || !is_string($_GET['echostr'] ?? null)) {
+            http_response_code(403);
+            echo 'forbidden';
+            return;
         }
+        echo htmlspecialchars(strip_tags($_GET['echostr']), ENT_QUOTES);
     }
 
     private function checkSignature()
     {
-        $signature = $_GET["signature"];
-        $timestamp = $_GET["timestamp"];
-        $nonce = $_GET["nonce"];
-        $token = $this->_conf['token'];
-        $tmpArr = array($token, $timestamp, $nonce);
-        sort($tmpArr);
-        $tmpStr = implode( $tmpArr );
-        $tmpStr = sha1( $tmpStr );
-        if( $tmpStr == $signature ){
-            return true;
-        }else{
+        $signature = $_GET['signature'] ?? null;
+        $timestamp = $_GET['timestamp'] ?? null;
+        $nonce = $_GET['nonce'] ?? null;
+        $token = $this->_conf['token'] ?? '';
+        if (!is_string($signature) || !preg_match('/^[a-f0-9]{40}$/i', $signature)
+            || !is_string($timestamp) || !ctype_digit($timestamp)
+            || !is_string($nonce) || $nonce === '' || !is_string($token) || $token === '') {
             return false;
         }
+        $tmpArr = array($token, $timestamp, $nonce);
+        sort($tmpArr, SORT_STRING);
+        $tmpStr = implode( $tmpArr );
+        $tmpStr = sha1( $tmpStr );
+        return hash_equals($tmpStr, strtolower($signature));
     }
 
     public function responseMsg() {
-        $postStr = @file_get_contents("php://input");
-        if (!empty($postStr)) {
-            libxml_disable_entity_loader(true);
-            $postObj = simplexml_load_string($postStr, 'SimpleXMLElement', LIBXML_NOCDATA);
-            $postType = trim($postObj->MsgType);
+        if (!$this->checkSignature()) {
+            http_response_code(403);
+            echo 'forbidden';
+            return;
+        }
+        $postStr = file_get_contents('php://input', false, null, 0, 1048577);
+        header('Content-Type: application/xml; charset=utf-8');
+        echo $this->replyToMessage($postStr === false ? '' : $postStr);
+    }
+
+    private function replyToMessage(string $postStr): string
+    {
+        if ($postStr === '' || strlen($postStr) > 1048576 || stripos($postStr, '<!DOCTYPE') !== false) {
+            http_response_code(400);
+            return 'invalid request';
+        }
+        $previous = libxml_use_internal_errors(true);
+        try {
+            $postObj = simplexml_load_string($postStr, 'SimpleXMLElement', LIBXML_NOCDATA | LIBXML_NONET);
+        } finally {
+            libxml_clear_errors();
+            libxml_use_internal_errors($previous);
+        }
+        if ($postObj === false || (string)$postObj->FromUserName === '' || (string)$postObj->ToUserName === '') {
+            http_response_code(400);
+            return 'invalid request';
+        }
+            $postType = trim((string)$postObj->MsgType);
             switch ($postType) {
                 case 'text':
                     $res = $this->receiveText($postObj);
                     break;
                 case 'image':
-                    $res = $this->receiveImage($postObj);
-                    break;
                 case 'location':
-                    $res = $this->receiveLocation($postObj);
-                    break;
                 case 'voice':
-                    $res = $this->receiveVoice($postObj);
-                    break;
                 case 'video':
-                    $res = $this->receiveVideo($postObj);
+                    // These message types have no business handler; acknowledge without a reply.
+                    $res = 'success';
                     break;
                 case 'link':
                     $res = $this->receiveLink($postObj);
@@ -62,15 +83,10 @@ class WechatPublic
                     $res = $this->receiveEvent($postObj);
                     break;
                 default:
-                    $res = 'unknow msg type: '.$postType;
+                    $res = 'success';
                     break;
             }
-            echo $res;
-        }
-        else{
-            echo 'other msg';
-            exit;
-        }
+            return $res;
     }
     private function receiveLink($object) {
         $msg = '你发送的是链接已收到，请等待处理';
@@ -79,7 +95,7 @@ class WechatPublic
     }
 
     private function receiveText($object) {
-        $content = trim($object->Content);
+        $content = trim((string)$object->Content);
         $txt = '请点击下方链接：'. "\n";
 
         if ($this->_conf['gjc1'] <> '' && strstr($content, $this->_conf['gjc1'])) {
@@ -160,7 +176,7 @@ class WechatPublic
     }
 
     private function receiveEvent($object) {
-        $guanzhu = $this->_conf['guanzhu'];
+        $guanzhu = $this->_conf['guanzhu'] ?? '';
         $msg = '';
         switch ($object->Event) {
             case 'subscribe':
@@ -172,7 +188,7 @@ class WechatPublic
             case 'CLICK':
                 switch ($object->EventKey) {
                     default:
-                        $res = '你点击了: '.$object->EventKey;
+                        $msg = '你点击了: '.$object->EventKey;
                         break;
                 }
                 break;
@@ -191,7 +207,7 @@ class WechatPublic
             <MsgType><![CDATA[text]]></MsgType>
             <Content><![CDATA[%s]]></Content>
             </xml>';
-        $res = sprintf($xmlTpl, $object->FromUserName, $object->ToUserName, time(), $content);
+        $res = sprintf($xmlTpl, self::cdata($object->FromUserName), self::cdata($object->ToUserName), time(), self::cdata($content));
         return $res;
     }
     private function transmitNews($object, $newsArray) {
@@ -206,7 +222,7 @@ class WechatPublic
         </item>';
         $item_str = '';
         foreach($newsArray as $item) {
-            $item_str.= sprintf($itemTpl, $item['Title'], $item['Description'], $item['PicUrl'], $item['Url']);
+            $item_str.= sprintf($itemTpl, self::cdata($item['Title']), self::cdata($item['Description']), self::cdata($item['PicUrl']), self::cdata($item['Url']));
         }
         $xmlTpl = '<xml>
         <ToUserName><![CDATA[%s]]></ToUserName>
@@ -216,7 +232,7 @@ class WechatPublic
         <ArticleCount>%s</ArticleCount>
         <Articles>%s</Articles>
         </xml>';
-        $res = sprintf($xmlTpl, $object->FromUserName, $object->ToUserName, time(), count($newsArray),$item_str);
+        $res = sprintf($xmlTpl, self::cdata($object->FromUserName), self::cdata($object->ToUserName), time(), count($newsArray),$item_str);
         return $res;
     }
 
@@ -231,7 +247,12 @@ class WechatPublic
             </Image>
             </xml>';
 
-        $res = sprintf($xmlTpl, $object->FromUserName, $object->ToUserName, time(), $imageArray['MediaId']);
+        $res = sprintf($xmlTpl, self::cdata($object->FromUserName), self::cdata($object->ToUserName), time(), self::cdata($imageArray['MediaId']));
         return $res;
+    }
+
+    private static function cdata($value): string
+    {
+        return str_replace(']]>', ']]]]><![CDATA[>', (string)$value);
     }
 }
