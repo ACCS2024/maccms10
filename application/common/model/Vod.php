@@ -28,6 +28,17 @@ class Vod extends Base {
     protected $insert     = [];
     protected $update     = [];
 
+    /** Replace one LIKE condition with its bounded cache result without broadening other filters. */
+    private static function appendCachedSearchCondition(array &$where, array $like, array $ids, int $maxIds): void
+    {
+        if (count($ids) <= $maxIds) {
+            // An empty cache result is an empty set, not permission to drop the filter.
+            $where[] = ['vod_id', 'in', array_values(array_unique(array_map('intval', $ids)))];
+        } else {
+            $where[] = $like;
+        }
+    }
+
     public function countData($where)
     {
         $this->ensureRecycleColumnExists();
@@ -529,57 +540,25 @@ class Vod extends Base {
         $vod_search_enabled = $vod_search->isFrontendEnabled() && !MeilisearchService::enabled();
         $max_id_count = $vod_search->maxIdCount;
         if ($vod_search_enabled) {
-            // 开启搜索优化，查询并缓存Id
-            $search_id_list = [];
-            if(!empty($wd)) {
-                $role = 'vod_name';
-                if(!empty($GLOBALS['config']['app']['search_vod_rule'])){
-                    $role .= '|'.$GLOBALS['config']['app']['search_vod_rule'];
-                }
-                $where[] = [$role, 'like', '%' . $wd . '%'];
-                if (count($search_id_list_tmp = $vod_search->getResultIdList($wd, $role)) <= $max_id_count) {
-                    $search_id_list = array_merge($search_id_list, $search_id_list_tmp);
-                    unset($where[$role]);
-                }
+            $searchField = 'vod_name';
+            if (!empty($GLOBALS['config']['app']['search_vod_rule'])) {
+                $searchField .= '|' . $GLOBALS['config']['app']['search_vod_rule'];
             }
-            if(!empty($name)) {
-                $where[] = ['vod_name', 'like', mac_like_arr($name),'OR'];
-                if (count($search_id_list_tmp = $vod_search->getResultIdList($name, 'vod_name')) <= $max_id_count) {
-                    $search_id_list = array_merge($search_id_list, $search_id_list_tmp);
-                    unset($where['vod_name']);
+            $filters = [
+                [$wd, $searchField, false, false],
+                [$name, 'vod_name', false, true],
+                [$tag, 'vod_tag', true, true],
+                [$class, 'vod_class', true, true],
+                [$actor, 'vod_actor', true, true],
+                [$director, 'vod_director', true, true],
+            ];
+            foreach ($filters as [$value, $field, $splitWords, $multipleLike]) {
+                if (empty($value)) {
+                    continue;
                 }
-            }
-            if(!empty($tag)) {
-                $where[] = ['vod_tag', 'like', mac_like_arr($tag),'OR'];
-                if (count($search_id_list_tmp = $vod_search->getResultIdList($tag, 'vod_tag', true)) <= $max_id_count) {
-                    $search_id_list = array_merge($search_id_list, $search_id_list_tmp);
-                    unset($where['vod_tag']);
-                }
-            }
-            if(!empty($class)) {
-                $where[] = ['vod_class', 'like', mac_like_arr($class), 'OR'];
-                if (count($search_id_list_tmp = $vod_search->getResultIdList($class, 'vod_class', true)) <= $max_id_count) {
-                    $search_id_list = array_merge($search_id_list, $search_id_list_tmp);
-                    unset($where['vod_class']);
-                }
-            }
-            if(!empty($actor)) {
-                $where[] = ['vod_actor', 'like', mac_like_arr($actor), 'OR'];
-                if (count($search_id_list_tmp = $vod_search->getResultIdList($actor, 'vod_actor', true)) <= $max_id_count) {
-                    $search_id_list = array_merge($search_id_list, $search_id_list_tmp);
-                    unset($where['vod_actor']);
-                }
-            }
-            if(!empty($director)) {
-                $where[] = ['vod_director', 'like', mac_like_arr($director),'OR'];
-                if (count($search_id_list_tmp = $vod_search->getResultIdList($director, 'vod_director', true)) <= $max_id_count) {
-                    $search_id_list = array_merge($search_id_list, $search_id_list_tmp);
-                    unset($where['vod_director']);
-                }
-            }
-            $search_id_list = array_values(array_unique(array_map('intval', $search_id_list)));
-            if (!empty($search_id_list)) {
-                $where['_string'] = "vod_id IN (" . join(',', $search_id_list) . ")";
+                $like = [$field, 'like', $multipleLike ? mac_like_arr($value) : '%' . $value . '%', 'OR'];
+                $ids = $vod_search->getResultIdList($value, $field, $splitWords);
+                self::appendCachedSearchCondition($where, $like, $ids, $max_id_count);
             }
         } else {
             // 不开启搜索优化，使用默认条件

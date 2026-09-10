@@ -49,6 +49,24 @@ class Collect extends Base {
         return $common;
     }
 
+    /** Group alternative actor/director matches while preserving all outer constraints. */
+    private static function alternativeConditions(array $conditions): \Closure
+    {
+        return static function ($query) use ($conditions) {
+            foreach ($conditions as $index => $condition) {
+                if ($index === 0) {
+                    $query->where([$condition]);
+                } else {
+                    // ORM 4 的 whereOr(列表数组) 会再包一层 AND；闭包才能
+                    // 保留此处跨字段 OR，同时保留 LIKE 数组内部的 OR 语义。
+                    $query->whereOr(static function ($alternative) use ($condition) {
+                        $alternative->where([$condition]);
+                    });
+                }
+            }
+        };
+    }
+
     public function listData($where,$order,$page=1,$limit=20,$start=0)
     {
         $page = $page > 0 ? (int)$page : 1;
@@ -849,7 +867,7 @@ class Collect extends Base {
                 if (strpos($config['inrule'], 'a')!==false) {
                     $where['vod_name'] = mac_filter_xss($v['vod_name']);
                 }
-                $blend=false;
+                $actorConditionKey = null;
                 if (strpos($config['inrule'], 'b')!==false && !empty($v['type_id'])) {
                     $where['type_id'] = $v['type_id'];
                 }
@@ -865,6 +883,7 @@ class Collect extends Base {
                 $search_actor_id_list = [];
                 if (strpos($config['inrule'], 'f')!==false && !empty(trim($v['vod_actor']))) {
                     $where[] = ['vod_actor', 'like', mac_like_arr(mac_filter_xss($v['vod_actor'])), 'OR'];
+                    $actorConditionKey = array_key_last($where);
                     if ($vod_search_enabled) {
                         $search_actor_id_list = $vod_search->getResultIdList(mac_filter_xss($v['vod_actor']), 'vod_actor', true);
                         $search_actor_id_list = empty($search_actor_id_list) ? [0] : $search_actor_id_list;
@@ -882,18 +901,14 @@ class Collect extends Base {
                     $where['vod_name'] = mac_filter_xss($v['vod_name']);
                 }
 
-                if(!empty($where['vod_actor']) && !empty($where['vod_director'])){
-                    $blend = true;
-                    $GLOBALS['blend'] = [
-                        'vod_actor'    => $where['vod_actor'],
-                        'vod_director' => $where['vod_director'],
-                    ];
-                    // 结果太大时，筛选更耗时。仅在结果数量较小时，才加入
-                    $GLOBALS['blend']['vod_id'] = null;
+                if ($actorConditionKey !== null && isset($where['vod_director'])) {
+                    $actorCondition = $where[$actorConditionKey];
                     if ($vod_search_enabled && count($search_actor_id_list) <= $vs_max_id_count) {
-                        $GLOBALS['blend']['vod_id'] = ['IN', $search_actor_id_list];
+                        $actorCondition = ['vod_id', 'in', $search_actor_id_list];
                     }
-                    unset($where['vod_actor'],$where['vod_director']);
+                    $directorCondition = ['vod_director', '=', $where['vod_director']];
+                    unset($where[$actorConditionKey], $where['vod_director']);
+                    $where[] = self::alternativeConditions([$directorCondition, $actorCondition]);
                 }
 
                 if(empty($v['vod_play_url'])){
@@ -1002,23 +1017,8 @@ class Collect extends Base {
                 // 回收站里的同名内容视同不存在 → 重新采集/接收会生成新的活跃行，而不是把内容
                 // 更新进一条隐藏(回收站)行、导致"收了却看不到"。裸 ->where()->find() 不经 listData、
                 // 不会自动套 mergeRecycleWhere，故这里显式加 where('vod_recycle_time',0)。
-                if($blend===false){
-                    $info = (new \app\common\model\Vod())->where($where)
-                        ->where('vod_recycle_time', 0)->find();
-                }
-                else{
-                    $info = (new \app\common\model\Vod())->where($where)
-                        ->where('vod_recycle_time', 0)
-                        ->where(function($query) {
-                            $query->where('vod_director',$GLOBALS['blend']['vod_director']);
-                            if (!empty($GLOBALS['blend']['vod_id'])) {
-                                $query->whereOr('vod_id', $GLOBALS['blend']['vod_id']);
-                            } else {
-                                $query->whereOr('vod_actor', $GLOBALS['blend']['vod_actor']);
-                            }
-                        })
-                        ->find();
-                }
+                $info = (new \app\common\model\Vod())->where($where)
+                    ->where('vod_recycle_time', 0)->find();
                 // 优化自动生成TAG https://github.com/magicblack/maccms10/issues/1178
                 if ($config['tag'] == 1 && empty($v['vod_tag']) && empty($info['vod_tag'])) {
                     $v['vod_tag'] = mac_filter_xss(mac_get_tag($v['vod_name'], $v['vod_content']));
@@ -2252,7 +2252,7 @@ class Collect extends Base {
                 $where['role_actor'] = $v['role_actor'];
 
                 $where2 = [];
-                $blend = false;
+                $personConditions = [];
 
                 if(!empty($v['douban_id'])){
                     $where2['vod_douban_id'] = $v['douban_id'];
@@ -2263,32 +2263,15 @@ class Collect extends Base {
                 }
 
                 if (strpos($config['inrule'], 'c')!==false) {
-                    $where2[] = ['vod_actor', 'like', mac_like_arr($v['role_actor']), 'OR'];
+                    $personConditions[] = ['vod_actor', 'like', mac_like_arr($v['role_actor']), 'OR'];
                 }
                 if (strpos($config['inrule'], 'd')!==false) {
-                    $where2[] = ['vod_director', 'like', mac_like_arr($v['role_actor']), 'OR'];
+                    $personConditions[] = ['vod_director', 'like', mac_like_arr($v['role_actor']), 'OR'];
                 }
-                if(!empty($where2['vod_actor']) && !empty($where2['vod_director'])){
-                    $blend = true;
-                    $GLOBALS['blend'] = [
-                        'vod_actor' => $where2['vod_actor'],
-                        'vod_director' => $where2['vod_director']
-                    ];
-                    unset($where2['vod_actor'],$where2['vod_director']);
+                if ($personConditions) {
+                    $where2[] = self::alternativeConditions($personConditions);
                 }
-
-                if($blend===false){
-                    $vod_info = (new \app\common\model\Vod())->where($where2)->find();
-
-                }
-                else{
-                    $vod_info = (new \app\common\model\Vod())->where($where2)
-                        ->where(function($query){
-                            $query->where('vod_director',$GLOBALS['blend']['vod_director'])
-                                ->whereOr('vod_actor',$GLOBALS['blend']['vod_actor']);
-                        })
-                        ->find();
-                }
+                $vod_info = (new \app\common\model\Vod())->where($where2)->find();
 
                 if (!$vod_info) {
                     $des = lang('model/collect/not_found_rel_vod');

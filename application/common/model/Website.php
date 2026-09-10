@@ -176,6 +176,7 @@ class Website extends Base {
             if(!empty($param['id'])) {
                 //$type = intval($param['id']);
             }
+            $tid = max(0, (int)($param['tid'] ?? 0));
             if(!empty($param['ids'])){
                 $ids = $param['ids'];
             }
