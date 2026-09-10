@@ -5,6 +5,8 @@ use think\facade\Db;
 use app\common\model\Order;
 
 $frameworkAuditTables = ['user', 'group', 'order', 'plog'];
+require __DIR__ . '/fixtures/financial_before_begin.php';
+define('FRAMEWORK_AUDIT_CONNECTION_CLASS', getenv('FRAMEWORK_AUDIT_MYSQL') === '1' ? FinancialBeforeBeginMysql::class : FinancialBeforeBeginSqlite::class);
 require __DIR__ . '/fixtures/framework_audit_db.php';
 
 // Match the production money column on MySQL; SQLite exercises numeric PDO values.
@@ -18,7 +20,7 @@ function paymentSnapshot(): array {
 }
 
 seed(); orderSeed();
-$manager->beforeStart = static function (): void {
+$GLOBALS['financial_before_begin'] = static function (): void {
     Db::name('Order')->where('order_id', 1)->update(['order_status'=>1]);
     Db::name('User')->where('user_id', 1)->setInc('user_points', 20);
     Db::name('Plog')->insert(['user_id'=>1,'plog_type'=>1,'plog_points'=>20]);
@@ -65,14 +67,14 @@ expect((new Order())->notify('once', 'internal')['code'] === 1, 'Trusted interna
 
 // A price change between the initial read and the conditional write invalidates the payment.
 seed(); orderSeed();
-$manager->beforeStart = static function (): void {
+$GLOBALS['financial_before_begin'] = static function (): void {
     Db::name('Order')->where('order_id', 1)->update(['order_price' => '11.00']);
 };
 expect((new Order())->notify('once', 'test', '10.00')['code'] !== 1, 'Payment used a stale price after a concurrent amount change');
 expect(balance()['user_points'] === 100 && Db::name('Order')->value('order_status') === 0
     && Db::name('Plog')->count() === 0, 'Stale-price payment wrote financial state');
 seed(); orderSeed();
-$manager->beforeStart = static function (): void {
+$GLOBALS['financial_before_begin'] = static function (): void {
     Db::name('Order')->where('order_id', 1)->update(['order_price' => '11.00', 'order_status' => 1]);
     Db::name('User')->where('user_id', 1)->setInc('user_points', 20);
     Db::name('Plog')->insert(['user_id' => 1, 'plog_type' => 1, 'plog_points' => 20]);

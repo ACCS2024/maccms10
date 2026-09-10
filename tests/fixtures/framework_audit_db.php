@@ -50,6 +50,14 @@ function mac_validate($name) {
     return new $class();
 }
 class FrameworkAuditDb extends think\DbManager {
+    protected function createConnection(string|array $config): \think\db\ConnectionInterface {
+        if (!defined('FRAMEWORK_AUDIT_CONNECTION_CLASS')) { return parent::createConnection($config); }
+        $config = is_array($config) ? $config : $this->getConnectionConfig($config);
+        $class = FRAMEWORK_AUDIT_CONNECTION_CLASS;
+        $connection = new $class($config);
+        $connection->setDb($this);
+        return $connection;
+    }
     public $beforeStart;
     public function startTrans(): void {
         // Reproduce a second callback committing after the first read but before its transaction.

@@ -119,40 +119,48 @@ class Order extends Base {
             return ['code'=>1001,'msg'=>lang('param_err')];
         }
 
-        $where = [];
-        $where['order_code'] = $order_code;
-        $order = (new \app\common\model\Order())->infoData($where);
-        if($order['code']>1){
-            return $order;
-        }
-        // All shipped external adapters supply an amount. Never let a missing
-        // amount on those channels enter the trusted internal compatibility path.
-        $paidMinor = null;
-        if ($paid_yuan === null && is_string($pay_type)
-            && in_array(strtolower($pay_type), ['alipay', 'weixin', 'epay', 'codepay', 'zhapay', 'jeepay'], true)) {
-            return ['code'=>2005,'msg'=>'order amount mismatch'];
-        }
-        if ($paid_yuan !== null) {
-            $paidMinor = self::amountMinorUnits($paid_yuan);
-            $expectedMinor = self::amountMinorUnits($order['info']['order_price']);
-            if ($paidMinor === null || $expectedMinor === null || $paidMinor !== $expectedMinor) {
+        $failure = ['code'=>2004, 'msg'=>lang('save_err')];
+        $success = ['code'=>1, 'msg'=>lang('model/order/pay_ok')];
+        if (($blocked = \app\common\util\OrderTransaction::blockedResult()) !== null) { return $blocked; }
+        $scope = null;
+        try {
+            \app\common\util\FinancialTransaction::requireTables([Db::name('Order')->getTable(), Db::name('User')->getTable(), Db::name('Plog')->getTable()]);
+            // External callbacks acknowledge durable settlement, so they must own the physical transaction.
+            $scope = new \app\common\util\OrderTransaction();
+            $where = [];
+            $where['order_code'] = $order_code;
+            $order = (new \app\common\model\Order())->infoData($where);
+            if($order['code']>1){
+                return $order;
+            }
+            $scope->record((int)$order['info']['order_id'], (int)$order['info']['user_id']);
+            // All shipped external adapters supply an amount. Never let a missing
+            // amount on those channels enter the trusted internal compatibility path.
+            $paidMinor = null;
+            if ($paid_yuan === null && is_string($pay_type)
+                && in_array(strtolower($pay_type), ['alipay', 'weixin', 'epay', 'codepay', 'zhapay', 'jeepay'], true)) {
                 return ['code'=>2005,'msg'=>'order amount mismatch'];
             }
-        }
-        // Replayed notifications must pass the same amount check as first delivery.
-        if($order['info']['order_status'] == 1){
-            return ['code'=>1,'msg'=>lang('model/order/pay_over')];
-        }
+            if ($paid_yuan !== null) {
+                $paidMinor = self::amountMinorUnits($paid_yuan);
+                $expectedMinor = self::amountMinorUnits($order['info']['order_price']);
+                if ($paidMinor === null || $expectedMinor === null || $paidMinor !== $expectedMinor) {
+                    return ['code'=>2005,'msg'=>'order amount mismatch'];
+                }
+            }
+            // Replayed notifications must pass the same amount check as first delivery.
+            if($order['info']['order_status'] == 1){
+                return ['code'=>1,'msg'=>lang('model/order/pay_over')];
+            }
 
-        $where2=[];
-        $where2['user_id'] = $order['info']['user_id'];
-        $user = (new \app\common\model\User())->infoData($where2);
-        if($user['code']>1){
-            return $user;
-        }
+            $where2=[];
+            $where2['user_id'] = $order['info']['user_id'];
+            $user = (new \app\common\model\User())->infoData($where2);
+            if($user['code']>1){
+                return $user;
+            }
 
-        Db::startTrans();
-        try{
+            $scope->begin();
             $update = [];
             $update['order_status'] = 1;
             $update['order_pay_time'] = time();
@@ -166,22 +174,22 @@ class Order extends Base {
             }
             $res = $query->update($update);
             if ($res !== 1) {
-                Db::rollback();
-                $current = $this->where('order_id', $order['info']['order_id'])->find();
+                $current = $this->master()->where('order_id', $order['info']['order_id'])->find();
                 if ($res === 0 && $current && (int)$current['order_status'] === 1) {
                     if ($paidMinor !== null && self::amountMinorUnits($current['order_price']) !== $paidMinor) {
-                        return ['code'=>2005,'msg'=>'order amount mismatch'];
+                        return $scope->rollback(['code'=>2005,'msg'=>'order amount mismatch']);
                     }
-                    return ['code'=>1,'msg'=>lang('model/order/pay_over')];
+                    return $scope->rollback(['code'=>1,'msg'=>lang('model/order/pay_over')]);
                 }
-                return ['code'=>2002,'msg'=>lang('model/order/update_status_err')];
+                return $scope->rollback(['code'=>2002,'msg'=>lang('model/order/update_status_err')]);
             }
 
             $res = \app\common\util\PointsBalance::credit($user['info']['user_id'], $order['info']['order_points']);
             if (!$res) {
-                Db::rollback();
-                return ['code'=>2003,'msg'=>lang('model/order/update_user_points_err')];
+                return $scope->rollback(['code'=>2003,'msg'=>lang('model/order/update_user_points_err')]);
             }
+
+            $scope->assertActive();
 
             //积分日志
             $data = [];
@@ -193,25 +201,24 @@ class Order extends Base {
                 throw new \RuntimeException('order points log failed');
             }
 
+            $scope->assertActive();
             $remarks = json_decode((string)($order['info']['order_remarks'] ?? ''), true);
             if(!empty($remarks) && is_array($remarks) && ($remarks['biz'] ?? '') === 'member_upgrade'){
                 $user_latest = (new \app\common\model\User())->infoData(['user_id' => $user['info']['user_id']]);
                 if($user_latest['code'] > 1){
-                    Db::rollback();
-                    return $user_latest;
+                    return $scope->rollback($user_latest);
                 }
                 $upgrade_res = (new \app\common\model\User())->upgradeByPaidOrder($order['info'], $user_latest['info']);
                 if($upgrade_res['code'] > 1){
-                    Db::rollback();
-                    return $upgrade_res;
+                    // This owner must end the whole original transaction when inner cleanup is unknown.
+                    return $scope->rollback(isset($upgrade_res['info']['outcome']) ? $failure : $upgrade_res);
                 }
             }
 
-            Db::commit();
-            return ['code'=>1,'msg'=>lang('model/order/pay_ok')];
+            $scope->assertActive();
+            return $scope->commit($success);
         }catch (\Throwable $e){
-            Db::rollback();
-            return ['code'=>2004,'msg'=>lang('save_err')];
+            return $scope !== null ? $scope->rollback($failure) : $failure;
         }
 
     }

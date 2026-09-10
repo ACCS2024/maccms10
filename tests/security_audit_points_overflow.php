@@ -1,5 +1,7 @@
 <?php
 /** Atomic upper bounds must hold even when MySQL clips unsigned overflows instead of throwing. */
+require __DIR__ . '/fixtures/financial_before_begin.php';
+define('MEMBERSHIP_AUDIT_CONNECTION_CLASS', getenv('MEMBERSHIP_AUDIT_MYSQL') === '1' ? FinancialBeforeBeginMysql::class : FinancialBeforeBeginSqlite::class);
 require __DIR__ . '/fixtures/security_audit_membership_db.php';
 use think\facade\Db;
 use app\common\model\Order;
@@ -26,7 +28,7 @@ check((new Order())->notify('member-once', 'weixin', '10.00')['code'] === 1 && m
 
 // A later credit between the initial order/user read and the transaction must be included in the bound.
 overflowOrderSeed(PointsBalance::MAX - 20);
-$manager->beforeStart = static function (): void {
+$GLOBALS['financial_before_begin'] = static function (): void {
     Db::name('User')->where('user_id', 1)->setInc('user_points', 1);
     $GLOBALS['overflow_winner_state'] = membershipState();
 };
