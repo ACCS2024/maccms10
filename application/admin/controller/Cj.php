@@ -141,6 +141,9 @@ class Cj extends Base
             $param = \think\facade\Request::param();
         }
 
+        if (!is_array($param) || filter_var($param['id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) === false) {
+            return $this->error(lang('param_err'));
+        }
         $where=[];
         $where['nodeid'] = $param['id'];
         $res = (new \app\common\model\Cj())->infoData('cj_node',$where);
@@ -156,11 +159,16 @@ class Cj extends Base
             return $this->error(lang('admin/cj/url_list_err'));
         }
 
-        $param['page'] = isset($param['page']) ? intval($param['page']) : 1;
-
+        $param['page'] = filter_var($param['page'] ?? 1, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+        if ($param['page'] === false || $param['page'] > $total_page) {
+            return $this->error(lang('param_err'));
+        }
         $url_list = $urls[$param['page']-1];
         $url = $collection->get_url_lists($url_list, $data);
 
+        if ($url === false) {
+            return $this->error(lang('obtain_err'));
+        }
         $total = count($url);
         $re = 0;
         if (is_array($url) && !empty($url)) {
@@ -219,9 +227,14 @@ class Cj extends Base
         }
 
         $collection = new cjOper();
-        $page = isset($_GET['page']) ? intval($_GET['page']) : 1;
-        $total = isset($_GET['total']) ? intval($_GET['total']) : 0;
+        if (!is_array($param)) { return $this->error(lang('param_err')); }
+        $page = filter_var($param['page'] ?? 1, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+        if ($page === false) { return $this->error(lang('param_err')); }
+        $param['page'] = $page;
 
+        if (!is_array($param) || filter_var($param['id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) === false) {
+            return $this->error(lang('param_err'));
+        }
         $where=[];
         $where['nodeid'] = $param['id'];
         $res = (new \app\common\model\Cj())->infoData('cj_node',$where);
@@ -232,21 +245,26 @@ class Cj extends Base
 
         mac_echo('<style type="text/css">body{font-size:12px;color: #333333;line-height:21px;}span{font-weight:bold;color:#FF0000}</style>');
 
-        if(empty($total)){
-            $total = Db::name('cj_content')->where('nodeid',$param['id'])->where('status',1)->count();
-        }
+        $remaining = Db::name('cj_content')->where('nodeid',$param['id'])->where('status',1)->count();
         $limit = 20;
-        $total_page = ceil($total/$limit);
-        mac_echo(lang('admin/cj/content/tip',[$total,$total_page,$limit,$page]));
+        $total_page = $page - 1 + (int)ceil($remaining / $limit);
+        mac_echo(lang('admin/cj/content/tip',[$remaining,$total_page,$limit,$page]));
 
-        $list = Db::name('cj_content')->where('nodeid',$param['id'])->where('status',1)->page($total_page-1,$limit)->select();
+        // Successful rows change status to 2, so always drain the first pending batch.
+        $list = Db::name('cj_content')->where('nodeid',$param['id'])->where('status',1)->order('id')->limit($limit)->select()->toArray();
 
         $i = 0;
         $ids=[];
         if(!empty($list) && is_array($list)){
             foreach($list as $v){
                 $html = $collection->get_content($v['url'],$data);
-                Db::name('cj_content')->where('id',$v['id'])->update(['status'=>2, 'data'=>json_encode($html)]);
+                if ($html === false) {
+                    // Keep failed rows pending; never mark a partial/failed scrape as collected.
+                    return $this->error(lang('obtain_err'));
+                }
+                $encoded = json_encode($html);
+                if ($encoded === false) { return $this->error(lang('obtain_err')); }
+                Db::name('cj_content')->where('id',$v['id'])->update(['status'=>2, 'data'=>$encoded]);
                 $ids[] = $v['id'];
                 $i++;
 
@@ -462,10 +480,16 @@ class Cj extends Base
     public function show_url()
     {
         $param = \think\facade\Request::param();
-        $data = $param['data'];
-        $data['urlpage'] = (string)$param['urlpage'.$data['sourcetype']];
+        $data = $param['data'] ?? null;
+        if (!is_array($data) || !is_scalar($data['sourcetype'] ?? null)
+            || !in_array((string)$data['sourcetype'], ['1', '2', '3', '4'], true)
+            || !is_string($param['urlpage'.$data['sourcetype']] ?? null)) {
+            return $this->error(lang('param_err'));
+        }
+        $data['urlpage'] = $param['urlpage'.$data['sourcetype']];
         $collection = new cjOper();
         $urls = $collection->url_list($data);
+        if ($urls === []) { return $this->error(lang('admin/cj/url_list_err')); }
 
         $this->assign('urls',$urls);
 
