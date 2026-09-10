@@ -15,7 +15,7 @@ $groups = [
         ['extensions_audit_qrcode_http.php'], ['extensions_audit_upyun.php'],
         ['extensions_audit_upyun.php', 'embedded-first'], ['extensions_audit_upload_adapters.php'],
         ['framework_audit_cli_failures.php'], ['framework_audit_collection_paging.php'],
-        ['framework_audit_csv.php'], ['framework_audit_request_injection.php'], ['framework_audit_receive.php'],
+        ['framework_audit_csv.php'], ['framework_audit_request_injection.php'], ['framework_audit_receive.php'], ['framework_audit_request_security.php'],
         ['framework_audit_api_runtime.php'], ['framework_audit_api_validation.php'],
         ['framework_audit_api_defaults.php'], ['framework_audit_detail_routes.php'],
         ['framework_audit_user_lists.php'], ['security_audit_member_order_url.php'], ['security_audit_order_amount.php'], ['security_audit_order_price_template.php'],
