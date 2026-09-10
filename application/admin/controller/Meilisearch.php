@@ -301,7 +301,8 @@ class Meilisearch extends Base
             curl_setopt($ch, CURLOPT_TIMEOUT, 8);
             curl_setopt($ch, CURLOPT_USERAGENT, 'maccms-meili-version-check');
             curl_setopt($ch, CURLOPT_HTTPHEADER, ['Accept: application/vnd.github+json']);
-            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
             $raw = (string)@curl_exec($ch);
             curl_close($ch);
         }

@@ -113,9 +113,10 @@ class Ppvod extends Base
             $ch = curl_init();
             curl_setopt($ch, CURLOPT_URL, $api . rawurlencode($picUrl));
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
-            curl_setopt($ch, CURLOPT_TIMEOUT, (int)($this->_cfg['pic_fetch_timeout'] ?? 15));
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
+            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+            curl_setopt($ch, CURLOPT_TIMEOUT, max(1, min(60, (int)($this->_cfg['pic_fetch_timeout'] ?? 15))));
             curl_exec($ch);
             if (curl_errno($ch)) {
                 $this->logError('图床抓取失败: ' . curl_error($ch));

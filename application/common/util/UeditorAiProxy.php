@@ -186,7 +186,7 @@ class UeditorAiProxy
             CURLOPT_POSTFIELDS => $body,
             CURLOPT_CONNECTTIMEOUT => min(15, $timeout),
             CURLOPT_TIMEOUT => $timeout,
-            CURLOPT_SSL_VERIFYPEER => 0,
+            CURLOPT_SSL_VERIFYPEER => true,
             CURLOPT_SSL_VERIFYHOST => 2,
         ]);
         $response = curl_exec($ch);
