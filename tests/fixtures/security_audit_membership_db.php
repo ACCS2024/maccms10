@@ -56,6 +56,7 @@ $GLOBALS['config'] = ['app'=>['cache_flag'=>'audit'], 'user'=>[
     'reward_status'=>'1', 'reward_ratio'=>'10', 'reward_ratio_2'=>'5', 'reward_ratio_3'=>'5',
 ]];
 
+if (!defined('MEMBERSHIP_AUDIT_EXISTING_DB')) {
 if ($mysql) {
     $ddl = file_get_contents(dirname(__DIR__, 2) . '/application/install/sql/install.sql');
     foreach (['user', 'group', 'order', 'plog'] as $table) {
@@ -75,6 +76,8 @@ if ($mysql) {
         order_pay_time INTEGER, order_pay_type TEXT, order_remarks TEXT DEFAULT "")');
     Db::execute('CREATE TABLE audit_plog (plog_id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, plog_type INTEGER,
         plog_points INTEGER CHECK(plog_points BETWEEN 0 AND 65535), plog_time INTEGER, plog_remarks TEXT)');
+}
+
 }
 
 function membershipSeed(int $balance = 100): void {

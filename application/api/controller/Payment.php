@@ -374,12 +374,8 @@ class Payment extends Base
         $auth = $this->_checkLogin();
         if (!$auth['ok']) return $auth['response'];
 
-        $param = $request->param();
-
-        $validate = new \app\api\validate\Payment();
-        if (!$validate->scene($request->action())->check($param)) {
-            return json(['code' => 1001, 'msg' => lang('api/param_validate', [$validate->getError()])]);
-        }
+        $param = \app\common\util\ContentPurchase::parameters($request->param());
+        if ($param === null || $param['mid'] === 12) { return json(['code'=>1001, 'msg'=>lang('param_err')]); }
 
         $data  = [];
         $data['ulog_mid'] = intval($param['mid'] ?? 1) <= 0 ? 1 : intval($param['mid']);
@@ -420,57 +416,9 @@ class Payment extends Base
         }
         $data['ulog_points'] = intval($res['info'][$col]);
 
-        // 检查是否已购买
-        $exists = (new \app\common\model\Ulog())->infoData($data);
-        if ($exists['code'] == 1) {
-            return json(['code' => 1, 'msg' => lang('api/payment/already_owned')]);
-        }
-
-        // 检查积分是否足够（先做快速检查，事务内再做原子扣除）
-        if ($data['ulog_points'] > $auth['user']['user_points']) {
-            return json([
-                'code' => 1005,
-                'msg'  => lang('api/payment/points_need_remain', [(string) $data['ulog_points'], (string) $auth['user']['user_points']]),
-                'info' => [
-                    'need_points'    => $data['ulog_points'],
-                    'current_points' => intval($auth['user']['user_points']),
-                ],
-            ]);
-        }
-
-        // 使用事务 + 条件更新防止并发刷积分
-        Db::startTrans();
-        try {
-            // 带条件的原子扣除：只有积分足够时才扣除
-            $affected = Db::name('user')
-                ->where('user_id', $auth['user_id'])
-                ->where('user_points', '>=', $data['ulog_points'])
-                ->setDec('user_points', $data['ulog_points']);
-
-            if ($affected === 0 || $affected === false) {
-                Db::rollback();
-                return json(['code' => 1005, 'msg' => lang('api/payment/points_insufficient')]);
-            }
-
-            // 积分日志
-            $plog = [];
-            $plog['user_id']     = $auth['user_id'];
-            $plog['plog_type']   = 8;
-            $plog['plog_points'] = $data['ulog_points'];
-            (new \app\common\model\Plog())->saveData($plog);
-
-            // 分销佣金
-            (new \app\common\model\User())->reward($data['ulog_points']);
-
-            // 写入购买记录
-            $save_res = (new \app\common\model\Ulog())->saveData($data);
-
-            Db::commit();
-            return json($save_res);
-        } catch (\Exception $e) {
-            Db::rollback();
-            return json(['code' => 1006, 'msg' => lang('api/payment/operation_retry')]);
-        }
+        $result = \app\common\util\ContentPurchase::buy($auth['user_id'], $data);
+        $result['code'] = [2001=>1001, 2002=>1005, 2003=>1006][$result['code']] ?? $result['code'];
+        return json($result);
     }
 
     /**

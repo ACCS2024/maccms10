@@ -24,7 +24,7 @@ $groups = [
         ['framework_audit_strict_errors.php', 'strict'], ['framework_audit_strict_errors.php', 'default'],
         ['security_audit_admin.php'], ['security_audit_annex.php'], ['security_audit_api.php'],
         ['security_audit_bulk_forms.php'], ['security_audit_cj.php'], ['security_audit_crypto.php'],
-        ['security_audit_csrf.php'], ['security_audit_config_preservation.php'], ['security_audit_dir.php'], ['security_audit_http.php'],
+        ['security_audit_csrf.php'], ['security_audit_data_config.php'], ['security_audit_script_policy.php'], ['security_audit_resourcehub_local.php'], ['security_audit_local_keywords.php'], ['security_audit_config_preservation.php'], ['security_audit_dir.php'], ['security_audit_http.php'],
         ['security_audit_jwt.php'], ['security_audit_logging.php'], ['security_audit_make.php'],
         ['security_audit_oauth.php'], ['security_audit_oauth_profiles.php'], ['security_audit_paths.php'], ['security_audit_safety.php'],
         ['security_audit_sms.php'], ['security_audit_tls.php'], ['security_audit_urlsend.php'],
@@ -44,7 +44,7 @@ $groups = [
         ['framework_audit_checkout.php'], ['security_audit_user_log_delete.php'], ['framework_audit_ulog_users.php'], ['framework_audit_ulog_writes.php'], ['framework_audit_ledger_usernames.php'], ['framework_audit_type_navigation.php'], ['framework_audit_vod_home.php'],
     ],
     // Separate environment: MEMBERSHIP_AUDIT_MYSQL selects the financial installation schema.
-    'financial' => [['security_audit_task_retention.php'], ['security_audit_visit_retention.php'], ['security_audit_visit_rewards.php'], ['security_audit_visit_redirect.php'], ['security_audit_cash_refund.php'], ['security_audit_membership.php'], ['security_audit_points_overflow.php'], ['security_audit_referral_storage.php'], ['security_audit_card_credit.php'], ['security_audit_task_rewards.php'], ['security_audit_task_eligibility.php'], ['security_audit_comment_submission.php'], ['framework_audit_gbook_normal.php'], ['security_audit_comment_provenance.php'], ['security_audit_ledger_retention.php'], ['security_audit_order_create.php']],
+    'financial' => [['security_audit_task_retention.php'], ['security_audit_visit_retention.php'], ['security_audit_visit_rewards.php'], ['security_audit_visit_redirect.php'], ['security_audit_cash_refund.php'], ['security_audit_membership.php'], ['security_audit_points_overflow.php'], ['security_audit_referral_storage.php'], ['security_audit_content_purchase.php'], ['security_audit_card_credit.php'], ['security_audit_task_rewards.php'], ['security_audit_task_eligibility.php'], ['security_audit_comment_submission.php'], ['framework_audit_gbook_normal.php'], ['security_audit_comment_provenance.php'], ['security_audit_ledger_retention.php'], ['security_audit_order_create.php']],
     // Separate upload schema; both response formats use the same identity guard.
     'upload' => [['security_audit_upload_identity.php'], ['security_audit_upload_identity.php', 'admin'], ['security_audit_upload_csrf.php'], ['security_audit_upload_csrf.php', 'admin']],
     // Execute as an unprivileged account so denied-write cases are meaningful.

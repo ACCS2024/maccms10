@@ -101,7 +101,8 @@ class User extends Base
 
     public function ajax_buy_popedom()
     {
-        $param = \think\facade\Request::param();
+        $param = \app\common\util\ContentPurchase::parameters(Request::param());
+        if ($param === null) { return json(['code'=>2001, 'msg'=>lang('param_err')]); }
         $data = [];
         $data['ulog_mid'] = intval($param['mid']) <=0 ? 1: intval($param['mid']);
         $data['ulog_rid'] = intval($param['id']);
@@ -120,7 +121,7 @@ class User extends Base
             $where['manga_id'] = $data['ulog_rid'];
             $res = (new \app\common\model\Manga())->infoData($where);
             if ($res['code'] > 1) {
-                return json([$res]);
+                return json($res);
             }
             $data['ulog_points'] = mac_content_read_points_amount('manga', $res['info']);
             if($GLOBALS['config']['user']['manga_points_type']=='1'){
@@ -133,7 +134,7 @@ class User extends Base
             $where['art_id'] = $data['ulog_rid'];
             $res = (new \app\common\model\Art())->infoData($where);
             if ($res['code'] > 1) {
-                return json([$res]);
+                return json($res);
             }
             $data['ulog_points'] = mac_content_read_points_amount('art', $res['info']);
             if($GLOBALS['config']['user']['art_points_type']=='1'){
@@ -146,7 +147,7 @@ class User extends Base
             $where['vod_id'] = $data['ulog_rid'];
             $res = (new \app\common\model\Vod())->infoData($where);
             if ($res['code'] > 1) {
-                return json([$res]);
+                return json($res);
             }
             $col = 'vod_points_' . ($param['type'] == '4' ? 'play' : 'down');
             if($GLOBALS['config']['user']['vod_points_type']=='1'){
@@ -157,47 +158,7 @@ class User extends Base
             $data['ulog_points'] = intval($res['info'][$col]);
         }
 
-        $res = (new \app\common\model\Ulog())->infoData($data);
-        if ($res['code'] == 1) {
-            return json(['code' => 1, 'msg' => lang('index/buy_popedom1')]);
-        }
-
-        if ($data['ulog_points'] > $GLOBALS['user']['user_points']) {
-            return json(['code' => 2002, 'msg' => lang('index/buy_popedom3',[$data['ulog_points'],$GLOBALS['user']['user_points']])]);
-        }
-
-        // 使用事务 + 条件更新防止并发刷积分
-        Db::startTrans();
-        try {
-            // 带条件的原子扣除：只有积分足够时才扣除
-            $affected = Db::name('user')
-                ->where('user_id', $GLOBALS['user']['user_id'])
-                ->where('user_points', '>=', $data['ulog_points'])
-                ->setDec('user_points', $data['ulog_points']);
-
-            if ($affected === 0 || $affected === false) {
-                Db::rollback();
-                return json(['code' => 2002, 'msg' => lang('index/buy_popedom3',[$data['ulog_points'],$GLOBALS['user']['user_points']])]);
-            }
-
-            //积分日志
-            $data2 = [];
-            $data2['user_id'] = $GLOBALS['user']['user_id'];
-            $data2['plog_type'] = 8;
-            $data2['plog_points'] = $data['ulog_points'];
-            (new \app\common\model\Plog())->saveData($data2);
-
-            //分销日志
-            (new \app\common\model\User())->reward($data['ulog_points']);
-
-            $res = (new \app\common\model\Ulog())->saveData($data);
-
-            Db::commit();
-            return json($res);
-        } catch (\Exception $e) {
-            Db::rollback();
-            return json(['code' => 2003, 'msg' => lang('index/buy_popedom2')]);
-        }
+        return json(\app\common\util\ContentPurchase::buy($GLOBALS['user']['user_id'], $data));
     }
 
     public function index()
