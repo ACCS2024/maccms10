@@ -1660,9 +1660,18 @@ function mac_array2xml($arr,$level=1)
 
 function mac_xml2array($xml)
 {
-    libxml_disable_entity_loader(true);
-    $result= json_decode(json_encode(simplexml_load_string($xml, 'SimpleXMLElement', LIBXML_NOCDATA)), true);
-    return $result;
+    if (!is_string($xml) || $xml === '' || str_contains($xml, "\0")
+        || stripos($xml, '<!DOCTYPE') !== false || stripos($xml, '<!ENTITY') !== false) {
+        return null;
+    }
+    $previous = libxml_use_internal_errors(true);
+    try {
+        $document = simplexml_load_string($xml, 'SimpleXMLElement', LIBXML_NOCDATA | LIBXML_NONET);
+        return $document === false ? null : json_decode(json_encode($document), true);
+    } finally {
+        libxml_clear_errors();
+        libxml_use_internal_errors($previous);
+    }
 }
 
 function mac_array_rekey($arr,$key)

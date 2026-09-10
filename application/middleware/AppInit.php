@@ -27,10 +27,6 @@ class AppInit
 
     public function handle($request, \Closure $next)
     {
-        if (PHP_VERSION_ID < 80000 && function_exists('libxml_disable_entity_loader')) {
-            libxml_disable_entity_loader(true);
-        }
-
         $GLOBALS['mctheme'] = config('mctheme') ?: ['theme' => []];
 
         // ── 恢复 __STATIC__ / __ROOT__ 模板占位符替换 ──────────────────────
