@@ -2,6 +2,7 @@
 return [
     'app_debug'               => false,
     'app_trace'               => false,
+    'strict_php_errors'       => env('APP_STRICT_PHP_ERRORS', false),
     'default_timezone'        => 'Asia/Shanghai',
     'default_lang'            => 'zh-cn',
     // TP5 遗留键，TP8 框架不读取此值，自定义异常处理器在 application/provider.php 注册。

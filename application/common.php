@@ -9,7 +9,9 @@
 
 use think\View;
 
-error_reporting(E_ERROR | E_PARSE );
+// Keep diagnostics observable; MacApp controls whether non-fatal errors are
+// logged or raised. A fatal-only mask makes strict audit mode ineffective.
+error_reporting(E_ALL);
 
 /**
  * TP5 时代由入口/框架提供的运行环境常量,TP8 全仓零定义。
