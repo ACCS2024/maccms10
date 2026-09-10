@@ -120,15 +120,13 @@ class Ulog extends Base {
             }
         }
 
-        if(!empty($user_ids)){
-            $where2=[];
-            $where['user_id'] = $user_ids;
-            $order='user_id desc';
-            $user_list = (new \app\common\model\User())->listData($where2,$order,1,999);
-            $user_list = mac_array_rekey($user_list['list'],'user_id');
+        unset($v);
 
-            foreach($list as $k=>&$v){
-                $list[$k]['user_name'] = $user_list[$v['user_id']]['user_name'];
+        if(!empty($user_ids)){
+            // Only fetch names for accounts referenced by the current log page.
+            $user_names = Db::name('User')->whereIn('user_id', array_values($user_ids))->column('user_name', 'user_id');
+            foreach($list as $k=>$v){
+                $list[$k]['user_name'] = $user_names[$v['user_id']] ?? '';
             }
         }
 
