@@ -2,6 +2,7 @@
 namespace app\common\util;
 
 require_once __DIR__ . '/ImportColumnException.php';
+require_once __DIR__ . '/ImportTextException.php';
 
 /**
  * CSV / XLSX 批量导入导出（无第三方依赖，xlsx 依赖 ZipArchive）
@@ -95,6 +96,10 @@ class BulkTableIo
                 throw new \RuntimeException('CSV exceeds the import byte limit');
             }
         } finally { fclose($handle); }
+        // Validate the complete file before rows can reach a database with different charset behavior.
+        if (!mb_check_encoding($source, 'UTF-8') || preg_match('/[\x00-\x08\x0B\x0C\x0E-\x1F]/', $source) !== 0) {
+            throw new ImportTextException('CSV requires UTF-8 text without unsupported control characters');
+        }
         $size = strlen($source);
         $start = str_starts_with($source, "\xEF\xBB\xBF") ? 3 : 0;
         $quoted = false; $afterQuote = false; $fieldStart = true;

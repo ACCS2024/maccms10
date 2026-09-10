@@ -1759,6 +1759,7 @@ Nota: Si se especifican listas negras y blancas, ambas se aplicarán simultánea
     'admin/batch/io_unknown' => 'No se ha confirmado el guardado de la fila %s. Importación detenida. Revise esta fila y los registros importados; no vuelva a importar todo el archivo.',
     'admin/batch/io_pending' => 'Se guardaron %s filas; falta actualizar el catálogo de vídeos duplicados.',
     'admin/batch/io_columns' => 'Asignación ambigua en fila %s, columna %s. Revise encabezados duplicados, ausentes o no admitidos y celdas ausentes. Para vaciar un campo, incluya una celda vacía explícita.',
+    'admin/batch/io_text' => 'CSV/TXT requiere UTF-8 sin caracteres de control como NULL. Guarde como CSV UTF-8 o use un archivo XLSX.',
 
   'admin/template/title' => 'Gestión de Plantillas',
   'admin/template/ads/title' => 'Gestión de Espacios Publicitarios',

@@ -1760,6 +1760,7 @@ https://www.baidu.com/123.jpg
     'admin/batch/io_unknown' => 'O resultado da gravação da linha %s não está confirmado. Importação interrompida. Verifique esta linha e os registos importados; não importe novamente todo o ficheiro.',
     'admin/batch/io_pending' => '%s linhas guardadas; o catálogo de vídeos duplicados precisa de atualização.',
     'admin/batch/io_columns' => 'Correspondência ambígua na linha %s, coluna %s. Verifique cabeçalhos duplicados, em falta ou não suportados e células em falta. Para limpar um campo, inclua uma célula explicitamente vazia.',
+    'admin/batch/io_text' => 'CSV/TXT requer UTF-8 sem caracteres de controlo como NULL. Guarde como CSV UTF-8 ou utilize um ficheiro XLSX.',
 
   'admin/template/title' => 'Gerenciamento de modelos',
   'admin/template/ads/title' => 'Gerenciamento de espaços de anúncios',

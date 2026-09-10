@@ -91,6 +91,14 @@ namespace {
             check($GLOBALS['import_model_calls']===$beforeCalls && Db::name(ucfirst($module))->order($id)->select()->toArray()===$before,'No valid prefix row is saved before a later mapping failure');
         }
         file_put_contents($path,$ordinary);
+        foreach(["\xff",iconv('UTF-8','GBK','普通正文'),"\0","\x01"]as $value){
+            $seed();$before=Db::name(ucfirst($module))->order($id)->select()->toArray();$beforeCalls=$GLOBALS['import_model_calls'];
+            file_put_contents($path,"$id,$name,type_id,$body\n7,Must not save,1,valid prefix\n0,Second,1,".$value."\n");
+            $result=importCall($module,importFile($path));
+            check($result['code']===0 && $result['data']===['status'=>'invalid_text'],'Invalid source text is reported before row writes');
+            check($GLOBALS['import_model_calls']===$beforeCalls && Db::name(ucfirst($module))->order($id)->select()->toArray()===$before,'Encoding preflight prevents partial saves and backend-specific text coercion');
+        }
+        file_put_contents($path,$ordinary);
         foreach(['csv','txt','CSV']as $extension){
             $seed();$result=importCall($module,importFile($path,'ordinary.'.$extension));$row=Db::name(ucfirst($module))->where($id,7)->find();
             check($result['code']===1 && $result['data']['status']==='completed' && $result['data']['saved']===1,'Real CSV/TXT import propagates success and counts');

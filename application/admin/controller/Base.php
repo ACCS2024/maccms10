@@ -309,6 +309,8 @@ class Base extends All
             $parsed = BulkTableIo::parseFile($upload['path'], $upload['extension'], true);
         } catch (\app\common\util\ImportColumnException $error) {
             return $this->importColumnError($error->row, $error->column);
+        } catch (\app\common\util\ImportTextException $error) {
+            return $this->error(lang('admin/batch/io_text'), null, ['status' => 'invalid_text']);
         } catch (\Throwable $error) {
             return $this->error(lang('import_err'));
         }
