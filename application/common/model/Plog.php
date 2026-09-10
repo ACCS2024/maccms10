@@ -35,15 +35,11 @@ class Plog extends Base {
             }
         }
 
-        if(!empty($user_ids)){
-            $where2=[];
-            $where2['user_id'] = $user_ids;
-            $order='user_id desc';
-            $user_list = (new \app\common\model\User())->listData($where2,$order,1,999);
-            $user_list = mac_array_rekey($user_list['list'],'user_id');
-
-            foreach($list as $k=>&$v){
-                $list[$k]['user_name'] = $user_list[$v['user_id']]['user_name'];
+        unset($v);
+        if (!empty($user_ids)) {
+            $userNames = Db::name('User')->whereIn('user_id', array_values($user_ids))->column('user_name', 'user_id');
+            foreach ($list as $key => $row) {
+                $list[$key]['user_name'] = $userNames[$row['user_id']] ?? '';
             }
         }
 

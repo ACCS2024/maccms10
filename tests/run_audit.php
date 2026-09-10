@@ -38,7 +38,7 @@ $groups = [
         ['framework_audit_lists.php'], ['framework_audit_collection_nodes.php'],
         ['framework_audit_queries.php'], ['framework_audit_payment.php'],
         ['framework_audit_cash.php'], ['framework_audit_admin_session.php'],
-        ['framework_audit_checkout.php'], ['security_audit_user_log_delete.php'], ['framework_audit_ulog_users.php'], ['framework_audit_type_navigation.php'],
+        ['framework_audit_checkout.php'], ['security_audit_user_log_delete.php'], ['framework_audit_ulog_users.php'], ['framework_audit_ledger_usernames.php'], ['framework_audit_type_navigation.php'],
     ],
     // Separate environment: MEMBERSHIP_AUDIT_MYSQL selects the financial installation schema.
     'financial' => [['security_audit_membership.php'], ['security_audit_points_overflow.php'], ['security_audit_order_create.php']],
