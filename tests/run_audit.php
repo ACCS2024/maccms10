@@ -16,7 +16,7 @@ $groups = [
         ['extensions_audit_qrcode_http.php'], ['extensions_audit_upyun_blocks.php'], ['extensions_audit_upyun_secure_purge.php'], ['extensions_audit_upyun.php'],
         ['extensions_audit_upyun.php', 'embedded-first'], ['extensions_audit_upload_adapters.php'],
         ['framework_audit_cache_connection.php'], ['framework_audit_cli_failures.php'], ['framework_audit_collection_paging.php'],
-        ['framework_audit_csv.php'], ['framework_audit_csv_roundtrip.php'], ['framework_audit_csv_budget.php'], ['framework_audit_bulk_export.php'], ['framework_audit_request_injection.php'], ['framework_audit_request_method.php'], ['framework_audit_client_ip.php'], ['framework_audit_receive.php'], ['framework_audit_request_security.php'],
+        ['framework_audit_csv.php'], ['framework_audit_csv_roundtrip.php'], ['framework_audit_csv_budget.php'], ['framework_audit_bulk_export.php'], ['framework_audit_xlsx_text.php'], ['framework_audit_request_injection.php'], ['framework_audit_request_method.php'], ['framework_audit_client_ip.php'], ['framework_audit_receive.php'], ['framework_audit_request_security.php'],
         ['framework_audit_api_runtime.php'], ['framework_audit_api_validation.php'],
         ['framework_audit_api_defaults.php'], ['framework_audit_detail_routes.php'],
         ['framework_audit_user_forms.php'], ['framework_audit_auto_registration_views.php'], ['framework_audit_purchase_views.php'], ['framework_audit_user_lists.php'], ['framework_audit_ulog_template.php'], ['security_audit_member_order_url.php'], ['security_audit_order_amount.php'], ['security_audit_order_price_template.php'],

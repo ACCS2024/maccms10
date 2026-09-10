@@ -209,16 +209,11 @@ class BulkTableIo
         if ($ss !== false) {
             $sx = @simplexml_load_string($ss);
             $ns = 'http://schemas.openxmlformats.org/spreadsheetml/2006/main';
-            if ($sx) {
+            if ($sx !== false) {
                 $sx->registerXPathNamespace('m', $ns);
                 $sis = $sx->xpath('//m:si') ?: [];
                 foreach ($sis as $si) {
-                    $ts = $si->xpath('.//m:t') ?: [];
-                    $buf = '';
-                    foreach ($ts as $t) {
-                        $buf .= (string)$t;
-                    }
-                    $shared[] = $buf;
+                    $shared[] = self::xlsxText($si);
                 }
             }
         }
@@ -228,7 +223,7 @@ class BulkTableIo
             throw new \RuntimeException('sheet');
         }
         $sx = @simplexml_load_string($sheetXml);
-        if (!$sx) {
+        if ($sx === false) {
             return ['headers' => [], 'rows' => []];
         }
         $sx->registerXPathNamespace('m', 'http://schemas.openxmlformats.org/spreadsheetml/2006/main');
@@ -247,15 +242,7 @@ class BulkTableIo
             $val = '';
             $children = $c->children('http://schemas.openxmlformats.org/spreadsheetml/2006/main');
             if ($t === 'inlineStr' && isset($children->is)) {
-                $ns = 'http://schemas.openxmlformats.org/spreadsheetml/2006/main';
-                foreach ($children->is->children($ns) as $ch) {
-                    if ($ch->getName() === 't') {
-                        $val .= (string)$ch;
-                    }
-                }
-                if ($val === '' && isset($children->is->t)) {
-                    $val = (string)$children->is->t;
-                }
+                $val = self::xlsxText($children->is);
             } elseif (isset($children->v)) {
                 $v = (string)$children->v;
                 if ($t === 's') {
@@ -309,6 +296,15 @@ class BulkTableIo
             }
         }
         return ['headers' => array_values($headers), 'rows' => $rows];
+    }
+
+    /** Shared and inline strings have the same rich-text shape; phonetic guides are separate data. */
+    private static function xlsxText(\SimpleXMLElement $string): string
+    {
+        $string->registerXPathNamespace('m', 'http://schemas.openxmlformats.org/spreadsheetml/2006/main');
+        $value = '';
+        foreach ($string->xpath('./m:t | ./m:r/m:t') ?: [] as $text) { $value .= (string)$text; }
+        return $value;
     }
 
     public static function exportCsvDownload($basename, array $headers, array $list)
