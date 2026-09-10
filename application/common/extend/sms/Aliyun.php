@@ -17,7 +17,7 @@ class Aliyun {
      * @param $method boolean 使用GET或POST方法请求，VPC仅支持POST
      * @return bool|\stdClass 返回API接口调用结果，当发生错误时返回false
      */
-    public function request($accessKeyId, $accessKeySecret, $domain, $params, $security=false, $method='POST') {
+    public function request($accessKeyId, $accessKeySecret, $domain, $params, $security=true, $method='POST') {
         $apiParams = array_merge(array (
             "SignatureMethod" => "HMAC-SHA1",
             "SignatureNonce" => uniqid(mt_rand(0,0xffff), true),
@@ -76,16 +76,16 @@ class Aliyun {
         ));
 
         if(substr($url, 0,5) == 'https') {
-            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
         }
 
         $rtn = curl_exec($ch);
 
         if($rtn === false) {
-            // 大多由设置等原因引起，一般无法保障后续逻辑正常执行，
-            // 所以这里触发的是E_USER_ERROR，会终止脚本执行，无法被try...catch捕获，需要用户排查环境、网络等故障
-            trigger_error("[CURL_" . curl_errno($ch) . "]: " . curl_error($ch), E_USER_ERROR);
+            $message = "[CURL_" . curl_errno($ch) . "]: " . curl_error($ch);
+            curl_close($ch);
+            throw new \RuntimeException($message);
         }
         curl_close($ch);
 
@@ -94,14 +94,15 @@ class Aliyun {
 
     public function submit($phone,$code,$type_flag,$type_des,$text)
     {
-        if(empty($phone) || empty($code) || empty($type_flag)){
+        if (!is_scalar($phone) || !is_scalar($code) || !is_scalar($type_flag)
+            || empty($phone) || empty($code) || empty($type_flag)) {
             return ['code'=>101,'msg'=>'参数错误'];
         }
 
         $appid = $GLOBALS['config']['sms']['aliyun']['appid'];
         $appkey = $GLOBALS['config']['sms']['aliyun']['appkey'];
         $sign = $GLOBALS['config']['sms']['sign'];
-        $security = false;
+        $security = true;
         $tpl = $GLOBALS['config']['sms']['tpl_code_'.$type_flag];
 
         $params=[];
@@ -129,16 +130,14 @@ class Aliyun {
                 $security
             );
 
-            if($rsp['Code'] == 'OK'){
-                $rsp['result'] = 1;
-            }
-
-            if($rsp['result'] ==1){
+            if (is_array($rsp) && ($rsp['Code'] ?? null) === 'OK') {
                 return ['code'=>1,'msg'=>'ok'];
             }
-            return ['code'=>101,'msg'=>$rsp['Message']];
+            $message = is_array($rsp) && is_string($rsp['Message'] ?? null)
+                ? $rsp['Message'] : '短信服务请求失败，请重试';
+            return ['code'=>101,'msg'=>$message];
         }
-        catch(\Exception $e) {
+        catch(\Throwable $e) {
             return ['code'=>102,'msg'=>'发生异常请重试'];
         }
     }
