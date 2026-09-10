@@ -1,4 +1,5 @@
-FROM php:8.3-apache
+ARG PHP_VERSION=8.4
+FROM php:${PHP_VERSION}-apache
 
 # 扩展:gd/zip/curl/mbstring/pdo_mysql/mysqli/opcache(性能)+ redis(缓存/会话/计数缓冲)
 RUN apt-get update && apt-get install -y --no-install-recommends \

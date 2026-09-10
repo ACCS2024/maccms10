@@ -7,8 +7,8 @@
 '--------------------------------------------------------
 */
 header('Content-Type:text/html;charset=utf-8');
-if (version_compare(PHP_VERSION, '8.0.0', '<')) {
-    die('PHP >= 8.0 required');
+if (version_compare(PHP_VERSION, '8.3.0', '<')) {
+    die('PHP >= 8.3 required');
 }
 
 // HTTP 侧:30 秒上限,超时按超时处理而非永久占 worker;256M 防泄漏。

@@ -7,8 +7,8 @@
 '--------------------------------------------------------
 */
 header('Content-Type:text/html;charset=utf-8');
-if (version_compare(PHP_VERSION, '8.0.0', '<')) {
-    die('PHP >= 8.0 required');
+if (version_compare(PHP_VERSION, '8.3.0', '<')) {
+    die('PHP >= 8.3 required');
 }
 
 ini_set('max_execution_time', '0');
