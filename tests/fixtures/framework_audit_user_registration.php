@@ -27,6 +27,8 @@ function registrationFixtureDelivery(string $channel, string $target): array {
     return ['code'=>1];
 }
 $temp = audit_temp_dir('user-registration');
+if (!defined('ROOT_PATH')) { define('ROOT_PATH', $temp.'/'); }
+if (!defined('MAC_PATH')) { define('MAC_PATH', '/fixture/'); }
 register_shutdown_function(static function() use ($temp): void { audit_remove_temp($temp); });
 $app = new \think\App($temp);
 $mysql = getenv('FRAMEWORK_AUDIT_MYSQL') === '1';

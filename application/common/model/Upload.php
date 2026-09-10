@@ -125,11 +125,6 @@ class Upload {
         }
 
         $result = $this->processUpload($param, $adminContext);
-        if (!$adminContext && $result['status'] === 1 && $param['flag'] === 'user'
-            && \app\common\util\UserPortrait::isManagedPath($param['user_id'], $result['data']['file'] ?? null)) {
-            // Other sessions may retain their old immutable URL until their next identity refresh.
-            cookie('user_portrait', MAC_PATH . $result['data']['file'], ['expire'=>2592000]);
-        }
         // Editors deliberately echo + exit: only invoke them after processing cleanup/transactions finish.
         return self::upload_return($result['info'], $param['from'], $result['status'], $result['data']);
     }
@@ -150,10 +145,6 @@ class Upload {
         $pre = $config['install_dir'] ?? '';
         if (!is_string($pre) || strlen($pre) > 7937 || preg_match('//u', $pre) !== 1
             || preg_match('/[\x00-\x1f\x7f]/', $pre)) { return self::uploadResult(lang('param_err')); }
-        $upload_image_ext = 'jpg,jpeg,png,gif,webp';
-        $upload_file_ext = 'doc,docx,xls,xlsx,ppt,pptx,pdf,wps,txt,rar,zip,torrent';
-        $upload_media_ext = 'rm,rmvb,avi,mkv,mp4,mp3';
-        $add_rnd = false;
         $config = (array)config('maccms.upload');
 
         if(!empty($param['from'])){
@@ -172,249 +163,20 @@ class Upload {
 
         $mode = $config['mode'] ?? '';
         if (!is_string($mode) && !is_int($mode)) { return self::uploadResult(lang('admin/upload/upload_faild')); }
-        if (in_array(strtolower((string)$mode), ['local', 'remote'], true)) {
-            try {
-                $data = $param['flag'] === 'user'
-                    ? \app\common\util\LocalAttachment::storeAvatar($param, $config, $param['user_id'], !$adminContext)
-                    : \app\common\util\LocalAttachment::store($param, $config);
-                if ($param['from'] !== '') { $data['file'] = $pre . $data['file']; }
-                return self::uploadResult(lang('admin/upload/upload_success'), 1, $data);
-            } catch (\Throwable $error) {
-                return self::uploadResult(lang('admin/upload/upload_faild'));
-            }
-        }
-
-        // 上传附件路径
-        $_upload_path = ROOT_PATH . 'upload' . '/' . $param['flag'] . '/' ;
-        // 附件访问路径
-        $_save_path = 'upload'. '/' . $param['flag'] . '/';
-        if($param['flag']=='user'){
-            $uniq = $param['user_id'] % 10;
-            $_upload_path .= $uniq .'/';
-            $_save_path .= $uniq .'/';
-            // Decode new avatar data before replacing the user's existing JPEG.
-            $_save_name = '.portrait-' . bin2hex(random_bytes(16)) . '.tmp';
-
-            if(!file_exists($_save_path)){
-                mac_mkdirss($_save_path);
-            }
-        }
-        else{
-            $ymd = date('Ymd');
-            $n_dir = $ymd;
-            for($i=1;$i<=100;$i++){
-                $n_dir = $ymd .'-'.$i;
-                $path1 = $_upload_path . $n_dir. '/';
-                if(file_exists($path1)){
-                    $farr = glob($path1.'*.*');
-                    if($farr){
-                        $fcount = count($farr);
-                        if($fcount>999){
-                            continue;
-                        }
-                        else{
-                            break;
-                        }
-                    }
-                    else{
-                        break;
-                    }
-                }
-                else{
-                    break;
-                }
-            }
-            $_save_name = $n_dir . '/' . md5(microtime(true));
-        }
-        $portraitInput = $param['flag'] === 'user' ? $_save_path . $_save_name : null;
         try {
-        if(!empty($base64_img)){
-            if(preg_match('/^(data:\s*image\/(\w+);base64,)/', $base64_img, $result)){
-                $extension = strtolower($result[2]);
-                if(in_array($extension, explode(',', $upload_image_ext), true)){
-                    $type = 'image';
-                    if ($param['flag'] !== 'user') { $_save_name .= '.' . $extension; }
-                    $directory = dirname($_save_path . $_save_name);
-                    if (!is_dir($directory) && !@mkdir($directory, 0777, true) && !is_dir($directory)) {
-                        return self::uploadResult(lang('admin/upload/upload_faild'));
-                    }
-                    $decoded = base64_decode(substr($base64_img, strlen($result[1])), true);
-                    if($decoded === false || !file_put_contents($_save_path.$_save_name, $decoded)){
-                        return self::uploadResult(lang('admin/upload/upload_faild'));
-                    }
-                    $file_size = round(filesize('./'.$_save_path.$_save_name)/1024, 2);
-                }
-                else {
-                    return self::uploadResult(lang('admin/upload/forbidden_ext'));
-                }
+            $data = $param['flag'] === 'user'
+                ? \app\common\util\LocalAttachment::storeAvatar($param, $config, $param['user_id'], !$adminContext)
+                : \app\common\util\LocalAttachment::store($param, $config);
+            if (!$adminContext && $param['flag'] === 'user'
+                && \app\common\util\UserPortrait::isManagedPath($param['user_id'], $data['_portrait_path'] ?? null)) {
+                $portrait = preg_match('~^https?://~D', $data['file']) ? $data['file'] : MAC_PATH . $data['file'];
+                cookie('user_portrait', $portrait, ['expire'=>2592000]);
             }
-            else{
-                return self::uploadResult(lang('admin/upload/no_input_file'));
-            }
-        }
-        else {
-            try {
-                $file = request()->file($param['input']);
-            } catch (\Throwable $e) {
-                return self::uploadResult(lang('admin/upload/upload_faild'));
-            }
-            if (!$file instanceof \think\file\UploadedFile || !$file->isValid()) {
-                return self::uploadResult(lang('admin/upload/no_input_file'));
-            }
-            if ($file->getMime() == 'text/x-php') {
-                return self::uploadResult(lang('admin/upload/forbidden_ext'));
-            }
-
-            $extension = strtolower($file->getOriginalExtension());
-            if (in_array($extension, explode(',', $upload_image_ext), true)) {
-                $type = 'image';
-            } elseif (in_array($extension, explode(',', $upload_file_ext), true)) {
-                $type = 'file';
-            } elseif (in_array($extension, explode(',', $upload_media_ext), true)) {
-                $type = 'media';
-            } else {
-                return self::uploadResult(lang('admin/upload/forbidden_ext'));
-            }
-            if ($param['flag'] !== 'user') { $_save_name .= '.' . $extension; }
-            $relativeDirectory = dirname($_save_name);
-            $targetDirectory = $_upload_path . ($relativeDirectory === '.' ? '' : $relativeDirectory);
-            try {
-                $upfile = $file->move($targetDirectory, basename($_save_name));
-            } catch (\Throwable $e) {
-                return self::uploadResult(lang('admin/upload/upload_faild'));
-            }
-            $file_size = round($upfile->getSize()/1024, 2);
-        }
-
-
-        $resource = fopen($_save_path.$_save_name, 'rb');
-        $fileSize = filesize($_save_path.$_save_name);
-        fseek($resource, 0);
-        if ($fileSize>512){
-            $hexCode = bin2hex(fread($resource, 512));
-            fseek($resource, $fileSize - 512);
-            $hexCode .= bin2hex(fread($resource, 512));
-        } else {
-            $hexCode = bin2hex(fread($resource, $fileSize));
-        }
-        fclose($resource);
-        if(preg_match("/(3c25.*?28.*?29.*?253e)|(3c3f.*?28.*?29.*?3f3e)|(3C534352495054)|(2F5343524950543E)|(3C736372697074)|(2F7363726970743E)/is", $hexCode)){
-            return self::uploadResult(lang('admin/upload/upload_safe'));
-        }
-
-        $file_count = 1;
-        $data = [
-            'file'  => $_save_path.$_save_name,
-            'type'  => $type,
-            'size'  => $file_size,
-            'flag' => $param['flag'],
-            'ctime' => request()->time(),
-            'thumb_class'=>$param['thumb_class'],
-        ];
-
-        $data['thumb'] = [];
-        if($param['flag']=='user'){
-            $add_rnd=true;
-            $file = $_save_path.str_replace('\\', '/', $_save_name);
-            $new_thumb = $param['user_id'] .'.jpg';
-            $new_file = $_save_path . $new_thumb;
-            try {
-                $image = \app\common\util\ImageProcessor::open('./' . $file);
-                $t_size = explode('x', strtolower($GLOBALS['config']['user']['portrait_size']));
-                if (!isset($t_size[1])) {
-                    $t_size[1] = $t_size[0];
-                }
-                $image->thumb($t_size[0], $t_size[1], 6)->save('./' . $new_file, 'jpeg');
-                clearstatcache(true, './' . $new_file);
-                $file_size = round(filesize('./' .$new_file)/1024, 2);
-            }
-            catch(\Throwable $e){
-                return self::uploadResult(lang('admin/upload/make_thumb_faild'));
-            }
-            $data['file'] = $new_file;
-            $data['size'] = $file_size;
-            $data['type'] = 'image';
-            $update = [];
-            $update['user_portrait'] = $new_file;
-            $where = [];
-            $where['user_id'] = $param['user_id'];
-            (new \app\common\model\User())->where($where)->update($update);
-        }
-        else {
-            if ($type == 'image') {
-                $watermarked = false;
-                if ($config['watermark'] == 1) {
-                    $watermarked = (new \app\common\model\Image())->watermark($data['file'], $config, $param['flag']);
-                }
-                if ($param['thumb'] == 1 && $config['thumb'] == 1) {
-                    $dd = (new \app\common\model\Image())->makethumb($data['file'], $config, $param['flag'], 1, $watermarked);
-                    if (is_array($dd)) {
-                        $data = array_merge($data, $dd);
-                    }
-                }
-            }
-        }
-        unset($upfile);
-
-        if ($config['mode'] == 2) {
-            $config['mode'] = 'upyun';
-        }
-        elseif ($config['mode'] == 3){
-            $config['mode'] = 'qiniu';
-        }
-        elseif ($config['mode'] == 4) {
-            $config['mode'] = 'ftp';
-        }
-        elseif ($config['mode'] == 5) {
-            $config['mode'] = 'weibo';
-        }
-
-        $config['mode'] = strtolower($config['mode']);
-
-        if(!in_array($config['mode'],['local','remote'])){
-            $data['file'] = (new \app\common\model\Upload())->api($data['file'],$config);
-            if(!empty($data['thumb'])){
-                $data['thumb'][0]['file'] = (new \app\common\model\Upload())->api($data['thumb'][0]['file'],$config);
-            }
-        }
-        if(!empty($param['from'])){
-            if(substr($data['file'],0,4)!='http' && substr($data['file'],0,4)!='mac:'){
-                $data['file']  =  $pre. $data['file'];
-            }
-            else{
-                $data['file']  = mac_url_content_img($data['file']);
-            }
-        }
-
-        $tmp = $data['file'];
-        if((substr($tmp,0,7) == "/upload")){
-            $tmp = substr($tmp,1);
-        }
-        if((substr($tmp,0,6) == "upload")){
-            $annex = [];
-            $annex['annex_file'] = $tmp;
-            $r = (new \app\common\model\Annex())->infoData($annex);
-            if($r['code']!==1){
-                $annex['annex_type'] = $type;
-                $annex['annex_size'] = $file_size;
-                (new \app\common\model\Annex())->saveData($annex);
-                $tmp = $data['thumb'][0]['file'] ?? '';
-                if(!empty($tmp)){
-                    $file_size = filesize($tmp);
-                    $annex = [];
-                    $annex['annex_file'] = $tmp;
-                    $r = (new \app\common\model\Annex())->infoData($annex);
-                    if($r['code']!==1){
-                        $annex['annex_type'] = $type;
-                        $annex['annex_size'] = $file_size;
-                        (new \app\common\model\Annex())->saveData($annex);
-                    }
-                }
-            }
-        }
-        return self::uploadResult(lang('admin/upload/upload_success'), 1, $data);
-        } finally {
-            if ($portraitInput !== null && is_file($portraitInput)) { @unlink($portraitInput); }
+            unset($data['_portrait_path']);
+            if ($param['from'] !== '' && !preg_match('~^https?://~D', $data['file'])) { $data['file'] = $pre . $data['file']; }
+            return self::uploadResult(lang('admin/upload/upload_success'), 1, $data);
+        } catch (\Throwable $error) {
+            return self::uploadResult(lang('admin/upload/upload_faild'));
         }
     }
 
@@ -443,7 +205,8 @@ class Upload {
         elseif(ENTRANCE=='index'){
             $arr['msg'] = $info;
             $arr['code'] = $status;
-            $arr['file'] = isset($data['file']) ? MAC_PATH . $data['file'] . '?'. mt_rand(1000, 9999) : '';
+            $arr['file'] = isset($data['file'])
+                ? (preg_match('~^https?://~D', $data['file']) ? $data['file'] : MAC_PATH . $data['file']) . '?'. mt_rand(1000, 9999) : '';
         }
         else{
             $arr['msg'] = $info;

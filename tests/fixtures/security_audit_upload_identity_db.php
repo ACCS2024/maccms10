@@ -2,7 +2,12 @@
 /** Real identity/metadata models and isolated files; admin/page shells never bootstrap the app. */
 namespace app\admin\controller { class Base {} }
 namespace app\index\controller {
-    class Base { public function fetch($template) { return $template; } }
+    class Base {
+        public array $assigned = [];
+        public function __construct() {}
+        public function assign($name, $value = ''): void { $this->assigned[$name] = $value; }
+        public function fetch($template) { return $template; }
+    }
 }
 namespace {
     require dirname(__DIR__, 2).'/vendor/autoload.php';
@@ -41,7 +46,8 @@ namespace {
     }
     $mysql = getenv('UPLOAD_AUDIT_MYSQL') === '1';
     $configuration = ['default'=>'upload', 'auto_timestamp'=>false, 'connections'=>['upload'=>[
-        'type'=>$mysql ? 'mysql' : (defined('UPLOAD_AUDIT_SQLITE_DRIVER') ? UPLOAD_AUDIT_SQLITE_DRIVER : 'sqlite'), 'database'=>$mysql ? 'maccms_audit_upload' : ':memory:',
+        'type'=>$mysql ? 'mysql' : (defined('UPLOAD_AUDIT_SQLITE_DRIVER') ? UPLOAD_AUDIT_SQLITE_DRIVER : 'sqlite'),
+        'database'=>$mysql ? (defined('UPLOAD_AUDIT_REMOTE') ? 'maccms_audit_remote_upload' : 'maccms_audit_upload') : ':memory:',
         'prefix'=>'upload_audit_', 'hostname'=>getenv('UPLOAD_AUDIT_HOST') ?: '127.0.0.1',
         'username'=>'root', 'password'=>getenv('UPLOAD_AUDIT_PASSWORD') ?: '',
         'charset'=>'utf8mb4', 'trigger_sql'=>defined('UPLOAD_AUDIT_TRACE_SQL') && UPLOAD_AUDIT_TRACE_SQL, 'fields_cache'=>false,

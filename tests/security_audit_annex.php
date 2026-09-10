@@ -1,6 +1,9 @@
 <?php
 /** Attachment pagination and accumulated batch insertion regressions. */
 require __DIR__ . "/fixtures/security_audit_controller_stubs.php";
+$GLOBALS['audit_select_collection'] = true;
+require dirname(__DIR__) . '/application/common/util/StoragePublicUrl.php';
+require dirname(__DIR__) . '/application/common/util/StorageObjectUrl.php';
 require dirname(__DIR__) . '/application/admin/controller/Base.php';
 require dirname(__DIR__) . '/application/admin/controller/Annex.php';
 $temp = audit_temp_dir('annex');

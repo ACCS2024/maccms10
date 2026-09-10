@@ -224,9 +224,13 @@ class Annex extends Base
         mac_echo(lang('admin/annex/info_tip',[$param['data_count'],$param['page_count'],$param['page_size'],$start]));
         $offset = ($page_size * ($page_count-$start));
 
-        $list = Db::name('Annex')->field('*')->where($where)->limit($offset, $page_size)->orderRaw('annex_time desc')->select();
+        $list = Db::name('Annex')->field('*')->where($where)->limit($offset, $page_size)->orderRaw('annex_time desc')->select()->toArray();
+        $protected = \app\common\util\StorageObjectUrl::protectedPaths(array_column($list, 'annex_file'));
         foreach ($list as $k3 => $v3) {
             $tmp = $v3['annex_file'];
+            if (isset($protected[$tmp]) || !\app\common\util\StoragePublicUrl::localPath($tmp)) {
+                continue; // A missing local replica is not evidence that a remote attachment can be deleted.
+            }
             if(!file_exists('./'.$tmp)){
                 $where=[];
                 $where['annex_file'] = $tmp;

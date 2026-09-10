@@ -230,6 +230,10 @@ class All
         // 不属任何前台展示需求;避免自定义主题误打印 {$user.user_random} 或经 XSS 读取 DOM 致会话伪造。
         // $GLOBALS['user'] 仍保留完整行供服务端逻辑使用(服务端不读这两个字段)。
         $tpl_user = $user;
+        $portraitOwner = \app\common\util\PointsBalance::amount($tpl_user['user_id'] ?? null);
+        if ($portraitOwner !== null) {
+            $tpl_user['user_portrait'] = \app\common\util\UserPortrait::url($portraitOwner);
+        }
         unset($tpl_user['user_pwd'], $tpl_user['user_random']);
         $this->assign('user',$tpl_user);
     }

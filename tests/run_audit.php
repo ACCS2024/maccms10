@@ -49,10 +49,12 @@ $groups = [
     'upload' => [['security_audit_avatar_consistency.php'], ['security_audit_local_attachment.php'], ['security_audit_upload_identity.php'], ['security_audit_upload_identity.php', 'admin'], ['security_audit_upload_csrf.php'], ['security_audit_upload_csrf.php', 'admin']],
     // Separate storage intent schema; SDK fixtures stay on loopback.
     'storage' => [['security_audit_storage_intents.php'], ['security_audit_storage_sdk.php']],
+    // Dedicated remote object and reader fixture; no real cloud credentials.
+    'remote_upload' => [['security_audit_remote_upload.php']],
     // Execute as an unprivileged account so denied-write cases are meaningful.
     'install' => [['framework_audit_install.php']],
 ];
-$selected = ['unit', 'models', 'financial', 'upload', 'storage'];
+$selected = ['unit', 'models', 'financial', 'upload', 'storage', 'remote_upload'];
 $listOnly = false;
 foreach (array_slice($argv, 1) as $arg) {
     if (str_starts_with($arg, '--suite=')) {

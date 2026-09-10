@@ -39,6 +39,8 @@ foreach(['Art','Manga'] as $name)class_alias(PurchaseCsrfMetadata::class,'app\\c
 class PurchaseCsrfRequest extends \app\Request {public function isCli():bool{return false;}}
 $purchaseHttp=defined('PURCHASE_CSRF_HTTP');
 $purchaseTemp=$purchaseHttp?getcwd():audit_temp_dir('purchase-csrf');
+if(!defined('ROOT_PATH'))define('ROOT_PATH',$purchaseTemp.'/');
+if(!defined('MAC_PATH'))define('MAC_PATH','/fixture/');
 if(!$purchaseHttp)register_shutdown_function(static function()use($purchaseTemp):void{audit_remove_temp($purchaseTemp);});
 $app=new \think\App($purchaseTemp.'/app');
 $mysql=getenv('PURCHASE_CSRF_MYSQL')==='1';

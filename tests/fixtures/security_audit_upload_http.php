@@ -4,6 +4,18 @@ declare(strict_types=1);
 if (PHP_SAPI !== 'cli-server') { throw new RuntimeException('Use the isolated PHP CLI server'); }
 $source = dirname(__DIR__,2);
 $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+$remoteBrowser = getenv('REMOTE_UPLOAD_AUDIT_BROWSER') === '1';
+$cloudDirectory = getenv('REMOTE_UPLOAD_AUDIT_OBJECT_DIR');
+if ($remoteBrowser) {
+    if (!is_string($cloudDirectory) || !str_starts_with($cloudDirectory,sys_get_temp_dir().'/maccms-upload-http-')
+        || basename($cloudDirectory)!=='cloud' || str_contains($cloudDirectory,'..')) { throw new RuntimeException('Remote browser requires its isolated object directory'); }
+    if (!is_dir($cloudDirectory) && !mkdir($cloudDirectory,0700,true) && !is_dir($cloudDirectory)) { throw new RuntimeException('Cannot create fixture object storage'); }
+    if (str_starts_with($path,'/fixture-cloud/')) {
+        $object=$cloudDirectory.'/'.hash('sha256','http://'.$_SERVER['HTTP_HOST'].$path);
+        if (!is_file($object)) {http_response_code(404);exit;}
+        header('Content-Type: '.image_type_to_mime_type(getimagesize($object)[2]));readfile($object);exit;
+    }
+}
 if (preg_match('~^/(?:static/|static_new/|template/default/asset/|template/demo/(?:js|vendor)/)~', $path)) {
     $file = realpath($source.$path);
     if (!$file || !str_starts_with($file, $source.'/') || !is_file($file)
@@ -18,7 +30,18 @@ if ($path === '/health') { echo 'ready'; exit; }
 putenv('UPLOAD_AUDIT_MYSQL=0');
 putenv('UPLOAD_AUDIT_ENTRANCE='. (str_contains($path,'/admin.php/') || in_array($_GET['client'] ?? '', ['native','layui','ueditor'],true) ? 'admin' : 'index'));
 ob_start();
-require __DIR__.'/security_audit_upload_identity_db.php';
+if ($remoteBrowser) {
+    putenv('REMOTE_UPLOAD_AUDIT_MYSQL=0');
+    require __DIR__.'/security_audit_remote_upload_db.php';
+    remoteUploadConfig(['thumb'=>0]);
+    $GLOBALS['config']['upload']['api']['s3']['domain']='http://'.$_SERVER['HTTP_HOST'].'/fixture-cloud';
+    $transport=$GLOBALS['storage_provider_callback'];
+    $GLOBALS['storage_provider_callback']=static function(string $path) use($transport,$cloudDirectory):void {
+        $transport($path);
+        $url=app\common\util\StoragePublicUrl::current('s3')->expected($path);
+        if (!copy(ROOT_PATH.$path,$cloudDirectory.'/'.hash('sha256',$url))) {throw new RuntimeException('Fixture object write failed');}
+    };
+} else { require __DIR__.'/security_audit_upload_identity_db.php'; }
 function mac_csrf_token() { return 'upload-browser-csrf'; }
 function url($route) { return '/admin.php/'.$route; }
 function response($data, $code = 200) { return new \think\response\Html(new \think\Cookie(request()), $data, $code); }
@@ -86,10 +109,11 @@ $GLOBALS['config']['app']['security_csrf_admin'] = '0';
 $GLOBALS['config']['app']['security_csrf_admin_exempt'] = 'upload/*';
 foreach (['static','static_new'] as $folder) { mkdir($folder.'/ueditor',0777,true); copy($source.'/'.$folder.'/ueditor/config.json',$folder.'/ueditor/config.json'); }
 $before=uploadIdentitySnapshot();
-$GLOBALS['upload_identity_before_cleanup']=static function () use ($before): void {
+$GLOBALS['upload_identity_before_cleanup']=static function () use ($before,$remoteBrowser): void {
     $after=uploadIdentitySnapshot();
     header('X-Audit-Unchanged: '.($before === $after ? 'yes' : 'no'));
     header('X-Audit-Annex-Count: '.\think\facade\Db::name('Annex')->count());
+    if ($remoteBrowser) {header('X-Audit-Remote-Count: '.\think\facade\Db::name('StorageIntent')->where('reference_state','committed')->count());}
 };
 header('Content-Type: application/json');
 try {

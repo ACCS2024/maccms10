@@ -35,6 +35,7 @@ class Annex extends Base {
             $total = $this->where($where)->count();
         }
         $list = Db::name('Annex')->field($field)->where($where)->order($order)->limit($offset, $limit)->select()->toArray();
+        $list = \app\common\util\StorageObjectUrl::annexList($list);
         return ['code'=>1,'msg'=>lang('data_list'),'page'=>$page,'pagecount'=>ceil($total/$limit),'limit'=>$limit,'total'=>$total,'list'=>$list];
     }
 

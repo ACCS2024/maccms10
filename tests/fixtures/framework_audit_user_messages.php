@@ -25,6 +25,8 @@ function messageFixtureDelivery(string $channel, string $target) {
     return $GLOBALS['message_fixture_delivery'];
 }
 $temp = audit_temp_dir('user-messages');
+if (!defined('ROOT_PATH')) { define('ROOT_PATH', $temp.'/'); }
+if (!defined('MAC_PATH')) { define('MAC_PATH', '/fixture/'); }
 register_shutdown_function(static function () use ($temp): void { audit_remove_temp($temp); });
 $app = new \think\App($temp);
 $mysql = getenv('FRAMEWORK_AUDIT_MYSQL') === '1';

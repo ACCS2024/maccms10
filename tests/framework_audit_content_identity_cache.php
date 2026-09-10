@@ -47,6 +47,7 @@ define('ENTRANCE',$entrance);define('MAC_MOB',0);
 $socket=getenv('DATABASE_AUDIT_MYSQL_SOCKET');$database=getenv('DATABASE_AUDIT_DATABASE');
 if($socket!=='/audit/mysql.sock'||!is_string($database)||!preg_match('/^maccms_audit_backup_[a-f0-9]+$/D',$database))throw new RuntimeException('Dedicated MySQL fixture required');
 $temp=audit_temp_dir('content-identity');
+define('ROOT_PATH',$temp.'/');define('MAC_PATH','/');
 $app=new think\App($temp.'/app');
 $cfg=['default'=>'fixture','auto_timestamp'=>false,'connections'=>['fixture'=>[
     'type'=>'mysql','dsn'=>'mysql:unix_socket='.$socket.';dbname='.$database.';charset=utf8mb4','database'=>$database,

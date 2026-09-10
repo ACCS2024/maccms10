@@ -21,20 +21,26 @@ class User extends Base
             define('THIRD_LOGIN_CALLBACK', request()->domain() . rtrim($installDir, '/') . '/index.php/user/logincallback/type/');
         }
 
+        $templateUser = $GLOBALS['user'];
+        $portraitOwner = \app\common\util\PointsBalance::amount($templateUser['user_id'] ?? null);
+        if ($portraitOwner !== null) {
+            $templateUser['user_portrait'] = \app\common\util\UserPortrait::url($portraitOwner);
+        }
+
         //判断用户登录状态
         $ac = request()->action();
         $guestAllowedActions = ['login', 'logout', 'ajax_login', 'reg', 'regcheck', 'findpass', 'findpass_msg', 'findpass_reset', 'reg_msg', 'oauth', 'logincallback', 'visit', 'index', 'ajax_upgrade', 'write_token', 'ajax_buy_popedom'];
         $guestAllowedGetActions = ['buy', 'plays', 'upgrade', 'checkin'];
         if (in_array($ac, $guestAllowedActions) || (in_array($ac, $guestAllowedGetActions) && !Request()->isPost())) {
             // 游客可访问的页面也注入 obj，避免模板判断分支缺少变量
-            $this->assign('obj', $GLOBALS['user']);
+            $this->assign('obj', $templateUser);
         } else {
             if ($GLOBALS['user']['user_id'] < 1) {
                 (new \app\common\model\User())->logout();
                 redirect(url('user/login'))->send();
                 exit;
             }
-            $this->assign('obj', $GLOBALS['user']);
+            $this->assign('obj', $templateUser);
         }
     }
 

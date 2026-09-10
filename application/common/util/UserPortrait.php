@@ -4,7 +4,7 @@ namespace app\common\util;
 
 use think\facade\Db;
 
-/** Read only managed, owner-specific local avatars, retaining the historical fixed-file fallback. */
+/** Read only managed, owner-specific avatars and attested remote mappings, retaining the historical fixed-file fallback. */
 final class UserPortrait
 {
     private static ?\WeakMap $requests = null;
@@ -28,16 +28,21 @@ final class UserPortrait
         }
         foreach (array_chunk($missing, 500) as $chunk) {
             foreach ($chunk as $id) { $cache[$id] = ''; }
+            $owners = [];
             try {
                 $rows = Db::name('User')->master()->field('user_id,user_portrait')->whereIn('user_id', $chunk)->select()->toArray();
                 foreach ($rows as $row) {
                     $id = PointsBalance::amount($row['user_id'] ?? null);
                     if ($id !== null && isset($missing[$id]) && self::isManagedPath($id, $row['user_portrait'] ?? null)) {
                         $cache[$id] = $row['user_portrait'];
+                        $owners[$row['user_portrait']] = $id;
                     }
                 }
             } catch (\Throwable $error) {
                 // A missing/unavailable legacy database must not turn a public avatar into a page error.
+            }
+            foreach (StorageObjectUrl::resolve(array_keys($owners), $owners) as $path => $url) {
+                $cache[$owners[$path]] = $url;
             }
         }
         self::$requests[$context] = $cache;
@@ -66,6 +71,7 @@ final class UserPortrait
         if ($id === null) { return $default; }
         self::prefetch([$id]);
         $path = self::$requests[self::context()][$id] ?? '';
+        if (preg_match('~^https?://~D', $path)) { return $path; }
         if ($path !== '' && self::exists($path)) { return MAC_PATH . $path; }
         $legacy = 'upload/user/' . ($id % 10) . '/' . $id . '.jpg';
         return self::exists($legacy) ? MAC_PATH . $legacy : $default;

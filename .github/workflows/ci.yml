@@ -47,7 +47,7 @@ jobs:
         run: php tests/php_lint.php --all --json=/tmp/php-installed-lint.json
       - name: Independent regression suites and SQLite models
         run: |
-          php tests/run_audit.php --suite=unit,models,financial,upload,storage
+          php tests/run_audit.php --suite=unit,models,financial,upload,storage,remote_upload
           node --check template/default/asset/js/user-buy-upgrade-ajax.js
           node --check template/default/asset/js/user-plog-list.js
           node --check template/default/asset/js/user-bind.js
@@ -69,6 +69,7 @@ jobs:
           test -n "$browser_binary"
           "$browser_binary" --version
           CHROMIUM_BINARY="$browser_binary" PHP_BINARY=php node tests/browser/upload_csrf.cjs
+          CHROMIUM_BINARY="$browser_binary" PHP_BINARY=php REMOTE_UPLOAD_AUDIT_BROWSER=1 node tests/browser/upload_csrf.cjs
           CHROMIUM_BINARY="$browser_binary" node tests/browser/purchase_csrf.cjs
           CHROMIUM_BINARY="$browser_binary" PHP_BINARY=php node tests/browser/purchase_csrf_php.cjs
       - name: Prepare dedicated MySQL fixtures and verify InnoDB schema
@@ -78,7 +79,7 @@ jobs:
           if grep -q -- 'ssl-mode' /tmp/mysql-help.txt; then tls=--ssl-mode=DISABLED; else tls=--skip-ssl; fi
           # Only the disposable loopback MySQL service uses this TLS setting.
           client=(mysql --default-character-set=utf8mb4 "$tls" -h127.0.0.1 -uroot -paudit-fixture)
-          "${client[@]}" -e 'CREATE DATABASE maccms_audit_models CHARACTER SET utf8mb4; CREATE DATABASE maccms_audit_user_messages CHARACTER SET utf8mb4; CREATE DATABASE maccms_audit_user_registration CHARACTER SET utf8mb4; CREATE DATABASE maccms_audit_upload CHARACTER SET utf8mb4; CREATE DATABASE maccms_audit_install CHARACTER SET utf8mb4; CREATE DATABASE maccms_audit_membership CHARACTER SET utf8mb4; CREATE DATABASE maccms_audit_storage CHARACTER SET utf8mb4;'
+          "${client[@]}" -e 'CREATE DATABASE maccms_audit_models CHARACTER SET utf8mb4; CREATE DATABASE maccms_audit_user_messages CHARACTER SET utf8mb4; CREATE DATABASE maccms_audit_user_registration CHARACTER SET utf8mb4; CREATE DATABASE maccms_audit_upload CHARACTER SET utf8mb4; CREATE DATABASE maccms_audit_install CHARACTER SET utf8mb4; CREATE DATABASE maccms_audit_membership CHARACTER SET utf8mb4; CREATE DATABASE maccms_audit_storage CHARACTER SET utf8mb4; CREATE DATABASE maccms_audit_remote_upload CHARACTER SET utf8mb4; CREATE DATABASE maccms_audit_remote_upload_read CHARACTER SET utf8mb4;'
           "${client[@]}" maccms_audit_http < application/install/sql/install.sql
           "${client[@]}" maccms_audit_http < application/install/sql/initdata.sql
           "${client[@]}" maccms_audit_http < tests/fixtures/http_seed.sql
@@ -107,6 +108,12 @@ jobs:
           STORAGE_AUDIT_HOST: 127.0.0.1
           STORAGE_AUDIT_PASSWORD: audit-fixture
         run: php tests/run_audit.php --suite=storage
+      - name: MySQL remote attachment references and failure recovery
+        env:
+          REMOTE_UPLOAD_AUDIT_MYSQL: '1'
+          REMOTE_UPLOAD_AUDIT_HOST: 127.0.0.1
+          REMOTE_UPLOAD_AUDIT_PASSWORD: audit-fixture
+        run: php tests/run_audit.php --suite=remote_upload
       - name: MySQL membership and referral ledgers
         env:
           MEMBERSHIP_AUDIT_MYSQL: '1'

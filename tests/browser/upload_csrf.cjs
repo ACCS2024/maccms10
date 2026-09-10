@@ -10,6 +10,7 @@ const {spawn} = require('node:child_process');
 let checks=0;
 function check(value,message) { checks++; assert.ok(value,message); }
 const root=path.resolve(__dirname,'../..');
+const remote=process.env.REMOTE_UPLOAD_AUDIT_BROWSER==='1';
 async function main() {
   let server, serverError, temporary, browser;
   let base=process.env.UPLOAD_AUDIT_BASE_URL;
@@ -18,7 +19,8 @@ async function main() {
       const socket=net.createServer(); await new Promise(resolve=>socket.listen(0,'127.0.0.1',resolve));
       const port=socket.address().port; await new Promise(resolve=>socket.close(resolve));
       temporary=fs.mkdtempSync(path.join(os.tmpdir(),'maccms-upload-http-'));
-      server=spawn(process.env.PHP_BINARY || 'php',['-S',`127.0.0.1:${port}`,path.join(root,'tests/fixtures/security_audit_upload_http.php')],{cwd:temporary,stdio:['ignore','pipe','pipe']});
+      server=spawn(process.env.PHP_BINARY || 'php',['-S',`127.0.0.1:${port}`,path.join(root,'tests/fixtures/security_audit_upload_http.php')],
+        {cwd:temporary,stdio:['ignore','pipe','pipe'],env:{...process.env,REMOTE_UPLOAD_AUDIT_OBJECT_DIR:path.join(temporary,'cloud')}});
       server.on('error',error=>{serverError=error;});
       let logs='';server.stderr.on('data',data=>{logs+=data;});
       base=`http://127.0.0.1:${port}`;
@@ -54,6 +56,14 @@ async function main() {
       if(tokenLocation==='header') check(request.headers()['x-csrf-token']==='upload-browser-csrf','Actual client omitted CSRF header');
       else check(request.postDataBuffer()?.toString().includes('name="csrf_token"\r\n\r\nupload-browser-csrf'),'Actual form omitted CSRF hidden field');
       check(!request.url().includes('upload-browser-csrf'),'CSRF token leaked into URL');
+      if(remote) {
+        const url=value.file || value.data?.file || value.url;
+        check(typeof url==='string' && new URL(url).origin===allowed.origin && new URL(url).pathname.startsWith('/fixture-cloud/'),
+          'Client response lost the actual absolute remote URL: '+body);
+        const object=await fetch(url);
+        check(object.ok && (await object.arrayBuffer()).byteLength>50 && response.headers()['x-audit-remote-count']==='1',
+          'Actual processed remote object or its committed intent is missing');
+      }
       return value;
     }
     for(const client of ['legacy','default','static_new','demo','deferred','layui','native']) {
@@ -136,7 +146,7 @@ async function main() {
         && Object.keys(MacUploadCsrf.headers('/not-upload')).length===0
         && MacUploadCsrf.headers('/subdir/admin.php/upload/upload.html?flag=vod')['X-CSRF-Token']==='upload-browser-csrf';
     }),'Client token routing leaks to an unrelated origin/path or loses subdirectory URLs');
-    console.log(`Upload HTTP/browser CSRF: ${checks} checks passed`);
+    console.log(`Upload HTTP/browser CSRF${remote?' (remote)':''}: ${checks} checks passed`);
   } finally {
     if(browser) await browser.close();
     if(server && !serverError && server.exitCode === null) {

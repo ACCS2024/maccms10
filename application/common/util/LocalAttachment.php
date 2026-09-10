@@ -34,7 +34,7 @@ final class LocalAttachment
             || !preg_match('/^[a-z0-9_]{1,64}$/D', $parameters['flag'])) {
             throw new \InvalidArgumentException('Invalid local attachment flag');
         }
-        $stage = null; $published = []; $directories = [];
+        $stage = null; $published = []; $directories = []; $remote = null;
         $connection = null; $transaction = false; $committed = false; $commitStarted = false;
         try {
             $stage = rtrim(sys_get_temp_dir(), DIRECTORY_SEPARATOR) . '/maccms-attachment-' . bin2hex(random_bytes(16));
@@ -79,13 +79,27 @@ final class LocalAttachment
             if ($connection->getPdo() && $connection->getPdo()->inTransaction()) {
                 throw new \RuntimeException('Upload must own its transaction');
             }
+            $connection->query('SELECT 1', [], true);
+            if ($connection->getPdo()->inTransaction()) { throw new \RuntimeException('Upload must own its master transaction'); }
             if ($connection->getPdo()->getAttribute(\PDO::ATTR_DRIVER_NAME) === 'mysql') {
                 foreach ($owner === null ? ['Annex'] : ['Annex', 'User'] as $model) {
-                    $engines = $connection->query('SELECT ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?', [Db::name($model)->getTable()]);
+                    $engines = $connection->query('SELECT ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?', [Db::name($model)->getTable()], true);
                     if (count($engines) !== 1 || strtolower((string)$engines[0]['ENGINE']) !== 'innodb') {
                         throw new \RuntimeException('Attachment metadata requires transactional storage');
                     }
                 }
+            }
+            $provider = RemoteAttachment::provider($config);
+            if ($provider !== null) {
+                self::makeDirectories($directory, $directories);
+                foreach ($prepared as $index => $file) {
+                    self::publish($file, ROOT_PATH . $records[$index]['annex_file'], $records[$index]['annex_size'], $published);
+                }
+                $remote = new RemoteAttachment($provider, $owner);
+                $remote->transfer($records, static function (array $evidence) use ($stage, &$manifest): void {
+                    $manifest['remote'] = $evidence;
+                    self::manifest($stage, $manifest);
+                });
             }
             $connection->startTrans(); $transaction = true;
             if ($owner !== null) {
@@ -94,6 +108,7 @@ final class LocalAttachment
                     throw new \RuntimeException('Avatar owner is no longer available');
                 }
             }
+            $annexIds = [];
             foreach ($records as $record) {
                 if (Db::name('Annex')->where('annex_file', $record['annex_file'])->count() !== 0) {
                     throw new \RuntimeException('Attachment identity already exists');
@@ -110,10 +125,13 @@ final class LocalAttachment
                     || $storedTime < $started || $storedTime > time()) {
                     throw new \RuntimeException('Attachment metadata did not persist exactly');
                 }
+                $annexIds[$record['annex_file']] = (int)$rows[0]['annex_id'];
             }
-            self::makeDirectories($directory, $directories);
-            foreach ($prepared as $index => $file) {
-                self::publish($file, ROOT_PATH . $records[$index]['annex_file'], $records[$index]['annex_size'], $published);
+            if ($remote === null) {
+                self::makeDirectories($directory, $directories);
+                foreach ($prepared as $index => $file) {
+                    self::publish($file, ROOT_PATH . $records[$index]['annex_file'], $records[$index]['annex_size'], $published);
+                }
             }
             if ($owner !== null) {
                 $path = $records[0]['annex_file'];
@@ -122,10 +140,17 @@ final class LocalAttachment
                     throw new \RuntimeException('Avatar pointer did not persist exactly');
                 }
             }
+            if ($remote !== null) { $remote->recordReferences($annexIds); }
             $commitStarted = true;
             $connection->commit(); $transaction = false; $committed = true;
             if ($owner !== null) { UserPortrait::forget($owner); }
+            if ($remote !== null) {
+                $remote->cleanup($config);
+                foreach ($descriptors as &$descriptor) { $descriptor['file'] = $remote->url($descriptor['file']); }
+                unset($descriptor);
+            }
             $data = $descriptors[0];
+            if ($owner !== null) { $data['_portrait_path'] = $records[0]['annex_file']; }
             $data['thumb_class'] = $parameters['thumb_class'];
             $data['thumb'] = array_slice($descriptors, 1);
             return $data;
@@ -137,14 +162,18 @@ final class LocalAttachment
                 // Do not delete files referenced by a COMMIT whose acknowledgement may have been lost.
                 try { self::manifest($stage, array_merge($manifest, ['state'=>'commit_outcome_unknown'])); } catch (\Throwable $manifestError) {}
                 error_log('Upload commit outcome unknown; inspect private manifest: ' . $stage . '/manifest.json');
+            } elseif ($remote !== null && $remote->hasAttempt() && $stage !== null) {
+                try { self::manifest($stage, array_merge($manifest, ['state'=>'remote_reference_failed'])); } catch (\Throwable $manifestError) {}
+                error_log('Remote upload reference failed; inspect private manifest: ' . $stage . '/manifest.json');
             }
             throw $error;
         } finally {
-            if (!$committed && !$commitStarted) {
+            $retainRemoteEvidence = !$committed && $remote !== null && $remote->hasAttempt();
+            if (!$committed && !$commitStarted && !$retainRemoteEvidence) {
                 foreach (array_reverse($published) as $file) { if (is_file($file) && !is_link($file)) { @unlink($file); } }
                 foreach (array_reverse($directories) as $directory) { @rmdir($directory); }
             }
-            if ($stage !== null && (!$commitStarted || $committed)) { self::removeStage($stage); }
+            if ($stage !== null && (!$commitStarted || $committed) && !$retainRemoteEvidence) { self::removeStage($stage); }
         }
     }
 

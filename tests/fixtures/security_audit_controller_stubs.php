@@ -71,7 +71,12 @@ namespace {
         public function where($value) { return $this; }
         public function orderRaw($value) { return $this; }
         public function limit($offset, $limit) { $GLOBALS['audit_limit'] = [$offset, $limit]; return $this; }
-        public function select() { return $GLOBALS['audit_rows'] ?? []; }
+        public function select() {
+            $rows = $GLOBALS['audit_rows'] ?? [];
+            return empty($GLOBALS['audit_select_collection']) ? $rows : new class($rows) extends \ArrayObject {
+                public function toArray(): array { return $this->getArrayCopy(); }
+            };
+        }
         public function getConfig($key) { return 'audit'; }
     }
 
