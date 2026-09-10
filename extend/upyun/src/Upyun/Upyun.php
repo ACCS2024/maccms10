@@ -309,6 +309,9 @@ class Upyun
      */
     public function purge($urls)
     {
+        if ($this->config->useSsl !== false) {
+            throw new \RuntimeException('Secure purge endpoint is not supported by this SDK');
+        }
         $urlString = $urls;
         if (is_array($urls)) {
             $urlString = implode("\n", $urls);
