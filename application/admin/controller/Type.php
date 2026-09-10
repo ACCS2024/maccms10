@@ -143,7 +143,20 @@ class Type extends Base
     public function batch()
     {
         $param = \think\facade\Request::param();
-        $ids = $param['ids'];
+        $ids = $param['ids'] ?? [];
+        if (!is_array($ids) || $ids === []) {
+            return $this->error(lang('param_err'));
+        }
+        foreach ($ids as $id) {
+            if ((!is_int($id) && !is_string($id)) || !ctype_digit((string)$id) || (int)$id < 1) {
+                return $this->error(lang('param_err'));
+            }
+            foreach (['type_name', 'type_sort', 'type_en', 'type_tpl', 'type_tpl_list', 'type_tpl_detail'] as $field) {
+                if (!isset($param[$field . '_' . $id]) || !is_scalar($param[$field . '_' . $id])) {
+                    return $this->error(lang('param_err'));
+                }
+            }
+        }
         foreach ($ids as $k=>$id) {
 
             $data = [];
@@ -164,21 +177,25 @@ class Type extends Base
                 return $this->error($res['msg']);
             }
         }
-        $this->success($res['msg']);
+        return $this->success($res['msg']);
     }
 
     public function extend()
     {
         $param = \think\facade\Request::param();
+        $extend = [];
         if(!empty($param['id'])){
+            if ((!is_int($param['id']) && !is_string($param['id'])) || !ctype_digit((string)$param['id'])) {
+                return $this->error(lang('param_err'));
+            }
             $type_list = (new \app\common\model\Type())->getCache('type_list');
-            $type_info = $type_list[$param['id']];
+            $type_info = $type_list[$param['id']] ?? [];
             if(!empty($type_info)){
                 $type_mid = $type_info['type_mid'];
                 $type_pid = $type_info['type_pid'];
-                $type_pinfo = $type_list[$type_pid];
-                $type_extend = $type_info['type_extend'];
-                $type_pextend = $type_pinfo['type_extend'];
+                $type_pinfo = $type_list[$type_pid] ?? [];
+                $type_extend = is_array($type_info['type_extend'] ?? null) ? $type_info['type_extend'] : [];
+                $type_pextend = is_array($type_pinfo['type_extend'] ?? null) ? $type_pinfo['type_extend'] : [];
 
                 $config = config('maccms.app');
 
@@ -249,6 +266,7 @@ class Type extends Base
             return $this->error(lang('get_info_err'));
 
         }
+        return $this->error(lang('param_err'));
     }
 
     public function move()

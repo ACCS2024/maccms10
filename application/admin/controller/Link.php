@@ -77,7 +77,20 @@ class Link extends Base
     public function batch()
     {
         $param = \think\facade\Request::param();
-        $ids = $param['ids'];
+        $ids = $param['ids'] ?? [];
+        if (!is_array($ids) || $ids === []) {
+            return $this->error(lang('param_err'));
+        }
+        foreach ($ids as $k => $id) {
+            if ((!is_int($id) && !is_string($id)) || !ctype_digit((string)$id) || (int)$id < 1) {
+                return $this->error(lang('param_err'));
+            }
+            foreach (['link_name', 'link_sort', 'link_url', 'link_type', 'link_logo'] as $field) {
+                if (!is_array($param[$field] ?? null) || !isset($param[$field][$k]) || !is_scalar($param[$field][$k])) {
+                    return $this->error(lang('param_err'));
+                }
+            }
+        }
         foreach ($ids as $k=>$id) {
             $data = [];
             $data['link_id'] = intval($id);
@@ -95,7 +108,7 @@ class Link extends Base
                 return $this->error($res['msg']);
             }
         }
-        $this->success($res['msg']);
+        return $this->success($res['msg']);
     }
 
 }
