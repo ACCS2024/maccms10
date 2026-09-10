@@ -16,7 +16,7 @@ class Manga extends Base
     public function get_list(\think\Request $request)
     {
         $param = $request->param();
-        $validate = validate($request->controller());
+        $validate = new \app\api\validate\Manga();
         if (!$validate->scene($request->action())->check($param)) {
             return json([
                 'code' => 1001,
@@ -79,7 +79,7 @@ class Manga extends Base
     public function get_detail(\think\Request $request)
     {
         $param = $request->param();
-        $validate = validate($request->controller());
+        $validate = new \app\api\validate\Manga();
         if (!$validate->scene($request->action())->check($param)) {
             return json([
                 'code' => 1001,
@@ -140,7 +140,7 @@ class Manga extends Base
     public function get_chapter(\think\Request $request)
     {
         $param = $request->param();
-        $validate = validate($request->controller());
+        $validate = new \app\api\validate\Manga();
         if (!$validate->scene('get_chapter')->check($param)) {
             return json([
                 'code' => 1001,

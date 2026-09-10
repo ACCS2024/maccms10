@@ -56,7 +56,7 @@ class Cash extends Base
 
         $param = $request->param();
 
-        $validate = validate($request->controller());
+        $validate = new \app\api\validate\Cash();
         if (!$validate->scene($request->action())->check($param)) {
             return json(['code' => 1001, 'msg' => '参数错误: ' . $validate->getError()]);
         }
@@ -94,7 +94,7 @@ class Cash extends Base
 
         $param = $request->param();
 
-        $validate = validate($request->controller());
+        $validate = new \app\api\validate\Cash();
         if (!$validate->scene($request->action())->check($param)) {
             return json(['code' => 1001, 'msg' => '参数错误: ' . $validate->getError()]);
         }
@@ -137,7 +137,7 @@ class Cash extends Base
 
         $param = $request->param();
 
-        $validate = validate($request->controller());
+        $validate = new \app\api\validate\Cash();
         if (!$validate->scene($request->action())->check($param)) {
             return json(['code' => 1001, 'msg' => '参数错误: ' . $validate->getError()]);
         }
@@ -166,7 +166,7 @@ class Cash extends Base
 
         $param = $request->param();
 
-        $validate = validate($request->controller());
+        $validate = new \app\api\validate\Cash();
         if (!$validate->scene($request->action())->check($param)) {
             return json(['code' => 1001, 'msg' => '参数错误: ' . $validate->getError()]);
         }

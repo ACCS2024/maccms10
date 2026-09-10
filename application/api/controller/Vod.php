@@ -31,7 +31,7 @@ class Vod extends Base
     {
         // 参数校验
         $param = $request->param();
-        $validate = validate($request->controller());
+        $validate = new \app\api\validate\Vod();
         if (!$validate->scene($request->action())->check($param)) {
             return json([
                 'code' => 1001,
@@ -284,7 +284,7 @@ class Vod extends Base
     public function get_year(\think\Request $request)
     {
         $param = $request->param();
-        $validate = validate($request->controller());
+        $validate = new \app\api\validate\Vod();
         if (!$validate->scene($request->action())->check($param)) {
             return json([
                 'code' => 1001,
@@ -332,7 +332,7 @@ class Vod extends Base
     public function get_class(\think\Request $request)
     {
         $param = $request->param();
-        $validate = validate($request->controller());
+        $validate = new \app\api\validate\Vod();
         if (!$validate->scene($request->action())->check($param)) {
             return json([
                 'code' => 1001,
@@ -380,7 +380,7 @@ class Vod extends Base
     public function get_area(\think\Request $request)
     {
         $param = $request->param();
-        $validate = validate($request->controller());
+        $validate = new \app\api\validate\Vod();
         if (!$validate->scene($request->action())->check($param)) {
             return json([
                 'code' => 1001,

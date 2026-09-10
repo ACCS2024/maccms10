@@ -30,7 +30,7 @@ class Link extends Base
     {
         // 参数校验
         $param = $request->param();
-        $validate = validate($request->controller());
+        $validate = new \app\api\validate\Link();
         if (!$validate->scene($request->action())->check($param)) {
             return json([
                 'code' => 1001,

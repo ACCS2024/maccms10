@@ -202,7 +202,7 @@ class Payment extends Base
 
         $param = $request->param();
 
-        $validate = validate($request->controller());
+        $validate = new \app\api\validate\Payment();
         if (!$validate->scene($request->action())->check($param)) {
             return json(['code' => 1001, 'msg' => lang('api/param_validate', [$validate->getError()])]);
         }
@@ -341,7 +341,7 @@ class Payment extends Base
 
         $param = $request->param();
 
-        $validate = validate($request->controller());
+        $validate = new \app\api\validate\Payment();
         if (!$validate->scene($request->action())->check($param)) {
             return json(['code' => 1001, 'msg' => lang('api/param_validate', [$validate->getError()])]);
         }
@@ -371,7 +371,7 @@ class Payment extends Base
 
         $param = $request->param();
 
-        $validate = validate($request->controller());
+        $validate = new \app\api\validate\Payment();
         if (!$validate->scene($request->action())->check($param)) {
             return json(['code' => 1001, 'msg' => lang('api/param_validate', [$validate->getError()])]);
         }
@@ -488,7 +488,7 @@ class Payment extends Base
 
         $param = $request->param();
 
-        $validate = validate($request->controller());
+        $validate = new \app\api\validate\Payment();
         if (!$validate->scene($request->action())->check($param)) {
             return json(['code' => 1001, 'msg' => lang('api/param_validate', [$validate->getError()])]);
         }
@@ -546,7 +546,7 @@ class Payment extends Base
 
         $param = $request->param();
 
-        $validate = validate($request->controller());
+        $validate = new \app\api\validate\Payment();
         if (!$validate->scene($request->action())->check($param)) {
             return json(['code' => 1001, 'msg' => lang('api/param_validate', [$validate->getError()])]);
         }

@@ -34,6 +34,9 @@ class Gbook extends Validate
             'status',
             'name',
             'orderby',
+            'content',
+            'time_start',
+            'time_end',
         ],
     ];
 }

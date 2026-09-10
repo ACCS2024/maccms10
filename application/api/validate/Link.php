@@ -24,6 +24,8 @@ class Link extends Validate
 
     protected $scene = [
         'get_list' => [
+            'offset',
+            'limit',
             'id',
             'type',
             'name',

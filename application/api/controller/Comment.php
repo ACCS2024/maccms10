@@ -36,7 +36,7 @@ class Comment extends Base
             ],
             $request->param()
         );
-        $validate = validate($request->controller());
+        $validate = new \app\api\validate\Comment();
         if (!$validate->scene($request->action())->check($param)) {
             return json([
                 'code' => 1001,

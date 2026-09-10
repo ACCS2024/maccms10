@@ -54,7 +54,7 @@ class Order extends Base
 
         $param = $request->param();
 
-        $validate = validate($request->controller());
+        $validate = new \app\api\validate\Order();
         if (!$validate->scene($request->action())->check($param)) {
             return json(['code' => 1001, 'msg' => '参数错误: ' . $validate->getError()]);
         }
@@ -106,7 +106,7 @@ class Order extends Base
 
         $param = $request->param();
 
-        $validate = validate($request->controller());
+        $validate = new \app\api\validate\Order();
         if (!$validate->scene($request->action())->check($param)) {
             return json(['code' => 1001, 'msg' => '参数错误: ' . $validate->getError()]);
         }
@@ -146,7 +146,7 @@ class Order extends Base
 
         $param = $request->param();
 
-        $validate = validate($request->controller());
+        $validate = new \app\api\validate\Order();
         if (!$validate->scene($request->action())->check($param)) {
             return json(['code' => 1001, 'msg' => '参数错误: ' . $validate->getError()]);
         }
@@ -180,7 +180,7 @@ class Order extends Base
 
         $param = $request->param();
 
-        $validate = validate($request->controller());
+        $validate = new \app\api\validate\Order();
         if (!$validate->scene($request->action())->check($param)) {
             return json(['code' => 1001, 'msg' => '参数错误: ' . $validate->getError()]);
         }

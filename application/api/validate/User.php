@@ -19,7 +19,7 @@ class User extends Validate
         'phone'      => 'max:20',
         'time_start' => 'number|between:1,' . PHP_INT_MAX,
         'time_end'   => 'number|between:1,' . PHP_INT_MAX,
-        'group_id'   => 'number|1,500',
+        'group_id'   => 'number|between:1,500',
         'orderby'    => 'in:login_time,reg_time,points',
     ];
 
@@ -36,9 +36,10 @@ class User extends Validate
             'email',
             'qq',
             'phone',
-            'reg_time_start',
-            'reg_time_end',
+            'time_start',
+            'time_end',
             'group_id',
+            'orderby',
         ],
         'get_detail' => [
             'id',

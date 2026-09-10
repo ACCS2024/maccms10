@@ -19,10 +19,10 @@ class Website extends Validate
         'area'      => 'max:10',
         'lang'      => 'max:10',
         'level'      => 'number|between:1,9',
-        'start_time'      => 'number|between:1,' . PHP_INT_MAX,
-        'end_time'      => 'number|between:1,' . PHP_INT_MAX,
+        'time_start'      => 'number|between:1,' . PHP_INT_MAX,
+        'time_end'      => 'number|between:1,' . PHP_INT_MAX,
         'tag'      => 'max:20',
-        'orderby'      => 'in|id,time,time_add,score,hits,up,down,level'
+        'orderby'      => 'in:id,time,time_add,score,hits,up,down,level'
     ];
 
     protected $message = [
@@ -42,8 +42,10 @@ class Website extends Validate
             'area',
             'lang',
             'level',
-            'time',
+            'time_start',
+            'time_end',
             'tag',
+            'orderby',
         ],
         'get_detail' => [
             'website_id',

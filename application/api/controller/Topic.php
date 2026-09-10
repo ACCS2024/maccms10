@@ -32,7 +32,7 @@ class Topic extends Base
     {
         // 参数校验
         $param = $request->param();
-        $validate = validate($request->controller());
+        $validate = new \app\api\validate\Topic();
         if (!$validate->scene($request->action())->check($param)) {
             return json([
                 'code' => 1001,
@@ -95,7 +95,7 @@ class Topic extends Base
     {
         // 参数校验
         $param = $request->param();
-        $validate = validate($request->controller());
+        $validate = new \app\api\validate\Topic();
         if (!$validate->scene($request->action())->check($param)) {
             return json([
                 'code' => 1001,

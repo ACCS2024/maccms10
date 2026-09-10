@@ -43,6 +43,8 @@ class Actor extends Validate
             'blood',
             'starsign',
             'orderby',
+            'time_start',
+            'time_end',
         ],
         'get_detail' => [
             'actor_id',

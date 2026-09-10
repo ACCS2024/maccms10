@@ -49,7 +49,7 @@ class Role extends Base
         $param = $request->param();
 
         // 参数校验
-        $validate = validate($request->controller());
+        $validate = new \app\api\validate\Role();
         if (!$validate->scene($request->action())->check($param)) {
             return json([
                 'code' => 1001,
@@ -162,7 +162,7 @@ class Role extends Base
         $param = $request->param();
 
         // 参数校验
-        $validate = validate($request->controller());
+        $validate = new \app\api\validate\Role();
         if (!$validate->scene($request->action())->check($param)) {
             return json([
                 'code' => 1001,
