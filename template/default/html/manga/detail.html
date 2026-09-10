@@ -7,7 +7,7 @@
     <link rel="stylesheet" type="text/css" href="{$maccms.path_tpl}/asset/css/manga-detail.css" />
 </head>
 <body class="manga-detail-csr-body"
-    data-detail-id="{$param.id|default='0'}"
+    data-detail-id="{$obj.manga_id|default='0'}"
     data-logged-user="{$GLOBALS['user']['user_id']|default='0'}">
 {assign name="isSingleRow" value="1"}
     {include file="public/th" /}
@@ -46,7 +46,7 @@
                     <div class="content-detail-btns content-detail-btns--manga">
                         <a class="cdb-primary cdb-primary--icon js-manga-read-btn" href="#"><span class="cdb-btn-ico cdb-btn-ico--read" aria-hidden="true"></span><span data-lang="manga_read_now">立即阅读</span></a>
                         {if condition="$GLOBALS['config']['user']['status'] eq 1"}
-                        <a class="cdb-fav mac_ulog js-manga-fav cdb-fav--icon" data-type="2" data-mid="{$maccms.mid}" data-id="{$param.id|default='0'}" data-uid="" href="javascript:;"><span class="cdb-btn-ico cdb-btn-ico--fav" aria-hidden="true"></span><span class="js-manga-fav-label" data-lang="art_add_fav">加入收藏</span></a>
+                        <a class="cdb-fav mac_ulog js-manga-fav cdb-fav--icon" data-type="2" data-mid="{$maccms.mid}" data-id="{$obj.manga_id|default='0'}" data-uid="" href="javascript:;"><span class="cdb-btn-ico cdb-btn-ico--fav" aria-hidden="true"></span><span class="js-manga-fav-label" data-lang="art_add_fav">加入收藏</span></a>
                         {else/}
                         <span class="cdb-fav cdb-fav--disabled cdb-fav--icon"><span class="cdb-btn-ico cdb-btn-ico--fav" aria-hidden="true"></span><span data-lang="art_add_fav">加入收藏</span></span>
                         {/if}
@@ -107,7 +107,7 @@
                 <h3 class="title" data-lang="string_play_pl">评论</h3>
             </div>
             <div class="mac_comment comm_list comm_list_box"
-                data-id="{$param.id|default='0'}"
+                data-id="{$obj.manga_id|default='0'}"
                 data-mid="{$maccms.mid}"
                 data-comment-login="{$comment.login|default='0'}"
                 data-comment-verify="{$comment.verify|default='0'}"></div>
@@ -132,7 +132,7 @@
         {/if}
 
         <div class="content-detail-guess"
-            data-manga-id="{$param.id|default='0'}"
+            data-manga-id="{$obj.manga_id|default='0'}"
             data-type-id="0"
             data-guess-url="{:url('ajax/guess_manga')}">
             <div class="pannel clearfix content-detail-panel">

@@ -551,6 +551,18 @@ class Ajax extends Base
             }
             return json($result);
         }
+        if ($videoMid === 12) {
+            $id = \app\common\util\ContentResource::positiveInt($raw['id'] ?? null);
+            if ($id === null || \app\common\util\ContentResource::positiveInt($raw['type'] ?? null) !== 1
+                || !is_string($raw['pwd'] ?? null)) {
+                return json(['code'=>1001, 'msg'=>lang('param_err')]);
+            }
+            $data = \app\common\util\MangaResourceReader::find(['manga_id'=>$id]);
+            if ($data['code'] !== 1) {
+                return json(['code'=>1031, 'msg'=>$data['msg']]);
+            }
+            return json(\app\common\util\ContentPassword::verifyManga($data['info'], $raw['pwd']));
+        }
         if ($videoMid !== 2 || \app\common\util\ContentResource::positiveInt($raw['type'] ?? null) !== 1
             || \app\common\util\ContentResource::positiveInt($raw['id'] ?? null) === null || !is_string($raw['pwd'] ?? null)) {
             return json(['code'=>1001, 'msg'=>lang('param_err')]);

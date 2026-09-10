@@ -579,45 +579,134 @@ class All
 
     protected function label_manga_detail($info=[],$view=0,$fullPointsPopedom=false)
     {
+        $raw = array_merge(request()->param(), $_REQUEST);
+        if (!\app\common\util\ContentResource::scalarParameters($raw)) {
+            $this->page_error(lang('param_err'));
+        }
+        $coordinates = [];
+        foreach (['sid','nid'] as $field) {
+            $coordinates[$field] = array_key_exists($field, $raw)
+                ? \app\common\util\ContentResource::positiveInt($raw[$field]) : 1;
+            if ($coordinates[$field] === null) {
+                $this->page_error(lang('param_err'));
+            }
+        }
+        if (empty($info) && (empty($GLOBALS['config']['rewrite']['manga_id'])
+            ? \app\common\util\ContentResource::positiveInt($raw['id'] ?? null) === null
+            : !is_string($raw['id'] ?? null) || $raw['id'] === '')) {
+            $this->page_error(lang('param_err'));
+        }
         $param = mac_param_url();
-        $this->assign('param',$param);
-
-        if(empty($info)) {
-            $res = mac_label_manga_detail($param);
-            if ($res['code'] > 1) {
-                $this->page_error($res['msg']);;
+        if (empty($info)) {
+            $res = mac_label_manga_detail(['id'=>$raw['id']], 0);
+            if ($res['code'] !== 1) {
+                $this->page_error($res['msg']);
             }
             $info = $res['info'];
         }
-        if(empty($info['manga_tpl'])){
-            $info['manga_tpl'] = $info['type']['type_tpl_detail'];
+        if ((int)($info['manga_status'] ?? 0) !== 1 || (int)($info['manga_recycle_time'] ?? 0) !== 0) {
+            $this->page_error(lang('obtain_err'));
         }
-
-        if($view <2) {
-            if ($fullPointsPopedom) {
-                $popedom = $this->check_user_popedom($info['type_id'], 3, $param, 'manga_play', $info);
-                $this->assign('popedom',$popedom);
-
-                if($popedom['code']>1){
-                    $this->assign('obj',$info);
-
-                    // 不再跳转确认页，直接进入阅读页，由模板内的权限引导进行购买/充值
-                }
-            } else {
-                $popedom = $this->check_user_popedom($info['type_id'], 2);
-                if($popedom['code']>1){
-                    echo $this->error($popedom['msg'], mac_url('user/index') );
-                    exit;
-                }
+        if ($view < 2 && !$fullPointsPopedom) {
+            $permission = $this->check_user_popedom((int)$info['type_id'], 2, [], 'manga_catalog');
+            if ($permission['code'] > 1) {
+                echo $this->error($permission['msg'], mac_url('user/index'));
+                exit;
             }
         }
-
-        $this->assign('obj',$info);
+        $context = \app\common\util\ContentResource::mangaContext($info, $coordinates);
+        if ($context['code'] !== 1 && $fullPointsPopedom) {
+            $this->page_error($context['msg']);
+        }
+        $publicOnly = !$fullPointsPopedom || $view >= 2;
+        $state = \app\common\util\ContentPassword::mangaState($info);
+        $access = $publicOnly ? ['code'=>3001, 'msg'=>'请进入阅读页查看图片', 'can_access'=>false,
+            'password_required'=>!$state['verified'], 'password_verified'=>$state['verified'],
+            'password_help_url'=>$state['help_url'], 'points_hint'=>0, 'points'=>0,
+            'purchase_supported'=>false, 'purchase_sid'=>0, 'purchase_nid'=>0, 'trysee'=>0, 'confirm'=>0]
+            : $this->check_manga_resource_access($info, $coordinates);
+        $param['id'] = (int)$info['manga_id'];
+        $param['sid'] = $coordinates['sid'];
+        $param['nid'] = $coordinates['nid'];
+        $this->assign('param', $param);
+        $this->assign('popedom', $access);
+        $this->assign('manga_access', $access);
+        $this->assign('manga_images', !$publicOnly && $access['can_access'] ? $context['images'] : []);
+        $this->assign('manga_current', ['name'=>(string)($context['current']['name'] ?? ''),
+            'sid'=>$coordinates['sid'], 'nid'=>$coordinates['nid'], 'total'=>$context['episode_total'] ?? 0,
+            'previous_nid'=>$context['previous_nid'] ?? null, 'next_nid'=>$context['next_nid'] ?? null]);
+        $this->assign('obj', \app\common\util\ContentResource::mangaTemplate($info));
         $this->assign('comment_mid', 12);
         $this->assign('comment_rid', $info['manga_id']);
         $this->label_comment();
-
         return $info;
+    }
+
+    /** Internal permission result shared with the transaction-owned Manga purchase quote. */
+    protected function check_manga_resource_access(array $info, array $param): array
+    {
+        $context = \app\common\util\ContentResource::mangaContext($info, $param);
+        if ($context['code'] !== 1) {
+            return $context + ['can_access'=>false, 'password_required'=>false, 'password_verified'=>false,
+                'password_help_url'=>'', 'trysee'=>0, 'confirm'=>0, 'purchase_supported'=>false,
+                'purchase_sid'=>0, 'purchase_nid'=>0, 'points_hint'=>0];
+        }
+        $permission = $this->check_user_popedom((int)$info['type_id'], 3,
+            ['id'=>$context['id'], 'sid'=>$context['sid'], 'nid'=>$context['nid']], 'manga_play', $info);
+        $password = \app\common\util\ContentPassword::mangaState($info);
+        $allowed = (int)$permission['code'] === 1 && empty($permission['trysee']) && $password['verified'];
+        if (!$context['purchase_supported'] && (int)$permission['code'] === 3003) {
+            $permission['points'] = 0;
+            $permission['confirm'] = 0;
+            $permission['msg'] = '本话暂不支持单独购买，请升级会员阅读';
+        }
+        if (!$password['verified']) {
+            $permission['code'] = 6001;
+            $permission['msg'] = '需要验证漫画访问密码';
+            $permission['points'] = 0;
+            $permission['confirm'] = 0;
+            $permission['trysee'] = 0;
+        }
+        return $permission + ['can_access'=>$allowed, 'password_required'=>!$password['verified'],
+            'password_verified'=>$password['verified'], 'password_help_url'=>$password['help_url'],
+            'points_hint'=>$context['points'], 'purchase_supported'=>$context['purchase_supported'],
+            'purchase_sid'=>$context['purchase_sid'], 'purchase_nid'=>$context['purchase_nid'],
+            'trysee'=>0, 'confirm'=>0];
+    }
+
+    private function mangaPermissionGroups(array $groupIds, int $typeId): array
+    {
+        if (($GLOBALS['config']['user']['status'] ?? 1) == 0) {
+            return [];
+        }
+        if ($groupIds === [] || count($groupIds) > 32) {
+            return [];
+        }
+        foreach ($groupIds as $id) {
+            if (\app\common\util\ContentResource::positiveInt($id) === null || (int)$id > 32767) {
+                return [];
+            }
+        }
+        $rows = \think\facade\Db::name('Group')->master()->whereIn('group_id', $groupIds)
+            ->where('group_status', 1)->select()->toArray();
+        $groups = [];
+        foreach ($rows as $row) {
+            $permissions = is_string($row['group_popedom'] ?? null) ? json_decode($row['group_popedom'], true) : null;
+            if (!is_array($permissions) || !is_string($row['group_type'] ?? null)) {
+                return [];
+            }
+            // This decision only consumes the current category; do not retain 32 complete permission trees.
+            $row['group_popedom'] = array_key_exists($typeId, $permissions) ? [$typeId=>$permissions[$typeId]] : [];
+            unset($permissions);
+            $groups[$row['group_id']] = $row;
+        }
+        return $groups;
+    }
+
+    private function mangaPurchaseInfo(array $where): array
+    {
+        $row = \think\facade\Db::name('Ulog')->master()->where($where)->find();
+        return $row ? ['code'=>1, 'info'=>$row] : ['code'=>1002, 'msg'=>lang('obtain_err')];
     }
 
     protected function label_vod_detail($info=[],$view=0)
@@ -1010,7 +1099,26 @@ class All
     {
         $user = $GLOBALS['user'];
         $group_ids = explode(',', $user['group_id']);
-        $group_list = (new \app\common\model\Group())->getCache();
+        $mangaPolicy = in_array($flag, ['manga_play','manga_catalog'], true);
+        if ($mangaPolicy) {
+            $normalized = [];
+            foreach ($group_ids as $groupId) {
+                $id = \app\common\util\ContentResource::positiveInt($groupId);
+                if ($id === null || $id > 32767) {
+                    if (($GLOBALS['config']['user']['status'] ?? 1) != 0) {
+                        return ['code'=>3001, 'msg'=>lang('controller/no_popedom'), 'trysee'=>0];
+                    }
+                    continue;
+                }
+                $normalized[$id] = $id;
+            }
+            $group_ids = array_values($normalized);
+        }
+        $group_list = $mangaPolicy ? $this->mangaPermissionGroups($group_ids, (int)$type_id) : (new \app\common\model\Group())->getCache();
+        if ($mangaPolicy && ($GLOBALS['config']['user']['status'] ?? 1) != 0
+            && count($group_list) !== count(array_unique($group_ids))) {
+            return ['code'=>3001, 'msg'=>lang('controller/no_popedom'), 'trysee'=>0];
+        }
 
         $res = false;
         $read_popedoms = [$popedom];
@@ -1093,7 +1201,7 @@ class All
                             $where['ulog_sid'] = 0;
                             $where['ulog_nid'] = 0;
                         }
-                        $ulogRes = (new \app\common\model\Ulog())->infoData($where);
+                        $ulogRes = $pre === 'manga' ? $this->mangaPurchaseInfo($where) : (new \app\common\model\Ulog())->infoData($where);
                         if ($ulogRes['code'] == 1) {
                             return ['code' => 1, 'msg' => lang('controller/popedom_ok')];
                         }
@@ -1117,7 +1225,7 @@ class All
                     $where['ulog_sid'] = 0;
                     $where['ulog_nid'] = 0;
                 }
-                $res = (new \app\common\model\Ulog())->infoData($where);
+                $res = $pre === 'manga' ? $this->mangaPurchaseInfo($where) : (new \app\common\model\Ulog())->infoData($where);
 
                 if ($res['code'] > 1) {
                     return ['code' => 3003, 'msg' => lang('controller/pay_play_points', [$points]), 'points' => $points, 'confirm' => 1, 'trysee' => 0];

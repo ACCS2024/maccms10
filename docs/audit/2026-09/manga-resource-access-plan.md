@@ -1,6 +1,8 @@
-# Manga 资源授权：未修复证据与后续分批计划
+# Manga 资源授权：诊断证据与分批状态
 
-日期：2026-09-10。范围仅当前源码；不读取 Git 历史、站点秘密配置或业务数据。本文是**未完成的修复计划**，不是漫画授权审计通过报告。此前 Vod、Art 的授权修复不能覆盖本模块。
+日期：2026-09-10。范围仅当前源码；不读取 Git 历史、站点秘密配置或业务数据。本文保留最初诊断证据，并记录分批状态；不是漫画购买全链审计通过报告。此前 Vod、Art 的授权修复不能覆盖本模块。
+
+当前状态：模型解析兼容已提交 `7967fe99`；读取、密码、主库缓存边界和模板授权实现与验收见 [漫画资源读取报告](manga-resource-authorization.md)，等待独立提交。锁内购买为下一依赖批次，不能由读取回归代替。下表行号和触发描述保留诊断基线，不能误当作修复后仍存在的现象。
 
 ## 验证方法与结论
 
@@ -38,26 +40,28 @@ PHP 8.3.33 / 8.4.25 各完成 46 项真实 MySQL/模板证据检查，实际默�
 
 实际 DDL：`manga_id` 为 UINT32；`manga_points`/`manga_points_detail` 为 SMALLINT UNSIGNED（0..65535）；`manga_pwd` VARCHAR(10)，只有一个漫画密码；章节是 `manga_chapter_from` 与 `manga_chapter_url`。Ulog 的 sid 为 TINYINT UNSIGNED（0..255），nid/points 为 SMALLINT UNSIGNED（0..65535）。原址按源 `$$$`、章节 `#`、标题/地址 `$`、图片 `,` 分隔。
 
-拟新增 `ContentResource::mangaContext(array $freshRow, array $parameters): array`，只解析调用方刚读取的行，不自行缓存、不读取身份、不写数据库。输入 sid/nid 仅正 UINT32 字符串或整数；缺省 1/1 保留现有规范链接合同，非法类型受控 1001，缺少该实际章受控 1002，不把任意非法/缺章请求重定向成另一个付费章。
+读取批已实现 `ContentResource::mangaContext(array $freshRow, array $parameters): array`，只解析调用方刚读取的行，不自行缓存、不读取身份、不写数据库。输入 sid/nid 仅正 UINT32 字符串或整数；缺省 1/1 保留现有规范链接合同，非法类型受控 1001，缺少该实际章受控 1002，不把任意非法/缺章请求重定向成另一个付费章。
 
 成功返回内部 `id,sid,nid,current,source,previous_nid,next_nid,points,whole,ulog_mid=12,ulog_type=1,ulog_rid,ulog_sid,ulog_nid,purchase_supported,purchase_sid,purchase_nid`。原数组键保留；previous/next 从真实可读章键计算，不用 url_count 当最后章编号。价格精确解析且允许 0；单章优先正 `manga_points_detail`，否则保持现有回退 `manga_points`；整条取 `manga_points`。
 
-`current/source` 含原始图片，只限内部授权使用，严禁直接序列化。空图片章可显示“暂无图片”，但不能收费。sid>255 或 nid>65535 时保留真实阅读坐标，单章购买不支持且按钮不得触发；免费/VIP读取无需削短目录。整条模式选择一个真实、非空、可存储的购买入口坐标，再由服务端形成 0/0 凭证；如果没有可表示的实际入口，应明确不可购买，不截断。无需运行时扩 DDL。
+`current/source` 含原始图片，只限内部授权使用，严禁直接序列化。空图片章可显示“暂无图片”，但不能收费。读取批最终设置全目录 20000 章节槽上限，因此 nid>65535 的早期计划场景不可达；超预算整目录受控拒绝并禁止收费。旧扩展目录 sid=256 保留真实阅读坐标，单章购买不支持且按钮不得触发；免费/VIP读取不截断该实际源。整条模式选择一个真实、非空、可存储的购买入口坐标，再由服务端形成 0/0 凭证；如果没有可表示的实际入口，应明确不可购买，不截断。无需运行时扩 DDL。
 
 推荐读取响应继续保持 `code=1,info`、现有 can_read/deny_code/deny_msg/points_hint/manga_id/name/sid/nid/episode_name/episode_total/images；新增 `previous_nid,next_nid,previous_link,next_link,password_required,password_verified,password_help_url,purchase_supported,purchase_sid,purchase_nid`。拒绝 images=[]；只有**当前获准章**出现图片；目录保留实际 sid/nid/标题/站内链接，原址/服务器/真实密码从所有模板变量与 JSON 分支去除。
 
-密码使用独立 Manga scope（拟 `mid12/type1/id`）、游客 Session grant，并绑定当前密码指纹以使修改密码后的旧 grant 失效。密码、会员/分类、积分三个条件都满足才返回图片。无试读片段实现时不允许以 trysee 标志交付全章图片。详情继续提供公开简介和目录；其是否另需组权限按既有前台/API合同分别保持，不把目录当付费图片。
+密码使用独立 Manga scope（`mid12/type1/id`）、游客 Session grant，并绑定当前密码指纹以使修改密码后的旧 grant 失效。密码、会员/分类、积分三个条件都满足才返回图片。无试读片段实现时不允许以 trysee 标志交付全章图片。详情继续提供公开简介和目录；其是否另需组权限按既有前台/API合同分别保持，不把目录当付费图片。
 
 ## 最小分批与验收
 
-1. **模型解析兼容批**：只改 Manga::infoData 可选字段默认值、mac_manga_list 空值/分组补齐。实际原始 DDL 不新增列；正常源/章键、空源、缺少 server/note、合法多源、分组数量不一致、空章节原序号有回归。API 请求参数、密码/付费/模板均留给下一批。该批只能声明可用性修复；上线需与紧接的授权批协调，因为原 500 被解除后密码旁路仍在。
-2. **完整 Manga 读取授权批**：共享工具只新增 Manga 方法；Fresh 状态/实际坐标→独立密码/组/积分→当前图片 DTO。接 API、前台 detail/play、Ajax pwd、默认模板/目录/JS、缺模板时独立本地兜底。模型 cache 不参与资源授权；递归拒绝、当前章独占、密码变更、重写、非连续章、默认坐标、VIP/普通/游客、whole/单章、超存储范围、有效 URL/属性/JS 输出、真实默认模板和表单 token→POST→回读均验证。
-3. **Manga 锁内购买批**：后续专组接 fresh mangaContext 与服务端可信用户，在用户锁之后锁资源/组并复核章节、价格、密码/权限和购买范围；不存在/空/下架/回收/密码未过/无需收费不得扣款。沿用现有幂等凭证、精确扣费/账本/奖励同事务，新增并发涨价/下架/双购买回归。此批完成前不得声称漫画付费闭环。
+1. **模型解析兼容批（已提交 `7967fe99`）**：只改 Manga::infoData 可选字段默认值、mac_manga_list 空值/分组补齐。实际原始 DDL 不新增列；正常源/章键、空源、缺少 server/note、合法多源、分组数量不一致、空章节原序号有回归。API 请求参数、密码/付费/模板均留给下一批。该批只能声明可用性修复；上线需与紧接的授权批协调，因为原 500 被解除后密码旁路仍在。
+2. **完整 Manga 读取授权批（实现验收完成，待独立提交）**：共享工具只新增 Manga 方法；Fresh 状态/实际坐标→独立密码/组/积分→当前图片 DTO。接 API、前台 detail/play、Ajax pwd、默认模板/目录/JS、缺模板时独立本地兜底。模型 cache 不参与资源授权；递归拒绝、当前章独占、密码变更、重写、非连续章、默认坐标、VIP/普通/游客、whole/单章、超存储范围、有效 URL/属性/JS 输出、真实默认模板和表单 token→POST→回读均验证。
+3. **Manga 锁内购买批（独立依赖批次）**：后续专组接 fresh mangaContext 与服务端可信用户，在用户锁之后锁资源/组并复核章节、价格、密码/权限和购买范围；不存在/空/下架/回收/密码未过/无需收费不得扣款。沿用现有幂等凭证、精确扣费/账本/奖励同事务，新增并发涨价/下架/双购买回归。此批完成前不得声称漫画付费闭环。
 
 ## 静态与未定业务语义
 
-`mac_url` 有漫画 detail view2、play view2/3 静态 URL 分支，但实际 `Make::info` 只处理 Art 与 Vod，未找到 Manga 生成调用。`label_manga_detail(view>=2)` 跳过检查是潜在危险接口；没有现存调用证据时不能声称“实际漫画静态文件已经复现泄漏”。后续读取批可保证目录不含原址；新增漫画静态生成能力应独立设计成安全动态入口壳，不能直接写鉴权后的图片。已有站点 HTML 不能自动删除。
+`mac_url` 有漫画 detail view2、play view2/3 静态 URL 分支，但实际 `Make::info` 只处理 Art 与 Vod，未找到 Manga 生成调用。`label_manga_detail(view>=2)` 跳过检查是潜在危险接口；没有现存调用证据时不能声称“实际漫画静态文件已经复现泄漏”。当前读取批已保证目录不含原址且 `view>=2` 不输出授权图片；新增漫画静态生成能力应独立设计成安全动态入口壳，不能直接写鉴权后的图片。已有站点 HTML 不能自动删除。
 
 公共页面缓存资格已排除 Manga detail/play/get_chapter，PHP 动态响应已有 private/no-store；保留此策略。根此前记录的“不同对象静态 path 缺少唯一标识导致文件碰撞”仍是全站配置风险，不纳入本次漫画解析修复。
 
 `manga_is_vip`、`manga_age_rating`、`manga_lock` 在实际表有字段，但未找到相应阅读策略；当前明确的付费/分类约束来自 points 和组权限。不能单凭字段名称发明新的访问规则，须独立确认产品语义。RecycleBinTrait 运行时 ALTER 的全站迁移治理待办继续引用搜索/公共列表报告，本组不修改共享 trait。
+
+最终解析预算及实际内存证据以读取报告为准：原址 8MiB、简介 1MiB、每个源字段 4KiB、源槽 256、全目录章节槽 20000、单章图片槽 1024、单地址 8192 字节；先检查再展开，不静默截断。主库权限组/凭证及 schema 检查也归读取批；默认表单 JS 的受控 DOM 回归与购买批 Chromium 回归分别记录，不混称同一浏览器链已全部验证。

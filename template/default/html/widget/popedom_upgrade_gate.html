@@ -19,11 +19,14 @@ elseif($__buy_mid === 2){
 }
 elseif($__buy_mid === 12){
 	$__buy_id = intval($obj['manga_id'] ?? 0);
-	$__buy_sid = intval($param['sid'] ?? 1);
-	$__buy_nid = intval($param['nid'] ?? 1);
+	$__buy_sid = intval($manga_access['purchase_sid'] ?? 0);
+	$__buy_nid = intval($manga_access['purchase_nid'] ?? 0);
 	$__buy_type = 1;
 }
 $__buy_enabled = $__buy_id > 0 ? 1 : 0;
+if($__buy_mid === 12 && (empty($manga_access['purchase_supported']) || !empty($manga_access['password_required']))){
+	$__buy_enabled = 0;
+}
 $__need_points = intval($popedom['points'] ?? 0);
 $__show_confirm_buy = ($__buy_enabled === 1 && $__need_points > 0) ? 1 : 0;
 {/php}

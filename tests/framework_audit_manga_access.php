@@ -1,5 +1,5 @@
 <?php
-/** Real installation DDL and ORM/API coverage for Manga chapter parser compatibility only. */
+/** Real installation DDL, writer/replica and template coverage for the Manga resource boundary. */
 declare(strict_types=1);
 namespace app\common\model { class HelpCfg {public static function get($key,$default=null){return $default;}} class SeoAiResult { public function getByObject(...$args){return [];} } }
 namespace app\common\controller {
@@ -17,6 +17,7 @@ require __DIR__.'/fixtures/security_audit_test_helpers.php';
 use app\common\util\ContentResource;
 use app\common\util\ContentPassword;
 use app\common\util\JwtService;
+use app\common\util\MangaResourceReader;
 use think\facade\Db;
 function config($key,$default=null){return think\facade\Config::get($key,$default);}
 function lang($key,...$args){return $key;}
@@ -27,7 +28,7 @@ function url($model,$params=[]){return '/'.basename($model).'/'.($params['id']??
 function json($value){return think\Response::create($value,'json');}
 function cookie($name,...$args){$c=think\Container::getInstance()->make('cookie');if($args===[])return $c->get($name);if($args[0]===null)return $c->delete($name);return $c->set($name,(string)$args[0],$args[1]??null);}
 function session($name,...$args){$s=think\Container::getInstance()->make('session');if($args===[])return $s->get($name);if($args[0]===null)return $s->delete($name);return $s->set($name,$args[0]);}
-class MangaParserCache implements Psr\SimpleCache\CacheInterface {
+class MangaAccessCache implements Psr\SimpleCache\CacheInterface {
     public array $data=[];
     public function get(string $key,mixed $default=null):mixed{return $this->data[$key]??$default;}
     public function set(string $key,mixed $value,null|int|DateInterval $ttl=null):bool{$this->data[$key]=$value;return true;}
@@ -38,25 +39,25 @@ class MangaParserCache implements Psr\SimpleCache\CacheInterface {
     public function setMultiple(iterable $values,null|int|DateInterval $ttl=null):bool{foreach($values as $key=>$value)$this->set($key,$value,$ttl);return true;}
     public function deleteMultiple(iterable $keys):bool{foreach($keys as $key)$this->delete($key);return true;}
 }
-class MangaParserPage extends app\index\controller\Manga {
+class MangaAccessPage extends app\index\controller\Manga {
     public array $assigned=[];
     public function __construct(){}
     protected function assign($name,$value=''):void{if(is_array($name))$this->assigned=array_merge($this->assigned,$name);else $this->assigned[$name]=$value;}
     protected function label_fetch($tpl,$loadcache=1,$type='html'){return $tpl;}
     protected function page_error($msg=''){throw new RuntimeException('Page denied: '.$msg);}
 }
-define('MAC_PAGE_SP','-');define('IN_FILE','api.php');define('ENTRANCE','api');define('MAC_PLAYER_SORT','1');define('MAC_PATH','/');
+define('MAC_PAGE_SP','-');define('IN_FILE','api.php');define('ENTRANCE','api');define('MAC_PLAYER_SORT','1');define('MAC_PATH',getenv('MANGA_AUDIT_PREFIX') ?: '/');
 $socket=getenv('DATABASE_AUDIT_MYSQL_SOCKET');$database=getenv('DATABASE_AUDIT_DATABASE');
 if($socket!=='/audit/mysql.sock'||!is_string($database)||!preg_match('/^maccms_audit_backup_[a-f0-9]+$/D',$database))throw new RuntimeException('Dedicated MySQL fixture required');
-$temp=audit_temp_dir('manga-parser');mkdir($temp.'/site');define('ROOT_PATH',$temp.'/site/');define('APP_PATH',dirname(__DIR__).'/application/');$app=new think\App($temp.'/app');
+$temp=audit_temp_dir('manga-access');mkdir($temp.'/site');define('ROOT_PATH',$temp.'/site/');define('APP_PATH',dirname(__DIR__).'/application/');$app=new think\App($temp.'/app');
 $cfg=['default'=>'fixture','auto_timestamp'=>false,'connections'=>['fixture'=>[
     'type'=>'mysql','dsn'=>'mysql:unix_socket='.$socket.';dbname='.$database.';charset=utf8mb4','database'=>$database,
-    'username'=>'root','password'=>getenv('DATABASE_AUDIT_PASSWORD'),'prefix'=>'audit_mangaparser_','charset'=>'utf8mb4','trigger_sql'=>true,'fields_cache'=>false,
+    'username'=>'root','password'=>getenv('DATABASE_AUDIT_PASSWORD'),'prefix'=>'audit_mangaaccess_','charset'=>'utf8mb4','trigger_sql'=>true,'fields_cache'=>false,
 ]]];
 $app->config->set($cfg,'database');$manager=new think\DbManager();$manager->setConfig($cfg);$app->instance('think\\DbManager',$manager);
 $app->config->set(['comment'=>['status'=>0,'login'=>0,'verify'=>0]],'maccms');
 $app->config->set(['type'=>'file','name'=>'resource_session','path'=>$temp.'/sessions','expire'=>3600],'session');
-$cache=new MangaParserCache();$app->instance('cache',$cache);
+$cache=new MangaAccessCache();$app->instance('cache',$cache);
 $GLOBALS['config']=['api'=>['publicapi'=>['status'=>1,'charge'=>0]],'site'=>['site_status'=>1],'upload'=>['protocol'=>'https','mode'=>'local','img_key'=>''],'app'=>['cache_flag'=>'resource_fixture','cache_core'=>0,'count_cache_sec'=>0,'encrypt'=>0,'copyright_status'=>0,'ajax_page'=>1,
     'api_jwt_enabled'=>'1','api_jwt_secret'=>str_repeat('synthetic-key-',4),'api_jwt_iss'=>'vod-resource-audit'],
     'user'=>['status'=>1,'vod_points_type'=>'0','art_points_type'=>'0','manga_points_type'=>'0','trysee'=>2],'rewrite'=>['vod_id'=>0,'art_id'=>0,'manga_id'=>0,'type_id'=>0,'status'=>1,'suffix_hide'=>0,'encode_len'=>6,'encode_key'=>'fixture-key']];
@@ -81,16 +82,18 @@ function mangaApi(string $action,array $parameters,int $uid=0,array $state=[],?s
     catch (think\exception\HttpResponseException $error) { $response=$error->getResponse(); }
     return json_decode($response->getContent(),true,512,JSON_THROW_ON_ERROR);
 }
-$sqlTrace=[];Db::listen(function($sql)use(&$sqlTrace){$sqlTrace[]=$sql;});
+$sqlTrace=[];Db::listen(function($sql)use(&$sqlTrace){$sqlTrace[]=substr($sql,0,1000);});
 
 
 $tables=['manga','user','ulog','type','group','plog'];
 try {
     $ddl=file_get_contents(dirname(__DIR__).'/application/install/sql/install.sql');
-    foreach($tables as $table){preg_match('/CREATE TABLE `mac_'.preg_quote($table,'/').'` \(.*?\) ENGINE=[^;]+;/s',$ddl,$m);check(isset($m[0]),'Install DDL has '.$table);Db::execute(str_replace('`mac_'.$table.'`','`audit_mangaparser_'.$table.'`',$m[0]));}
+    foreach($tables as $table){preg_match('/CREATE TABLE `mac_'.preg_quote($table,'/').'` \(.*?\) ENGINE=[^;]+;/s',$ddl,$m);check(isset($m[0]),'Install DDL has '.$table);Db::execute(str_replace('`mac_'.$table.'`','`audit_mangaaccess_'.$table.'`',$m[0]));}
     foreach([1=>'2',2=>'3',3=>'4',4=>'2,5'] as $id=>$group)Db::name('user')->insert(['user_id'=>$id,'user_name'=>'member-'.$id,'user_random'=>md5('fixture-'.$id),'user_status'=>1,'group_id'=>$group,'user_points'=>100,'user_end_time'=>time()+3600]);
     foreach($groups as $id=>$group){Db::name('group')->insert(['group_id'=>$id,'group_name'=>$group['group_name'],'group_status'=>1,'group_type'=>$group['group_type'],'group_popedom'=>json_encode($group['group_popedom'],JSON_THROW_ON_ERROR)]);}
-    require __DIR__.'/fixtures/manga_parser_cases.php';
-    echo 'framework_audit_manga_parser: '.$checks.' checks passed on PHP '.PHP_VERSION.' / MySQL'.PHP_EOL;
-} finally {foreach($tables as $table)Db::execute('DROP TABLE IF EXISTS audit_mangaparser_'.$table);audit_remove_temp($temp);}
+    require __DIR__.'/fixtures/manga_access_cases.php';
+    require __DIR__.'/fixtures/manga_access_templates.php';
+    require __DIR__.'/fixtures/manga_access_limits.php';
+    echo 'framework_audit_manga_access: '.$checks.' checks passed on PHP '.PHP_VERSION.' / MySQL'.PHP_EOL;
+} finally {foreach($tables as $table)Db::execute('DROP TABLE IF EXISTS audit_mangaaccess_'.$table);audit_remove_temp($temp);}
 }

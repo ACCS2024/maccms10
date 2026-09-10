@@ -1,0 +1,6 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{$obj.manga_name|htmlspecialchars}</title></head>
+<body><main><h1>{$obj.manga_name|htmlspecialchars}</h1><p>{$obj.manga_blurb|htmlspecialchars}</p>
+<nav aria-label="漫画目录">{volist name="obj.manga_page_list" id="source"}<p>{$source.from|htmlspecialchars}</p>
+{volist name="source.urls" id="chapter"}<a href="{$chapter.play_link|htmlspecialchars}">第 {$chapter.nid} 话 {$chapter.name|htmlspecialchars}</a> {/volist}{/volist}</nav>
+</main></body></html>

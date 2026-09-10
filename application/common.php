@@ -3849,30 +3849,21 @@ function mac_url_manga_detail($info)
 }
 function mac_url_manga_play($info,$param=[])
 {
-    if($param=='first'){
-        if(empty($info['manga_page_list']) || !is_array($info['manga_page_list'])){
-            return '';
+    if ($param === 'first') {
+        foreach (\app\common\util\ContentResource::mangaPages($info) as $sid=>$source) {
+            foreach (is_array($source['urls'] ?? null) ? $source['urls'] : [] as $nid=>$chapter) {
+                if (\app\common\util\ContentResource::positiveInt($sid) !== null
+                    && \app\common\util\ContentResource::positiveInt($nid) !== null
+                    && is_array($chapter) && \app\common\util\ContentResource::mangaImages($chapter['url'] ?? null) !== []) {
+                    return \app\common\util\ContentResource::mangaReadLink($info, (int)$sid, (int)$nid);
+                }
+            }
         }
-        $sid = intval(key($info['manga_page_list']));
-        if(empty($info['manga_page_list'][$sid]['urls']) || !is_array($info['manga_page_list'][$sid]['urls'])){
-            return '';
-        }
-        $nid = intval(key($info['manga_page_list'][$sid]['urls']));
-        if($sid==0 || $nid==0){
-            return '';
-        }
-        $param = [];
-        $param['sid'] = $sid;
-        $param['nid'] = $nid;
+        return '';
     }
-    if(intval($param['sid'] ?? 0)<1){
-        $param['sid'] = 1;
-    }
-    if(intval($param['nid'] ?? 0)<1){
-        $param['nid'] = 1;
-    }
-
-    return mac_url('manga/play',['sid'=>$param['sid'],'nid'=>$param['nid']],$info);
+    $sid = \app\common\util\ContentResource::positiveInt($param['sid'] ?? null, 1);
+    $nid = \app\common\util\ContentResource::positiveInt($param['nid'] ?? null, 1);
+    return $sid !== null && $nid !== null ? \app\common\util\ContentResource::mangaReadLink($info, $sid, $nid) : '';
 }
 function mac_url_manga_down($info,$param=[])
 {
@@ -4053,7 +4044,7 @@ function mac_label_art_detail($param, $cache = 1)
 
     return $res;
 }
-function mac_label_manga_detail($param)
+function mac_label_manga_detail($param, $cache = 0)
 {
     $where = [];
     if($GLOBALS['config']['rewrite']['manga_id']==1){
@@ -4065,8 +4056,8 @@ function mac_label_manga_detail($param)
         }
         $where['manga_id'] = $param['id'];
     }
-    $where['manga_status'] = 1;
-    $res = (new \app\common\model\Manga())->infoData($where,'*',1);
+    // $cache remains accepted for old callers; resource state always comes from the writer.
+    $res = \app\common\util\MangaResourceReader::find($where);
     if($res['code'] != 1){
         return $res;
     }

@@ -223,4 +223,246 @@ final class ContentResource
         $row['art_page_total'] = count($row['art_page_list']);
         return $row;
     }
+
+    public const MANGA_MAX_CHAPTER_BYTES = 8388608;
+    public const MANGA_MAX_DESCRIPTION_BYTES = 1048576;
+    public const MANGA_MAX_SOURCE_BYTES = 4096;
+    public const MANGA_MAX_SOURCES = 256;
+    public const MANGA_MAX_CHAPTERS = 20000;
+    public const MANGA_MAX_IMAGES = 1024;
+    public const MANGA_MAX_IMAGE_BYTES = 8192;
+
+    /** Reject over-budget catalogs as a whole; never turn a truncated catalog into a different paid chapter. */
+    public static function mangaWithinBudget(array $row): bool
+    {
+        if (is_string($row['manga_content'] ?? null) && strlen($row['manga_content']) > self::MANGA_MAX_DESCRIPTION_BYTES) {
+            return false;
+        }
+        foreach (['manga_chapter_from','manga_play_server','manga_play_note'] as $field) {
+            if (is_string($row[$field] ?? null) && strlen($row[$field]) > self::MANGA_MAX_SOURCE_BYTES) {
+                return false;
+            }
+        }
+        $from = is_string($row['manga_chapter_from'] ?? null) ? $row['manga_chapter_from'] : '';
+        if (substr_count($from, '$$$') + 1 > self::MANGA_MAX_SOURCES) {
+            return false;
+        }
+        if (array_key_exists('manga_chapter_url', $row)) {
+            $text = is_string($row['manga_chapter_url']) ? $row['manga_chapter_url'] : '';
+            if (strlen($text) > self::MANGA_MAX_CHAPTER_BYTES || substr_count($text, '$$$') + 1 > self::MANGA_MAX_SOURCES
+                || substr_count($text, '#') + substr_count($text, '$$$') + 1 > self::MANGA_MAX_CHAPTERS) {
+                return false;
+            }
+            foreach (explode('$$$', $text) as $source) {
+                foreach (explode('#', $source) as $chapter) {
+                    $parts = explode('$', $chapter, 3);
+                    if (!self::mangaImageBudget($parts[1] ?? $parts[0])) {
+                        return false;
+                    }
+                }
+            }
+            return true;
+        }
+        $sources = is_array($row['manga_page_list'] ?? null) ? $row['manga_page_list'] : [];
+        if (count($sources) > self::MANGA_MAX_SOURCES) {
+            return false;
+        }
+        $total = $bytes = 0;
+        foreach ($sources as $source) {
+            if (!is_array($source)) {
+                return false;
+            }
+            foreach (is_array($source['urls'] ?? null) ? $source['urls'] : [] as $chapter) {
+                if (++$total > self::MANGA_MAX_CHAPTERS) {
+                    return false;
+                }
+                $address = is_string($chapter['url'] ?? null) ? $chapter['url'] : '';
+                $bytes += strlen($address);
+                if ($bytes > self::MANGA_MAX_CHAPTER_BYTES || !self::mangaImageBudget($address)) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    private static function mangaImageBudget(string $text): bool
+    {
+        if (strlen($text) > self::MANGA_MAX_CHAPTER_BYTES || substr_count($text, ',') + 1 > self::MANGA_MAX_IMAGES) {
+            return false;
+        }
+        foreach (explode(',', $text) as $address) {
+            if (strlen(trim($address)) > self::MANGA_MAX_IMAGE_BYTES) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /** Resolve chapter catalogs without compressing their actual one-based source/episode keys. */
+    public static function mangaPages(array $row): array
+    {
+        if (!self::mangaWithinBudget($row)) {
+            return [];
+        }
+        if (!array_key_exists('manga_chapter_url', $row)) {
+            return is_array($row['manga_page_list'] ?? null) ? $row['manga_page_list'] : [];
+        }
+        $sources = mac_manga_list($row['manga_chapter_from'] ?? '', $row['manga_chapter_url'] ?? '',
+            $row['manga_play_server'] ?? '', $row['manga_play_note'] ?? '');
+        foreach ($sources as &$source) {
+            foreach (explode('#', $source['url']) as $index=>$text) {
+                $parts = explode('$', $text, 3);
+                if (count($parts) > 1 && $parts[1] === '' && isset($source['urls'][$index + 1])) {
+                    // An explicitly empty image address is not a title-only relative image path.
+                    $source['urls'][$index + 1]['name'] = $parts[0];
+                    $source['urls'][$index + 1]['url'] = '';
+                }
+            }
+        }
+        unset($source);
+        return $sources;
+    }
+
+    /** Images may use HTTP(S), protocol-relative URLs or local paths, including the existing image mapping. */
+    public static function mangaImages($addresses): array
+    {
+        if (!is_string($addresses) || !self::mangaImageBudget($addresses)) {
+            return [];
+        }
+        $result = [];
+        foreach (explode(',', $addresses) as $address) {
+            $address = trim($address);
+            if ($address === '') {
+                continue;
+            }
+            if (strlen($address) > 8192 || preg_match('/[\x00-\x20\x7f\\\\]/', $address)) {
+                return [];
+            }
+            if (preg_match('/^mac:/i', $address)) {
+                $scheme = strtolower((string)($GLOBALS['config']['upload']['protocol'] ?? 'http'));
+                $address = (in_array($scheme, ['http','https'], true) ? $scheme : 'http') . substr($address, 3);
+            }
+            if (preg_match('/^[a-z][a-z0-9+.-]*:/i', $address) && !preg_match('~^https?://~i', $address)) {
+                return [];
+            }
+            $address = preg_replace_callback('~^https?://~i', static fn($match) => strtolower($match[0]), $address);
+            $address = mac_url_img($address);
+            if (!is_string($address) || $address === '' || strlen($address) > 8192
+                || preg_match('/[\x00-\x20\x7f\\\\]/', $address)) {
+                return [];
+            }
+            if (str_starts_with($address, '//')) {
+                $scheme = strtolower((string)($GLOBALS['config']['upload']['protocol'] ?? 'http'));
+                $address = (in_array($scheme, ['http','https'], true) ? $scheme : 'http') . ':' . $address;
+            }
+            $parsed = parse_url($address);
+            if ($parsed === false || isset($parsed['user']) || isset($parsed['pass'])) {
+                return [];
+            }
+            if (isset($parsed['scheme'])) {
+                if (!in_array(strtolower($parsed['scheme']), ['http','https'], true) || empty($parsed['host'])) {
+                    return [];
+                }
+            } elseif (!str_starts_with($address, '/') || str_starts_with($address, '//')) {
+                return [];
+            }
+            $result[] = $address;
+        }
+        return $result;
+    }
+
+    /** Pure fresh-row quote shared by the reader and the transaction-owned purchase resolver. */
+    public static function mangaContext(array $row, array $parameters): array
+    {
+        if (!self::mangaWithinBudget($row)) {
+            return ['code'=>1002, 'msg'=>'漫画资源超过读取上限', 'purchase_supported'=>false];
+        }
+        $id = self::positiveInt($row['manga_id'] ?? null);
+        $sid = array_key_exists('sid', $parameters) ? self::positiveInt($parameters['sid']) : 1;
+        $nid = array_key_exists('nid', $parameters) ? self::positiveInt($parameters['nid']) : 1;
+        if ($id === null || $sid === null || $nid === null) {
+            return ['code'=>1001, 'msg'=>lang('param_err')];
+        }
+        if ((int)($row['manga_status'] ?? 0) !== 1 || (int)($row['manga_recycle_time'] ?? 0) !== 0) {
+            return ['code'=>1002, 'msg'=>lang('obtain_err')];
+        }
+        $sources = self::mangaPages($row);
+        $source = is_array($sources[$sid] ?? null) ? $sources[$sid] : [];
+        $current = is_array($source['urls'][$nid] ?? null) ? $source['urls'][$nid] : [];
+        if (!is_string($current['url'] ?? null)) {
+            return ['code'=>1002, 'msg'=>'该话不存在'];
+        }
+        $coordinates = [];
+        foreach ($source['urls'] as $key=>$chapter) {
+            if (self::positiveInt($key) !== null && is_array($chapter) && is_string($chapter['url'] ?? null)) {
+                $coordinates[] = (int)$key;
+            }
+        }
+        sort($coordinates, SORT_NUMERIC);
+        $position = array_search($nid, $coordinates, true);
+        $mode = PointsBalance::amount($GLOBALS['config']['user']['manga_points_type'] ?? 0, true);
+        if (!in_array($mode, [0,1], true)) {
+            return ['code'=>1002, 'msg'=>lang('obtain_err')];
+        }
+        $whole = $mode === 1;
+        $points = PointsBalance::amount($row[$whole ? 'manga_points' : 'manga_points_detail'] ?? 0, true);
+        if (!$whole && $points === 0) {
+            $points = PointsBalance::amount($row['manga_points'] ?? 0, true);
+        }
+        if ($points === null || $points > 65535) {
+            return ['code'=>1002, 'msg'=>lang('obtain_err')];
+        }
+        $images = self::mangaImages($current['url']);
+        $purchaseSid = $sid;
+        $purchaseNid = $nid;
+        $purchaseSupported = $sid <= 255 && $nid <= 65535 && $images !== [];
+        if ($whole) {
+            $purchaseSid = $purchaseNid = 0;
+            $purchaseSupported = false;
+            foreach ($sources as $sourceKey=>$group) {
+                if (self::positiveInt($sourceKey) === null || (int)$sourceKey > 255 || !is_array($group)) {
+                    continue;
+                }
+                foreach (is_array($group['urls'] ?? null) ? $group['urls'] : [] as $chapterKey=>$chapter) {
+                    if (self::positiveInt($chapterKey) !== null && (int)$chapterKey <= 65535
+                        && is_array($chapter) && self::mangaImages($chapter['url'] ?? null) !== []) {
+                        $purchaseSid = (int)$sourceKey;
+                        $purchaseNid = (int)$chapterKey;
+                        $purchaseSupported = true;
+                        break 2;
+                    }
+                }
+            }
+        }
+        return ['code'=>1, 'msg'=>'ok', 'id'=>$id, 'sid'=>$sid, 'nid'=>$nid,
+            'source'=>$source, 'current'=>$current, 'images'=>$images, 'episode_total'=>count($coordinates),
+            'previous_nid'=>$position > 0 ? $coordinates[$position - 1] : null,
+            'next_nid'=>$coordinates[$position + 1] ?? null,
+            'points'=>$points, 'whole'=>$whole, 'purchase_supported'=>$purchaseSupported,
+            'purchase_sid'=>$purchaseSid, 'purchase_nid'=>$purchaseNid,
+            'ulog_mid'=>12, 'ulog_type'=>1, 'ulog_rid'=>$id,
+            'ulog_sid'=>$whole ? 0 : $sid, 'ulog_nid'=>$whole ? 0 : $nid];
+    }
+
+    /** Fixed numeric dynamic entry: independent of detail rewrite and unsupported static-reader paths. */
+    public static function mangaReadLink(array $row, int $sid = 1, int $nid = 1): string
+    {
+        return MAC_PATH . 'index.php/manga/play?' . http_build_query(['id'=>(int)($row['manga_id'] ?? 0), 'sid'=>$sid, 'nid'=>$nid]);
+    }
+
+    /** Public templates never receive raw chapter addresses; current authorized images are assigned separately. */
+    public static function mangaTemplate(array $row): array
+    {
+        $row['manga_page_list'] = self::mangaPages($row);
+        $template = PublicContentView::detail('manga', $row);
+        $state = ContentPassword::mangaState($row);
+        $template['manga_pwd'] = $state['required'] ? 1 : 0;
+        $template['manga_pwd_url'] = $state['help_url'];
+        $template['manga_page_total'] = count($template['manga_page_list']);
+        foreach (['manga_chapter_url','manga_chapter_from','manga_play_server','manga_play_note'] as $field) {
+            $template[$field] = '';
+        }
+        return $template;
+    }
 }

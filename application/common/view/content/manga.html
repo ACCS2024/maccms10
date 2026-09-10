@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{$obj.manga_name|htmlspecialchars}</title>
+<link rel="stylesheet" href="{$maccms.path|htmlspecialchars}static/css/art-access.css">
+<script defer src="{$maccms.path|htmlspecialchars}static/js/manga-access.js"></script></head>
+<body><main class="art-access"><h1>{$obj.manga_name|htmlspecialchars}</h1><p>{$manga_current.name|htmlspecialchars}</p>
+<p><a href="{:htmlspecialchars(mac_url_manga_detail($obj))}">返回详情</a></p>
+{if condition="$manga_access.can_access"}
+{volist name="manga_images" id="img"}<img loading="lazy" src="{$img|htmlspecialchars}" alt="{$manga_current.name|htmlspecialchars}" style="display:block;max-width:100%;height:auto">{/volist}
+{empty name="manga_images"}<p>本话暂无图片</p>{/empty}
+{else /}
+<div data-manga-base="{$maccms.path|htmlspecialchars}">
+    {if condition="$manga_access.password_required"}
+    <p>请输入漫画访问密码。</p>
+    <form method="post" action="{$maccms.path|htmlspecialchars}index.php/ajax/pwd" data-manga-password data-id="{$obj.manga_id}">
+        <input type="hidden" name="mid" value="12"><input type="hidden" name="type" value="1"><input type="hidden" name="id" value="{$obj.manga_id}">
+        <label>访问密码 <input type="password" name="pwd" required maxlength="1024" autocomplete="off"></label>
+        <button type="submit">验证密码</button>
+        {notempty name="obj.manga_pwd_url"}<a href="{$obj.manga_pwd_url|htmlspecialchars}" target="_blank" rel="noopener noreferrer">获取密码</a>{/notempty}
+    </form>
+    {else /}
+    <p>{$manga_access.msg|htmlspecialchars}</p>
+    {if condition="$manga_access.purchase_supported && $manga_access.points_hint gt 0"}
+    <form method="post" data-manga-purchase data-id="{$obj.manga_id}" data-sid="{$manga_access.purchase_sid}" data-nid="{$manga_access.purchase_nid}">
+        <button type="submit">使用 {$manga_access.points_hint} 积分购买阅读权限</button>
+    </form>
+    {/if}
+    <p><a href="{:mac_url('user/index')}">登录或前往会员中心</a></p>
+    {/if}
+    <p data-manga-result role="status" aria-live="polite"></p>
+</div>
+{/if}
+<nav aria-label="漫画目录">
+{volist name="obj.manga_page_list" id="source"}
+<p>{$source.from|htmlspecialchars}</p>
+{volist name="source.urls" id="chapter"}<a href="{$chapter.play_link|htmlspecialchars}">第 {$chapter.nid} 话 {$chapter.name|htmlspecialchars}</a> {/volist}
+{/volist}
+</nav></main></body></html>

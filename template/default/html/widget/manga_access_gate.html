@@ -1,0 +1,17 @@
+{if condition="$manga_access.password_required"}
+<div data-manga-base="{$maccms.path|htmlspecialchars}">
+    {if condition="$manga_access.password_required"}
+    <p>请输入漫画访问密码。</p>
+    <form method="post" action="{$maccms.path|htmlspecialchars}index.php/ajax/pwd" data-manga-password data-id="{$obj.manga_id}">
+        <input type="hidden" name="mid" value="12"><input type="hidden" name="type" value="1"><input type="hidden" name="id" value="{$obj.manga_id}">
+        <label>访问密码 <input type="password" name="pwd" required maxlength="1024" autocomplete="off"></label>
+        <button type="submit">验证密码</button>
+        {notempty name="obj.manga_pwd_url"}<a href="{$obj.manga_pwd_url|htmlspecialchars}" target="_blank" rel="noopener noreferrer">获取密码</a>{/notempty}
+    </form>
+    {/if}
+    <p data-manga-result role="status" aria-live="polite"></p>
+</div>
+<script defer src="{$maccms.path|htmlspecialchars}static/js/manga-access.js"></script>
+{else /}
+{include file="widget/popedom_upgrade_gate"}
+{/if}

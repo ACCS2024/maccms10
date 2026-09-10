@@ -80,21 +80,11 @@ class Manga extends Base
     public function get_detail(\think\Request $request)
     {
         $param = $request->param();
-        $validate = new \app\api\validate\Manga();
-        if (!$validate->scene($request->action())->check($param)) {
-            return json([
-                'code' => 1001,
-                'msg'  => '参数错误: ' . $validate->getError(),
-            ]);
+        $id = \app\common\util\ContentResource::positiveInt($param['id'] ?? null);
+        if ($id === null || !\app\common\util\ContentResource::scalarParameters($param)) {
+            return json(['code'=>1001, 'msg'=>lang('param_err')]);
         }
-        $where = [];
-        $where['manga_status'] = 1;
-
-        if (!empty($param['id'])) {
-            $where['manga_id'] = $param['id'];
-        }
-
-        $data = (new \app\common\model\Manga())->infoData($where);
+        $data = \app\common\util\MangaResourceReader::find(['manga_id'=>$id]);
         if ($data['code'] == 1 && !empty($data['info'])) {
             $info = &$data['info'];
             // 处理图片 URL
@@ -140,77 +130,48 @@ class Manga extends Base
     public function get_chapter(\think\Request $request)
     {
         $param = $request->param();
-        $validate = new \app\api\validate\Manga();
-        if (!$validate->scene('get_chapter')->check($param)) {
-            return json([
-                'code' => 1001,
-                'msg'  => '参数错误: ' . $validate->getError(),
-            ]);
+        $id = \app\common\util\ContentResource::positiveInt($param['id'] ?? null);
+        if ($id === null || !\app\common\util\ContentResource::scalarParameters($param)) {
+            return json(['code'=>1001, 'msg'=>lang('param_err')]);
         }
-        $id  = (int) $param['id'];
-        $sid = isset($param['sid']) ? (int) $param['sid'] : 1;
-        $nid = isset($param['nid']) ? (int) $param['nid'] : 1;
-        if ($sid < 1) {
-            $sid = 1;
-        }
-        if ($nid < 1) {
-            $nid = 1;
-        }
-
-        $where = [];
-        $where['manga_status'] = 1;
-        $where['manga_id'] = $id;
-
-        $data = (new \app\common\model\Manga())->infoData($where);
-        if ($data['code'] != 1 || empty($data['info'])) {
-            return json(['code' => 1002, 'msg' => $data['msg'] ?? '数据不存在']);
+        $data = \app\common\util\MangaResourceReader::find(['manga_id'=>$id]);
+        if ($data['code'] !== 1) {
+            return json(['code'=>1002, 'msg'=>$data['msg']]);
         }
         $info = $data['info'];
-
-        $popParam = ['id' => $id, 'sid' => $sid, 'nid' => $nid];
-        $popedom  = $this->check_user_popedom($info['type_id'], 3, $popParam, 'manga_play', $info);
-
-        $plist = $info['manga_page_list'] ?? [];
-        $grp   = $plist[$sid] ?? $plist[(string) $sid] ?? null;
-        if (empty($grp) || empty($grp['urls']) || !is_array($grp['urls'])) {
-            return json(['code' => 1002, 'msg' => '章节数据不存在']);
+        $context = \app\common\util\ContentResource::mangaContext($info, $param);
+        if ($context['code'] !== 1) {
+            return json($context);
         }
-        $ep = $grp['urls'][$nid] ?? $grp['urls'][(string) $nid] ?? null;
-        if (empty($ep) || !is_array($ep)) {
-            return json(['code' => 1002, 'msg' => '该话不存在']);
+        $access = $this->check_manga_resource_access($info, ['sid'=>$context['sid'], 'nid'=>$context['nid']]);
+        return json(['code'=>1, 'msg'=>'ok', 'info'=>[
+            'can_read'=>$access['can_access'] ? 1 : 0, 'deny_code'=>(int)$access['code'],
+            'deny_msg'=>$access['can_access'] ? '' : (string)$access['msg'], 'points_hint'=>$context['points'],
+            'password_required'=>$access['password_required'], 'password_verified'=>$access['password_verified'],
+            'password_help_url'=>$access['password_help_url'], 'purchase_supported'=>$context['purchase_supported'],
+            'purchase_sid'=>$context['purchase_sid'], 'purchase_nid'=>$context['purchase_nid'],
+            'manga_id'=>$context['id'], 'manga_name'=>(string)$info['manga_name'],
+            'sid'=>$context['sid'], 'nid'=>$context['nid'], 'episode_name'=>(string)($context['current']['name'] ?? ''),
+            'episode_total'=>$context['episode_total'], 'has_prev'=>$context['previous_nid'] !== null,
+            'has_next'=>$context['next_nid'] !== null, 'previous_nid'=>$context['previous_nid'], 'next_nid'=>$context['next_nid'],
+            'previous_link'=>$context['previous_nid'] !== null ? \app\common\util\ContentResource::mangaReadLink($info, $context['sid'], $context['previous_nid']) : '',
+            'next_link'=>$context['next_nid'] !== null ? \app\common\util\ContentResource::mangaReadLink($info, $context['sid'], $context['next_nid']) : '',
+            'images'=>$access['can_access'] ? $context['images'] : [],
+        ]]);
+    }
+
+    public function verify_pwd(\think\Request $request)
+    {
+        $param = $request->param();
+        $id = \app\common\util\ContentResource::positiveInt($param['id'] ?? null);
+        if ($id === null || !is_string($param['pwd'] ?? null)) {
+            return json(['code'=>1001, 'msg'=>lang('param_err')]);
         }
-
-        $epTotal = isset($grp['url_count']) ? (int) $grp['url_count'] : count($grp['urls']);
-        $name    = !empty($ep['name']) ? (string) $ep['name'] : ('第' . $nid . '话');
-
-        $images = [];
-        if (!empty($ep['url'])) {
-            foreach (explode(',', (string) $ep['url']) as $piece) {
-                $piece = trim($piece);
-                if ($piece !== '') {
-                    $images[] = mac_url_img($piece);
-                }
-            }
+        $data = \app\common\util\MangaResourceReader::find(['manga_id'=>$id]);
+        if ($data['code'] !== 1) {
+            return json(['code'=>1031, 'msg'=>$data['msg']]);
         }
-
-        $canRead = ($popedom['code'] == 1) ? 1 : 0;
-        $out     = [
-            'can_read'       => $canRead,
-            'deny_code'      => (int) ($popedom['code'] ?? 0),
-            'deny_msg'       => $canRead ? '' : (string) ($popedom['msg'] ?? ''),
-            'points_hint'    => isset($popedom['points']) ? (int) $popedom['points'] : 0,
-            'manga_id'       => $id,
-            'manga_name'     => (string) ($info['manga_name'] ?? ''),
-            'sid'            => $sid,
-            'nid'            => $nid,
-            'episode_name'   => $name,
-            'episode_total'  => $epTotal,
-            'has_prev'       => $nid > 1,
-            'has_next'       => $epTotal > 0 && $nid < $epTotal,
-            'images'         => $canRead ? $images : [],
-        ];
-
-        return json(['code' => 1, 'msg' => 'ok', 'info' => $out]);
+        return json(\app\common\util\ContentPassword::verifyManga($data['info'], $param['pwd']));
     }
 
     /**
