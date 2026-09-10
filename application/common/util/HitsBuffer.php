@@ -4,6 +4,7 @@ namespace app\common\util;
 
 use think\facade\Cache;
 use think\facade\Db;
+use think\facade\Log;
 
 /**
  * 播放/阅读量 Redis 计数缓冲(可选,默认关闭)。
@@ -13,15 +14,16 @@ use think\facade\Db;
  *
  * 设计要点:
  * - 仅当后台开启 hits_buffer 且缓存后端为 Redis 时启用;否则 bump() 返回 false,调用方回退原子 UPDATE。
- * - 阈值触发落库:同一内容累计达 THRESHOLD 即落库一次 → 无需依赖 cron,DB 展示最多滞后 THRESHOLD-1。
+ * - 阈值触发落库;低频内容由 flush() 收尾。DB 故障时积压可以超过阈值。
  * - 落库用与单条自增同语义的原子条件 UPDATE(步长为累计 delta),日/周/月跨期归零一致。
- * - 落库时用 HINCRBY -delta 扣减(而非 HDEL),并发新增的增量保留在计数里,不丢。
- * - flush() 供定时任务低峰收尾(把低频内容的零头也落库);用 RENAME 快照排空,期间新增计入新 key。
- * - 任何 Redis 异常都吞掉并回退,绝不影响播放/阅读主流程。
+ * - Lua 原子读取并删除待写增量;阈值请求和 flush() 共用领取逻辑,不会重复领取同一批。
+ * - DB 抛错时用 HINCRBY 回补,保留领取后新到的计数。Redis 已确认接收后不再让调用方重复自增。
+ * - 这是尽力而为的缓冲,不是跨 Redis/DB 事务:领取后进程崩溃可能丢计数;
+ *   DB 提交但回执丢失后回补可能重复。Redis 回执不明或回补失败也无法保证计数完整。
  */
 class HitsBuffer
 {
-    /** 单条累计达到该值即落库一次(写入削减约 N 倍;DB 展示最多滞后 N-1) */
+    /** 单条累计达到该值即尝试落库一次 */
     const THRESHOLD = 10;
 
     /**
@@ -35,7 +37,7 @@ class HitsBuffer
             return false;
         }
         try {
-            $h = Cache::init()->handler();
+            $h = Cache::store()->handler();
             return class_exists('\Redis', false) && $h instanceof \Redis;
         } catch (\Throwable $e) {
             return false;
@@ -45,7 +47,7 @@ class HitsBuffer
     /**
      * 缓冲一次自增;累计达阈值则落库。
      *
-     * @return bool true=已缓冲(调用方无需再写库);false=未启用/异常(调用方走原子 UPDATE)
+     * @return bool true=Redis 已确认接收(包括 DB 失败待重试);false=未启用/未确认接收
      */
     public static function bump($kind, $id)
     {
@@ -56,18 +58,25 @@ class HitsBuffer
         if ($id <= 0 || !self::enabled()) {
             return false;
         }
+        $accepted = false;
         try {
-            $h = Cache::init()->handler();
+            $h = Cache::store()->handler();
             $key = self::key($kind);
-            $delta = (int)$h->hIncrBy($key, (string)$id, 1);
-            if ($delta >= self::THRESHOLD) {
-                // 原子扣减待落库量(并发新增留在计数里,不丢),再落库
-                $h->hIncrBy($key, (string)$id, -$delta);
-                self::apply($kind, $id, $delta);
+            $pending = $h->hIncrBy($key, (string)$id, 1);
+            if ($pending === false) {
+                throw new \RuntimeException('Redis did not acknowledge the increment');
+            }
+            $accepted = true;
+            if ($pending >= self::THRESHOLD) {
+                $delta = self::claim($h, $key, $id, self::THRESHOLD);
+                if ($delta > 0) {
+                    self::deliver($h, $key, $kind, $id, $delta);
+                }
             }
             return true;
         } catch (\Throwable $e) {
-            return false;
+            self::report('redis', $kind, $id, 0, $e);
+            return $accepted;
         }
     }
 
@@ -78,67 +87,107 @@ class HitsBuffer
      */
     public static function flush($kind = null)
     {
-        if (!self::enabled()) {
+        if (($kind !== null && !in_array($kind, ['vod', 'art'], true)) || !self::enabled()) {
             return 0;
         }
-        $kinds = $kind ? [$kind] : ['vod', 'art'];
+        $kinds = $kind === null ? ['vod', 'art'] : [$kind];
         $n = 0;
-        try {
-            $h = Cache::init()->handler();
-            foreach ($kinds as $k) {
+        foreach ($kinds as $k) {
+            try {
+                $h = Cache::store()->handler();
                 $key = self::key($k);
-                if (!$h->exists($key)) {
-                    continue;
-                }
-                // 重命名快照再排空:期间新增计入新 key,避免丢增量
-                $snap = $key . ':flush:' . getmypid() . ':' . mt_rand(1000, 9999);
-                if (!$h->rename($key, $snap)) {
-                    continue;
-                }
-                $all = $h->hGetAll($snap);
-                if (is_array($all)) {
-                    foreach ($all as $id => $delta) {
-                        if ((int)$delta > 0) {
-                            self::apply($k, (int)$id, (int)$delta);
+                $cursor = null;
+                do {
+                    $batch = $h->hScan($key, $cursor, null, 100);
+                    foreach ($batch ?: [] as $id => $unused) {
+                        if (!ctype_digit((string)$id) || (int)$id <= 0) {
+                            continue;
+                        }
+                        $delta = self::claim($h, $key, (int)$id, 1);
+                        if ($delta > 0 && self::deliver($h, $key, $k, (int)$id, $delta)) {
                             $n++;
                         }
                     }
-                }
-                $h->del($snap);
+                } while ($cursor !== 0);
+            } catch (\Throwable $e) {
+                self::report('flush', $k, 0, 0, $e);
             }
-        } catch (\Throwable $e) {
         }
         return $n;
+    }
+
+    /** Reading and removing the same batch must be one Redis operation. */
+    private static function claim(\Redis $h, string $key, int $id, int $minimum): int
+    {
+        $script = <<<'LUA'
+local delta = redis.call('HGET', KEYS[1], ARGV[1])
+if delta and tonumber(delta) >= tonumber(ARGV[2]) then
+    redis.call('HDEL', KEYS[1], ARGV[1])
+    return delta
+end
+return '0'
+LUA;
+        $delta = $h->eval($script, [$key, (string)$id, (string)$minimum], 1);
+        if ($delta === false) {
+            throw new \RuntimeException('Redis did not acknowledge the claim');
+        }
+        return (int)$delta;
+    }
+
+    private static function deliver(\Redis $h, string $key, string $kind, int $id, int $delta): bool
+    {
+        try {
+            // Zero affected rows means the content no longer exists; do not retain an orphan counter.
+            return self::apply($kind, $id, $delta) > 0;
+        } catch (\Throwable $e) {
+            try {
+                if ($h->hIncrBy($key, (string)$id, $delta) === false) {
+                    throw new \RuntimeException('Redis did not acknowledge the restore');
+                }
+            } catch (\Throwable $restoreError) {
+                self::report('restore_failed', $kind, $id, $delta, $restoreError);
+            }
+            self::report('database', $kind, $id, $delta, $e);
+            return false;
+        }
     }
 
     /**
      * 以原子条件 UPDATE 把累计 delta 落库(与 P1 单条自增同语义,步长为 delta)。
      */
-    private static function apply($kind, $id, $delta)
+    private static function apply($kind, $id, $delta): int
     {
         $delta = (int)$delta;
         $id = (int)$id;
         if ($delta <= 0 || $id <= 0) {
-            return;
+            return 0;
         }
         $now        = time();
         $dayStart   = strtotime('today');
         $weekStart  = $dayStart - ((int)date('w', $now)) * 86400;
         $monthStart = mktime(0, 0, 0, (int)date('n', $now), 1, (int)date('Y', $now));
         $p = ($kind === 'vod') ? 'vod' : 'art';
-        try {
-            Db::name($p)->where($p . '_id', $id)
-                ->inc($p . '_hits', $delta)
-                ->exp($p . '_hits_day',   "IF({$p}_time_hits >= {$dayStart}, {$p}_hits_day + {$delta}, {$delta})")
-                ->exp($p . '_hits_week',  "IF({$p}_time_hits >= {$weekStart}, {$p}_hits_week + {$delta}, {$delta})")
-                ->exp($p . '_hits_month', "IF({$p}_time_hits >= {$monthStart}, {$p}_hits_month + {$delta}, {$delta})")
-                ->update([$p . '_time_hits' => $now]);
-        } catch (\Throwable $e) {
-        }
+        return Db::name($p)->where($p . '_id', $id)
+            ->inc($p . '_hits', $delta)
+            ->exp($p . '_hits_day',   "IF({$p}_time_hits >= {$dayStart}, {$p}_hits_day + {$delta}, {$delta})")
+            ->exp($p . '_hits_week',  "IF({$p}_time_hits >= {$weekStart}, {$p}_hits_week + {$delta}, {$delta})")
+            ->exp($p . '_hits_month', "IF({$p}_time_hits >= {$monthStart}, {$p}_hits_month + {$delta}, {$delta})")
+            ->update([$p . '_time_hits' => $now]);
     }
 
     private static function key($kind)
     {
-        return 'mac_hits_buf:' . $kind;
+        return Cache::store()->getCacheKey('mac_hits_buf:' . $kind);
+    }
+
+    private static function report(string $stage, string $kind, int $id, int $delta, \Throwable $error): void
+    {
+        try {
+            Log::warning('HitsBuffer ' . $stage, [
+                'kind' => $kind, 'id' => $id, 'delta' => $delta, 'exception' => get_class($error),
+            ]);
+        } catch (\Throwable $ignored) {
+            // Logging must not turn a counting failure into a playback error.
+        }
     }
 }
