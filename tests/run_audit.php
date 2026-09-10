@@ -41,7 +41,7 @@ $groups = [
         ['framework_audit_checkout.php'], ['security_audit_user_log_delete.php'], ['framework_audit_ulog_users.php'], ['framework_audit_type_navigation.php'],
     ],
     // Separate environment: MEMBERSHIP_AUDIT_MYSQL selects the financial installation schema.
-    'financial' => [['security_audit_membership.php'], ['security_audit_order_create.php']],
+    'financial' => [['security_audit_membership.php'], ['security_audit_points_overflow.php'], ['security_audit_order_create.php']],
     // Execute as an unprivileged account so denied-write cases are meaningful.
     'install' => [['framework_audit_install.php']],
 ];

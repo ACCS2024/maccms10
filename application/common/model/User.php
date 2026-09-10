@@ -1415,9 +1415,8 @@ class User extends Base
                 }
                 $recipients[$recipient] = true;
                 $points = (int)$points;
-                $affected = $this->where('user_id', $recipient)->setInc('user_points', $points);
-                if ($affected !== 1) {
-                    throw new \RuntimeException('reward recipient missing');
+                if (!\app\common\util\PointsBalance::credit($recipient, $points)) {
+                    throw new \RuntimeException('reward credit rejected');
                 }
                 $log = (new \app\common\model\Plog())->saveData([
                     'user_id'=>$recipient, 'plog_type'=>$log_type, 'plog_points'=>$points,

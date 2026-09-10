@@ -177,10 +177,8 @@ class Order extends Base {
                 return ['code'=>2002,'msg'=>lang('model/order/update_status_err')];
             }
 
-            $where2 = [];
-            $where2['user_id'] = $user['info']['user_id'];
-            $res = (new \app\common\model\User())->where($where2)->setInc('user_points',$order['info']['order_points']);
-            if($res !== 1){
+            $res = \app\common\util\PointsBalance::credit($user['info']['user_id'], $order['info']['order_points']);
+            if (!$res) {
                 Db::rollback();
                 return ['code'=>2003,'msg'=>lang('model/order/update_user_points_err')];
             }
