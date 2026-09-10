@@ -167,7 +167,7 @@ class Receive extends Base
     {
         $info = $this->_param;
         $this->requireText($info, 'comment_name', 2001, 'api/require_comment_name');
-        $this->requireText($info, 'comment_content', 2002, 'api/require_comment_name');
+        $this->requireText($info, 'comment_content', 2002, 'api/require_comment_content');
         $mid = $this->positiveId($info['comment_mid'] ?? null);
         if ($mid === null) {
             $this->reject(2004, 'api/require_mid');
