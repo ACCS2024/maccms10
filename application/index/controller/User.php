@@ -785,34 +785,16 @@ class User extends Base
 
     public function ulog_del()
     {
-        $param = \think\facade\Request::param();
-        $ids = htmlspecialchars(urldecode(trim($param['ids'])));
-        $type = $param['type'];
-        $all = $param['all'];
-
-        if (!in_array($type, array('1', '2', '3', '4', '5'))) {
+        $param = \think\facade\Request::post();
+        $ids = $this->logDeletionIds($param);
+        $type = $param['type'] ?? null;
+        if ($ids === null || (!is_int($type) && !is_string($type))
+            || !in_array((string)$type, ['1', '2', '3', '4', '5'], true)) {
             return json(['code' => 1001, 'msg' => lang('param_err')]);
         }
-
-        if (empty($ids) && empty($all)) {
-            return json(['code' => 1001, 'msg' => lang('param_err')]);
-        }
-
-        $arr = [];
-        $ids = explode(',', $ids);
-        foreach ($ids as $k => $v) {
-            $v = abs(intval($v));
-            $arr[$v] = $v;
-        }
-
-        $where = [];
-        $where['user_id'] = $GLOBALS['user']['user_id'];
-        $where['ulog_type'] = $type;
-        if ($all != '1') {
-            $where['ulog_id'] = array('in', array_values($arr));
-        }
-        $return = (new \app\common\model\Ulog())->delData($where);
-        return json($return);
+        $where = ['user_id' => $GLOBALS['user']['user_id'], 'ulog_type' => $type];
+        if ($ids !== []) { $where[] = ['ulog_id', 'in', $ids]; }
+        return json((new \app\common\model\Ulog())->delData($where));
     }
 
     public function plog()
@@ -843,29 +825,35 @@ class User extends Base
 
     public function plog_del()
     {
-        $param = \think\facade\Request::param();
-        $ids = htmlspecialchars(urldecode(trim($param['ids'])));
-        $type = $param['type'];
-        $all = $param['all'];
-
-        if (empty($ids) && empty($all)) {
+        $ids = $this->logDeletionIds(\think\facade\Request::post());
+        if ($ids === null) {
             return json(['code' => 1001, 'msg' => lang('param_err')]);
         }
+        $where = ['user_id' => $GLOBALS['user']['user_id']];
+        if ($ids !== []) { $where[] = ['plog_id', 'in', $ids]; }
+        return json((new \app\common\model\Plog())->delData($where));
+    }
 
-        $arr = [];
-        $ids = explode(',', $ids);
-        foreach ($ids as $k => $v) {
-            $v = abs(intval($v));
-            $arr[$v] = $v;
+    /** Null rejects the request; [] means an explicit delete-all within the owner's scope. */
+    private function logDeletionIds(array $param): ?array
+    {
+        if (!request()->isPost() || (int)($GLOBALS['user']['user_id'] ?? 0) < 1) { return null; }
+        $all = $param['all'] ?? '0';
+        $raw = $param['ids'] ?? '';
+        if ((!is_int($all) && !is_string($all)) || !in_array((string)$all, ['0', '1'], true)
+            || (!is_string($raw) && !is_int($raw))) { return null; }
+        if ((string)$all === '1') { return []; }
+        $raw = trim((string)$raw);
+        if ($raw === '' || strlen($raw) > 12000) { return null; }
+        $parts = explode(',', $raw);
+        if (count($parts) > 1000) { return null; }
+        $ids = [];
+        foreach ($parts as $part) {
+            $part = trim($part);
+            if (!preg_match('/^[0-9]{1,10}$/D', $part) || (int)$part < 1 || (int)$part > 4294967295) { return null; }
+            $ids[(int)$part] = (int)$part;
         }
-
-        $where = [];
-        $where['user_id'] = $GLOBALS['user']['user_id'];
-        if ($all != '1') {
-            $where['plog_id'] = array('in', array_values($arr));
-        }
-        $return = (new \app\common\model\Plog())->delData($where);
-        return json($return);
+        return array_values($ids);
     }
 
     public function cash()
