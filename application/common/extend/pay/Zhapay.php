@@ -64,6 +64,22 @@ class Zhapay {
         //unset($param['/payment/notify/pay_type/zhapay']);
         //unset($param['pay_type']);
 
+        foreach ($param as $value) {
+            if (!is_string($value) && !is_int($value)) {
+                echo 'fail';
+                return;
+            }
+        }
+        $GLOBALS['config']['pay'] = config('maccms.pay');
+        // Keep the existing yuan contract; do not infer units from the value.
+        $paid = $param['total_fee'] ?? $param['money'] ?? '';
+        if (empty($param['transaction_id']) || empty($param['out_trade_no']) || empty($param['sign'])
+            || trim((string)($GLOBALS['config']['pay']['zhapay']['appkey'] ?? '')) === ''
+            || !preg_match('/^[0-9]{1,12}(?:\.[0-9]{1,2})?$/D', (string)$paid) || (float)$paid <= 0) {
+            echo 'fail';
+            return;
+        }
+
         ksort($param); //排序post参数
         reset($param); //内部指针指向数组中的第一个元素
         $sign = '';
@@ -73,21 +89,15 @@ class Zhapay {
             $sign .= "$key=$val"; //拼接为url参数形式
         }
 
-        $GLOBALS['config']['pay'] = config('maccms.pay');
-
-        if (!$param['transaction_id'] || md5($sign. $GLOBALS['config']['pay']['zhapay']['appkey']) != $param['sign']) {
+        if (!hash_equals(md5($sign . $GLOBALS['config']['pay']['zhapay']['appkey']), (string)$param['sign'])) {
             echo 'fail';
         }
         else{
-            // 安全加固:回传金额(按元)二次核对防改价低付。单位若实际为分则换算后只会偏大,
-            // 仅触发“多付不挡”不会误伤正常支付。
-            $paid = isset($param['total_fee']) ? $param['total_fee'] : (isset($param['money']) ? $param['money'] : null);
-            $res = (new \app\common\model\Order())->notify($param['out_trade_no'],'zhapay',$paid);
-            if($res['code'] >1){
-                echo 'fail2';
-            }
-            else {
-                echo 'success';
+            try {
+                $res = (new \app\common\model\Order())->notify($param['out_trade_no'],'zhapay',$paid);
+                echo in_array($res['code'] ?? null, [1, '1'], true) ? 'success' : 'fail';
+            } catch (\Throwable $e) {
+                echo 'fail';
             }
         }
     }
