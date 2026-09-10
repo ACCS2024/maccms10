@@ -298,6 +298,8 @@ assert command("PING").startswith(b"+PONG")
 PY
     return
   fi
+  # Positional parameters are expanded by the child shell after receiving the port and password.
+  # shellcheck disable=SC2016
   output="$(timeout 3 bash -c '
     exec 3<>"/dev/tcp/127.0.0.1/$1" || exit 1
     printf "*2\r\n\$4\r\nAUTH\r\n\$%s\r\n%s\r\n*1\r\n\$4\r\nPING\r\n" "${#2}" "$2" >&3
