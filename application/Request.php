@@ -1,9 +1,14 @@
 <?php
 namespace app;
 
-/** Validate method input types before TP8 performs string operations during routing. */
+/** Request boundary for method input types and explicit client IP trust. */
 class Request extends \think\Request
 {
+    public function ip(): string
+    {
+        return \app\common\util\ClientIp::fromRequest($this);
+    }
+
     public function method(bool $origin = false): string
     {
         $raw = $this->server('REQUEST_METHOD');

@@ -1787,42 +1787,8 @@ function mac_get_tag($title,$content){
 
 function mac_get_client_ip()
 {
-    static $final;
-    if (!is_null($final)) {
-        return $final;
-    }
-    $ips = [];
-    if (!empty($_SERVER['HTTP_CF_CONNECTING_IP'] ?? '')) {
-        $ips[] = $_SERVER['HTTP_CF_CONNECTING_IP'] ?? '';
-    }
-    if (!empty($_SERVER['HTTP_ALI_CDN_REAL_IP'] ?? '')) {
-        $ips[] = $_SERVER['HTTP_ALI_CDN_REAL_IP'] ?? '';
-    }
-    if (!empty($_SERVER['HTTP_CLIENT_IP'] ?? '')) {
-        $ips[] = $_SERVER['HTTP_CLIENT_IP'] ?? '';
-    }
-    if (!empty($_SERVER['HTTP_PROXY_USER'] ?? '')) {
-        $ips[] = $_SERVER['HTTP_PROXY_USER'] ?? '';
-    }
-    $real_ip = getenv('HTTP_X_REAL_IP');
-    if (!empty($real_ip)) {
-        $ips[] = $real_ip;
-    }
-    if (!empty($_SERVER['REMOTE_ADDR'] ?? '')) {
-        $ips[] = $_SERVER['REMOTE_ADDR'] ?? '';
-    }
-    // 选第一个最合法的，或最后一个正常的IP
-    foreach ($ips as $ip) {
-        $verifyResult = filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_RES_RANGE);
-        if (!$verifyResult){
-            continue;
-        }
-        $verifyResult && $final = $ip;
-    }
-    empty($final) && $final = '0.0.0.0';
-    return $final;
+    return \app\common\util\ClientIp::fromRequest(\think\Container::getInstance()->make('request'));
 }
-
 /**
  * 前台写接口按 IP 的温和限流(默认开启,独立于 anti_scrape 全局开关),防刷评论/留言/提现等垃圾与 CPU 打满。
  * 阈值取"远高于真人(含 NAT 共享出口)峰值、却远低于自动化洪泛"的区间,故对正常用户零回归。
