@@ -30,12 +30,13 @@ try {
         $source = $extension === 'gif' ? $root . '/tests/fixtures/image-processing/animation.gif' : 'source.' . $extension;
         imageAuditRequest(['flag'=>'user','user_id'=>1,'imgdata'=>'data:image/' . $extension . ';base64,' . base64_encode(file_get_contents($source))]);
         $result = (new Upload())->upload();
-        check($result['code'] === 1 && str_starts_with($result['file'],'/upload/user/1/1.jpg?'), 'Base64 avatar returned a staging path or failure');
-        $info = getimagesize('upload/user/1/1.jpg');
+        $portrait = ltrim(explode('?', $result['file'])[0], '/');
+        check($result['code'] === 1 && app\common\util\UserPortrait::isManagedPath(1, $portrait), 'Base64 avatar returned a staging path or failure');
+        $info = getimagesize($portrait);
         check([$info[0],$info[1],$info[2]] === [30,20,IMAGETYPE_JPEG], 'Avatar extension did not match real JPEG content');
         check(glob('upload/user/1/.portrait-*') === [], 'Successful avatar left its incoming temporary file');
     }
-    $original = file_get_contents('upload/user/1/1.jpg');
+    $original = file_get_contents($portrait);
     foreach (['bad-data', 'bad-size', 'truncated-gif', 'missing-file'] as $failure) {
         $params = ['flag'=>'user','user_id'=>1];
         $GLOBALS['config']['user']['portrait_size'] = $failure === 'bad-size' ? '0x20' : '30x20';
@@ -48,10 +49,10 @@ try {
             $params['imgdata'] = 'data:image/gif;base64,' . base64_encode($source);
         }
         imageAuditRequest($params);
-        $updates = $GLOBALS['image_user_updates'];
+        $updates = think\facade\Db::name('User')->find(1);
         $result = (new Upload())->upload();
         check($result['code'] !== 1 && $result['file'] === '', 'Invalid avatar did not return a controlled failure');
-        check(file_get_contents('upload/user/1/1.jpg') === $original && $GLOBALS['image_user_updates'] === $updates,
+        check(file_get_contents($portrait) === $original && think\facade\Db::name('User')->find(1) === $updates,
             'Failed avatar replaced the old file or its metadata');
         check(glob('upload/user/1/.portrait-*') === [], 'Failed avatar leaked its incoming data');
     }
@@ -60,7 +61,9 @@ try {
     copy('source.png','uploaded.png');
     $file = new UploadedFile($temp . '/uploaded.png','client.PNG','image/png',UPLOAD_ERR_OK,true);
     imageAuditRequest(['flag'=>'user','user_id'=>1],['file'=>$file]);
-    check((new Upload())->upload()['code'] === 1 && getimagesize('upload/user/1/1.jpg')[2] === IMAGETYPE_JPEG,
+    $result = (new Upload())->upload();
+    $portrait = ltrim(explode('?', $result['file'])[0], '/');
+    check($result['code'] === 1 && getimagesize($portrait)[2] === IMAGETYPE_JPEG,
         'Real TP8 UploadedFile avatar still called a removed file API');
 
     foreach (['png','jpg','gif'] as $extension) {

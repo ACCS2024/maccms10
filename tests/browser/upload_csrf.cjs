@@ -64,7 +64,7 @@ async function main() {
       if(client==='native') await page.locator('input[type=submit]').click();
       await result(response,['demo','deferred','layui'].includes(client)?'header':'body');
       if(client==='demo') {
-        await page.waitForFunction(()=>document.querySelector('#portrait').getAttribute('src').includes('/upload/user/1/1.jpg'));
+        await page.waitForFunction(()=>document.querySelector('#portrait').getAttribute('src').match(/\/upload\/user\/1\/1-[0-9a-f]{32}\.jpg/));
         check(true,'Demo client accepts the actual payload.file response');
       }
       console.log('client passed:',client);

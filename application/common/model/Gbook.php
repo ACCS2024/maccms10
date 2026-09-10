@@ -32,6 +32,7 @@ class Gbook extends Base {
         $offset = ($limit * ($page-1) + $start);
         $total = $this->where($where)->count();
         $list = Db::name('Gbook')->where($where)->order($order)->limit($offset, $limit)->select()->toArray();
+        \app\common\util\UserPortrait::prefetch(array_column($list, 'user_id'));
         foreach ($list as $k=>$v){
             $list[$k]['user_portrait'] = mac_get_user_portrait($v['user_id']);
             $list[$k]['gbook_content'] = mac_restore_htmlfilter($list[$k]['gbook_content']);

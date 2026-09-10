@@ -54,11 +54,11 @@ $GLOBALS['config']['user']['portrait_status'] = '1';
 uploadIdentityRequest(['user_id'=>2, 'flag'=>'vod']);
 $victim = hash_file('sha256', 'upload/user/2/2.jpg');
 $result = uploadIdentityController('member');
-check($result['code'] === 1 && uploadIdentityPath($result) === 'upload/user/1/1.jpg', 'Normal portrait controller lost the server-owned target');
-check(hash_file('sha256', 'upload/user/2/2.jpg') === $victim && getimagesize('upload/user/1/1.jpg')[2] === IMAGETYPE_JPEG,
+check($result['code'] === 1 && app\common\util\UserPortrait::isManagedPath(1, uploadIdentityPath($result)), 'Normal portrait controller lost the server-owned target');
+check(hash_file('sha256', 'upload/user/2/2.jpg') === $victim && getimagesize(uploadIdentityPath($result))[2] === IMAGETYPE_JPEG,
     'Member avatar overwrote another user or returned mislabeled content');
-check(Db::name('User')->where('user_id',1)->value('user_portrait') === 'upload/user/1/1.jpg'
-    && Db::name('Annex')->where('annex_file','upload/user/1/1.jpg')->count() === 1, 'Avatar metadata does not match its authenticated target');
+check(Db::name('User')->where('user_id',1)->value('user_portrait') === uploadIdentityPath($result)
+    && Db::name('Annex')->where('annex_file',uploadIdentityPath($result))->count() === 1, 'Avatar metadata does not match its authenticated target');
 $GLOBALS['user'] = ['user_id'=>2];
 uploadIdentityRequest();
 uploadIdentityDenied(fn() => uploadIdentityController('member'), 'A stale/forged global identity overrode authenticated cookies');
@@ -113,7 +113,8 @@ foreach ([2, 4294967295] as $target) {
     uploadIdentityRequest(['flag'=>'user', 'user_id'=>(string)$target]);
     $before = Db::name('User')->find(1);
     $result = uploadIdentityController('admin');
-    $expected = 'upload/user/'.($target % 10).'/'.$target.'.jpg';
+    $expected = uploadIdentityPath($result);
+    check(app\common\util\UserPortrait::isManagedPath($target, $expected), 'Administrator avatar path belongs to another owner');
     check($result['code'] === 1 && uploadIdentityPath($result) === $expected, 'Authorized admin avatar chose the wrong path');
     check(Db::name('User')->where('user_id',$target)->value('user_portrait') === $expected && Db::name('User')->find(1) === $before,
         'Authorized admin avatar wrote unrelated/global user metadata');

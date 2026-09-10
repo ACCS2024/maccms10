@@ -42,17 +42,20 @@ class Comment extends Base {
         }
         $list = Db::name('Comment')->field($field)->where($where)->order($order)->limit($offset, $limit)->select()->toArray();
 
-        $user_ids=[];
-        foreach($list as $k=>$v){
-            $list[$k]['user_portrait'] = mac_get_user_portrait($v['user_id']);
-            $list[$k]['comment_content'] = mac_restore_htmlfilter($list[$k]['comment_content']);
-
+        $portraitIds = array_column($list, 'user_id');
+        foreach ($list as $k => $v) {
             $where2=[];
             $where2['comment_pid'] = $v['comment_id'];
             $where2['comment_status'] = 1;
-            $sub = Db::name('Comment')->where($where2)->order($order)->select();
+            $sub = Db::name('Comment')->where($where2)->order($order)->select()->toArray();
             $list[$k]['sub'] = $sub;
-            foreach($sub as $k2=>$v2){
+            foreach ($sub as $reply) { $portraitIds[] = $reply['user_id']; }
+        }
+        \app\common\util\UserPortrait::prefetch($portraitIds);
+        foreach ($list as $k => $v) {
+            $list[$k]['user_portrait'] = mac_get_user_portrait($v['user_id']);
+            $list[$k]['comment_content'] = mac_restore_htmlfilter($list[$k]['comment_content']);
+            foreach($v['sub'] as $k2=>$v2){
                 $list[$k]['sub'][$k2]['user_portrait'] = mac_get_user_portrait($v2['user_id']);
                 $list[$k]['sub'][$k2]['comment_content'] = mac_restore_htmlfilter($list[$k]['sub'][$k2]['comment_content']);
             }

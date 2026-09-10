@@ -76,12 +76,14 @@ class Comment extends Base
                     ->order($order)
                     ->limit(200)  // 单批父评论下子评论合计上限，防止超大结果集
                     ->select();
+                \app\common\util\UserPortrait::prefetch(array_merge(array_column($list, 'user_id'), array_column($subRows->toArray(), 'user_id')));
                 foreach ($subRows as $row) {
                     $rowArr = is_array($row) ? $row : $row->toArray();
                     $subMap[(int)$rowArr['comment_pid']][] = $this->commentRowForApi($rowArr, true);
                 }
             }
 
+            \app\common\util\UserPortrait::prefetch(array_column($list, 'user_id'));
             foreach ($list as $k => $v) {
                 $list[$k] = $this->commentRowForApi($v, false);
                 $list[$k]['sub'] = $subMap[(int)$v['comment_id']] ?? [];

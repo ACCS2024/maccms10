@@ -20,6 +20,7 @@ function lang($key) { return $key; }
 function mac_validate($name) { $class = 'app\\common\\validate\\'.$name; return new $class(); }
 function config($key, $default = null) { return $GLOBALS['image_config'][$key] ?? $default; }
 function session($key) { return $key === '__csrf_token__' ? 'image-upload-csrf' : null; }
+function cookie($key, $value = null, $options = []) { $GLOBALS['image_cookies'][$key] = $value; }
 function mac_mkdirss($path) { return mkdir($path, 0777, true); }
 function mac_is_safe_remote_url($url) { return true; }
 function mac_curl_get($url) { return $GLOBALS['image_download_fixture']; }
@@ -88,14 +89,12 @@ function imageAuditRejected(callable $operation, string $message): void {
     check($failed, $message);
 }
 
-// User/admin identities remain controlled fixtures; Annex persistence now uses a real isolated SQLite transaction.
+// User/admin identities remain controlled fixtures; User/Annex writes use real isolated SQLite transactions.
 class ImageAuditUserMetadata {
     public function checkLogin() {
         $user = $GLOBALS['image_upload_member'] ?? null;
         return $user ? ['code'=>1, 'info'=>$user] : ['code'=>1001];
     }
-    public function where($where) { return $this; }
-    public function update($data) { $GLOBALS['image_user_updates'][] = $data; return 1; }
 }
 class ImageAuditAdminIdentity {
     public function checkLogin() {

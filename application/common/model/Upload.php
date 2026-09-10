@@ -124,7 +124,12 @@ class Upload {
             return self::upload_return(lang('token_err'));
         }
 
-        $result = $this->processUpload($param);
+        $result = $this->processUpload($param, $adminContext);
+        if (!$adminContext && $result['status'] === 1 && $param['flag'] === 'user'
+            && \app\common\util\UserPortrait::isManagedPath($param['user_id'], $result['data']['file'] ?? null)) {
+            // Other sessions may retain their old immutable URL until their next identity refresh.
+            cookie('user_portrait', MAC_PATH . $result['data']['file'], ['expire'=>2592000]);
+        }
         // Editors deliberately echo + exit: only invoke them after processing cleanup/transactions finish.
         return self::upload_return($result['info'], $param['from'], $result['status'], $result['data']);
     }
@@ -134,7 +139,7 @@ class Upload {
         return ['info'=>$info, 'status'=>$status, 'data'=>$data];
     }
 
-    private function processUpload(array $param): array
+    private function processUpload(array $param, bool $adminContext): array
     {
         $base64_img = $param['imgdata'] ?? '';
         if (!is_string($base64_img) || strlen($base64_img) > 4 * (int)ceil(\app\common\util\ImageProcessor::MAX_BYTES / 3) + 128) {
@@ -167,9 +172,11 @@ class Upload {
 
         $mode = $config['mode'] ?? '';
         if (!is_string($mode) && !is_int($mode)) { return self::uploadResult(lang('admin/upload/upload_faild')); }
-        if ($param['flag'] !== 'user' && in_array(strtolower((string)$mode), ['local', 'remote'], true)) {
+        if (in_array(strtolower((string)$mode), ['local', 'remote'], true)) {
             try {
-                $data = \app\common\util\LocalAttachment::store($param, $config);
+                $data = $param['flag'] === 'user'
+                    ? \app\common\util\LocalAttachment::storeAvatar($param, $config, $param['user_id'], !$adminContext)
+                    : \app\common\util\LocalAttachment::store($param, $config);
                 if ($param['from'] !== '') { $data['file'] = $pre . $data['file']; }
                 return self::uploadResult(lang('admin/upload/upload_success'), 1, $data);
             } catch (\Throwable $error) {

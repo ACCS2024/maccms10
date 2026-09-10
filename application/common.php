@@ -2162,19 +2162,9 @@ function mac_get_order_status_text($data)
     return $arr[$data];
 }
 
-function mac_get_user_portrait($user_id = null)
+function mac_get_user_portrait($user_id=null)
 {
-    $res = MAC_PATH . 'static_new/images/touxiang.png';
-    if ($user_id === null && !empty($GLOBALS['user']['user_id'])) {
-        $user_id = (int)$GLOBALS['user']['user_id'];
-    }
-    if(!empty($user_id)){
-        $res2 = 'upload/user/'.($user_id % 10 ). '/'.$user_id.'.jpg';
-        if(file_exists(ROOT_PATH . $res2)){
-            $res = MAC_PATH . $res2;
-        }
-    }
-    return $res;
+    return \app\common\util\UserPortrait::url($user_id);
 }
 
 function mac_scalar_string($val, $default = '')

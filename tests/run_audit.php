@@ -46,7 +46,7 @@ $groups = [
     // Separate environment: MEMBERSHIP_AUDIT_MYSQL selects the financial installation schema.
     'financial' => [['security_audit_task_retention.php'], ['security_audit_visit_retention.php'], ['security_audit_visit_rewards.php'], ['security_audit_visit_redirect.php'], ['security_audit_cash_refund.php'], ['security_audit_membership.php'], ['security_audit_points_overflow.php'], ['security_audit_referral_storage.php'], ['security_audit_content_purchase.php'], ['security_audit_card_credit.php'], ['security_audit_task_rewards.php'], ['security_audit_task_eligibility.php'], ['security_audit_comment_submission.php'], ['framework_audit_gbook_normal.php'], ['security_audit_comment_provenance.php'], ['security_audit_ledger_retention.php'], ['security_audit_order_create.php']],
     // Separate upload schema; both response formats use the same identity guard.
-    'upload' => [['security_audit_local_attachment.php'], ['security_audit_upload_identity.php'], ['security_audit_upload_identity.php', 'admin'], ['security_audit_upload_csrf.php'], ['security_audit_upload_csrf.php', 'admin']],
+    'upload' => [['security_audit_avatar_consistency.php'], ['security_audit_local_attachment.php'], ['security_audit_upload_identity.php'], ['security_audit_upload_identity.php', 'admin'], ['security_audit_upload_csrf.php'], ['security_audit_upload_csrf.php', 'admin']],
     // Execute as an unprivileged account so denied-write cases are meaningful.
     'install' => [['framework_audit_install.php']],
 ];

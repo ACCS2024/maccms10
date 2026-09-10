@@ -15,9 +15,24 @@ final class LocalAttachment
 
     public static function store(array $parameters, array $config): array
     {
-        if (!isset($parameters['flag']) || !is_string($parameters['flag']) || $parameters['flag'] === 'user'
+        return self::process($parameters, $config, null, false);
+    }
+
+    /** The upload controller/model supplies the verified owner and server-selected admin context. */
+    public static function storeAvatar(array $parameters, array $config, int $owner, bool $requireActiveOwner): array
+    {
+        if (PointsBalance::amount($owner) === null || ($parameters['flag'] ?? null) !== 'user') {
+            throw new \InvalidArgumentException('Invalid avatar owner');
+        }
+        return self::process($parameters, $config, $owner, $requireActiveOwner);
+    }
+
+    private static function process(array $parameters, array $config, ?int $owner, bool $requireActiveOwner): array
+    {
+        if (!isset($parameters['flag']) || !is_string($parameters['flag'])
+            || ($owner === null && $parameters['flag'] === 'user')
             || !preg_match('/^[a-z0-9_]{1,64}$/D', $parameters['flag'])) {
-            throw new \InvalidArgumentException('Local attachment requires a non-avatar upload flag');
+            throw new \InvalidArgumentException('Invalid local attachment flag');
         }
         $stage = null; $published = []; $directories = [];
         $connection = null; $transaction = false; $committed = false; $commitStarted = false;
@@ -27,17 +42,28 @@ final class LocalAttachment
             [$source, $type] = self::receive($stage, $parameters);
             self::scan($source);
             $prepared = [$source];
-            if ($type === 'image') {
+            if ($owner !== null) {
+                if ($type !== 'image') { throw new \RuntimeException('Avatar must be an image'); }
+                // Validate the declared image type before producing the explicitly flattened JPEG avatar.
+                (new Image())->prepareLocalUpload($source, ['watermark'=>0], false);
+                $size = $GLOBALS['config']['user']['portrait_size'] ?? null;
+                if ((!is_string($size) && !is_int($size)) || !preg_match('/^([0-9]{1,5})(?:x([0-9]{1,5}))?$/Di', (string)$size, $dimensions)) {
+                    throw new \RuntimeException('Invalid avatar dimensions');
+                }
+                $avatar = $stage . '/source-avatar.jpg';
+                ImageProcessor::open($source)->thumb($dimensions[1], $dimensions[2] ?? $dimensions[1], 6)->save($avatar, 'jpeg');
+                $prepared = [$avatar];
+            } elseif ($type === 'image') {
                 $prepared = array_merge($prepared, (new Image())->prepareLocalUpload($source, $config, $parameters['thumb'] === '1'));
             }
-            $name = bin2hex(random_bytes(16));
-            $directory = self::targetDirectory($parameters['flag']);
+            $name = ($owner === null ? '' : $owner . '-') . bin2hex(random_bytes(16));
+            $directory = $owner === null ? self::targetDirectory($parameters['flag']) : 'upload/user/' . ($owner % 10);
             $descriptors = []; $records = [];
             foreach ($prepared as $index => $file) {
                 clearstatcache(true, $file);
                 $bytes = @filesize($file);
                 if (!is_int($bytes) || $bytes < 0 || $bytes > 4294967295) { throw new \RuntimeException('Attachment size exceeds schema'); }
-                $relative = $directory . '/' . $name . substr(basename($file), strlen('source'));
+                $relative = $directory . '/' . $name . ($owner === null ? substr(basename($file), strlen('source')) : '.jpg');
                 $descriptors[] = ['file'=>$relative, 'type'=>$type, 'size'=>round($bytes / 1024, 2),
                     'flag'=>$parameters['flag'], 'ctime'=>request()->time()];
                 $records[] = ['annex_file'=>$relative, 'annex_type'=>$type, 'annex_size'=>$bytes];
@@ -45,20 +71,29 @@ final class LocalAttachment
             // A crash/ambiguous COMMIT must leave enough identity to inspect only this upload's files.
             $manifest = ['state'=>'prepared', 'created'=>time(), 'root'=>realpath(ROOT_PATH),
                 'metadata_table'=>Db::name('Annex')->getTable(), 'files'=>$records];
+            if ($owner !== null) { $manifest['avatar_owner'] = $owner; $manifest['owner_table'] = Db::name('User')->getTable(); }
             self::manifest($stage, $manifest);
             $connection = Db::connect();
             Db::name('Annex')->getTableFields();
+            if ($owner !== null) { Db::name('User')->getTableFields(); }
             if ($connection->getPdo() && $connection->getPdo()->inTransaction()) {
                 throw new \RuntimeException('Upload must own its transaction');
             }
-            if (strtolower((string)$connection->getConfig('type')) === 'mysql') {
-                $table = Db::name('Annex')->getTable();
-                $engines = $connection->query('SELECT ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?', [$table]);
-                if (count($engines) !== 1 || strtolower((string)$engines[0]['ENGINE']) !== 'innodb') {
-                    throw new \RuntimeException('Attachment metadata requires transactional storage');
+            if ($connection->getPdo()->getAttribute(\PDO::ATTR_DRIVER_NAME) === 'mysql') {
+                foreach ($owner === null ? ['Annex'] : ['Annex', 'User'] as $model) {
+                    $engines = $connection->query('SELECT ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?', [Db::name($model)->getTable()]);
+                    if (count($engines) !== 1 || strtolower((string)$engines[0]['ENGINE']) !== 'innodb') {
+                        throw new \RuntimeException('Attachment metadata requires transactional storage');
+                    }
                 }
             }
             $connection->startTrans(); $transaction = true;
+            if ($owner !== null) {
+                $user = Db::name('User')->master()->field('user_id,user_status,user_portrait')->where('user_id', $owner)->lock(true)->find();
+                if (!$user || ($requireActiveOwner && (string)$user['user_status'] !== '1')) {
+                    throw new \RuntimeException('Avatar owner is no longer available');
+                }
+            }
             foreach ($records as $record) {
                 if (Db::name('Annex')->where('annex_file', $record['annex_file'])->count() !== 0) {
                     throw new \RuntimeException('Attachment identity already exists');
@@ -80,8 +115,16 @@ final class LocalAttachment
             foreach ($prepared as $index => $file) {
                 self::publish($file, ROOT_PATH . $records[$index]['annex_file'], $records[$index]['annex_size'], $published);
             }
+            if ($owner !== null) {
+                $path = $records[0]['annex_file'];
+                $changed = Db::name('User')->where('user_id', $owner)->where('user_portrait', $user['user_portrait'])->update(['user_portrait'=>$path]);
+                if ($changed !== 1 || Db::name('User')->master()->where('user_id', $owner)->value('user_portrait') !== $path) {
+                    throw new \RuntimeException('Avatar pointer did not persist exactly');
+                }
+            }
             $commitStarted = true;
             $connection->commit(); $transaction = false; $committed = true;
+            if ($owner !== null) { UserPortrait::forget($owner); }
             $data = $descriptors[0];
             $data['thumb_class'] = $parameters['thumb_class'];
             $data['thumb'] = array_slice($descriptors, 1);

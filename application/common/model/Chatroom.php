@@ -95,6 +95,7 @@ class Chatroom extends Base {
         $last_id = 0;
         if (!empty($list)) {
             $last_id = $list[count($list) - 1]['chat_id'];
+            \app\common\util\UserPortrait::prefetch(array_column($list, 'user_id'));
             foreach ($list as &$v) {
                 $v['user_portrait'] = mac_get_user_portrait($v['user_id']);
                 $v['chat_time_text'] = date('H:i:s', $v['chat_time']);

@@ -44,7 +44,7 @@ namespace {
         'type'=>$mysql ? 'mysql' : (defined('UPLOAD_AUDIT_SQLITE_DRIVER') ? UPLOAD_AUDIT_SQLITE_DRIVER : 'sqlite'), 'database'=>$mysql ? 'maccms_audit_upload' : ':memory:',
         'prefix'=>'upload_audit_', 'hostname'=>getenv('UPLOAD_AUDIT_HOST') ?: '127.0.0.1',
         'username'=>'root', 'password'=>getenv('UPLOAD_AUDIT_PASSWORD') ?: '',
-        'charset'=>'utf8mb4', 'trigger_sql'=>false, 'fields_cache'=>false,
+        'charset'=>'utf8mb4', 'trigger_sql'=>defined('UPLOAD_AUDIT_TRACE_SQL') && UPLOAD_AUDIT_TRACE_SQL, 'fields_cache'=>false,
     ]]];
     $manager = new \think\DbManager();
     $manager->setConfig($configuration);
@@ -80,7 +80,7 @@ namespace {
     $temporary = audit_temp_dir('upload-identity');
     $originalCwd = getcwd();
     define('ROOT_PATH', $temporary.'/');
-    define('MAC_PATH', '/');
+    define('MAC_PATH', defined('UPLOAD_AUDIT_MAC_PATH') ? UPLOAD_AUDIT_MAC_PATH : '/');
     define('ENTRANCE', getenv('UPLOAD_AUDIT_ENTRANCE') === 'admin' || ($argv[1] ?? '') === 'admin' ? 'admin' : 'index');
     chdir($temporary);
     register_shutdown_function(static function () use ($temporary, $originalCwd): void {
@@ -149,7 +149,9 @@ namespace {
         return $result instanceof \think\response\Json ? $result->getData() : $result;
     }
     function uploadIdentityPath(array $result): string {
-        return ltrim(explode('?', $result['file'] ?? $result['data']['file'] ?? '')[0], '/');
+        $path = explode('?', $result['file'] ?? $result['data']['file'] ?? '')[0];
+        return isset($result['file']) && str_starts_with($path, MAC_PATH)
+            ? substr($path, strlen(MAC_PATH)) : ltrim($path, '/');
     }
     function uploadIdentityDenied(callable $call, string $message): void {
         $before = uploadIdentitySnapshot();

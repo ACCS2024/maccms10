@@ -215,6 +215,10 @@ class User extends Base
     {
         if (Request()->isPost()) {
             $param = \think\facade\Request::post();
+            // Avatar uploads commit their own immutable file and pointer. A stale profile form must not reset it.
+            foreach (array_keys($param) as $field) {
+                if (is_string($field) && strcasecmp($field, 'user_portrait') === 0) { unset($param[$field]); }
+            }
             if(isset($param['group_id']) && is_array($param['group_id'])) {
                 $param['group_id'] = implode(',', $param['group_id']);
             }
