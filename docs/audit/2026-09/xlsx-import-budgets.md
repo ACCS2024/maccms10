@@ -8,7 +8,7 @@
 
 新实现先有限复制源文件，再检查 EOCD 和实际中央目录的数量、记录长度、名称与偏移，避免只相信声明的数量后就交给 libzip。随后以只读一致性检查打开快照。每个实际读取的 XML 项在解压前检查剩余字节预算；流读取也有上限，并核对实际长度及 CRC。重复部件、跨卷、ZIP64 及不一致目录受控拒绝；未使用的部件不会解压或执行。
 
-XML 使用逐节点读取，不展开 SimpleXML/DOM 整树。DTD 检查必须早于原生 XML 解析：否则底层可能先分配声明对象，应用才看到 DOC_TYPE 节点。先规范 UTF-8/UTF-16/UTF-32 字节编码，再跳过合法注释、CDATA 和处理指令，拒绝其它声明；声明样式的普通单元格文本不会被误当成 DTD。输入仅接受一致的 UTF 编码或纯 ASCII 声明，其它编码受控拒绝。原生解析另外关闭 DTD 加载、默认属性、验证与实体替换，并禁用网络；不启用放宽原生限制的 HUGE 选项。[XMLReader 节点接口](https://www.php.net/manual/en/xmlreader.read.php)、[解析属性](https://www.php.net/manual/en/xmlreader.setparserproperty.php)
+XML 使用逐节点读取，不展开 SimpleXML/DOM 整树。DTD 检查必须早于原生 XML 解析：否则底层可能先分配声明对象，应用才看到 DOC_TYPE 节点。先规范 UTF-8/UTF-16/UTF-32 字节编码，再跳过合法注释、CDATA 和处理指令，拒绝其它声明；声明样式的普通单元格文本不会被误当成 DTD。输入仅接受一致的 UTF 编码或纯 ASCII 声明，其它编码受控拒绝。重复的开头 BOM 也拒绝，避免规范化后遗留的标记使编码声明检查被跳过；单元格内部的正常 Unicode 文本不受此规则影响。原生解析另外关闭 DTD 加载、默认属性、验证与实体替换，并禁用网络；不启用放宽原生限制的 HUGE 选项。[XMLReader 节点接口](https://www.php.net/manual/en/xmlreader.read.php)、[解析属性](https://www.php.net/manual/en/xmlreader.setparserproperty.php)
 
 原有共享/内联字符串、富文本片段、显式命名空间前缀、零值和注音分离合同由原有测试继续验证。丢失或非法共享字符串索引、重复行/单元格、行与单元格坐标不一致均拒绝，不再默默覆盖或转换成第一格。公开坐标函数验证完整工作表边界后返回整数；导入器再施加更小的业务范围。
 
@@ -36,7 +36,7 @@ XLSX 功能需要 ZIP、XMLReader；UTF-16/32 规范化还使用现有生产依�
 
 ## 验证与剩余边界
 
-`framework_audit_xlsx_budget.php` 在 56 个独立 `memory_limit=128M` 进程中验证目录、损坏部件、解压累计量、XML 结构/编码、坐标、共享引用、文本和矩阵的边界，共 435 项。每个进程同时检查源文件 SHA-256 不变、私有快照清理和 libxml 错误模式恢复。记录 PHP 内存峰值及 Linux RSS，分别要求不超过 96 MiB 和 192 MiB；RSS 包括扩展内存及夹具构造，不把 PHP memory_limit 误称为整个进程的内存上限。
+`framework_audit_xlsx_budget.php` 在 58 个独立 `memory_limit=128M` 进程中验证目录、损坏部件、解压累计量、XML 结构/编码、坐标、共享引用、文本和矩阵的边界，共 449 项。每个进程同时检查源文件 SHA-256 不变、私有快照清理和 libxml 错误模式恢复。记录 PHP 内存峰值及 Linux RSS，分别要求不超过 96 MiB 和 192 MiB；RSS 包括扩展内存及夹具构造，不把 PHP memory_limit 误称为整个进程的内存上限。
 
 双 PHP 8.3/8.4 从暂存源码验证新矩阵、既有 68 项普通 XLSX 文本、86 项实际后台导出及 CSV 普通/往返/预算回归；另验证缺失扩展的受控响应。专项结果不代替整个应用叠加身份缓存、数据库结果和并发后的容量验收。
 

@@ -174,6 +174,7 @@ final class XlsxTableReader
             }
             $xml = $converted;
         }
+        if (str_starts_with($xml, "\xEF\xBB\xBF")) { throw new \RuntimeException('Repeated XLSX XML byte-order mark'); }
         if (strlen($xml) > BulkTableIo::MAX_IMPORT_BYTES || str_contains($xml, "\0") || preg_match('//u', $xml) !== 1) {
             throw new \RuntimeException('Invalid or oversized XLSX XML text');
         }

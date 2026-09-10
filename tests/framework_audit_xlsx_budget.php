@@ -7,7 +7,7 @@ use app\common\util\BulkTableIo;
 $cases=['empty','coordinate','row_limit','row_over','column_limit','column_over','coordinate_over','row_mismatch',
     'padding_limit','padding_over','cells_limit','cells_over','shared_over','reference_over','text_limit','text_over',
     'part_over','parts_sum_over','archive_limit','archive_over','zip_comment','entries_limit','entries_over','invalid_directory','invalid_directory_count','invalid_local','invalid_crc','invalid_central','invalid_xml','empty_xml',
-    'doctype','doctype_utf16','doctype_utf32','utf16_le','utf16_be','utf32_le','utf32_be','utf16_no_bom','utf16_text_limit','cdata_literal','comment_literal','decl_unsupported','depth_limit','depth_over','attribute_count_limit','attribute_count_over','attribute_limit','attribute_over',
+    'doctype','doctype_utf16','doctype_utf32','utf16_le','utf16_be','utf32_le','utf32_be','utf16_no_bom','utf16_text_limit','cdata_literal','comment_literal','decl_unsupported','invalid_bom','invalid_bom16','depth_limit','depth_over','attribute_count_limit','attribute_count_over','attribute_limit','attribute_over',
     'nodes_over','invalid_reference','duplicate_row','duplicate_cell','fallback','fallback_external','fallback_missing_id','fallback_duplicate_rel'];
 if(($argv[1]??'')!=='--case') {
     foreach($cases as $case) {
@@ -101,6 +101,8 @@ try {
         if($case==='utf16_no_bom')$bom='';
         file_put_contents($part,$bom.iconv('UTF-8',$encoding,file_get_contents($part)));
     }
+    if($case==='invalid_bom')file_put_contents($part,"\xEF\xBB\xBF\xEF\xBB\xBF".file_get_contents($part));
+    if($case==='invalid_bom16')file_put_contents($part,"\xFF\xFE".iconv('UTF-8','UTF-16LE',"\xEF\xBB\xBF".file_get_contents($part)));
     $sheetName=str_starts_with($case,'fallback')?'xl/worksheets/ordinary.xml':'xl/worksheets/sheet1.xml';
     $zip->addFile($part,$sheetName);
     if(str_starts_with($case,'fallback')) {
