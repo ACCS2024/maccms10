@@ -3,7 +3,7 @@ namespace app\common\util;
 
 use think\facade\Cache;
 use think\facade\Db;
-use think\Log;
+use think\facade\Log;
 
 /**
  * AI-generated poster / cover for VOD (OpenAI Images API).

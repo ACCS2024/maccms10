@@ -2,7 +2,7 @@
 namespace app\common\util;
 
 use think\facade\Db;
-use think\Log;
+use think\facade\Log;
 
 class AiSearch
 {

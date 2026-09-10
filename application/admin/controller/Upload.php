@@ -1,7 +1,7 @@
 <?php
 namespace app\admin\controller;
 use think\facade\Db;
-use think\Log;
+use think\facade\Log;
 use app\common\util\UeditorAiCsrf;
 use app\common\util\UeditorAiProxy;
 
