@@ -23,7 +23,7 @@ class WeixinSDK extends ThinkOauth
      */
     protected $ApiBase = 'https://api.weixin.qq.com/';
 
-    public function getRequestCodeURL()
+    public function getRequestCodeURL(string $state = '')
     {
         $this->config();
 
@@ -33,6 +33,9 @@ class WeixinSDK extends ThinkOauth
             'response_type' => 'code',
             'scope' => 'snsapi_login'
         );
+        if ($state !== '') {
+            $params['state'] = $state;
+        }
         return $this->GetRequestCodeURL . '?' . http_build_query($params);
     }
 
@@ -80,7 +83,7 @@ class WeixinSDK extends ThinkOauth
     {
         $data = json_decode($result, true);
         //parse_str($result, $data);
-        if ($data['access_token'] && $data['expires_in']) {
+        if (is_array($data) && !empty($data['access_token']) && !empty($data['expires_in'])) {
             $this->Token = $data;
             $data['openid'] = $this->openid();
             return $data;
@@ -102,4 +105,3 @@ class WeixinSDK extends ThinkOauth
 }
 
 ?>
-

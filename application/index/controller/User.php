@@ -5,6 +5,7 @@ use think\facade\Request;
 use login\ThinkOauth;
 use app\index\event\LoginEvent;
 use app\common\util\Qrcode;
+use app\common\util\OAuthState;
 
 class User extends Base
 {
@@ -12,7 +13,10 @@ class User extends Base
     {
         parent::__construct();
 
-        define('THIRD_LOGIN_CALLBACK',  $GLOBALS['http_type'] . $_SERVER['HTTP_HOST'] ?? '' . '/index.php/user/logincallback/type/');
+        if (!defined('THIRD_LOGIN_CALLBACK')) {
+            $installDir = '/' . trim((string) ($GLOBALS['config']['site']['install_dir'] ?? '/'), '/');
+            define('THIRD_LOGIN_CALLBACK', request()->domain() . rtrim($installDir, '/') . '/index.php/user/logincallback/type/');
+        }
 
         //判断用户登录状态
         $ac = request()->action();
@@ -226,17 +230,21 @@ class User extends Base
 
     public function oauth($type = '')
     {
-        empty($type) && $this->error(lang('param_err'));
+        if (!OAuthState::supports($type)) {
+            return $this->error(lang('param_err'));
+        }
         //加载ThinkOauth类并实例化一个对象
         $sns = ThinkOauth::getInstance($type);
         //跳转到授权页面
-        return redirect($sns->getRequestCodeURL());
+        $state = OAuthState::issue($type, (int) ($GLOBALS['user']['user_id'] ?? 0));
+        return redirect($sns->getRequestCodeURL($state));
     }
 
     //授权回调地址
     public function logincallback($type = '', $code = '')
     {
-        if (empty($type) || empty($code)) {
+        if (!OAuthState::supports($type) || !is_string($code) || $code === ''
+            || !OAuthState::consume($type, request()->get('state'), (int) ($GLOBALS['user']['user_id'] ?? 0))) {
             return $this->error(lang('param_err'));
         }
         //加载ThinkOauth类并实例化一个对象
@@ -250,7 +258,10 @@ class User extends Base
             $loginEvent = new LoginEvent();
             $res = $loginEvent->$type($token);
             if ($res['code'] == 1) {
-                $openid = $res['info']['openid'];
+                $openid = $res['info']['openid'] ?? null;
+                if (!is_string($openid) || $openid === '') {
+                    return $this->error(lang('index/logincallback2'));
+                }
                 $col = 'user_openid_' . $type;
                 //如果已登录,是否需要重新绑定
                 $check = (new \app\common\model\User())->checkLogin();
@@ -284,18 +295,18 @@ class User extends Base
                     $data = [];
                     $data['user_name'] = substr($openid, 0, 10);
                     $data['user_nick_name'] = htmlspecialchars(urldecode(trim($res['info']['name'])));
-                    $pwd = time();
+                    $pwd = bin2hex(random_bytes(24));
                     $data['user_pwd'] = $pwd;
                     $data['user_pwd2'] = $pwd;
                     $data[$col] = $openid;
-                    $reg = (new \app\common\model\User())->register($data);
+                    $reg = (new \app\common\model\User())->register($data, true);
                     if ($reg['code'] > 1) {
                         //注册失败
                         return $this->error(lang('index/logincallback1'));
                     }
                 }
                 //直接登录。。。
-                $login = (new \app\common\model\User())->login(['col' => $col, 'openid' => $openid]);
+                $login = (new \app\common\model\User())->login(['col' => $col, 'openid' => $openid], ['trusted_oauth' => true]);
                 if ($login['code'] > 1) {
                     return $this->error($login['msg']);
                 }

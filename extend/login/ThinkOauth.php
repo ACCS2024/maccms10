@@ -88,10 +88,10 @@ abstract class ThinkOauth
 
         //获取应用配置
         $connect = config('maccms.connect');
-        $tmp = $connect["{$this->Type}"];
+        $tmp = $connect[$this->Type] ?? [];
         unset($config);
-        $config['APP_KEY'] = $tmp['key'];
-        $config['APP_SECRET'] = $tmp['secret'];
+        $config['APP_KEY'] = $tmp['key'] ?? '';
+        $config['APP_SECRET'] = $tmp['secret'] ?? '';
 
         if (empty($config['APP_KEY']) || empty($config['APP_SECRET'])) {
             throw new \think\Exception('请配置您申请的APP_KEY和APP_SECRET', 100001);
@@ -121,7 +121,7 @@ abstract class ThinkOauth
     /**
      * 请求code
      */
-    public function getRequestCodeURL()
+    public function getRequestCodeURL(string $state = '')
     {
         $this->config();
         //Oauth 标准参数
@@ -138,6 +138,9 @@ abstract class ThinkOauth
             } else {
                 throw new \think\Exception('AUTHORIZE配置不正确！',100003);
             }
+        }
+        if ($state !== '') {
+            $params['state'] = $state;
         }
         return $this->GetRequestCodeURL . '?' . http_build_query($params);
     }
@@ -187,8 +190,8 @@ abstract class ThinkOauth
         $opts = array(
             CURLOPT_TIMEOUT => 30,
             CURLOPT_RETURNTRANSFER => 1,
-            CURLOPT_SSL_VERIFYPEER => false,
-            CURLOPT_SSL_VERIFYHOST => false,
+            CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_SSL_VERIFYHOST => 2,
             CURLOPT_HTTPHEADER => $header
         );
 

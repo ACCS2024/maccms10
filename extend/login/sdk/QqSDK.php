@@ -57,7 +57,7 @@ class QqSDK extends ThinkOauth
     protected function parseToken($result, $extend)
     {
         parse_str($result, $data);
-        if ($data['access_token'] && $data['expires_in']) {
+        if (!empty($data['access_token']) && !empty($data['expires_in'])) {
             $this->Token = $data;
             $data['openid'] = $this->openid();
             return $data;
@@ -74,13 +74,13 @@ class QqSDK extends ThinkOauth
         $data = $this->Token;
         if (isset($data['openid']))
             return $data['openid'];
-        elseif ($data['access_token']) {
+        elseif (!empty($data['access_token'])) {
             $data = $this->http($this->url('oauth2.0/me'), array('access_token' => $data['access_token']));
             $data = json_decode(trim(substr($data, 9), " );\n"), true);
             if (isset($data['openid']))
                 return $data['openid'];
             else
-                throw new \think\Exception("获取用户openid出错：{$data['error_description']}");
+                throw new \think\Exception('获取用户openid出错');
         } else {
             throw new \think\Exception('没有获取到openid！');
         }

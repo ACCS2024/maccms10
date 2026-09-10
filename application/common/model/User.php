@@ -196,8 +196,22 @@ class User extends Base
         return ['code' => 1, 'msg' =>lang('set_ok')];
     }
 
-    public function register($param)
+    public function register($param, bool $trustedOauth = false)
     {
+        if (!is_array($param)) {
+            return ['code' => 1001, 'msg' => lang('param_err')];
+        }
+        foreach (['user_name', 'user_pwd', 'user_pwd2', 'verify', 'uid', 'user_openid_qq', 'user_openid_weixin'] as $key) {
+            if (isset($param[$key]) && !is_scalar($param[$key])) {
+                return ['code' => 1001, 'msg' => lang('param_err')];
+            }
+            $param[$key] = (string) ($param[$key] ?? '');
+        }
+        // Only the server-side callback, after verifying state and the provider token,
+        // may register an OAuth identity or bypass normal registration challenges.
+        if (!$trustedOauth) {
+            $param['user_openid_qq'] = $param['user_openid_weixin'] = '';
+        }
         // 安全加固:注册按 IP 温和限流(默认开启,失败开放),防注册刷量/暴力触发 bcrypt 打满 CPU。
         // 既有逻辑仅限制"每 IP 当日成功注册数",不限请求频率;此处补齐请求级限流。
         if (!mac_fe_write_throttle('fe_reg', 120, 10)) {
@@ -620,6 +634,19 @@ class User extends Base
 
     public function login($param, array $options = [])
     {
+        if (!is_array($param)) {
+            return ['code' => 1001, 'msg' => lang('param_err')];
+        }
+        foreach (['user_name', 'user_pwd', 'verify', 'openid', 'col'] as $key) {
+            if (isset($param[$key]) && !is_scalar($param[$key])) {
+                return ['code' => 1001, 'msg' => lang('param_err')];
+            }
+            $param[$key] = (string) ($param[$key] ?? '');
+        }
+        // Request parameters cannot select the password-free OAuth authentication path.
+        if (($options['trusted_oauth'] ?? false) !== true) {
+            $param['openid'] = $param['col'] = '';
+        }
         // 安全加固:登录按 IP 温和限流(默认开启,失败开放),防撞库/暴力破解。
         // 覆盖 index 登录与 Auth::jwt() 等所有调用方;api/User 控制器另有 10/60s 限流,
         // 本阈值(20/120s)更宽松,不改变其既有行为,仅补齐此前未受保护的入口。
@@ -681,7 +708,7 @@ class User extends Base
             $update['group_id'] = 2;
         }
 
-        $random = md5(rand(10000000, 99999999));
+        $random = bin2hex(random_bytes(16));
         $update['user_random'] = $random;
         $update['user_login_ip'] = mac_get_ip_long();
         $update['user_login_time'] = time();
