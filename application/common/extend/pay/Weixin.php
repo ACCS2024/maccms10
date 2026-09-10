@@ -46,34 +46,63 @@ class Weixin {
 
     public function notify()
     {
-        $xml = file_get_contents('php://input');
-        $config = config('maccms.pay');
-
-        //将服务器返回的XML数据转化为数组
-        $data = mac_xml2array($xml);
-        // 保存微信服务器返回的签名sign
-        $data_sign = $data['sign'];
-        // sign不参与签名算法
-        unset($data['sign']);
-        // 生成签名
-        $sign = $this->makeSign($data);
-        // 判断签名是否正确  判断支付状态
-        if ( ($sign===$data_sign) && ($data['return_code']=='SUCCESS') && ($data['result_code']=='SUCCESS') ) {
-            // 安全加固:微信 total_fee 单位为「分」,换算为元后二次核对,防改价低付
-            $paid = isset($data['total_fee']) ? ($data['total_fee'] / 100) : null;
-            $res = (new \app\common\model\Order())->notify($data['out_trade_no'],'weixin',$paid);
+        $accepted = false;
+        try {
+            $xml = file_get_contents('php://input', false, null, 0, 1048577);
+            $GLOBALS['config']['pay'] = config('maccms.pay');
+            $data = is_string($xml) && strlen($xml) <= 1048576 ? mac_xml2array($xml) : [];
+            $accepted = is_array($data) && $this->acceptNotification($data);
+        } catch (\Throwable $e) {
+            // A failed transaction must remain retryable by the payment gateway.
+        }
+        if ($accepted) {
             echo '<xml><return_code><![CDATA[SUCCESS]]></return_code><return_msg><![CDATA[OK]]></return_msg></xml>';
+        } else {
+            echo '<xml><return_code><![CDATA[FAIL]]></return_code><return_msg><![CDATA[通知处理失败]]></return_msg></xml>';
         }
-        else{
-            echo '<xml><return_code><![CDATA[FAIL]]></return_code><return_msg><![CDATA[签名失败]]></return_msg></xml>';
+    }
+
+    private function acceptNotification(array $data): bool
+    {
+        foreach ($data as $field => $value) {
+            // SimpleXML's JSON representation encodes an empty XML element as [].
+            if ($value === []) {
+                $data[$field] = '';
+            } elseif (!is_string($value) && !is_int($value)) {
+                return false;
+            }
         }
+        $config = $GLOBALS['config']['pay']['weixin'] ?? [];
+        $key = trim((string)($config['appkey'] ?? ''));
+        if ($key === '' || empty($data['sign']) || empty($data['out_trade_no']) || empty($data['transaction_id'])
+            || ($data['return_code'] ?? '') !== 'SUCCESS' || ($data['result_code'] ?? '') !== 'SUCCESS'
+            || empty($config['appid']) || (string)($data['appid'] ?? '') !== trim((string)$config['appid'])
+            || empty($config['mchid']) || (string)($data['mch_id'] ?? '') !== trim((string)$config['mchid'])
+            || ($data['fee_type'] ?? 'CNY') !== 'CNY') {
+            return false;
+        }
+        $fee = (string)($data['total_fee'] ?? '');
+        if (!preg_match('/^[0-9]{1,10}$/D', $fee) || (int)$fee <= 0) {
+            return false;
+        }
+        $receivedSign = (string)$data['sign'];
+        unset($data['sign']);
+        $sign = $this->makeSign($data);
+        if ($sign === '' || !hash_equals($sign, $receivedSign)) {
+            return false;
+        }
+        // total_fee is integer fen; preserve the exact decimal amount without float division.
+        $cents = (int)$fee;
+        $paid = intdiv($cents, 100) . '.' . str_pad((string)($cents % 100), 2, '0', STR_PAD_LEFT);
+        $res = (new \app\common\model\Order())->notify($data['out_trade_no'], 'weixin', $paid);
+        return in_array($res['code'] ?? null, [1, '1'], true);
     }
 
     public function makeSign($data){
         //获取微信支付秘钥
         $key = trim($GLOBALS['config']['pay']['weixin']['appkey']);
         // 去空
-        $data=array_filter($data);
+        $data = array_filter($data, static fn($value) => $value !== '' && $value !== null);
         //签名步骤一：按字典序排序参数
         ksort($data);
         $string_a=http_build_query($data);
@@ -81,7 +110,14 @@ class Weixin {
         //签名步骤二：在string后加入KEY
         $string_sign_temp=$string_a."&key=".$key;
         //签名步骤三：MD5加密
-        $sign = md5($string_sign_temp);
+        $signType = $data['sign_type'] ?? 'MD5';
+        if ($signType === 'HMAC-SHA256') {
+            $sign = hash_hmac('sha256', $string_sign_temp, $key);
+        } elseif ($signType === 'MD5') {
+            $sign = md5($string_sign_temp);
+        } else {
+            return '';
+        }
         // 签名步骤四：所有字符转为大写
         $result=strtoupper($sign);
         return $result;
