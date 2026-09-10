@@ -17,6 +17,7 @@ function imageAuditRequest(array $params = [], array $files = []): void {
 }
 function request() { return $GLOBALS['image_request']; }
 function lang($key) { return $key; }
+function mac_validate($name) { $class = 'app\\common\\validate\\'.$name; return new $class(); }
 function config($key, $default = null) { return $GLOBALS['image_config'][$key] ?? $default; }
 function session($key) { return $key === '__csrf_token__' ? 'image-upload-csrf' : null; }
 function mac_mkdirss($path) { return mkdir($path, 0777, true); }
@@ -87,7 +88,7 @@ function imageAuditRejected(callable $operation, string $message): void {
     check($failed, $message);
 }
 
-// These fixtures only isolate metadata persistence; image decoding, rendering, requests and upload moves are real.
+// User/admin identities remain controlled fixtures; Annex persistence now uses a real isolated SQLite transaction.
 class ImageAuditUserMetadata {
     public function checkLogin() {
         $user = $GLOBALS['image_upload_member'] ?? null;
@@ -96,10 +97,6 @@ class ImageAuditUserMetadata {
     public function where($where) { return $this; }
     public function update($data) { $GLOBALS['image_user_updates'][] = $data; return 1; }
 }
-class ImageAuditAnnexMetadata {
-    public function infoData($where) { return ['code'=>1]; }
-    public function saveData($data) { return ['code'=>1]; }
-}
 class ImageAuditAdminIdentity {
     public function checkLogin() {
         $admin = $GLOBALS['image_upload_admin'] ?? null;
@@ -107,5 +104,5 @@ class ImageAuditAdminIdentity {
     }
 }
 class_alias(ImageAuditUserMetadata::class, 'app\\common\\model\\User');
-class_alias(ImageAuditAnnexMetadata::class, 'app\\common\\model\\Annex');
+require __DIR__ . '/security_audit_image_db.php';
 class_alias(ImageAuditAdminIdentity::class, 'app\\common\\model\\Admin');

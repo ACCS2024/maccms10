@@ -118,6 +118,38 @@ class Image {
         return $_file_path;
     }
 
+    /** Strict preparation for new local attachments; failures must not publish a partial image set. */
+    public function prepareLocalUpload(string $file, array $config, bool $thumbnails): array
+    {
+        $source = ImageProcessor::open($file);
+        $types = [IMAGETYPE_JPEG=>['jpg','jpeg'], IMAGETYPE_PNG=>['png'], IMAGETYPE_GIF=>['gif'], IMAGETYPE_WEBP=>['webp']];
+        $info = getimagesize($file);
+        if (!in_array(strtolower(pathinfo($file, PATHINFO_EXTENSION)), $types[$info[2]] ?? [], true)) {
+            throw new \RuntimeException('Image extension does not match its content');
+        }
+        if (($config['watermark'] ?? 0) == 1) {
+            $this->applyWatermark($source, $config);
+            $source->save($file);
+        }
+        $files = [];
+        if (!$thumbnails || ($config['thumb'] ?? 0) != 1) { return $files; }
+        $sizes = $config['thumb_size'] ?? '';
+        if (!is_string($sizes) || $sizes === '') { throw new \RuntimeException('Missing thumbnail dimensions'); }
+        $sizes = explode(',', $sizes);
+        if (count($sizes) > 16) { throw new \RuntimeException('Too many thumbnail dimensions'); }
+        foreach ($sizes as $size) {
+            if (!preg_match('/^([0-9]{1,4})(?:x([0-9]{1,4}))?$/Di', trim($size), $match)) {
+                throw new \RuntimeException('Invalid thumbnail dimensions');
+            }
+            $width = $match[1]; $height = $match[2] ?? $width;
+            $path = $file . '_' . $width . 'x' . $height . '.' . strtolower(pathinfo($file, PATHINFO_EXTENSION));
+            if (in_array($path, $files, true)) { throw new \RuntimeException('Duplicate thumbnail dimensions'); }
+            $source->copy()->thumb($width, $height, $config['thumb_type'] ?? 1)->save($path);
+            $files[] = $path;
+        }
+        return $files;
+    }
+
     public function watermark($file_path,$config,$flag='vod')
     {
         try {

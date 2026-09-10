@@ -4,7 +4,7 @@ namespace app\common\model;
 use app\common\util\Ftp as ftpOper;
 
 /**
- * 上传处理辅助类：接收文件、本地保存或转投 FTP/云存储，不落库。
+ * 上传处理辅助类：接收文件、本地保存或转投 FTP/云存储，并协调附件元数据。
  *
  * 【不要让它继承 Base/Model】
  * 本类没有对应的数据表（mac_upload 在官方原版与老库中同样不存在）。
@@ -124,13 +124,27 @@ class Upload {
             return self::upload_return(lang('token_err'));
         }
 
+        $result = $this->processUpload($param);
+        // Editors deliberately echo + exit: only invoke them after processing cleanup/transactions finish.
+        return self::upload_return($result['info'], $param['from'], $result['status'], $result['data']);
+    }
+
+    private static function uploadResult(string $info, int $status = 0, array $data = []): array
+    {
+        return ['info'=>$info, 'status'=>$status, 'data'=>$data];
+    }
+
+    private function processUpload(array $param): array
+    {
         $base64_img = $param['imgdata'] ?? '';
         if (!is_string($base64_img) || strlen($base64_img) > 4 * (int)ceil(\app\common\util\ImageProcessor::MAX_BYTES / 3) + 128) {
-            return self::upload_return(lang('admin/upload/upload_faild'), $param['from']);
+            return self::uploadResult(lang('admin/upload/upload_faild'));
         }
         $data = [];
         $config = (array)config('maccms.site');
-        $pre= $config['install_dir'];
+        $pre = $config['install_dir'] ?? '';
+        if (!is_string($pre) || strlen($pre) > 7937 || preg_match('//u', $pre) !== 1
+            || preg_match('/[\x00-\x1f\x7f]/', $pre)) { return self::uploadResult(lang('param_err')); }
         $upload_image_ext = 'jpg,jpeg,png,gif,webp';
         $upload_file_ext = 'doc,docx,xls,xlsx,ppt,pptx,pdf,wps,txt,rar,zip,torrent';
         $upload_media_ext = 'rm,rmvb,avi,mkv,mp4,mp3';
@@ -144,11 +158,23 @@ class Upload {
                 $c->front($param);
             }
             else{
-                return self::upload_return(lang('admin/upload/not_find_extend'), '');
+                return self::uploadResult(lang('admin/upload/not_find_extend'));
             }
         }
         else{
             $pre='';
+        }
+
+        $mode = $config['mode'] ?? '';
+        if (!is_string($mode) && !is_int($mode)) { return self::uploadResult(lang('admin/upload/upload_faild')); }
+        if ($param['flag'] !== 'user' && in_array(strtolower((string)$mode), ['local', 'remote'], true)) {
+            try {
+                $data = \app\common\util\LocalAttachment::store($param, $config);
+                if ($param['from'] !== '') { $data['file'] = $pre . $data['file']; }
+                return self::uploadResult(lang('admin/upload/upload_success'), 1, $data);
+            } catch (\Throwable $error) {
+                return self::uploadResult(lang('admin/upload/upload_faild'));
+            }
         }
 
         // 上传附件路径
@@ -203,33 +229,33 @@ class Upload {
                     if ($param['flag'] !== 'user') { $_save_name .= '.' . $extension; }
                     $directory = dirname($_save_path . $_save_name);
                     if (!is_dir($directory) && !@mkdir($directory, 0777, true) && !is_dir($directory)) {
-                        return self::upload_return(lang('admin/upload/upload_faild'), $param['from']);
+                        return self::uploadResult(lang('admin/upload/upload_faild'));
                     }
                     $decoded = base64_decode(substr($base64_img, strlen($result[1])), true);
                     if($decoded === false || !file_put_contents($_save_path.$_save_name, $decoded)){
-                        return self::upload_return(lang('admin/upload/upload_faild'), $param['from']);
+                        return self::uploadResult(lang('admin/upload/upload_faild'));
                     }
                     $file_size = round(filesize('./'.$_save_path.$_save_name)/1024, 2);
                 }
                 else {
-                    return self::upload_return(lang('admin/upload/forbidden_ext'), $param['from']);
+                    return self::uploadResult(lang('admin/upload/forbidden_ext'));
                 }
             }
             else{
-                return self::upload_return(lang('admin/upload/no_input_file'), $param['from']);
+                return self::uploadResult(lang('admin/upload/no_input_file'));
             }
         }
         else {
             try {
                 $file = request()->file($param['input']);
             } catch (\Throwable $e) {
-                return self::upload_return(lang('admin/upload/upload_faild'), $param['from']);
+                return self::uploadResult(lang('admin/upload/upload_faild'));
             }
             if (!$file instanceof \think\file\UploadedFile || !$file->isValid()) {
-                return self::upload_return(lang('admin/upload/no_input_file'), $param['from']);
+                return self::uploadResult(lang('admin/upload/no_input_file'));
             }
             if ($file->getMime() == 'text/x-php') {
-                return self::upload_return(lang('admin/upload/forbidden_ext'), $param['from']);
+                return self::uploadResult(lang('admin/upload/forbidden_ext'));
             }
 
             $extension = strtolower($file->getOriginalExtension());
@@ -240,7 +266,7 @@ class Upload {
             } elseif (in_array($extension, explode(',', $upload_media_ext), true)) {
                 $type = 'media';
             } else {
-                return self::upload_return(lang('admin/upload/forbidden_ext'), $param['from']);
+                return self::uploadResult(lang('admin/upload/forbidden_ext'));
             }
             if ($param['flag'] !== 'user') { $_save_name .= '.' . $extension; }
             $relativeDirectory = dirname($_save_name);
@@ -248,7 +274,7 @@ class Upload {
             try {
                 $upfile = $file->move($targetDirectory, basename($_save_name));
             } catch (\Throwable $e) {
-                return self::upload_return(lang('admin/upload/upload_faild'), $param['from']);
+                return self::uploadResult(lang('admin/upload/upload_faild'));
             }
             $file_size = round($upfile->getSize()/1024, 2);
         }
@@ -266,7 +292,7 @@ class Upload {
         }
         fclose($resource);
         if(preg_match("/(3c25.*?28.*?29.*?253e)|(3c3f.*?28.*?29.*?3f3e)|(3C534352495054)|(2F5343524950543E)|(3C736372697074)|(2F7363726970743E)/is", $hexCode)){
-            return self::upload_return(lang('admin/upload/upload_safe'), $param['from']);
+            return self::uploadResult(lang('admin/upload/upload_safe'));
         }
 
         $file_count = 1;
@@ -296,7 +322,7 @@ class Upload {
                 $file_size = round(filesize('./' .$new_file)/1024, 2);
             }
             catch(\Throwable $e){
-                return self::upload_return(lang('admin/upload/make_thumb_faild'), $param['from']);
+                return self::uploadResult(lang('admin/upload/make_thumb_faild'));
             }
             $data['file'] = $new_file;
             $data['size'] = $file_size;
@@ -379,7 +405,7 @@ class Upload {
                 }
             }
         }
-        return self::upload_return(lang('admin/upload/upload_success'), $param['from'], 1, $data);
+        return self::uploadResult(lang('admin/upload/upload_success'), 1, $data);
         } finally {
             if ($portraitInput !== null && is_file($portraitInput)) { @unlink($portraitInput); }
         }

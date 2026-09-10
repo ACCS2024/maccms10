@@ -41,7 +41,7 @@ namespace {
     }
     $mysql = getenv('UPLOAD_AUDIT_MYSQL') === '1';
     $configuration = ['default'=>'upload', 'auto_timestamp'=>false, 'connections'=>['upload'=>[
-        'type'=>$mysql ? 'mysql' : 'sqlite', 'database'=>$mysql ? 'maccms_audit_upload' : ':memory:',
+        'type'=>$mysql ? 'mysql' : (defined('UPLOAD_AUDIT_SQLITE_DRIVER') ? UPLOAD_AUDIT_SQLITE_DRIVER : 'sqlite'), 'database'=>$mysql ? 'maccms_audit_upload' : ':memory:',
         'prefix'=>'upload_audit_', 'hostname'=>getenv('UPLOAD_AUDIT_HOST') ?: '127.0.0.1',
         'username'=>'root', 'password'=>getenv('UPLOAD_AUDIT_PASSWORD') ?: '',
         'charset'=>'utf8mb4', 'trigger_sql'=>false, 'fields_cache'=>false,
