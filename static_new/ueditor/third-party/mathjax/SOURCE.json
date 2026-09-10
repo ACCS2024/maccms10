@@ -1,0 +1,16 @@
+{
+  "project": "MathJax",
+  "version": "3.2.2",
+  "commit": "600692ad9d3552cc25f85510d5797bc942ecc9f7",
+  "source": "https://github.com/mathjax/MathJax/tree/600692ad9d3552cc25f85510d5797bc942ecc9f7",
+  "files": {
+    "tex-svg.js": {
+      "source": "https://raw.githubusercontent.com/mathjax/MathJax/600692ad9d3552cc25f85510d5797bc942ecc9f7/es5/tex-svg.js",
+      "sha256": "d4295dc33744836935c1399feece5159577b34c5c8ffb9f1c6324cd82e03a882"
+    },
+    "LICENSE": {
+      "source": "https://raw.githubusercontent.com/mathjax/MathJax/600692ad9d3552cc25f85510d5797bc942ecc9f7/LICENSE",
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+    }
+  }
+}
