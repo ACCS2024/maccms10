@@ -66,4 +66,17 @@ foreach ([[['fixture-card'],'fixture', ['user_id'=>1]], ['fixture-card',['fixtur
     check((new Card())->useData($code,$password,$recipientInput)['code'] !== 1 && cardState() === $before,
         'Malformed credentials/recipient caused an exception, coercion or card mutation');
 }
+// MySQL's installation collation must not broaden valid credential identity.
+foreach ([['fixture-card','FIXTURE'], ['fixture-card','fixture '], ['fixture-card','fixturé'],
+    ['FIXTURE-CARD','fixture'], ['fixture-card ','fixture'], ['fixture-cárd','fixture']] as [$number,$password]) {
+    cardSeed();$before=cardState();
+    check((new Card())->useData($number,$password,['user_id'=>1])['code']===1002 && cardState()===$before,
+        'Case, accent or padding equivalence cannot redeem a different literal credential');
+    check(!Db::connect()->getPdo()->inTransaction(),'Credential mismatch ends its read-only owner transaction');
+}
+foreach ([['FIXTURE-CARD','FIXTURE'], ['Fíxture-卡','Fixtüré'], ['fixture-card ','fixture ']] as [$number,$password]) {
+    cardSeed();Db::name('Card')->where('card_id',1)->update(['card_no'=>$number,'card_pwd'=>$password]);
+    check((new Card())->useData($number,$password,['user_id'=>1])['code']===1 && memberRow()['user_points']===120,
+        'Exactly stored UTF-8, uppercase and padding credentials remain usable at the model boundary');
+}
 echo "card credit audit: $checks checks passed on PHP " . PHP_VERSION . ($mysql ? ' / MySQL non-strict' : ' / SQLite') . "\n";

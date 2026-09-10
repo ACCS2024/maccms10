@@ -150,6 +150,10 @@ class Card extends Base {
                 return $scope->rollback($notFound);
             }
             $info = $matches[0]->toArray();
+            // SQL collations can ignore case, accents or trailing spaces; credentials remain exact bytes.
+            if (!hash_equals((string)$info['card_no'], $card_no) || !hash_equals((string)$info['card_pwd'], $card_pwd)) {
+                return $scope->rollback($notFound);
+            }
             $cardId = \app\common\util\PointsBalance::amount($info['card_id']);
             $points = \app\common\util\PointsBalance::amount($info['card_points']);
             $user = Db::name('User')->master()->where('user_id', $user_id)->lock(true)->find();
