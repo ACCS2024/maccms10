@@ -102,7 +102,7 @@ class SinaUpload
     }
 
 
-    function upload($file, $multipart = true,$cookie) {
+    function upload($file, $multipart, $cookie) {
         $url = 'http://picupload.service.weibo.com/interface/pic_upload.php'.'?mime=image%2Fjpeg&data=base64&url=0&markpos=1&logo=&nick=0&marks=1&app=miniblog';
         if($multipart) {
             $url .= '&cb=http://weibo.com/aj/static/upimgback.html?_wv=5&callback=STK_ijax_'.time();

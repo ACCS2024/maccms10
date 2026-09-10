@@ -176,7 +176,7 @@ class Qcloud {
         return $result;
     }
 
-    public function sendWithParam($nationCode, $phoneNumber, $templId = 0, $params,
+    public function sendWithParam($nationCode, $phoneNumber, $templId, $params,
                                   $sign = "", $extend = "", $ext = "")
     {
         $random = $this->getRandom();

@@ -111,7 +111,7 @@ class ApiMeilisearchSuggest
      *
      * @return array<int, array<string, mixed>>
      */
-    public static function orderedDbRowsByIds($kind, array $ids, array $meta = null)
+    public static function orderedDbRowsByIds($kind, array $ids, ?array $meta = null)
     {
         $k = strtolower((string)$kind);
         $m = $meta !== null ? $meta : self::meta($k);
@@ -167,7 +167,7 @@ class ApiMeilisearchSuggest
      *
      * @return array<int, array<string, mixed>>
      */
-    public static function meiliOrderedDbRows($kind, $wd, $limit, array $meta = null)
+    public static function meiliOrderedDbRows($kind, $wd, $limit, ?array $meta = null)
     {
         $k = strtolower((string)$kind);
         $m = $meta !== null ? $meta : self::meta($k);
@@ -205,7 +205,7 @@ class ApiMeilisearchSuggest
      *
      * @return array{code:int,msg:string,page:int,pagecount:int,limit:int,total:int,list:array}
      */
-    public static function fallbackListDataRes($kind, $wd, $limit, array $meta = null)
+    public static function fallbackListDataRes($kind, $wd, $limit, ?array $meta = null)
     {
         $k = strtolower((string)$kind);
         $m = $meta !== null ? $meta : self::meta($k);

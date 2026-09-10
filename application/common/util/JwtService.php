@@ -69,7 +69,7 @@ class JwtService
         return (string)$app['api_jwt_enabled'] === '1' && self::hasStrongSecret();
     }
 
-    public static function bearerFromRequest(Request $req = null)
+    public static function bearerFromRequest(?Request $req = null)
     {
         $req = $req ?: request();
         $h = $req->header('Authorization');

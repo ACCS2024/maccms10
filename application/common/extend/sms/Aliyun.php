@@ -33,7 +33,7 @@ class Aliyun {
             $sortedQueryStringTmp .= "&" . $this->encode($key) . "=" . $this->encode($value);
         }
 
-        $stringToSign = "${method}&%2F&" . $this->encode(substr($sortedQueryStringTmp, 1));
+        $stringToSign = "{$method}&%2F&" . $this->encode(substr($sortedQueryStringTmp, 1));
 
         $sign = base64_encode(hash_hmac("sha1", $stringToSign, $accessKeySecret . "&",true));
 

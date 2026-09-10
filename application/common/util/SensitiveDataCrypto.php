@@ -54,7 +54,7 @@ class SensitiveDataCrypto
     /**
      * 加密为带版本前缀的 ASCII 串；失败或不可用则返回原文（与 supportsAes256Gcm() 为 false 时行为一致）。
      */
-    public static function encryptString($plaintext, array $app = null)
+    public static function encryptString($plaintext, ?array $app = null)
     {
         if ($plaintext === null || $plaintext === '') {
             return $plaintext;
@@ -81,7 +81,7 @@ class SensitiveDataCrypto
      *
      * @return string|false
      */
-    public static function decryptString($stored, array $app = null)
+    public static function decryptString($stored, ?array $app = null)
     {
         if ($stored === null || $stored === '') {
             return $stored;
