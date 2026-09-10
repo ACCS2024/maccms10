@@ -1115,18 +1115,29 @@ class User extends Base
         return $this->fetch('user/invite');
     }
 
+    private static function visitReturnLocation($value, string $origin): string
+    {
+        if (!is_string($value) || $value === '' || strlen($value) > 4096
+            || preg_match('/[\\x00-\\x20\\x7f\\\\]/', $value)) { return '/'; }
+        if ($value[0] === '/') { return str_starts_with($value, '//') ? '/' : $value; }
+        $target = parse_url($value); $site = parse_url($origin);
+        if (!is_array($target) || !is_array($site) || isset($target['user']) || isset($target['pass'])
+            || !in_array(strtolower($target['scheme'] ?? ''), ['http','https'], true)
+            || strcasecmp($target['scheme'], $site['scheme'] ?? '') !== 0
+            || strcasecmp($target['host'] ?? '', $site['host'] ?? '') !== 0
+            || ($target['port'] ?? (strtolower($target['scheme']) === 'https' ? 443 : 80))
+                !== ($site['port'] ?? (strtolower($site['scheme'] ?? '') === 'https' ? 443 : 80))) { return '/'; }
+        $path = $target['path'] ?? '/';
+        if ($path === '' || $path[0] !== '/' || str_starts_with($path, '//')) { return '/'; }
+        // A same-origin absolute input becomes a local path, so Host never chooses the destination origin.
+        return $path.(isset($target['query']) ? '?'.$target['query'] : '').(isset($target['fragment']) ? '#'.$target['fragment'] : '');
+    }
+
     public function visit()
     {
         $param = \think\facade\Request::param();
-        $res = (new \app\common\model\User())->visit($param);
-        $url = '/';
-        if(!empty($param['url'])){
-            $tempu = @parse_url($param['url']);
-            if($_SERVER['HTTP_HOST'] ?? '' == $tempu['host']){
-                $url = $param['url'];
-            }
-        }
-        return redirect((string) $url);
+        (new \app\common\model\User())->visit($param);
+        return redirect(self::visitReturnLocation($param['url'] ?? null, \think\facade\Request::domain()));
     }
 
 }
