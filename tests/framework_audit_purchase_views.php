@@ -16,6 +16,10 @@ $base=['maccms'=>['path'=>'/fixture/','path_tpl'=>'/fixture/template/default'],'
     'param'=>['sid'=>2,'nid'=>3,'page'=>4]];
 foreach ([[1,'vod','play',4,2,3],[1,'vod','down',5,2,3],[2,'art','',1,4,0],[12,'manga','',1,2,3]] as [$mid,$kind,$flag,$type,$sid,$nid]) {
     $data=$base;$data['maccms']['mid']=$mid;$data['obj']=[$kind.'_id'=>17,'player_info'=>['flag'=>$flag]];
+    if ($mid===12) {
+        $data['manga_access']=['purchase_supported'=>true,'password_required'=>false,'purchase_sid'=>2,'purchase_nid'=>3];
+        $data['param']['sid']=9;$data['param']['nid']=8;
+    }
     $html=purchaseRender($gate,$data);
     preg_match('/<a\b[^>]*class="[^"]*js-popedom-buy-btn[^>]*>/',$html,$match);
     check(isset($match[0]),'Normal paid '.$kind.' gate must render an actionable purchase button');
@@ -27,6 +31,15 @@ foreach ([[1,'vod','play',4,2,3],[1,'vod','down',5,2,3],[2,'art','',1,4,0],[12,'
     check(!preg_match('/<a\b[^>]*class="[^"]*js-popedom-buy-btn/',$html),'A membership-only gate must not show a paid-content purchase button');
     $data['popedom']['points']=10;$data['obj'][$kind.'_id']=0;$html=purchaseRender($gate,$data);
     check(!preg_match('/<a\b[^>]*class="[^"]*js-popedom-buy-btn/',$html),'A gate without a resource id must not offer an invalid purchase');
+}
+// The current Manga reader supplies verified purchase coordinates independently of raw route parameters.
+$data=$base;$data['maccms']['mid']=12;$data['obj']=['manga_id'=>17];
+foreach ([null, ['purchase_supported'=>false,'password_required'=>false],
+    ['purchase_supported'=>true,'password_required'=>true]] as $access) {
+    $data['manga_access']=$access;
+    $html=purchaseRender($gate,$data);
+    check(!preg_match('/<a\b[^>]*class="[^"]*js-popedom-buy-btn/',$html),
+        'Unresolved, unsupported or password-locked manga must not offer a purchase button');
 }
 foreach (['template/default/html/vod/player.html'=>4,'template/m1938pc3_v2/html9/vod/downer.html'=>5] as $file=>$type) {
     $source=file_get_contents(dirname(__DIR__).'/'.$file);
