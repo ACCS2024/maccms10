@@ -57,7 +57,7 @@ final class UploadManager
             $this->config,
             $params,
             $mime,
-            $fname
+            $fname ?? 'default_filename'
         );
     }
 
@@ -92,39 +92,43 @@ final class UploadManager
         if ($file === false) {
             throw new \Exception("file can not open", 1);
         }
-        $params = self::trimParams($params);
-        $stat = fstat($file);
-        $size = $stat['size'];
-        if ($size <= Config::BLOCK_SIZE) {
-            $data = fread($file, $size);
-            fclose($file);
-            if ($data === false) {
-                throw new \Exception("file can not read", 1);
+        try {
+            $params = self::trimParams($params);
+            $stat = fstat($file);
+            if ($stat === false || !isset($stat['size']) || $stat['size'] < 0) {
+                throw new \RuntimeException("file size can not be read");
             }
-            return FormUploader::put(
+            $size = $stat['size'];
+            if ($size <= Config::BLOCK_SIZE) {
+                $data = $size === 0 ? '' : fread($file, $size);
+                if ($data === false || strlen($data) !== $size) {
+                    throw new \RuntimeException("file can not be read completely");
+                }
+                // FormUploader always computes CRC; its seventh argument is the filename.
+                return FormUploader::put(
+                    $upToken,
+                    $key,
+                    $data,
+                    $this->config,
+                    $params,
+                    $mime,
+                    basename($filePath)
+                );
+            }
+
+            $up = new ResumeUploader(
                 $upToken,
                 $key,
-                $data,
-                $this->config,
+                $file,
+                $size,
                 $params,
                 $mime,
-                $checkCrc,
-                basename($filePath)
+                $this->config
             );
+            return $up->upload(basename($filePath));
+        } finally {
+            fclose($file);
         }
-
-        $up = new ResumeUploader(
-            $upToken,
-            $key,
-            $file,
-            $size,
-            $params,
-            $mime,
-            $this->config
-        );
-        $ret = $up->upload(basename($filePath));
-        fclose($file);
-        return $ret;
     }
 
     public static function trimParams($params)
