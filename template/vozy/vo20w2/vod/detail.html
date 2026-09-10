@@ -95,9 +95,9 @@ document.addEventListener('DOMContentLoaded', function() {
     <div class="playlist wbox {$vo.from}">
       {maccms:foreach name="vo.urls" id="vo2" key="key2"}
       <li>
-        <input name="copy_{$vo.from}[]" type="checkbox" value="{$vo2.name}${$vo2.url}" checked>&nbsp;&nbsp;
-        <a title="{$vo2.name}" href="https://vip.vipuuvip.com/?url={$vo2.url}" target="_blank"><font color="red">{$vo2.name}${$vo2.url}</font></a>
-        <a href="javascript:;" class="bugs mac_report" data-msg="{:htmlspecialchars('编号【'.(int)$obj['vod_id'].'】名称【'.$vo2['name'].'】不能观看请检查修复，页面地址：'.$vo2['name'].'$'.$vo2['url'],ENT_QUOTES)}">我要报错</a>
+        <input name="copy_{$vo.from}[]" type="checkbox" value="{$vo2.name}${$vo2.play_link}" checked>&nbsp;&nbsp;
+        <a title="{$vo2.name}" href="{$vo2.play_link}" target="_blank"><font color="red">{$vo2.name}${$vo2.play_link}</font></a>
+        <a href="javascript:;" class="bugs mac_report" data-msg="{:htmlspecialchars('编号【'.(int)$obj['vod_id'].'】名称【'.$vo2['name'].'】不能观看请检查修复，页面地址：'.$vo2['name'].'$'.$vo2['play_link'],ENT_QUOTES)}">我要报错</a>
       </li>
       <hr>
       {/maccms:foreach}
@@ -128,9 +128,9 @@ document.addEventListener('DOMContentLoaded', function() {
     <div class="playlist wbox {$vo.from}">
       {maccms:foreach name="vo.urls" id="vo2" key="key2"}
       <li>
-        <input name="copy_{$vo.from}[]" type="checkbox" value="{$vo2.name}${$vo2.url}" checked>&nbsp;&nbsp;
-        <a title="{$vo2.name}" href="{$vo2.url}" target="_blank"><font color="red">{$vo2.name}${$vo2.url}</font></a>
-        <a href="javascript:;" class="bugs mac_report" data-msg="{:htmlspecialchars('编号【'.(int)$obj['vod_id'].'】名称【'.$vo2['name'].'】不能观看请检查修复，页面地址：'.$vo2['name'].'$'.$vo2['url'],ENT_QUOTES)}">我要报错</a>
+        <input name="copy_{$vo.from}[]" type="checkbox" value="{$vo2.name}${$vo2.down_link}" checked>&nbsp;&nbsp;
+        <a title="{$vo2.name}" href="{$vo2.down_link}" target="_blank"><font color="red">{$vo2.name}${$vo2.down_link}</font></a>
+        <a href="javascript:;" class="bugs mac_report" data-msg="{:htmlspecialchars('编号【'.(int)$obj['vod_id'].'】名称【'.$vo2['name'].'】不能观看请检查修复，页面地址：'.$vo2['name'].'$'.$vo2['down_link'],ENT_QUOTES)}">我要报错</a>
       </li>
       <hr>
       {/maccms:foreach}

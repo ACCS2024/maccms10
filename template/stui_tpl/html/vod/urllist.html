@@ -2,7 +2,7 @@
 {maccms:foreach name="obj.vod_play_list" id="vo"}		
 <div class="stui-pannel clearfix" id="playlist">
 	<div class="stui-pannel__head clearfix">
-		<span class="more text-muted pull-right hidden-xs">{$vo.player_info.tip}</span>
+		<span class="more text-muted pull-right hidden-xs">{$vo.player_info.tip|default=''}</span>
 		<h3 class="title">
 			播放类型：<!-- 播放器 -->{$vo.player_info.show}<!-- end 播放器 -->				
 		</h3>						
@@ -12,8 +12,8 @@
 		{maccms:foreach name="vo.urls" id="vo2"}								
         <li {if condition="$param.sid eq $vo.sid && $param.nid eq $vo2.nid"}class="active"{/if}>
         	<a class="text-muted pull-right" href="{:mac_url_vod_play($obj,['sid'=>$vo.sid,'nid'=>$vo2.nid])}">{if condition="$param.sid eq $vo.sid && $param.nid eq $vo2.nid"}正在{/if}播放 &gt;</a>
-        	<input type="checkbox" name="copy_url_{$key}" value="{$vo2.name}${$vo2.url}" checked>
-        	<a href="javascript:;" class="copy_text"><!-- 播放集数 -->{$vo2.name}<!-- end 播放集数 --><span class="hidden-xs">$<!-- 播放集数地址 -->{$vo2.url}<!-- end 播放集数地址 --></span></a>
+            <input type="checkbox" name="copy_url_{$key}" value="{$vo2.name}${$vo2.play_link}" checked>
+            <a href="javascript:;" class="copy_text"><!-- 播放集数 -->{$vo2.name}<!-- end 播放集数 --><span class="hidden-xs">$<!-- 播放集数地址 -->{$vo2.play_link}<!-- end 播放集数地址 --></span></a>
         </li>
         {/maccms:foreach}
        	<!-- end 播放地址 -->

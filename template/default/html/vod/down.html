@@ -73,6 +73,7 @@
 					<ul id="downul">
 					{maccms:foreach name="vo.urls" id="vo2" key="key2"}
 					<li>
+					{if condition="$vo2.authorized"}
 						<input type="checkbox" name="down_url_list_{$key}" class="style-input down_url" value="{$vo2.url}" file_name="{$vo2.name}" />
 					<p>
 						<strong class="down_part_name">
@@ -86,6 +87,9 @@
 							<label class="xiaomi" data-lang="string_down_xm">小米路由</label>
 							<a href="{$vo2.url}" class="btn_bd btnd" data-lang="string_down_bd">本地下载</a>
 						</span>
+					{else/}
+					<p><strong class="down_part_name">{$vo2.name}</strong> <a href="{$vo2.down_link}" class="btn_bd btnd">获取下载权限</a></p>
+					{/if}
 					</li>
 					{/maccms:foreach}
 					</ul>

@@ -630,6 +630,13 @@ class Make extends Base
 
     public function info()
     {
+        if (($this->_param['tab'] ?? '') === 'vod'
+            && ((int)($GLOBALS['config']['view']['vod_play'] ?? 0) >= 2
+                || (int)($GLOBALS['config']['view']['vod_down'] ?? 0) >= 2)) {
+            // Fail before writing any page or advancing generation progress. A static response
+            // cannot reevaluate the visitor's purchase/password; safe dynamic shells follow separately.
+            return $this->error('播放和下载资源需要动态授权，暂不能生成静态页面；请将播放、下载设为动态后生成详情页');
+        }
         $where = [];
 
         $ids = $this->_param['ids'];

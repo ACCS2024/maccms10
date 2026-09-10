@@ -576,7 +576,7 @@ class All
 
         $this->assign('param',$param);
         if(empty($info)) {
-            $res = mac_label_vod_detail($param);
+            $res = mac_label_vod_detail($param, 0);
             if ($res['code'] > 1){
                 $this->page_error($res['msg']);
             }
@@ -600,7 +600,7 @@ class All
                 exit;
             }
         }
-        $this->assign('obj',$info);
+        $this->assign('obj', \app\common\util\ContentResource::vodTemplate($info));
         $seo_ai = (new \app\common\model\SeoAiResult())->getByObject(1, intval($info['vod_id']));
         $this->assign('seo_ai', $seo_ai);
         $this->mergeDetailSeoIntoMaccms(1, $info, $seo_ai);
@@ -617,7 +617,7 @@ class All
         $this->assign('param', $param);
 
         if (empty($info)) {
-            $res = mac_label_vod_detail($param);
+            $res = mac_label_vod_detail($param, 0);
             if ($res['code'] > 1) {
                 $this->page_error($res['msg']);
             }
@@ -629,16 +629,166 @@ class All
         }
         $info['role'] = $role['list'];
 
-        $this->assign('obj',$info);
+        $this->assign('obj', \app\common\util\ContentResource::vodTemplate($info));
+    }
+
+    protected array $vodPurchaseRecords = [];
+
+    private function vodPurchaseKey(array $where): string
+    {
+        return implode(':', array_map(static fn($field) => (int)($where[$field] ?? 0),
+            ['user_id', 'ulog_mid', 'ulog_type', 'ulog_rid', 'ulog_points']));
+    }
+
+    /** Read only known catalog coordinates; duplicate behavior logs cannot inflate the result. */
+    private function prepareVodPurchases(array $info, string $flag, array $context): void
+    {
+        $uid = (int)($GLOBALS['user']['user_id'] ?? 0);
+        if ($uid < 1 || $context['points'] === 0) {
+            return;
+        }
+        $where = ['user_id' => $uid, 'ulog_mid' => 1, 'ulog_type' => $context['ulog_type'],
+            'ulog_rid' => $context['id'], 'ulog_points' => $context['points']];
+        $key = $this->vodPurchaseKey($where);
+        if (array_key_exists($key, $this->vodPurchaseRecords)) {
+            return;
+        }
+        $this->vodPurchaseRecords[$key] = [];
+        $coordinates = [];
+        if ($context['whole']) {
+            $coordinates[0] = [0];
+        } else {
+            foreach ($info['vod_' . $flag . '_list'] ?? [] as $sid => $source) {
+                foreach (is_array($source['urls'] ?? null) ? $source['urls'] : [] as $nid => $episode) {
+                    if (is_array($episode) && is_string($episode['url'] ?? null) && $episode['url'] !== '') {
+                        $coordinates[(int)$sid][] = (int)$nid;
+                    }
+                }
+            }
+        }
+        if ($coordinates === []) {
+            return;
+        }
+        $readBatch = function (array $batch) use ($where, $key): void {
+            $rows = (new \app\common\model\Ulog())->field('ulog_sid,ulog_nid')->distinct(true)->where($where)
+                ->where(static function ($query) use ($batch) {
+                    foreach ($batch as $sid => $nids) {
+                        $query->whereOr(static function ($sourceQuery) use ($sid, $nids) {
+                            $sourceQuery->where('ulog_sid', $sid)->whereIn('ulog_nid', $nids);
+                        });
+                    }
+                })->select()->toArray();
+            foreach ($rows as $row) {
+                $this->vodPurchaseRecords[$key][(int)$row['ulog_sid'] . ':' . (int)$row['ulog_nid']] = true;
+            }
+        };
+        $batch = [];
+        $count = 0;
+        foreach ($coordinates as $sid => $nids) {
+            foreach ($nids as $nid) {
+                $batch[$sid][] = $nid;
+                if (++$count === 500) {
+                    $readBatch($batch);
+                    $batch = [];
+                    $count = 0;
+                }
+            }
+        }
+        if ($batch !== []) {
+            $readBatch($batch);
+        }
+    }
+
+    private function vodPurchaseInfo(array $where): array
+    {
+        if ((int)($GLOBALS['user']['user_id'] ?? 0) < 1) {
+            return ['code' => 1002];
+        }
+        $key = $this->vodPurchaseKey($where);
+        if (array_key_exists($key, $this->vodPurchaseRecords)) {
+            return ['code' => isset($this->vodPurchaseRecords[$key][(int)$where['ulog_sid'] . ':' . (int)$where['ulog_nid']]) ? 1 : 1002];
+        }
+        return (new \app\common\model\Ulog())->infoData($where);
+    }
+
+    protected function check_vod_resource_access(array $info, string $flag, array $param): array
+    {
+        $context = \app\common\util\ContentResource::vodContext($info, $flag, $param);
+        if ($context['code'] !== 1) {
+            return $context + ['can_access' => false, 'trysee' => 0, 'confirm' => 0];
+        }
+        return $this->vodAccessForContext($info, $flag, $context);
+    }
+
+    private function vodAccessForContext(array $info, string $flag, array $context): array
+    {
+        $trysee = $flag === 'play' ? max(0, (int)($info['vod_trysee'] ?? 0) ?: (int)($GLOBALS['config']['user']['trysee'] ?? 0)) : 0;
+        $permission = $this->check_user_popedom((int)$info['type_id'], $flag === 'play' ? 3 : 4,
+            ['id' => $context['id'], 'sid' => $context['sid'], 'nid' => $context['nid']], $flag, $info, $trysee);
+        $password = \app\common\util\ContentPassword::vodState($info, $flag);
+        $allowed = (int)$permission['code'] === 1 && empty($permission['trysee']) && $password['verified'];
+        if (!$password['verified']) {
+            $permission['code'] = 6001;
+            $permission['msg'] = '需要验证内容密码';
+            $permission['trysee'] = 0;
+        }
+        return $permission + ['can_access' => $allowed, 'password_required' => !$password['verified'],
+            'password_verified' => $password['verified'], 'password_help_url' => $password['help_url'],
+            'preview_available' => false, 'points_hint' => $context['points'], 'trysee' => 0, 'confirm' => 0];
+    }
+
+    private function vodResourceTemplate(array $info, string $flag): array
+    {
+        $view = \app\common\util\ContentResource::vodTemplate($info);
+        $view['player_info'] = $info['player_info'] ?? [];
+        if ($flag === 'down') {
+            $context = \app\common\util\ContentResource::vodContext($info, 'down', $info['player_info']);
+            foreach ($view['vod_down_list'] as $sid => &$source) {
+                foreach ($source['urls'] as $nid => &$episode) {
+                    $url = $info['vod_down_list'][$sid]['urls'][$nid]['url'] ?? '';
+                    $allowed = false;
+                    if ($context['code'] === 1 && is_string($url) && $url !== '') {
+                        // Coordinates come from the parsed catalog, never from a client. Reuse the
+                        // validated row/price so a directory does not reparse all N episodes N times.
+                        $item = array_replace($context, ['sid' => (int)$sid, 'nid' => (int)$nid]);
+                        $allowed = $this->vodAccessForContext($info, 'down', $item)['can_access'];
+                    }
+                    $episode['authorized'] = $allowed;
+                    $episode['url'] = $allowed ? $url : '';
+                }
+                unset($episode);
+            }
+            unset($source);
+        }
+        return $view;
     }
 
     protected function label_vod_play($flag='play',$info=[],$view=0,$pe=0)
     {
+        if ($view >= 2) {
+            $this->page_error('播放和下载资源需要动态授权，暂不能生成静态页面');
+        }
+        // The legacy URL parser casts coordinates and trims every input value. Validate before it
+        // so arrays cannot become a different episode or a PHP 8 error, while keeping rewritten IDs.
+        $raw = array_merge(request()->param(), $_REQUEST);
+        if (!\app\common\util\ContentResource::scalarParameters($raw)) {
+            $this->page_error(lang('param_err'));
+        }
+        $sid = array_key_exists('sid', $raw) ? \app\common\util\ContentResource::positiveInt($raw['sid']) : 1;
+        $nid = array_key_exists('nid', $raw) ? \app\common\util\ContentResource::positiveInt($raw['nid']) : 1;
+        if ($sid === null || $nid === null || (empty($info) &&
+            (empty($GLOBALS['config']['rewrite']['vod_id'])
+                ? \app\common\util\ContentResource::positiveInt($raw['id'] ?? null) === null
+                : !is_string($raw['id'] ?? null) || $raw['id'] === ''))) {
+            $this->page_error(lang('param_err'));
+        }
         $param = mac_param_url();
+        $param['sid'] = $sid;
+        $param['nid'] = $nid;
         $this->assign('param',$param);
 
         if(empty($info)) {
-            $res = mac_label_vod_detail($param);
+            $res = mac_label_vod_detail($param, 0);
             if ($res['code'] > 1) {
                 $this->page_error($res['msg']);
             }
@@ -655,37 +805,23 @@ class All
         }
 
 
-        $trysee = 0;
-        $vod_popedom_locked = false;
-        $popedom = ['code' => 1, 'msg' => '', 'trysee' => 0, 'confirm' => 0];
+        $context = \app\common\util\ContentResource::vodContext($info, $flag, $param);
+        if ($context['code'] !== 1) {
+            $this->page_error($context['msg']);
+        }
+        $param['id'] = $context['id'];
+        $param['sid'] = $context['sid'];
+        $param['nid'] = $context['nid'];
+        $this->assign('param', $param);
+        if ($flag === 'down') {
+            $this->prepareVodPurchases($info, $flag, $context);
+        }
+        $access = $this->check_vod_resource_access($info, $flag, $param);
+
         $urlfun='mac_url_vod_'.$flag;
         $listfun = 'vod_'.$flag.'_list';
-        if($view <2) {
-            if ($flag == 'play') {
-                $trysee = $GLOBALS['config']['user']['trysee'];
-                if($info['vod_trysee'] >0){
-                    $trysee = $info['vod_trysee'];
-                }
-                $popedom = $this->check_user_popedom($info['type_id'], ($pe==0 ? 3 : 5),$param,$flag,$info,$trysee);
-            }
-            else {
-                $popedom =  $this->check_user_popedom($info['type_id'], 4,$param,$flag,$info);
-            }
-
-            if($pe==0 && $popedom['code']>1 && empty($popedom["trysee"])){
-                $info['player_info']['flag'] = $flag;
-
-                // 下载页面：清空下载列表
-                if ($flag == 'down') {
-                    $info['vod_down_list'] = [];
-                }
-
-                $this->assign('obj',$info);
-
-                // 不再跳转确认页，直接进入播放页/下载页，由模板内的权限引导进行购买/充值
-                $vod_popedom_locked = true;
-            }
-        }
+        $popedom = $access;
+        $vod_popedom_locked = !$access['can_access'];
         $this->assign('popedom',$popedom);
 
         if (!empty($vod_popedom_locked)) {
@@ -693,7 +829,7 @@ class All
                 'flag' => $flag,
                 'encrypt' => 0,
                 'trysee' => 0,
-                'points' => intval($info['vod_points_'.$flag]),
+                'points' => $context['points'],
                 'link' => '',
                 'link_next' => '',
                 'link_pre' => '',
@@ -714,16 +850,14 @@ class All
                 ],
             ];
             // 无权限时仍生成上/下集播放页链接，便于游客切换集数（各集仍受权限门控）
-            if ($param['nid'] > 1) {
-                $player_info['link_pre'] = $urlfun($info, ['sid' => $param['sid'], 'nid' => $param['nid'] - 1]);
+            if ($context['previous_nid'] !== null) {
+                $player_info['link_pre'] = $urlfun($info, ['sid' => $param['sid'], 'nid' => $context['previous_nid']]);
             }
-            $list_key = 'vod_' . $flag . '_list';
-            if (!empty($info[$list_key][$param['sid']]['url_count'])
-                && $param['nid'] < $info[$list_key][$param['sid']]['url_count']) {
-                $player_info['link_next'] = $urlfun($info, ['sid' => $param['sid'], 'nid' => $param['nid'] + 1]);
+            if ($context['next_nid'] !== null) {
+                $player_info['link_next'] = $urlfun($info, ['sid' => $param['sid'], 'nid' => $context['next_nid']]);
             }
             $info['player_info'] = $player_info;
-            $this->assign('obj',$info);
+            $this->assign('obj', $this->vodResourceTemplate($info, $flag));
             $favPlay = mac_user_fav_state((int)($GLOBALS['user']['user_id'] ?? 0), 1, (int)($info['vod_id'] ?? 0));
             $this->assign('vod_play_fav_ulog_id', $favPlay['fav_ulog_id']);
             $this->assign('vod_play_is_fav', $favPlay['is_fav']);
@@ -741,8 +875,8 @@ class All
         $player_info=[];
         $player_info['flag'] = $flag;
         $player_info['encrypt'] = intval($GLOBALS['config']['app']['encrypt']);
-        $player_info['trysee'] = intval($trysee);
-        $player_info['points'] = intval($info['vod_points_'.$flag]);
+        $player_info['trysee'] = 0;
+        $player_info['points'] = $context['points'];
         $player_info['link'] = $urlfun($info,['sid'=>'{sid}','nid'=>'{nid}']);
         $player_info['link_next'] = '';
         $player_info['link_pre'] = '';
@@ -752,21 +886,17 @@ class All
             'vod_director' => $info['vod_director'],
             'vod_class'    => $info['vod_class'],
         ];
-        if($param['nid']>1){
-            $player_info['link_pre'] = $urlfun($info,['sid'=>$param['sid'],'nid'=>$param['nid']-1]);
+        if($context['previous_nid'] !== null){
+            $player_info['link_pre'] = $urlfun($info,['sid'=>$param['sid'],'nid'=>$context['previous_nid']]);
         }
-        // 影片没有这个来源时(最常见:根本没填下载地址就访问 /voddown/ 页)整段是空数组,
-        // 下面每个字段都会读到未定义键。上面无权限分支已经用 !empty() 守过一次,这里
-        // 把主分支也统一成先取出来再兜底 —— 实测一次 /voddown/ 会刷 10 条 warning。
         $__src  = $info[$listfun][$param['sid']] ?? [];
         $__urls = is_array($__src['urls'] ?? null) ? $__src['urls'] : [];
 
-        if($param['nid'] < ($__src['url_count'] ?? 0)){
-            $player_info['link_next'] = $urlfun($info,['sid'=>$param['sid'],'nid'=>$param['nid']+1]);
+        if($context['next_nid'] !== null){
+            $player_info['link_next'] = $urlfun($info,['sid'=>$param['sid'],'nid'=>$context['next_nid']]);
         }
-        // ?? '' 兜底:最后一集无「下一集」(urls[nid+1] 不存在),PHP8 下未定义键会被 TP8 升级为异常 → 500
         $player_info['url'] = (string)($__urls[$param['nid']]['url'] ?? '');
-        $player_info['url_next'] = (string)($__urls[$param['nid']+1]['url'] ?? '');
+        $player_info['url_next'] = '';
         // 当前集名。主题原本自己去 $obj.vod_down_list[sid].urls[nid].name 重算一遍,
         // 影片没有该来源时就读到未定义键(一次 /voddown/ 刷 5 条 warning,标题还是空的)。
         // 控制器这里已经把来源解析完了,直接给出来,主题引用 {$obj.player_info.name} 即可。
@@ -799,7 +929,7 @@ class All
         $player_info['sid'] = $param['sid'];
         $player_info['nid'] = $param['nid'];
         $info['player_info'] = $player_info;
-        $this->assign('obj',$info);
+        $this->assign('obj', $this->vodResourceTemplate($info, $flag));
         $seo_ai = (new \app\common\model\SeoAiResult())->getByObject(1, intval($info['vod_id']));
         $this->assign('seo_ai', $seo_ai);
         $this->mergeDetailSeoIntoMaccms(1, $info, $seo_ai);
@@ -807,29 +937,13 @@ class All
         $this->assign('vod_play_fav_ulog_id', $favPlay['fav_ulog_id']);
         $this->assign('vod_play_is_fav', $favPlay['is_fav']);
 
-        $pwd_key = '1-'.($flag=='play' ?'4':'5').'-'.$info['vod_id'];
-
-        if( $pe==0 && $flag=='play' && (($popedom['trysee'] ?? 0)>0 ) || ($info['vod_pwd_'.$flag]!='' && session($pwd_key)!='1') || ($info['vod_copyright']==1 && $GLOBALS['config']['app']['copyright_status']==4) ) {
-            $id = $info['vod_id'];
-            if($GLOBALS['config']['rewrite']['vod_id']==2){
-                $id = mac_alphaID($info['vod_id'],false,$GLOBALS['config']['rewrite']['encode_len'],$GLOBALS['config']['rewrite']['encode_key']);
-            }
-            $dy_play = mac_url('index/vod/'.$flag.'er',['id'=>$id,'sid'=>$param['sid'],'nid'=>$param['nid']]);
-            $this->assign('player_data','');
-            $this->assign('player_js','<div class="MacPlayer" style="z-index:99999;width:100%;height:100%;margin:0px;padding:0px;"><iframe id="player_if" name="player_if" src="'.$dy_play.'" style="z-index:9;width:100%;height:100%;" border="0" marginWidth="0" frameSpacing="0" marginHeight="0" frameBorder="0" scrolling="no" allowfullscreen="allowfullscreen" mozallowfullscreen="mozallowfullscreen" msallowfullscreen="msallowfullscreen" oallowfullscreen="oallowfullscreen" webkitallowfullscreen="webkitallowfullscreen" ></iframe></div>');
-        }
-        else {
-            $this->assign('player_data', '<script type="text/javascript">var player_aaaa=' . json_encode($player_info) . '</script>');
-            // 缓存串按文件 mtime，而非 date('Ymd')：后台改播放器→playerconfig.js 重建→mtime 变→URL 变，
-            // CDN(Cloudflare)/浏览器立刻取新文件。否则同一天内 ?t 不变，CDN 会一直吐旧的 player_list，
-            // 表现＝新加的播放器前台"不支持的播放来源"（强刷也没用，因为强刷绕不过 CDN 边缘缓存）。
-            $_pcRoot = (defined('ROOT_PATH') ? ROOT_PATH : './');
-            $_pcFile = $_pcRoot . 'static/js/playerconfig.js';
-            $_pjFile = $_pcRoot . 'static/js/player.js';
-            $_pcVer  = @is_file($_pcFile) ? @filemtime($_pcFile) : $this->_tsp;
-            $_pjVer  = @is_file($_pjFile) ? @filemtime($_pjFile) : $this->_tsp;
-            $this->assign('player_js', '<script type="text/javascript" src="' . MAC_PATH . 'static/js/playerconfig.js?t='.$_pcVer.'"></script><script type="text/javascript" src="' . MAC_PATH . 'static/js/player.js?t=a'.$_pjVer.'"></script>');
-        }
+        $this->assign('player_data', '<script type="text/javascript">var player_aaaa=' . json_encode($player_info) . '</script>');
+        $_pcRoot = (defined('ROOT_PATH') ? ROOT_PATH : './');
+        $_pcFile = $_pcRoot . 'static/js/playerconfig.js';
+        $_pjFile = $_pcRoot . 'static/js/player.js';
+        $_pcVer = @is_file($_pcFile) ? @filemtime($_pcFile) : $this->_tsp;
+        $_pjVer = @is_file($_pjFile) ? @filemtime($_pjFile) : $this->_tsp;
+        $this->assign('player_js', '<script type="text/javascript" src="' . MAC_PATH . 'static/js/playerconfig.js?t='.$_pcVer.'"></script><script type="text/javascript" src="' . MAC_PATH . 'static/js/player.js?t=a'.$_pjVer.'"></script>');
         $this->assign('comment_mid', 1);
         $this->assign('comment_rid', $info['vod_id']);
         $this->label_comment();
@@ -992,7 +1106,7 @@ class All
                     $where['ulog_sid'] = 0;
                     $where['ulog_nid'] = 0;
                 }
-                $res_ulog = (new \app\common\model\Ulog())->infoData($where);
+                $res_ulog = $this->vodPurchaseInfo($where);
 
                 if ($res_ulog['code'] > 1) {
                     return ['code' => 3003, 'msg' => lang('controller/pay_play_points', [$points]), 'points' => $points, 'confirm' => 1, 'trysee' => 0];
@@ -1018,7 +1132,7 @@ class All
                         $where['ulog_sid'] = 0;
                         $where['ulog_nid'] = 0;
                     }
-                    $res = (new \app\common\model\Ulog())->infoData($where);
+                    $res = $this->vodPurchaseInfo($where);
 
                     if ($res['code'] > 1) {
                         return ['code' => 4003, 'msg' => lang('controller/pay_down_points', [$points]), 'points' => $points, 'confirm' => 1, 'trysee' => 0];
@@ -1053,7 +1167,7 @@ class All
                         $where['ulog_sid'] = 0;
                         $where['ulog_nid'] = 0;
                     }
-                    $res = (new \app\common\model\Ulog())->infoData($where);
+                    $res = $this->vodPurchaseInfo($where);
 
                     if ($points > 0 && $res['code'] == 1) {
                         return ['code' => 5001, 'msg' => lang('controller/popedom_ok')];

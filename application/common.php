@@ -4154,7 +4154,7 @@ function mac_label_manga_detail($param)
 
     return $res;
 }
-function mac_label_vod_detail($param)
+function mac_label_vod_detail($param, $cache = 1)
 {
     $where = [];
     if($GLOBALS['config']['rewrite']['vod_id']==1){
@@ -4167,8 +4167,11 @@ function mac_label_vod_detail($param)
         $where['vod_id'] = $param['id'];
     }
     $where['vod_status'] = 1;
-    $res = (new \app\common\model\Vod())->infoData($where,'*',1);
+    $res = (new \app\common\model\Vod())->infoData($where,'*',$cache);
 
+    if ($res['code'] != 1) {
+        return $res;
+    }
     $GLOBALS['type_id'] = $res['info']['type_id'];
     $GLOBALS['type_pid'] = $res['info']['type']['type_pid'];
     return $res;

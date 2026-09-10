@@ -763,19 +763,16 @@ class Vod extends Base
     public function verify_pwd(\think\Request $request)
     {
         $param = $request->param();
-        $id = intval($param['id'] ?? 0);
-        $type = intval($param['type'] ?? 0);
-        $pwd = trim($param['pwd'] ?? '');
-        if ($id < 1 || empty($pwd) || !in_array($type, [1, 4, 5])) return json(['code' => 1001, 'msg' => lang('param_err')]);
-        $key = '1-' . $type . '-' . $id;
-        if (session($key) == '1') return json(['code' => 1002, 'msg' => lang('index/pwd_repeat')]);
-        if (mac_get_time_span("last_pwd") < 5) return json(['code' => 1003, 'msg' => lang('index/pwd_frequently')]);
-        $res = (new \app\common\model\Vod())->infoData(['vod_id' => $id]);
-        if ($res['code'] > 1) return json(['code' => 1011, 'msg' => $res['msg']]);
-        $pwdMap = [1 => 'vod_pwd', 4 => 'vod_pwd_play', 5 => 'vod_pwd_down'];
-        if ($res['info'][$pwdMap[$type]] != $pwd) return json(['code' => 1012, 'msg' => lang('pass_err')]);
-        session($key, '1');
-        return json(['code' => 1, 'msg' => 'ok']);
+        $id = \app\common\util\ContentResource::positiveInt($param['id'] ?? null);
+        $type = \app\common\util\ContentResource::positiveInt($param['type'] ?? null);
+        if ($id === null || !in_array($type, [1, 4, 5], true) || !is_string($param['pwd'] ?? null)) {
+            return json(['code' => 1001, 'msg' => lang('param_err')]);
+        }
+        $res = (new \app\common\model\Vod())->infoData(['vod_id' => $id, 'vod_status' => 1], '*', 0);
+        if ($res['code'] !== 1) {
+            return json(['code' => 1011, 'msg' => $res['msg']]);
+        }
+        return json(\app\common\util\ContentPassword::verifyVod($res['info'], [1 => 'detail', 4 => 'play', 5 => 'down'][$type], $param['pwd']));
     }
 
     /**
@@ -784,71 +781,58 @@ class Vod extends Base
      */
     public function get_play_info(\think\Request $request)
     {
-        $param = $request->param();
-        $id  = intval($param['id'] ?? 0);
-        $sid = intval($param['sid'] ?? 1);
-        $nid = intval($param['nid'] ?? 1);
-        if ($id < 1) return json(['code' => 1001, 'msg' => '参数错误: id 必须']);
-        $where = ['vod_id' => $id, 'vod_status' => 1];
-        $res = (new \app\common\model\Vod())->infoData($where);
-        if ($res['code'] > 1) return json($res);
-        $info = $res['info'];
-        // 解析播放源
-        $playList = mac_play_list(
-            $info['vod_play_from'] ?? '', $info['vod_play_url'] ?? '',
-            $info['vod_play_server'] ?? '', $info['vod_play_note'] ?? '', 'play'
-        );
-        // 取当前集播放地址
-        $currentPlay = $playList[$sid]['urls'][$nid] ?? null;
-        return json(['code' => 1, 'msg' => 'ok', 'info' => [
-            'vod_id'    => intval($info['vod_id']),
-            'vod_name'  => $info['vod_name'] ?? '',
-            'vod_pic'   => mac_url_img($info['vod_pic'] ?? ''),
-            'vod_remarks' => $info['vod_remarks'] ?? '',
-            'vod_score' => $info['vod_score'] ?? '',
-            'vod_copyright' => intval($info['vod_copyright'] ?? 0),
-            'vod_points_play' => intval($info['vod_points_play'] ?? 0),
-            'vod_pwd_play'  => !empty($info['vod_pwd_play']) ? 1 : 0,
-            'type_id'   => intval($info['type_id'] ?? 0),
-            'play_list' => $playList,
-            'current'   => $currentPlay,
-            'sid'       => $sid,
-            'nid'       => $nid,
-            'play_url'  => mac_url_vod_play($info, ['sid' => $sid, 'nid' => $nid]),
-        ]]);
+        return $this->vodResourceInfo($request, 'play');
     }
 
-    /**
-     * 获取下载页信息
-     * api.php/vod/get_down_info?id=1&sid=1&nid=1
-     */
+    /** Current download resource, with a catalog that never contains other resource addresses. */
     public function get_down_info(\think\Request $request)
     {
+        return $this->vodResourceInfo($request, 'down');
+    }
+
+    private function vodResourceInfo(\think\Request $request, string $flag)
+    {
         $param = $request->param();
-        $id  = intval($param['id'] ?? 0);
-        $sid = intval($param['sid'] ?? 1);
-        $nid = intval($param['nid'] ?? 1);
-        if ($id < 1) return json(['code' => 1001, 'msg' => '参数错误: id 必须']);
-        $where = ['vod_id' => $id, 'vod_status' => 1];
-        $res = (new \app\common\model\Vod())->infoData($where);
-        if ($res['code'] > 1) return json($res);
-        $info = $res['info'];
-        $downList = mac_play_list(
-            $info['vod_down_from'] ?? '', $info['vod_down_url'] ?? '',
-            $info['vod_down_server'] ?? '', $info['vod_down_note'] ?? '', 'down'
-        );
-        $currentDown = $downList[$sid]['urls'][$nid] ?? null;
-        return json(['code' => 1, 'msg' => 'ok', 'info' => [
-            'vod_id'    => intval($info['vod_id']),
-            'vod_name'  => $info['vod_name'] ?? '',
-            'vod_pic'   => mac_url_img($info['vod_pic'] ?? ''),
-            'vod_points_down' => intval($info['vod_points_down'] ?? 0),
-            'vod_pwd_down' => !empty($info['vod_pwd_down']) ? 1 : 0,
-            'type_id'   => intval($info['type_id'] ?? 0),
-            'down_list' => $downList,
-            'current'   => $currentDown,
-            'sid'       => $sid,
-            'nid'       => $nid,
-        ]]);
+        $id = \app\common\util\ContentResource::positiveInt($param['id'] ?? null);
+        $sid = array_key_exists('sid', $param) ? \app\common\util\ContentResource::positiveInt($param['sid']) : 1;
+        $nid = array_key_exists('nid', $param) ? \app\common\util\ContentResource::positiveInt($param['nid']) : 1;
+        if ($id === null || $sid === null || $nid === null) {
+            return json(['code' => 1001, 'msg' => lang('param_err')]);
+        }
+        $result = (new \app\common\model\Vod())->infoData(['vod_id' => $id, 'vod_status' => 1], '*', 0);
+        if ($result['code'] !== 1) {
+            return json($result);
+        }
+        $info = $result['info'];
+        $context = \app\common\util\ContentResource::vodContext($info, $flag, ['sid' => $sid, 'nid' => $nid]);
+        if ($context['code'] !== 1) {
+            return json(['code' => $context['code'], 'msg' => $context['msg']]);
+        }
+        $access = $this->check_vod_resource_access($info, $flag, ['sid' => $sid, 'nid' => $nid]);
+        $current = null;
+        if ($access['can_access']) {
+            $current = ['name' => (string)($context['current']['name'] ?? ''), 'nid' => $nid,
+                'from' => (string)($context['current']['from'] ?? $context['source']['from'] ?? ''),
+                'url' => $context['current']['url']];
+        }
+        $out = [
+            'vod_id' => $context['id'], 'vod_name' => (string)($info['vod_name'] ?? ''),
+            'vod_pic' => mac_url_img($info['vod_pic'] ?? ''), 'type_id' => (int)($info['type_id'] ?? 0),
+            'vod_points_' . $flag => (int)($info['vod_points_' . $flag] ?? 0),
+            'vod_pwd_' . $flag => is_string($info['vod_pwd_' . $flag] ?? null) && $info['vod_pwd_' . $flag] !== '' ? 1 : 0,
+            $flag . '_list' => \app\common\util\ContentResource::vodCatalog($info, $flag),
+            'current' => $current, 'sid' => $sid, 'nid' => $nid,
+            'can_' . $flag => $access['can_access'] ? 1 : 0,
+            'deny_code' => (int)$access['code'], 'deny_msg' => $access['can_access'] ? '' : (string)$access['msg'],
+            'points_hint' => $context['points'], 'password_required' => $access['password_required'],
+            'password_verified' => $access['password_verified'], 'password_help_url' => $access['password_help_url'],
+            'preview_available' => false,
+        ];
+        if ($flag === 'play') {
+            $out += ['vod_remarks' => (string)($info['vod_remarks'] ?? ''), 'vod_score' => $info['vod_score'] ?? '',
+                'vod_copyright' => (int)($info['vod_copyright'] ?? 0),
+                'play_url' => mac_url_vod_play($info, ['sid' => $sid, 'nid' => $nid])];
+        }
+        return json(['code' => 1, 'msg' => 'ok', 'info' => $out]);
     }
 }

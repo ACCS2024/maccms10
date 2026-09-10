@@ -2244,7 +2244,7 @@
             'Check': function (o) {
                 var $that = $(o);
                 if ($that.attr("data-id")) {
-                    MAC.Ajax(maccms.base_url + '/index.php/ajax/pwd.html?id=' + $that.attr("data-id") + '&mid=' + $that.attr("data-mid") + '&type=' + $that.attr("data-type") + '&pwd=' + $that.parents('form').find('input[name="pwd"]').val(), 'get', 'json', '', function (r) {
+                    MAC.Ajax(maccms.base_url + '/index.php/ajax/pwd.html?id=' + $that.attr("data-id") + '&mid=' + $that.attr("data-mid") + '&type=' + $that.attr("data-type") + '&pwd=' + encodeURIComponent($that.parents('form').find('input[name="pwd"]').val()), 'get', 'json', '', function (r) {
                         $that.addClass('disabled');
                         MAC.Pop.Msg(300, 50, r.msg, 2000);
                         if (r.code == 1) {

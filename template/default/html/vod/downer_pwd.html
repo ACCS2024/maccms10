@@ -8,7 +8,7 @@
     <title>系统提示.........</title>
     <link rel="stylesheet" href="{$maccms.path}static/css/home.css">
     <link rel="stylesheet" href="{$maccms.path}template/default/asset/css/theme-tokens.css">
-    
+
     <script src="{$maccms.path}static/js/jquery.js"></script>
     {include file="public/jsvar"}
     <script src="{$maccms.path}static/js/home.js"></script>
@@ -25,11 +25,11 @@
                 <input type="password" name="pwd" data-placeholder="password_here" placeholder="请在此输入访问密码"/>
             </div>
             <div class="item">
-                <a class="submit_btn" href="javascript:;" onclick="MAC.Pwd.Check(this)" data-mid="1" data-id="{$obj.vod_id}" data-type="4" data-lang="string_submit">确认</a>
+                <a class="submit_btn" href="javascript:;" onclick="MAC.Pwd.Check(this)" data-mid="1" data-id="{$obj.vod_id}" data-type="5" data-lang="string_submit">确认</a>
             </div>
             <div class="mm_btn">
-                {if condition="$obj.vod_pwd_play_url neq ''"}
-                <a href="{$obj.vod_pwd_play_url|htmlspecialchars}" target="_blank" data-lang="click_to_get_password">点击获取密码</a>
+                {if condition="$obj.vod_pwd_down_url neq ''"}
+                <a href="{$obj.vod_pwd_down_url|htmlspecialchars}" target="_blank" data-lang="click_to_get_password">点击获取密码</a>
                 {/if}
             </div>
         </form>
@@ -41,6 +41,3 @@
 </script>
 </body>
 </html>
-
-
-

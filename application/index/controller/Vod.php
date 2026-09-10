@@ -6,6 +6,10 @@ class Vod extends Base
 {
     public function __construct()
     {
+        if (in_array(strtolower(request()->action()), ['play', 'player', 'down', 'downer'], true)
+            && !\app\common\util\ContentResource::scalarParameters(array_merge(request()->param(), $_REQUEST))) {
+            throw new \think\exception\HttpResponseException(\think\Response::create(lang('param_err'), 'html', 400));
+        }
         parent::__construct();
     }
 
@@ -73,7 +77,7 @@ class Vod extends Base
         if($info['vod_copyright']==1 && $GLOBALS['config']['app']['copyright_status']==2){
             return $this->label_fetch('vod/copyright');
         }
-        if(!empty($info['vod_pwd']) && session('1-1-'.$info['vod_id'])!='1'){
+        if(!\app\common\util\ContentPassword::vodState($info, 'detail')['verified']){
             return $this->label_fetch('vod/detail_pwd');
         }
         return $this->label_fetch( mac_tpl_fetch('vod',$info['vod_tpl'],'detail') );
@@ -104,6 +108,9 @@ class Vod extends Base
         if($info['vod_copyright']==1 && $GLOBALS['config']['app']['copyright_status']==3){
             return $this->label_fetch('vod/copyright');
         }
+        if (!\app\common\util\ContentPassword::vodState($info, 'play')['verified']) {
+            return $this->label_fetch('vod/player_pwd');
+        }
         return $this->label_fetch( mac_tpl_fetch('vod',$info['vod_tpl_play'],'play') );
     }
 
@@ -113,7 +120,7 @@ class Vod extends Base
         if($info['vod_copyright']==1 && $GLOBALS['config']['app']['copyright_status']==4){
             return $this->label_fetch('vod/copyright');
         }
-        if(!empty($info['vod_pwd_play']) && session('1-4-'.$info['vod_id'])!='1'){
+        if(!\app\common\util\ContentPassword::vodState($info, 'play')['verified']){
             return $this->label_fetch('vod/player_pwd');
         }
         return $this->label_fetch('vod/player');
@@ -122,13 +129,16 @@ class Vod extends Base
     public function down()
     {
         $info = $this->label_vod_play('down');
+        if (!\app\common\util\ContentPassword::vodState($info, 'down')['verified']) {
+            return $this->label_fetch('vod/downer_pwd');
+        }
         return $this->label_fetch( mac_tpl_fetch('vod',$info['vod_tpl_down'],'down') );
     }
 
     public function downer()
     {
         $info = $this->label_vod_play('down');
-        if(!empty($info['vod_pwd_down']) && session('1-5-'.$info['vod_id'])!='1'){
+        if(!\app\common\util\ContentPassword::vodState($info, 'down')['verified']){
             return $this->label_fetch('vod/downer_pwd');
         }
         return $this->label_fetch('vod/downer');

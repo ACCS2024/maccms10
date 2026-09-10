@@ -14,6 +14,10 @@ class Ajax extends Base
     
     public function __construct()
     {
+        if (strtolower(request()->action()) === 'pwd'
+            && !\app\common\util\ContentResource::scalarParameters(array_merge(request()->param(), $_REQUEST))) {
+            throw new \think\exception\HttpResponseException(json(['code' => 1001, 'msg' => lang('param_err')]));
+        }
         parent::__construct();
 
         $this->_param = mac_param_url();
@@ -84,6 +88,9 @@ class Ajax extends Base
                 $v[$pre.'_pic'] = mac_url_img($v[$pre.'_pic']);
                 $v[$pre.'_pic_thumb'] = mac_url_img($v[$pre.'_pic_thumb']);
                 $v[$pre.'_pic_slide'] = mac_url_img($v[$pre.'_pic_slide']);
+                if ($mid == '1') {
+                    $v = \app\common\util\PublicContentView::detail('vod', $v) + ['detail_link' => $detailLink];
+                }
             }
         }
         return json($res);
@@ -524,6 +531,24 @@ class Ajax extends Base
 
     public function pwd()
     {
+        $raw = \think\facade\Request::param();
+        $videoMid = \app\common\util\ContentResource::positiveInt($raw['mid'] ?? null);
+        if ($videoMid === 1) {
+            $id = \app\common\util\ContentResource::positiveInt($raw['id'] ?? null);
+            $type = \app\common\util\ContentResource::positiveInt($raw['type'] ?? null);
+            if ($id === null || !in_array($type, [1, 4, 5], true) || !is_string($raw['pwd'] ?? null)) {
+                return json(['code' => 1001, 'msg' => lang('param_err')]);
+            }
+            $result = (new \app\common\model\Vod())->infoData(['vod_id' => $id, 'vod_status' => 1], '*', 0);
+            if ($result['code'] !== 1) {
+                return json(['code' => 1011, 'msg' => $result['msg']]);
+            }
+            $result = \app\common\util\ContentPassword::verifyVod($result['info'], [1 => 'detail', 4 => 'play', 5 => 'down'][$type], $raw['pwd']);
+            if ($result['code'] === 1012 && $type !== 1) {
+                $result['code'] = $type === 4 ? 1013 : 1014;
+            }
+            return json($result);
+        }
         $mid = $this->_param['mid'];
         $id = $this->_param['id'];
         $type = $this->_param['type'];

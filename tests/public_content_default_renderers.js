@@ -38,7 +38,7 @@ function node() {
     if(kind==='vod') {
       check(html.includes('第一集') && html.includes('第2集') && html.includes('备用集'),'Video sources and episode labels must render');
       check((tabs.outerHTML||tabs.innerHTML).includes('线路一'),'Video source display label must render');
-      check(html.includes('/vod/play/') && !html.includes('https://PRIVATE'),'Video catalog must link to controlled pages');
+      check(html.includes('/play/1/1/1') && !html.includes('https://PRIVATE'),'Video catalog must link to controlled pages');
     } else if(kind==='art') {
       check(html.includes('第一章') && html.includes('第二章'),'Article chapter labels must render');
       check(html.includes('/art/read/'),'Article catalog must preserve the controlled read route');

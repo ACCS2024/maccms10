@@ -87,7 +87,7 @@
                                             <a href="{$obj.player_info.link_pre}" class="{if$param.nid==1}btns_disad{/if}"><i class="iconfont pre-t">&#xe626;</i> <span data-lang="string_play_sj">上集</span></a>
                                         </li>
                                         <li class="play-but-item">
-                                            <a href="{$obj.player_info.link_next}" class="{if$param.nid==$obj['vod_play_list'][$param['sid']]['url_count']}btns_disad{/if}"><span data-lang="string_play_xj">下集</span> <i class="iconfont next-p next-t">&#xe62c;</i></a>
+                                            <a href="{$obj.player_info.link_next}" class="{if condition="empty($obj.player_info.link_next)"}btns_disad{/if}"><span data-lang="string_play_xj">下集</span> <i class="iconfont next-p next-t">&#xe62c;</i></a>
                                         </li>
                                     </ul>
                                 </div>
