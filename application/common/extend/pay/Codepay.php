@@ -62,6 +62,21 @@ class Codepay {
         unset($param['/payment/notify/pay_type/codepay']);
         unset($param['paytype']);
 
+        foreach ($param as $value) {
+            if (!is_string($value) && !is_int($value)) {
+                echo 'fail';
+                return;
+            }
+        }
+        $GLOBALS['config']['pay'] = config('maccms.pay');
+        $paid = $param['money'] ?? '';
+        if (empty($param['pay_no']) || empty($param['pay_id']) || empty($param['sign'])
+            || trim((string)($GLOBALS['config']['pay']['codepay']['appkey'] ?? '')) === ''
+            || !preg_match('/^[0-9]{1,12}(?:\.[0-9]{1,2})?$/D', (string)$paid) || (float)$paid <= 0) {
+            echo 'fail';
+            return;
+        }
+
         ksort($param); //排序post参数
         reset($param); //内部指针指向数组中的第一个元素
         $sign = '';
@@ -72,20 +87,16 @@ class Codepay {
             }
         }
 
-        $GLOBALS['config']['pay'] = config('maccms.pay');
-
-        if (!$param['pay_no'] || md5(substr($sign,0,-1).trim( $GLOBALS['config']['pay']['codepay']['appkey'])) != $param['sign']) {
+        if (!hash_equals(md5(substr($sign,0,-1).trim($GLOBALS['config']['pay']['codepay']['appkey'])), (string)$param['sign'])) {
             echo 'fail';
         }
         else{
             // 安全加固:码支付 money 单位为元,二次核对防改价低付
-            $paid = isset($param['money']) ? $param['money'] : null;
-            $res = (new \app\common\model\Order())->notify($param['pay_id'],'codepay',$paid);
-            if($res['code'] >1){
-                echo 'fail2';
-            }
-            else {
-                echo 'success';
+            try {
+                $res = (new \app\common\model\Order())->notify($param['pay_id'],'codepay',$paid);
+                echo in_array($res['code'] ?? null, [1, '1'], true) ? 'success' : 'fail';
+            } catch (\Throwable $e) {
+                echo 'fail';
             }
         }
     }
