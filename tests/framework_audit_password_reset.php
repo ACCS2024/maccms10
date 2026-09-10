@@ -1,7 +1,21 @@
 <?php
 /** Normal password-recovery lifecycle and database failure recovery, using isolated fixture accounts. */
 declare(strict_types=1);
+namespace app\common\model {
+    // Group metadata is peripheral; User authentication and account/message queries are real.
+    class Group {
+        public function getCache(...$args) { return [
+            1=>['group_id'=>1, 'group_name'=>'Guest', 'group_type'=>''],
+            2=>['group_id'=>2, 'group_name'=>'Member', 'group_type'=>''],
+        ]; }
+    }
+}
+namespace {
 require __DIR__ . '/fixtures/framework_audit_user_messages.php';
+if (!$mysql) {
+    \think\facade\Db::execute('ALTER TABLE audit_user ADD COLUMN group_id TEXT DEFAULT "2"');
+    \think\facade\Db::execute('ALTER TABLE audit_user ADD COLUMN user_end_time INTEGER DEFAULT 0');
+}
 $model = new \app\common\model\User();
 function resetFixtureParam(array $overrides = []): array {
     return $overrides + ['ac'=>'email', 'to'=>'fixture@example.invalid', 'code'=>'123456',
@@ -9,6 +23,7 @@ function resetFixtureParam(array $overrides = []): array {
 }
 function resetFixtureSeed(string $channel = 'email'): void {
     messageFixtureSeed();
+    \think\facade\Db::name('User')->where('user_id',1)->update(['group_id'=>'2']);
     \think\facade\Db::name('Msg')->insert(messageFixtureRow([
         'msg_to'=>$channel === 'email' ? 'fixture@example.invalid' : '13000000000',
     ]));
@@ -19,6 +34,8 @@ foreach (['email'=>'fixture@example.invalid', 'phone'=>'13000000000'] as $channe
     $GLOBALS['config']['app'] += ['api_jwt_enabled'=>'1', 'api_jwt_secret'=>str_repeat('fixture-secret-', 4)];
     $oldToken = \app\common\util\JwtService::encode(1, $before[0][0]['user_random']);
     check(\app\common\util\JwtService::decodeAndVerify($oldToken) !== null, 'Fixture session token must be validly signed');
+    $app->instance('request', (new \think\Request())->withHeader(['authorization'=>'Bearer '.$oldToken]));
+    check($model->checkLogin()['code'] === 1, 'The enabled fixture account must authenticate using its old JWT before reset');
     $param = resetFixtureParam(['ac'=>$channel, 'to'=>$target]);
     $res = $model->findpass_reset($param);
     $after = messageFixtureState();
@@ -29,7 +46,7 @@ foreach (['email'=>'fixture@example.invalid', 'phone'=>'13000000000'] as $channe
         'A successful reset must rotate the existing session secret');
     $app->instance('request', (new \think\Request())->withHeader(['authorization'=>'Bearer '.$oldToken]));
     check(\app\common\util\JwtService::bearerFromRequest() === $oldToken, 'Fixture authorization header must enter the real JWT login branch');
-    check($model->checkLogin()['code'] > 1, 'The real login path must reject a previously issued JWT after reset');
+    check($model->checkLogin()['code'] === 1003, 'The real login path must reject a previously issued JWT after reset');
     check((int)$after[1][0]['msg_status'] === 1 && $after[1][0]['msg_to'] === $target,
         'A successful reset must consume the matching fixture code');
     $res = $model->findpass_reset($param);
@@ -122,3 +139,4 @@ if ($mysql) {
     }
 }
 echo 'framework_audit_password_reset: '.$checks.' checks passed on PHP '.PHP_VERSION.' ('.($mysql ? 'MySQL non-strict' : 'SQLite').')'.PHP_EOL;
+}

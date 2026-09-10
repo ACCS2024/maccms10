@@ -81,7 +81,7 @@ function messageFixtureSeed(): void {
     \think\facade\Db::execute('DELETE FROM audit_msg');
     \think\facade\Db::execute('DELETE FROM audit_user');
     \think\facade\Db::name('User')->insert(['user_id'=>1, 'user_name'=>'fixture-user', 'user_email'=>'fixture@example.invalid',
-        'user_phone'=>'13000000000', 'user_question'=>'Fixture question', 'user_answer'=>'Fixture answer',
+        'user_phone'=>'13000000000', 'user_question'=>'Fixture question', 'user_answer'=>'Fixture answer', 'user_status'=>1,
         'user_pwd'=>'fixture-original-password', 'user_random'=>'0123456789abcdef0123456789abcdef']);
     $GLOBALS['config'] = ['app'=>['cache_flag'=>'fixture'], 'user'=>[],
         'email'=>['time'=>'5', 'tpl'=>[

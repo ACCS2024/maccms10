@@ -112,6 +112,9 @@ class User extends Base
 
     public function saveData($data)
     {
+        if (!is_array($data) || (array_key_exists('user_pwd', $data) && !is_string($data['user_pwd']))) {
+            return ['code'=>1001, 'msg'=>lang('param_err')];
+        }
         $validate = mac_validate('User');
 
         if (isset($data['user_start_time']) && !is_numeric($data['user_start_time'])) {
@@ -141,15 +144,22 @@ class User extends Base
                 return ['code' => 1001, 'msg' => lang('param_err').'：' . $validate->getError()];
             }
 
-            if (empty($data['user_pwd'])) {
-                unset($data['user_pwd']);
-            } else {
-                $data['user_pwd'] = mac_password_hash($data['user_pwd']);
+            $changePassword = isset($data['user_pwd']) && trim($data['user_pwd']) !== '';
+            try {
+                if (!$changePassword) {
+                    unset($data['user_pwd']);
+                } else {
+                    $credentials = $this->passwordCredentials($data['user_pwd']);
+                    if ($credentials === null) { return ['code'=>1001, 'msg'=>lang('model/user/pass_length_err')]; }
+                    $data = array_replace($data, $credentials);
+                }
+                $where = ['user_id'=>$data['user_id']];
+                $data = $this->filterFields($data);
+                $res = $this->where($where)->update($data);
+                if ($changePassword && $res !== 1) { return ['code'=>1003, 'msg'=>lang('save_err')]; }
+            } catch (\Throwable $error) {
+                return ['code'=>1003, 'msg'=>lang('save_err')];
             }
-            $where = [];
-            $where['user_id'] = $data['user_id'];
-            $data = $this->filterFields($data);
-            $res = $this->where($where)->update($data);
         } else {
             if (!$validate->scene('edit')->check($data)) {
                 return ['code' => 1002, 'msg' => lang('param_err').'：' . $validate->getError()];
@@ -403,52 +413,99 @@ class User extends Base
         return ['code' => 1, 'msg' => 'ok'];
     }
 
+    /** Password replacement always changes the hash and invalidates existing sessions together. */
+    private function passwordCredentials($value): ?array
+    {
+        if (!is_string($value)) { return null; }
+        $password = trim($value);
+        if (strlen($password) < 6 || strlen($password) > 72 || str_contains($password, "\0")) {
+            return null;
+        }
+        return ['user_pwd'=>mac_password_hash($password), 'user_random'=>bin2hex(random_bytes(16))];
+    }
+
+    /** Only legacy MD5 rows may use the historical request-format transformation. */
+    private function passwordMatches(string $password, string $hash): bool
+    {
+        if (mac_password_verify($password, $hash)) { return true; }
+        return strlen($hash) === 32 && ctype_xdigit($hash)
+            && mac_password_verify(htmlspecialchars(urldecode($password)), $hash);
+    }
+
+    /** Shared by the authenticated frontend and API profile forms. */
+    public function updateAccountProfile($userId, array $profile, $oldPassword = null, $newPassword = null): array
+    {
+        if ((!is_int($userId) && !is_string($userId)) || !preg_match('/^[1-9][0-9]{0,9}$/D', (string)$userId)
+            || (int)$userId > 4294967295) {
+            return ['code'=>1002, 'msg'=>lang('model/user/not_login')];
+        }
+        $lengths = ['user_nick_name'=>30, 'user_qq'=>16, 'user_question'=>255, 'user_answer'=>255,
+            'user_email'=>30, 'user_phone'=>16];
+        $profile = array_intersect_key($profile, $lengths);
+        foreach ($profile as $field=>$value) {
+            if (!is_string($value) || !mb_check_encoding($value, 'UTF-8') || mb_strlen($value, 'UTF-8') > $lengths[$field]) {
+                return ['code'=>1001, 'msg'=>lang('param_err')];
+            }
+        }
+        $changePassword = $oldPassword !== null || $newPassword !== null;
+        if ($changePassword && (!is_string($oldPassword) || !is_string($newPassword) || trim($oldPassword) === '')) {
+            return ['code'=>1001, 'msg'=>lang('model/user/input_old_pass')];
+        }
+        try {
+            $current = Db::name('User')->where('user_id', (int)$userId)->field('user_pwd')->find();
+            if (!$current) { return ['code'=>1002, 'msg'=>lang('model/user/not_login')]; }
+            $where = ['user_id'=>(int)$userId];
+            if ($changePassword) {
+                if (!$this->passwordMatches(trim($oldPassword), $current['user_pwd'])) {
+                    return ['code'=>1012, 'msg'=>lang('model/user/old_pass_err')];
+                }
+                $credentials = $this->passwordCredentials($newPassword);
+                if ($credentials === null) { return ['code'=>1003, 'msg'=>lang('model/user/pass_length_err')]; }
+                $profile = array_replace($profile, $credentials);
+                // A concurrent password change must not be overwritten using an already checked old hash.
+                $where['user_pwd'] = $current['user_pwd'];
+            }
+            if ($profile === []) { return ['code'=>1001, 'msg'=>lang('api/no_update_needed')]; }
+            $affected = Db::name('User')->where($where)->update($profile);
+            if ($affected === false || ($changePassword && $affected !== 1)) {
+                return ['code'=>1003, 'msg'=>lang('update_err')];
+            }
+            return ['code'=>1, 'msg'=>lang('update_ok')];
+        } catch (\Throwable $error) {
+            return ['code'=>1003, 'msg'=>lang('update_err')];
+        }
+    }
+
     public function info($param)
     {
-        $pwd_old = isset($param['user_pwd']) ? trim($param['user_pwd']) : '';
-        $pwd1 = isset($param['user_pwd1']) ? trim($param['user_pwd1']) : '';
-        $pwd2 = isset($param['user_pwd2']) ? trim($param['user_pwd2']) : '';
-        $wantPwdChange = ($pwd_old !== '' || $pwd1 !== '' || $pwd2 !== '');
-
-        if ($wantPwdChange) {
-            if ($pwd_old === '') {
-                return ['code' => 1001, 'msg' => lang('model/user/input_old_pass')];
-            }
-            $password_raw = $pwd_old;
-            $password_formatted = htmlspecialchars(urldecode($pwd_old));
-            // 必须用库里的哈希：$GLOBALS['user'] 经模板/接口传递时可能不含 user_pwd，导致误判「原密码错误」
-            $uid = intval($GLOBALS['user']['user_id'] ?? 0);
-            if ($uid < 1) {
-                return ['code' => 1002, 'msg' => lang('model/user/not_login')];
-            }
-            $storedHash = $this->where('user_id', $uid)->value('user_pwd');
-            $storedHash = $storedHash === null ? '' : (string) $storedHash;
-            // 安全加固(V4):兼容 bcrypt 与旧 md5 校验原密码(同时兼容两种入库格式)
-            $ok = mac_password_verify($password_raw, $storedHash) || mac_password_verify($password_formatted, $storedHash);
-            if (!$ok) {
-                return ['code' => 1002, 'msg' => lang('model/user/old_pass_err')];
-            }
-            if ($pwd1 === '' || $pwd2 === '') {
-                return ['code' => 1003, 'msg' => lang('model/user/input_require')];
-            }
-            if ($pwd1 !== $pwd2) {
-                return ['code' => 1004, 'msg' => lang('model/user/pass_not_same_pass2')];
+        if (!is_array($param)) { return ['code'=>1001, 'msg'=>lang('param_err')]; }
+        foreach (['user_pwd', 'user_pwd1', 'user_pwd2', 'user_nick_name', 'user_qq', 'user_question', 'user_answer'] as $field) {
+            if (array_key_exists($field, $param) && !is_string($param[$field]) && !is_int($param[$field])) {
+                return ['code'=>1001, 'msg'=>lang('param_err')];
             }
         }
-
-        $data = [];
-        $data['user_id'] = $GLOBALS['user']['user_id'];
-        $data['user_name'] = $GLOBALS['user']['user_name'];
-        if(!empty($param['user_nick_name'])){
-            $data['user_nick_name'] = htmlspecialchars(urldecode(trim($param['user_nick_name'])));
+        $old = trim((string)($param['user_pwd'] ?? ''));
+        $first = trim((string)($param['user_pwd1'] ?? ''));
+        $second = trim((string)($param['user_pwd2'] ?? ''));
+        $changePassword = $old !== '' || $first !== '' || $second !== '';
+        if ($changePassword && ($first === '' || $second === '')) {
+            return ['code'=>1003, 'msg'=>lang('model/user/input_require')];
         }
-        $data['user_qq'] = htmlspecialchars(urldecode(trim($param['user_qq'])));
-        $data['user_question'] = htmlspecialchars(urldecode(trim($param['user_question'])));
-        $data['user_answer'] = htmlspecialchars(urldecode(trim($param['user_answer'])));
-        if ($wantPwdChange && $pwd2 !== '') {
-            $data['user_pwd'] = $pwd2;
+        if ($changePassword && $first !== $second) {
+            return ['code'=>1004, 'msg'=>lang('model/user/pass_not_same_pass2')];
         }
-        return $this->saveData($data);
+        $profile = [];
+        foreach (['user_nick_name', 'user_qq', 'user_question', 'user_answer'] as $field) {
+            if (array_key_exists($field, $param)) {
+                $value = urldecode(trim((string)$param[$field]));
+                if (!mb_check_encoding($value, 'UTF-8')) { return ['code'=>1001, 'msg'=>lang('param_err')]; }
+                $profile[$field] = htmlspecialchars($value);
+            }
+        }
+        $result = $this->updateAccountProfile($GLOBALS['user']['user_id'] ?? null, $profile,
+            $changePassword ? $old : null, $changePassword ? $first : null);
+        if ($result['code'] === 1012) { $result['code'] = 1002; }
+        return $result;
     }
 
     /**
@@ -698,7 +755,7 @@ class User extends Base
 
         // 安全加固(V4):密码登录(非openid)取行后校验,兼容旧md5与bcrypt,成功后透明升级
         if (empty($data['openid'])) {
-            if (!mac_password_verify($password_raw, $row['user_pwd'])) {
+            if (!$this->passwordMatches($password_raw, $row['user_pwd'])) {
                 return ['code' => 1003, 'msg' => lang('model/user/not_found')];
             }
             if (mac_password_need_rehash($row['user_pwd'])) {
@@ -916,50 +973,34 @@ class User extends Base
 
     public function findpass($param)
     {
-        $data = [];
-        $password_raw = trim($param['user_pwd']);
-        $data['user_name'] = htmlspecialchars(urldecode(trim($param['user_name'])));
-        $data['user_question'] = htmlspecialchars(urldecode(trim($param['user_question'])));
-        $data['user_answer'] = htmlspecialchars(urldecode(trim($param['user_answer'])));
-        $data['user_pwd'] = htmlspecialchars(urldecode(trim($param['user_pwd'])));
-        $data['user_pwd2'] = htmlspecialchars(urldecode(trim($param['user_pwd2'])));
-        $data['verify'] = $param['verify'];
-
-        if (empty($data['user_name']) || empty($data['user_question']) || empty($data['user_answer']) || empty($data['user_pwd']) || empty($data['user_pwd2']) || empty($data['verify'])) {
-            return ['code' => 1001, 'msg' => lang('param_err')];
+        if (!is_array($param)) { return ['code'=>1001, 'msg'=>lang('param_err')]; }
+        foreach (['user_name', 'user_question', 'user_answer', 'user_pwd', 'user_pwd2', 'verify'] as $field) {
+            if (!is_string($param[$field] ?? null) || trim($param[$field]) === '') {
+                return ['code'=>1001, 'msg'=>lang('param_err')];
+            }
         }
-
-        if (!captcha_check((string)($data['verify'] ?? ''))) {
-            return ['code' => 1002, 'msg' => lang('verify_err')];
+        if (!captcha_check($param['verify'])) { return ['code'=>1002, 'msg'=>lang('verify_err')]; }
+        if (trim($param['user_pwd']) !== trim($param['user_pwd2'])) {
+            return ['code'=>1003, 'msg'=>lang('model/user/pass_not_same_pass2')];
         }
-
-        if ($data['user_pwd'] != $data['user_pwd2']) {
-            return ['code' => 1003, 'msg' => lang('model/user/pass_not_same_pass2')];
-        }
-
-
         $where = [];
-        $where['user_name'] = $data['user_name'];
-        $where['user_question'] = $data['user_question'];
-        $where['user_answer'] = $data['user_answer'];
-
-        $info = $this->where($where)->find();
-        if (empty($info)) {
-            return ['code' => 1004, 'msg' => lang('model/user/findpass_not_found')];
+        foreach (['user_name', 'user_question', 'user_answer'] as $field) {
+            $where[$field] = htmlspecialchars(urldecode(trim($param[$field])));
         }
-
-        $update = [];
-        $update['user_pwd'] = mac_password_hash($password_raw);
-
-        $where = [];
-        $where['user_id'] = $info['user_id'];
-        $res = $this->where($where)->update($update);
-
-        if (false === $res) {
-            return ['code' => 1005, 'msg' => '' . $this->getError()];
+        try {
+            $users = Db::name('User')->where($where)->limit(2)->select()->toArray();
+            if (count($users) !== 1) { return ['code'=>1004, 'msg'=>lang('model/user/findpass_not_found')]; }
+            $credentials = $this->passwordCredentials($param['user_pwd']);
+            if ($credentials === null) { return ['code'=>1001, 'msg'=>lang('model/user/pass_length_err')]; }
+            $where['user_id'] = $users[0]['user_id'];
+            $where['user_pwd'] = $users[0]['user_pwd'];
+            if (Db::name('User')->where($where)->update($credentials) !== 1) {
+                return ['code'=>1005, 'msg'=>lang('model/user/pass_reset_err')];
+            }
+            return ['code'=>1, 'msg'=>lang('model/user/findpass_ok')];
+        } catch (\Throwable $error) {
+            return ['code'=>1005, 'msg'=>lang('model/user/pass_reset_err')];
         }
-        return ['code' => 1, 'msg' => lang('model/user/findpass_ok')];
-
     }
 
     public function popedom($type_id, $popedom, $group_ids = 1)

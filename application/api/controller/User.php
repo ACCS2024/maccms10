@@ -423,26 +423,29 @@ class User extends Base
      */
     public function update_info(\think\Request $request)
     {
-        $check = (new \app\common\model\User())->checkLogin();
+        if (!$request->isPost()) { return json(['code'=>1001, 'msg'=>lang('param_err')]); }
+        $model = new \app\common\model\User();
+        $check = $model->checkLogin();
         if ($check['code'] > 1) return json(['code' => 1401, 'msg' => lang('api/please_login_first')]);
         $uid = intval($check['info']['user_id']);
-        $param = $request->param();
-        $update = [];
-        if (!empty($param['user_nick_name'])) $update['user_nick_name'] = mac_filter_xss(trim($param['user_nick_name']));
-        if (!empty($param['user_email'])) $update['user_email'] = mac_filter_xss(trim($param['user_email']));
-        if (!empty($param['user_phone'])) $update['user_phone'] = mac_filter_xss(trim($param['user_phone']));
-        if (!empty($param['user_qq'])) $update['user_qq'] = mac_filter_xss(trim($param['user_qq']));
-        // 修改密码（使用单重 md5，与 model 层 User::saveData / login / register 保持一致）
-        if (!empty($param['user_new_pwd']) && !empty($param['user_old_pwd'])) {
-            $userInfo = Db::name('User')->field('user_pwd')->where('user_id', $uid)->find();
-            if (md5($param['user_old_pwd']) !== $userInfo['user_pwd']) {
-                return json(['code' => 1012, 'msg' => lang('model/user/old_pass_err')]);
+        $param = $request->post();
+        foreach (['user_nick_name', 'user_email', 'user_phone', 'user_qq', 'user_old_pwd', 'user_new_pwd'] as $field) {
+            if (array_key_exists($field, $param) && !is_string($param[$field]) && !is_int($param[$field])) {
+                return json(['code'=>1001, 'msg'=>lang('param_err')]);
             }
-            $update['user_pwd'] = md5($param['user_new_pwd']);
         }
-        if (empty($update)) return json(['code' => 1001, 'msg' => lang('api/no_update_needed')]);
-        Db::name('User')->where('user_id', $uid)->update($update);
-        return json(['code' => 1, 'msg' => lang('update_ok')]);
+        $update = [];
+        foreach (['user_nick_name', 'user_email', 'user_phone', 'user_qq'] as $field) {
+            if (!empty($param[$field])) {
+                $value = trim((string)$param[$field]);
+                if (!mb_check_encoding($value, 'UTF-8')) { return json(['code'=>1001, 'msg'=>lang('param_err')]); }
+                $update[$field] = mac_filter_xss($value);
+            }
+        }
+        $old = trim((string)($param['user_old_pwd'] ?? ''));
+        $new = trim((string)($param['user_new_pwd'] ?? ''));
+        $changePassword = $old !== '' || $new !== '';
+        return json($model->updateAccountProfile($uid, $update, $changePassword ? $old : null, $changePassword ? $new : null));
     }
 
     /**
