@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0"><channel>
+    <title>{$obj.art_name|htmlspecialchars}</title>
+    <link>{$maccms.http_type|htmlspecialchars}{$maccms.site_url|htmlspecialchars}{:htmlspecialchars(mac_url_art_detail($obj))}</link>
+    <description>{$obj.art_blurb|htmlspecialchars}</description>
+    {volist name="obj.art_page_list" id="chapter"}
+    <item>
+        <title>{$obj.art_name|htmlspecialchars} {$chapter.title|htmlspecialchars}</title>
+        <link>{$maccms.http_type|htmlspecialchars}{$maccms.site_url|htmlspecialchars}{$chapter.read_link|htmlspecialchars}</link>
+        <description>{$chapter.title|htmlspecialchars}</description>
+    </item>
+    {/volist}
+</channel></rss>

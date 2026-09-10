@@ -90,6 +90,8 @@ class Ajax extends Base
                 $v[$pre.'_pic_slide'] = mac_url_img($v[$pre.'_pic_slide']);
                 if ($mid == '1') {
                     $v = \app\common\util\PublicContentView::detail('vod', $v) + ['detail_link' => $detailLink];
+                } elseif ($mid == '2') {
+                    $v = \app\common\util\PublicContentView::detail('art', $v) + ['detail_link' => $detailLink];
                 }
             }
         }
@@ -549,62 +551,15 @@ class Ajax extends Base
             }
             return json($result);
         }
-        $mid = $this->_param['mid'];
-        $id = $this->_param['id'];
-        $type = $this->_param['type'];
-        $pwd = \think\facade\Request::param('pwd');
-
-        if( empty($id) || empty($pwd) || !in_array($mid,['1','2']) || !in_array($type,['1','4','5'])){
-            return json(['code'=>1001,'msg'=>lang('param_err')]);
+        if ($videoMid !== 2 || \app\common\util\ContentResource::positiveInt($raw['type'] ?? null) !== 1
+            || \app\common\util\ContentResource::positiveInt($raw['id'] ?? null) === null || !is_string($raw['pwd'] ?? null)) {
+            return json(['code'=>1001, 'msg'=>lang('param_err')]);
         }
-
-        $key = $mid.'-'.$type.'-'.$id;
-        if(session($key)=='1'){
-            return json(['code'=>1002,'msg'=>lang('index/pwd_repeat')]);
+        $data = (new \app\common\model\Art())->infoData(['art_id'=>(int)$raw['id'], 'art_status'=>1], '*', 0);
+        if ($data['code'] !== 1) {
+            return json(['code'=>1021, 'msg'=>$data['msg']]);
         }
-
-        if ( mac_get_time_span("last_pwd") < 5){
-            return json(['code'=>1003,'msg'=>lang('index/pwd_frequently')]);
-        }
-
-
-        if($mid=='1'){
-            $where=[];
-            $where['vod_id'] = $id;
-            $info = (new \app\common\model\Vod())->infoData($where);
-            if($info['code'] >1){
-                return json(['code'=>1011,'msg'=>$info['msg']]);
-            }
-            if($type=='1'){
-                if($info['info']['vod_pwd'] != $pwd){
-                    return json(['code'=>1012,'msg'=>lang('pass_err')]);
-                }
-            }
-            elseif($type=='4'){
-                if($info['info']['vod_pwd_play'] != $pwd){
-                    return json(['code'=>1013,'msg'=>lang('pass_err')]);
-                }
-            }
-            elseif($type=='5'){
-                if($info['info']['vod_pwd_down'] != $pwd){
-                    return json(['code'=>1014,'msg'=>lang('pass_err')]);
-                }
-            }
-        }
-        else{
-            $where=[];
-            $where['art_id'] = $id;
-            $info = (new \app\common\model\Art())->infoData($where);
-            if($info['code'] >1){
-                return json(['code'=>1021,'msg'=>$info['msg']]);
-            }
-            if($info['info']['art_pwd'] != $pwd){
-                return json(['code'=>1022,'msg'=>lang('pass_err')]);
-            }
-        }
-
-        session($key,'1');
-        return json(['code'=>1,'msg'=>'ok']);
+        return json(\app\common\util\ContentPassword::verifyArt($data['info'], $raw['pwd']));
     }
 
     /**

@@ -27,7 +27,7 @@
 			<link>{$maccms.http_type}{$maccms.site_url}{:mac_url_art_detail($vo)}</link>
 			<guid>{$maccms.http_type}{$maccms.site_url}{:mac_url_art_detail($vo)}</guid>
 			<description>
-				<![CDATA[{$vo.art_content|mac_filter_html}]]>
+				<![CDATA[{$vo.art_blurb|mac_filter_html}]]>
 			</description>
 			<pubDate>{$vo.art_time|date='Y-m-d H:i:s'}</pubDate>
 		</item>

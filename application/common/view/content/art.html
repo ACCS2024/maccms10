@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>{$obj.art_name|htmlspecialchars}</title>
+    <link rel="stylesheet" href="{$maccms.path|htmlspecialchars}static/css/art-access.css">
+    <script defer src="{$maccms.path|htmlspecialchars}static/js/art-access.js"></script>
+</head>
+<body>
+<main class="art-access" data-art-base="{$maccms.path|htmlspecialchars}">
+    <h1>{$obj.art_name|htmlspecialchars}</h1>
+    <p>{$obj.art_blurb|htmlspecialchars}</p>
+    <p><a href="{:mac_url_art_detail($obj)}">返回详情</a></p>
+    {if condition="$art_access.password_required"}
+    <p>请输入文章访问密码。</p>
+    <form method="post" action="{$maccms.path|htmlspecialchars}index.php/ajax/pwd" data-art-password data-id="{$obj.art_id}">
+        <input type="hidden" name="mid" value="2">
+        <input type="hidden" name="type" value="1">
+        <input type="hidden" name="id" value="{$obj.art_id}">
+        <label>访问密码 <input type="password" name="pwd" required maxlength="1024" autocomplete="off"></label>
+        <button type="submit">验证密码</button>
+        {notempty name="obj.art_pwd_url"}<a href="{$obj.art_pwd_url|htmlspecialchars}" target="_blank" rel="noopener noreferrer">获取密码</a>{/notempty}
+    </form>
+    {elseif condition="$art_access.can_access" /}
+    <article>{$obj.art_content|mac_url_content_img}</article>
+    {else /}
+    <p>{$art_access.msg|htmlspecialchars}</p>
+    {if condition="$art_access.purchase_supported && $art_access.points_hint gt 0"}
+    <form method="post" data-art-purchase data-id="{$obj.art_id}" data-page="{$art_access.purchase_page}">
+        <button type="submit">使用 {$art_access.points_hint} 积分购买阅读权限</button>
+    </form>
+    {/if}
+    <p><a href="{:mac_url('user/index')}">登录或前往会员中心</a></p>
+    {/if}
+    <p data-art-result role="status" aria-live="polite"></p>
+    <nav aria-label="文章目录">
+        {volist name="obj.art_page_list" id="chapter"}
+        <a href="{$chapter.read_link|htmlspecialchars}">第 {$chapter.page} 页 {$chapter.title|htmlspecialchars}</a>
+        {/volist}
+    </nav>
+</main>
+</body>
+</html>

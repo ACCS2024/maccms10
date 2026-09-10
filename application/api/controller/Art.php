@@ -10,6 +10,10 @@ class Art extends Base
     use PublicApi;
     public function __construct()
     {
+        if (in_array(strtolower(request()->action()), ['get_detail', 'get_read_page', 'verify_pwd'], true)
+            && !\app\common\util\ContentResource::scalarParameters(array_merge(request()->param(), $_REQUEST))) {
+            throw new \think\exception\HttpResponseException(json(['code'=>1001, 'msg'=>lang('param_err')]));
+        }
         parent::__construct();
         $this->check_config();
 
@@ -174,8 +178,11 @@ class Art extends Base
             ]);
         }
 
-        $aid = (int)$param['art_id'];
-        $data = (new \app\common\model\Art())->infoData(['art_id' => $aid], '*', 0);
+        $aid = \app\common\util\ContentResource::positiveInt($param['art_id'] ?? null);
+        if ($aid === null) {
+            return json(['code'=>1001, 'msg'=>lang('param_err')]);
+        }
+        $data = (new \app\common\model\Art())->infoData(['art_id' => $aid, 'art_status'=>1], '*', 0);
         if ($data['code'] != 1 || empty($data['info'])) {
             return json(['code' => 1001, 'msg' => $data['msg'] ?? '数据不存在']);
         }
@@ -211,9 +218,9 @@ class Art extends Base
         $info['art_prev'] = null;
         $info['art_next'] = null;
         if ($tid > 0 && $aid > 0) {
-            $prev = Db::name('art')->where(['art_status' => 1, 'type_id' => $tid])->where('art_id', '<', $aid)
+            $prev = Db::name('art')->where(['art_status' => 1, 'art_recycle_time' => 0, 'type_id' => $tid])->where('art_id', '<', $aid)
                 ->order('art_id', 'desc')->field('art_id,art_name,art_en')->find();
-            $next = Db::name('art')->where(['art_status' => 1, 'type_id' => $tid])->where('art_id', '>', $aid)
+            $next = Db::name('art')->where(['art_status' => 1, 'art_recycle_time' => 0, 'type_id' => $tid])->where('art_id', '>', $aid)
                 ->order('art_id', 'asc')->field('art_id,art_name,art_en')->find();
             if (!empty($prev)) {
                 $prev['art_link'] = mac_url_art_detail($prev);
@@ -247,67 +254,45 @@ class Art extends Base
     public function get_read_page(\think\Request $request)
     {
         $param = $request->param();
-        $validate = new \app\api\validate\Art();
-        if (!$validate->scene('get_read_page')->check($param)) {
-            return json([
-                'code' => 1001,
-                'msg'  => '参数错误: ' . $validate->getError(),
-            ]);
+        $id = \app\common\util\ContentResource::positiveInt($param['art_id'] ?? null);
+        if ($id === null || !\app\common\util\ContentResource::scalarParameters($param)) {
+            return json(['code'=>1001, 'msg'=>lang('param_err')]);
         }
-        $artId = (int) $param['art_id'];
-        $page  = isset($param['page']) ? (int) $param['page'] : 1;
-        if ($page < 1) {
-            $page = 1;
-        }
-
-        $data = (new \app\common\model\Art())->infoData(['art_id' => $artId], '*', 0);
-        if ($data['code'] != 1 || empty($data['info'])) {
-            return json(['code' => 1002, 'msg' => $data['msg'] ?? '数据不存在']);
+        $data = (new \app\common\model\Art())->infoData(['art_id'=>$id, 'art_status'=>1], '*', 0);
+        if ($data['code'] !== 1) {
+            return json(['code'=>1002, 'msg'=>$data['msg']]);
         }
         $info = $data['info'];
-        if ((int) ($info['art_status'] ?? 0) != 1) {
-            return json(['code' => 1002, 'msg' => '数据不存在']);
+        $context = \app\common\util\ContentResource::artContext($info, $param);
+        if ($context['code'] !== 1) {
+            return json($context);
         }
+        $access = $this->check_art_resource_access($info, ['page'=>$context['page']]);
+        return json(['code'=>1, 'msg'=>'ok', 'info'=>[
+            'can_read'=>$access['can_access'] ? 1 : 0, 'deny_code'=>(int)$access['code'],
+            'deny_msg'=>$access['can_access'] ? '' : (string)$access['msg'], 'points_hint'=>$context['points'],
+            'password_required'=>$access['password_required'], 'password_help_url'=>$access['password_help_url'],
+            'purchase_supported'=>$context['purchase_supported'], 'purchase_page'=>$context['purchase_page'],
+            'art_id'=>$context['id'], 'art_name'=>(string)$info['art_name'], 'page'=>$context['page'],
+            'page_total'=>$context['page_total'], 'title'=>(string)($context['current']['title'] ?? ''),
+            'note'=>(string)($context['current']['note'] ?? ''),
+            'content_html'=>$access['can_access'] ? mac_url_content_img($context['current']['content']) : '',
+            'has_prev'=>$context['previous_page'] !== null, 'has_next'=>$context['next_page'] !== null,
+        ]]);
+    }
 
-        $popParam = ['id' => $artId, 'page' => $page];
-        $popedom  = $this->check_user_popedom($info['type_id'], 3, $popParam, 'art_read', $info);
-
-        $pageList  = $info['art_page_list'] ?? [];
-        $pageTotal = count($pageList);
-        if ($pageTotal < 1) {
-            return json(['code' => 1002, 'msg' => '暂无正文']);
+    public function verify_pwd(\think\Request $request)
+    {
+        $param = $request->param();
+        $id = \app\common\util\ContentResource::positiveInt($param['art_id'] ?? $param['id'] ?? null);
+        if ($id === null || !is_string($param['pwd'] ?? null)) {
+            return json(['code'=>1001, 'msg'=>lang('param_err')]);
         }
-        if ($page > $pageTotal) {
-            $page = $pageTotal;
+        $data = (new \app\common\model\Art())->infoData(['art_id'=>$id, 'art_status'=>1], '*', 0);
+        if ($data['code'] !== 1) {
+            return json(['code'=>1021, 'msg'=>$data['msg']]);
         }
-        $cur = $pageList[$page] ?? $pageList[(string) $page] ?? null;
-        if (empty($cur) || !is_array($cur)) {
-            return json(['code' => 1002, 'msg' => '该页不存在']);
-        }
-
-        $html = '';
-        if ($popedom['code'] == 1 && !empty($cur['content'])) {
-            $html = mac_url_content_img($cur['content']);
-        }
-
-        $canRead = ($popedom['code'] == 1) ? 1 : 0;
-        $out     = [
-            'can_read'     => $canRead,
-            'deny_code'    => (int) ($popedom['code'] ?? 0),
-            'deny_msg'     => $canRead ? '' : (string) ($popedom['msg'] ?? ''),
-            'points_hint'  => isset($popedom['points']) ? (int) $popedom['points'] : 0,
-            'art_id'       => $artId,
-            'art_name'     => (string) ($info['art_name'] ?? ''),
-            'page'         => $page,
-            'page_total'   => $pageTotal,
-            'title'        => (string) ($cur['title'] ?? ''),
-            'note'         => (string) ($cur['note'] ?? ''),
-            'content_html' => $html,
-            'has_prev'     => $page > 1,
-            'has_next'     => $page < $pageTotal,
-        ];
-
-        return json(['code' => 1, 'msg' => 'ok', 'info' => $out]);
+        return json(\app\common\util\ContentPassword::verifyArt($data['info'], $param['pwd']));
     }
 
     /**

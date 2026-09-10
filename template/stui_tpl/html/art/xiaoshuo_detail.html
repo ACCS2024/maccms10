@@ -14,7 +14,7 @@
 					<h3 class="title">{$obj.art_name}</h3>						
 				</div>																		
 				<div class="stui-content__mtxs col-pd clearfix">
-					<!-- 小说 -->{$obj.art_content}<!-- end 小说 -->
+					<!-- 小说 -->{if condition="$art_static_catalog || !$art_access.can_access"}<p>{if condition="$art_static_catalog"}正文请进入阅读页查看。{else /}{$art_access.msg|htmlspecialchars}{/if} <a href="{$art_read_link|htmlspecialchars}">前往阅读</a></p>{else /}{$obj.art_content}{/if}<!-- end 小说 -->
 				</div>				
 			</div>	
 			

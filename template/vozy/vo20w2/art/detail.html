@@ -27,7 +27,7 @@
 </div>
 <div class="width1200 white" id="content">
   <p class="whitetitle">正文内容</p>
-  <div class="vod_content">{:$obj['art_page_list'][max(1,(int)($param['page'] ?? 1))]['content'] ?? ''}</div>
+  <div class="vod_content">{if condition="$art_static_catalog || !$art_access.can_access"}<p>{if condition="$art_static_catalog"}正文请进入阅读页查看。{else /}{$art_access.msg|htmlspecialchars}{/if} <a href="{$art_read_link|htmlspecialchars}">前往阅读</a></p>{else /}{:$obj['art_page_list'][max(1,(int)($param['page'] ?? 1))]['content'] ?? ''}{/if}</div>
 </div>
 <div class="clear"></div>
 {include file="public/foot"}

@@ -4073,7 +4073,7 @@ function mac_label_topic_detail($param)
     $res = (new \app\common\model\Topic())->infoData($where,'*',1);
     return $res;
 }
-function mac_label_art_detail($param)
+function mac_label_art_detail($param, $cache = 1)
 {
     $where = [];
     if($GLOBALS['config']['rewrite']['art_id']==1){
@@ -4086,12 +4086,9 @@ function mac_label_art_detail($param)
         $where['art_id'] = $param['id'];
     }
     $where['art_status'] = 1;
-    $res = (new \app\common\model\Art())->infoData($where,'*',1);
-    if($res['code'] ==1){
-        // mac_art 建表里根本没有 art_page_total 列(文章不分页),这里恒为缺键。
-        // 补 0 后 mac_page_param(0,...) 走"无分页"分支,与旧的 null 行为一致。
-        $artPageTotal = $res['info']['art_page_total'] ?? 0;
-        if($param['page']>$artPageTotal){ $param['page'] = $artPageTotal; }
+    $res = (new \app\common\model\Art())->infoData($where,'*',$cache);
+    if ($res['code'] !== 1) {
+        return $res;
     }
     $GLOBALS['type_id'] = $res['info']['type_id'];
     $GLOBALS['type_pid'] = $res['info']['type']['type_pid'];

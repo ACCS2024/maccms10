@@ -23,7 +23,7 @@ BORDER-RIGHT: #F0F0F0 1px solid; PADDING-RIGHT: 4px; BORDER-TOP: #F0F0F0 1px sol
 				</div>																		
 				<div class="stui-content__mtxs col-pd clearfix">
 					<div class="tp">
-					<!-- 美图 -->{$obj.art_content|mac_url_content_img}<!-- end 美图 -->
+					<!-- 美图 -->{if condition="$art_static_catalog || !$art_access.can_access"}<p>{if condition="$art_static_catalog"}正文请进入阅读页查看。{else /}{$art_access.msg|htmlspecialchars}{/if} <a href="{$art_read_link|htmlspecialchars}">前往阅读</a></p>{else /}{$obj.art_content|mac_url_content_img}{/if}<!-- end 美图 -->
 					</div>
 				</div>
 			</div>	

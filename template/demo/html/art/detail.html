@@ -31,7 +31,7 @@
 	   <p class="text-muted">来源：{$obj.art_from}<span class="split-line"></span>人气：{$obj.art_hits}<span class="split-line"></span>更新：{$obj.art_time|date='Y-m-d H:i:s'}</p>
    <div class="people">
 	 <div class="news-content">
-	{$obj.art_page_list[$param['page']]['content']} 
+	{if condition="$art_static_catalog || !$art_access.can_access"}<p>{if condition="$art_static_catalog"}正文请进入阅读页查看。{else /}{$art_access.msg|htmlspecialchars}{/if} <a href="{$art_read_link|htmlspecialchars}">前往阅读</a></p>{else /}{$obj.art_page_list[$param['page']]['content']}{/if}
 	</div>	
 	   <div class="clear"></div>
 	</div>

@@ -13,7 +13,7 @@ if($__buy_mid === 1){
 }
 elseif($__buy_mid === 2){
 	$__buy_id = intval($obj['art_id'] ?? 0);
-	$__buy_sid = intval($param['page'] ?? 1);
+	$__buy_sid = intval($art_access['purchase_page'] ?? ($param['page'] ?? 1));
 	$__buy_nid = 0;
 	$__buy_type = 1;
 }

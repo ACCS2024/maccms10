@@ -1,0 +1,4 @@
+.art-access { max-width: 52rem; margin: 2rem auto; padding: 0 1rem; line-height: 1.8; overflow-wrap: anywhere; }
+.art-access img { max-width: 100%; height: auto; }
+.art-access input, .art-access button { font: inherit; margin: .5rem; padding: .35rem .65rem; }
+.art-access nav a { display: inline-block; margin-right: 1rem; }

@@ -477,55 +477,100 @@ class All
         return $info;
     }
 
-    protected function label_art_detail($info=[],$view=0,$fullPointsPopedom=false)
+    protected function label_art_detail($info=[],$view=0,$fullPointsPopedom=false,$publicCatalog=false)
     {
+        $raw = array_merge(request()->param(), $_REQUEST);
+        if (!\app\common\util\ContentResource::scalarParameters($raw)
+            || (array_key_exists('page', $raw) && \app\common\util\ContentResource::positiveInt($raw['page']) === null)) {
+            $this->page_error(lang('param_err'));
+        }
+        if (empty($info) && (empty($GLOBALS['config']['rewrite']['art_id'])
+            ? \app\common\util\ContentResource::positiveInt($raw['id'] ?? null) === null
+            : !is_string($raw['id'] ?? null) || $raw['id'] === '')) {
+            $this->page_error(lang('param_err'));
+        }
         $param = mac_param_url();
-        $this->assign('param',$param);
-
-        if(empty($info)) {
-            $res = mac_label_art_detail($param);
-            if ($res['code'] > 1) {
-                $this->page_error($res['msg']);;
+        if (empty($info)) {
+            $res = mac_label_art_detail($param, 0);
+            if ($res['code'] !== 1) {
+                $this->page_error($res['msg']);
             }
             $info = $res['info'];
         }
-        if(empty($info['art_tpl'])){
-            $info['art_tpl'] = $info['type']['type_tpl_detail'];
+        if ((int)($info['art_status'] ?? 0) !== 1 || (int)($info['art_recycle_time'] ?? 0) !== 0) {
+            $this->page_error(lang('obtain_err'));
         }
-
-        if($view <2) {
-            if ($fullPointsPopedom) {
-                $popedom = $this->check_user_popedom($info['type_id'], 3, $param, 'art_read', $info);
-                $this->assign('popedom',$popedom);
-
-                if($popedom['code']>1){
-                    $this->assign('obj',$info);
-                }
-            } else {
-                $popedom = $this->check_user_popedom($info['type_id'], 2);
-                if($popedom['code']>1){
-                    echo $this->error($popedom['msg'], mac_url('user/index') );
-                    exit;
-                }
+        $info['art_tpl'] = ($info['art_tpl'] ?? '') ?: ($info['type']['type_tpl_detail'] ?? '');
+        if ($view < 2 && !$fullPointsPopedom && !$publicCatalog) {
+            $detailPermission = $this->check_user_popedom($info['type_id'], 2);
+            if ($detailPermission['code'] > 1) {
+                echo $this->error($detailPermission['msg'], mac_url('user/index'));
+                exit;
             }
         }
-
-        $this->assign('obj',$info);
-        $seo_ai = (new \app\common\model\SeoAiResult())->getByObject(2, intval($info['art_id']));
+        $context = \app\common\util\ContentResource::artContext($info, $param);
+        if ($context['code'] !== 1 && $fullPointsPopedom) {
+            $this->page_error($context['msg']);
+        }
+        $param['id'] = (int)$info['art_id'];
+        $param['page'] = $context['code'] === 1 ? $context['page'] : 1;
+        // Admin generation has no frontend user context. Static catalogs and RSS must never
+        // query creator purchases or inherit a creator's password verification result.
+        $publicOnly = $view >= 2 || strtolower(request()->action()) === 'rss';
+        if ($publicOnly) {
+            $access = ['code'=>3001, 'msg'=>'正文请进入阅读页查看', 'can_access'=>false,
+                'password_required'=>\app\common\util\ContentPassword::artState($info)['required'],
+                'points_hint'=>$context['points'] ?? 0, 'points'=>0, 'purchase_supported'=>false,
+                'purchase_page'=>0, 'trysee'=>0, 'confirm'=>0];
+        } else {
+            $access = $context['code'] === 1 ? $this->check_art_resource_access($info, ['page'=>$param['page']])
+                : $context + ['can_access'=>false, 'password_required'=>!\app\common\util\ContentPassword::artState($info)['verified'],
+                    'points_hint'=>0, 'purchase_supported'=>false, 'purchase_page'=>0, 'trysee'=>0, 'confirm'=>0];
+        }
+        $authorizedPage = !$publicOnly && $access['can_access'] ? $param['page'] : null;
+        $template = \app\common\util\ContentResource::artTemplate($info, $authorizedPage);
+        $this->assign('param', $param);
+        $this->assign('popedom', $access);
+        $this->assign('art_access', $access);
+        $this->assign('art_read_link', \app\common\util\ContentResource::artReadLink($info, $param['page']));
+        $this->assign('art_static_catalog', $publicOnly);
+        $this->assign('obj', $template);
+        $seo_ai = (new \app\common\model\SeoAiResult())->getByObject(2, (int)$info['art_id']);
         $this->assign('seo_ai', $seo_ai);
-        $this->mergeDetailSeoIntoMaccms(2, $info, $seo_ai);
-
-        $url = mac_url_art_detail($info,['page'=>'PAGELINK']);
-
-        // 同上:art_page_total 不是 mac_art 的列,缺键即"不分页"。
-        $__PAGING__ = mac_page_param($info['art_page_total'] ?? 0,1,$param['page'] ?? 1,$url);
-        $this->assign('__PAGING__',$__PAGING__);
-
+        // An absent public blurb must not turn protected body text into a public SEO description.
+        $this->mergeDetailSeoIntoMaccms(2, \app\common\util\ContentResource::artTemplate($info), $seo_ai);
+        $url = mac_url_art_detail($info, ['page'=>'PAGELINK']);
+        $this->assign('__PAGING__', mac_page_param($template['art_page_total'], 1, $param['page'], $url));
         $this->assign('comment_mid', 2);
         $this->assign('comment_rid', $info['art_id']);
         $this->label_comment();
-
         return $info;
+    }
+
+    protected function check_art_resource_access(array $info, array $param): array
+    {
+        $context = \app\common\util\ContentResource::artContext($info, $param);
+        if ($context['code'] !== 1) {
+            return $context + ['can_access'=>false, 'trysee'=>0, 'confirm'=>0, 'purchase_supported'=>false];
+        }
+        $permission = $this->check_user_popedom((int)$info['type_id'], 3,
+            ['id'=>$context['id'], 'page'=>$context['page']], 'art_read', $info);
+        $password = \app\common\util\ContentPassword::artState($info);
+        $allowed = (int)$permission['code'] === 1 && empty($permission['trysee']) && $password['verified'];
+        if (!$context['purchase_supported'] && (int)$permission['code'] === 3003) {
+            $permission['points'] = 0;
+            $permission['confirm'] = 0;
+            $permission['msg'] = '本章暂不支持单章购买，请升级会员阅读';
+        }
+        if (!$password['verified']) {
+            $permission['code'] = 6001;
+            $permission['msg'] = '需要验证内容密码';
+            $permission['trysee'] = 0;
+        }
+        return $permission + ['can_access'=>$allowed, 'password_required'=>!$password['verified'],
+            'password_verified'=>$password['verified'], 'password_help_url'=>$password['help_url'],
+            'points_hint'=>$context['points'], 'purchase_supported'=>$context['purchase_supported'],
+            'purchase_page'=>$context['purchase_page'], 'trysee'=>0, 'confirm'=>0];
     }
 
     protected function label_manga_detail($info=[],$view=0,$fullPointsPopedom=false)

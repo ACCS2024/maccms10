@@ -119,4 +119,108 @@ final class ContentResource
         unset($row['player_info']);
         return $row;
     }
+
+    /** Article chapters retain their original one-based page coordinates, including empty chapters. */
+    public static function artPages(array $row): array
+    {
+        if (is_array($row['art_page_list'] ?? null)) {
+            return $row['art_page_list'];
+        }
+        $content = $row['art_content'] ?? '';
+        if (!is_string($content) || $content === '') {
+            return [];
+        }
+        $titles = explode('$$$', is_string($row['art_title'] ?? null) ? $row['art_title'] : '');
+        $notes = explode('$$$', is_string($row['art_note'] ?? null) ? $row['art_note'] : '');
+        $pages = [];
+        foreach (explode('$$$', $content) as $index => $body) {
+            $pages[$index + 1] = ['page' => $index + 1, 'title' => $titles[$index] ?? '',
+                'note' => $notes[$index] ?? '', 'content' => $body];
+        }
+        return $pages;
+    }
+
+    /** Pure parsing contract for both reading and purchasing: the Ulog sid is the resolved page. */
+    public static function artContext(array $row, array $parameters): array
+    {
+        $id = self::positiveInt($row['art_id'] ?? null);
+        $page = array_key_exists('page', $parameters) ? self::positiveInt($parameters['page']) : 1;
+        if ($id === null || $page === null) {
+            return ['code' => 1001, 'msg' => lang('param_err')];
+        }
+        if ((int)($row['art_status'] ?? 0) !== 1 || (int)($row['art_recycle_time'] ?? 0) !== 0) {
+            return ['code' => 1002, 'msg' => lang('obtain_err')];
+        }
+        $pages = self::artPages($row);
+        $coordinates = array_keys(array_filter($pages, static fn($item, $key) => self::positiveInt($key) !== null
+            && is_array($item) && is_string($item['content'] ?? null), ARRAY_FILTER_USE_BOTH));
+        if ($coordinates === []) {
+            return ['code' => 1002, 'msg' => '暂无正文'];
+        }
+        sort($coordinates, SORT_NUMERIC);
+        // Preserve the old last-page fallback, but resolve it before checking a purchase record.
+        $page = min($page, (int)end($coordinates));
+        $position = array_search($page, $coordinates, true);
+        if ($position === false) {
+            return ['code' => 1002, 'msg' => '该页不存在'];
+        }
+        $whole = (string)($GLOBALS['config']['user']['art_points_type'] ?? '0') === '1';
+        $points = PointsBalance::amount($row[$whole ? 'art_points' : 'art_points_detail'] ?? 0, true);
+        if (!$whole && $points === 0) {
+            $points = PointsBalance::amount($row['art_points'] ?? 0, true);
+        }
+        if ($points === null) {
+            return ['code' => 1002, 'msg' => lang('obtain_err')];
+        }
+        $purchasePage = $page;
+        if ($whole) {
+            $purchasePage = 0;
+            foreach ($coordinates as $key) {
+                if ($pages[$key]['content'] !== '') {
+                    $purchasePage = (int)$key;
+                    break;
+                }
+            }
+        }
+        return ['code' => 1, 'msg' => 'ok', 'id' => $id, 'page' => $page, 'page_total' => count($coordinates),
+            'previous_page' => $position > 0 ? (int)$coordinates[$position - 1] : null,
+            'next_page' => isset($coordinates[$position + 1]) ? (int)$coordinates[$position + 1] : null,
+            'current' => $pages[$page], 'points' => $points, 'whole' => $whole,
+            'purchase_supported' => $purchasePage > 0 && $purchasePage <= 255 && $points <= 65535
+                && ($pages[$purchasePage]['content'] ?? '') !== '', 'purchase_page' => $purchasePage,
+            'ulog_mid' => 2, 'ulog_type' => 1, 'ulog_rid' => $id, 'ulog_sid' => $whole ? 0 : $page, 'ulog_nid' => 0];
+    }
+
+    public static function artReadLink(array $row, int $page = 1): string
+    {
+        return MAC_PATH . 'index.php/art/read?' . http_build_query(['id'=>(int)($row['art_id'] ?? 0), 'page'=>$page]);
+    }
+
+    /** Only the authorized current chapter may be present in a template, never adjacent chapter bodies. */
+    public static function artTemplate(array $row, ?int $authorizedPage = null): array
+    {
+        $pages = self::artPages($row);
+        $state = ContentPassword::artState($row);
+        $row['art_pwd'] = $state['required'] ? 1 : 0;
+        $row['art_pwd_url'] = $state['help_url'];
+        $row['has_password'] = $state['required'];
+        $row['art_content'] = '';
+        unset($row['art_content_text']);
+        $row['art_page_list'] = [];
+        foreach ($pages as $key => $item) {
+            if (self::positiveInt($key) === null || !is_array($item)) {
+                continue;
+            }
+            $content = (int)$key === $authorizedPage && is_string($item['content'] ?? null) ? $item['content'] : '';
+            $row['art_page_list'][$key] = ['page' => (int)$key,
+                'title' => is_string($item['title'] ?? null) ? $item['title'] : '',
+                'note' => is_string($item['note'] ?? null) ? $item['note'] : '', 'content' => $content,
+                'read_link' => self::artReadLink($row, (int)$key)];
+            if ((int)$key === $authorizedPage) {
+                $row['art_content'] = $content;
+            }
+        }
+        $row['art_page_total'] = count($row['art_page_list']);
+        return $row;
+    }
 }
