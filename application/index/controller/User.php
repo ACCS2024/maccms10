@@ -816,7 +816,7 @@ class User extends Base
             $where['plog_type'] = [7, 8, 9];
         }
         $order = 'plog_id desc';
-        $res = (new \app\common\model\Plog())->listData($where, $order, $param['page'], $param['limit']);
+        $res = (new \app\common\model\Plog())->listForUser($GLOBALS['user']['user_id'], $where, $order, $param['page'], $param['limit']);
 
         $this->assign('param', array_merge(mac_param_url(), $param));
         $this->assign('list', $res['list']);
@@ -832,31 +832,14 @@ class User extends Base
         if ($ids === null) {
             return json(['code' => 1001, 'msg' => lang('param_err')]);
         }
-        $where = ['user_id' => $GLOBALS['user']['user_id']];
-        if ($ids !== []) { $where[] = ['plog_id', 'in', $ids]; }
-        return json((new \app\common\model\Plog())->delData($where));
+        return json((new \app\common\model\Plog())->hideForUser($GLOBALS['user']['user_id'], $ids));
     }
 
     /** Null rejects the request; [] means an explicit delete-all within the owner's scope. */
     private function logDeletionIds(array $param): ?array
     {
         if (!request()->isPost() || (int)($GLOBALS['user']['user_id'] ?? 0) < 1) { return null; }
-        $all = $param['all'] ?? '0';
-        $raw = $param['ids'] ?? '';
-        if ((!is_int($all) && !is_string($all)) || !in_array((string)$all, ['0', '1'], true)
-            || (!is_string($raw) && !is_int($raw))) { return null; }
-        if ((string)$all === '1') { return []; }
-        $raw = trim((string)$raw);
-        if ($raw === '' || strlen($raw) > 12000) { return null; }
-        $parts = explode(',', $raw);
-        if (count($parts) > 1000) { return null; }
-        $ids = [];
-        foreach ($parts as $part) {
-            $part = trim($part);
-            if (!preg_match('/^[0-9]{1,10}$/D', $part) || (int)$part < 1 || (int)$part > 4294967295) { return null; }
-            $ids[(int)$part] = (int)$part;
-        }
-        return array_values($ids);
+        return \app\common\util\LogSelection::ids($param);
     }
 
     public function cash()

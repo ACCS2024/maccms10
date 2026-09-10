@@ -36,17 +36,18 @@ php tests/run_audit.php
 # 设置上述对应环境变量后：
 php tests/run_audit.php --suite=models,financial
 php tests/security_audit_payment_schema.php
+php tests/security_audit_ledger_schema.php
 # 以下两次均以普通系统用户运行；第二次启用 MySQL 环境开关。
 php tests/run_audit.php --suite=install
 ```
 
-安装回归覆盖配置原子写入、拒绝写入/失败回滚、扩展检查以及真实 MySQL 的 Web/CLI 安装流程。线上历史表结构的只读预检与人工处理要求见 [支付表结构说明](../docs/audit/2026-09/payment-schema.md)；CI 不会对业务库执行迁移。
+安装回归覆盖配置原子写入、拒绝写入/失败回滚、扩展检查以及真实 MySQL 的 Web/CLI 安装流程。线上历史表结构的只读预检与人工处理要求见 [支付表结构说明](../docs/audit/2026-09/payment-schema.md) 和 [账变留存说明](../docs/audit/2026-09/ledger-retention.md)；CI 不会对业务库执行迁移。
 
 ## HTTP 与生产镜像
 
 HTTP 测试需要全新、可丢弃的 checkout：依次载入 `application/install/sql/install.sql`、`initdata.sql`、`tests/fixtures/http_seed.sql`，然后按 CI 中的环境变量运行 `tests/setup_http_fixture.php`。脚本拒绝覆盖已有 `.env`、站点配置或安装锁；测试账号与数据仅用于该临时实例。
 
-`python3 tests/run_http_smoke.py` 检查实际前台/API action 的状态和固定内容，并运行两个故意失败的对照。后台以改名入口启动 PHP HTTP 服务，`admin_smoke.sh` 检查登录后的页面内容，`admin_write_smoke.py` 验证持久化修改、拒绝未授权写入以及 CSRF。严格诊断模式下的 500、空响应或缺少业务标记都不能通过。完整启动顺序见 [工作流](../.github/workflows/ci.yml)。
+`python3 tests/run_http_smoke.py` 检查实际前台/API action 的状态和固定内容，并运行两个故意失败的对照。后台以改名入口启动 PHP HTTP 服务，`admin_smoke.sh` 检查登录后的页面内容，`admin_write_smoke.py` 验证持久化修改、拒绝未授权写入以及 CSRF。严格诊断模式下的 500、空响应或缺少业务标记都不能通过。`ledger_http_smoke.py` 通过真实会员/管理员登录验证账变隐藏、后台保留、财务字段不变，要求 `MAC_MYSQL` 明确选择专用 HTTP 库；验证后恢复测试记录显示状态。完整启动顺序见 [工作流](../.github/workflows/ci.yml)。
 
 ```sh
 docker build --build-arg PHP_VERSION=8.4 -t maccms-audit:8.4 docker

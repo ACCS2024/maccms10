@@ -66,7 +66,7 @@ routes=(
   vod/data "vod/info?id=1" art/data "art/info?id=1"
   actor/data "actor/info?id=1" topic/data type/index "type/info?id=6"
   user/data comment/data gbook/data link/index card/index
-  order/index collect/index group/index role/data
+  order/index plog/index collect/index group/index role/data
   system/config system/configuser system/configcollect system/configupload
   system/configapi system/configseo system/configpay system/configemail
   addon/index template/index update/index

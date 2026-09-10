@@ -6,4 +6,4 @@
 
 `tests/security_audit_user_log_delete.php` 执行实际控制器、Request 和 ORM，隔离身份初始化及渲染。PHP 8.3/8.4 × SQLite/MySQL 各 39 项覆盖单选/多选、他人日志、类型隔离、明确清空、省略可选参数、畸形/超界输入、重复项及 GET 拒绝。MySQL 只操作 `maccms_audit_models.audit_log_delete_*` 两张专用表并清理。
 
-本组保留既有 Plog 删除功能。它不提供不可删除的财务留存体系；商用部署还需明确账务留存规则，不能将可由用户或后台删除的展示账变当作唯一对账依据。
+该提交最初保留 Plog 删除行为；后续 [账变留存修复](ledger-retention.md) 已将会员操作改为隐藏，后台及模型普通接口拒绝修改/删除原始账变。ID、POST 与用户归属限制继续适用。

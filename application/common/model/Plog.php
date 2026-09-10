@@ -63,6 +63,8 @@ class Plog extends Base {
 
     public function saveData($data)
     {
+        if (array_key_exists('plog_id', $data)) { return self::immutableResult(); }
+        unset($data['plog_user_hidden']);
         $data['plog_time'] = time();
 
         $validate = mac_validate('Plog');
@@ -75,44 +77,65 @@ class Plog extends Base {
             return ['code'=>1002,'msg'=>lang('param_err')];
         }
 
-        if(!empty($data['plog_id'])){
-            $where=[];
-            $where['plog_id'] = $data['plog_id'];
-            $data = $this->filterFields($data);
-            $res = $this->where($where)->update($data);
-        }
-        else{
-            $data = $this->filterFields($data);
-            $res = $this->insert($data);
-        }
-        if(false === $res){
+        $data = $this->filterFields($data);
+        $res = $this->insert($data);
+        if($res !== 1){
             return ['code'=>1004,'msg'=>lang('save_err').'：'.$this->getError() ];
         }
         return ['code'=>1,'msg'=>lang('save_ok')];
     }
 
+    /** Administrative callers may read original ledgers but cannot erase them. */
     public function delData($where)
     {
-        $res = $this->where($where)->delete();
-        if($res===false){
-            return ['code'=>1001,'msg'=>lang('del_err').'：'.$this->getError() ];
-        }
-        return ['code'=>1,'msg'=>lang('del_ok')];
+        return self::immutableResult();
     }
 
-    public function fieldData($where,$col,$val)
+    public function fieldData($where, $col, $val)
     {
-        if(!isset($col) || !isset($val)){
-            return ['code'=>1001,'msg'=>lang('param_err')];
-        }
-
-        $data = [];
-        $data[$col] = $val;
-        $res = $this->where($where)->update($data);
-        if($res===false){
-            return ['code'=>1001,'msg'=>lang('set_err').'：'.$this->getError() ];
-        }
-        return ['code'=>1,'msg'=>lang('set_ok')];
+        return self::immutableResult();
     }
 
+    private static function immutableResult(): array
+    {
+        return ['code'=>1005, 'msg'=>'原始账变仅供查阅，不支持修改或删除'];
+    }
+
+    private function supportsUserHiding(): bool
+    {
+        return in_array('plog_user_hidden', Db::name('Plog')->getTableFields(), true);
+    }
+
+    /** Old databases remain readable until their explicit visibility migration runs. */
+    public function listForUser($userId, array $where, $order, $page = 1, $limit = 20): array
+    {
+        $userId = \app\common\util\PointsBalance::amount($userId);
+        if ($userId === null) { throw new \InvalidArgumentException('A valid ledger owner is required'); }
+        $where['user_id'] = $userId;
+        if ($this->supportsUserHiding()) { $where['plog_user_hidden'] = 0; }
+        return $this->listData($where, $order, $page, $limit);
+    }
+
+    /** Hide the selected owner's rows without changing their financial fields. */
+    public function hideForUser($userId, array $ids): array
+    {
+        $userId = \app\common\util\PointsBalance::amount($userId);
+        if ($userId === null || count($ids) > 1000) { return ['code'=>1001, 'msg'=>lang('param_err')]; }
+        foreach ($ids as $id) {
+            if (\app\common\util\PointsBalance::amount($id) === null) { return ['code'=>1001, 'msg'=>lang('param_err')]; }
+        }
+        try {
+            if (!$this->supportsUserHiding()) {
+                return ['code'=>1006, 'msg'=>'账变隐藏功能尚未完成升级，原始记录已保留，请联系管理员'];
+            }
+            $query = Db::name('Plog')->where('user_id', $userId)->where('plog_user_hidden', 0);
+            if ($ids !== []) { $query->whereIn('plog_id', $ids); }
+            if ($query->update(['plog_user_hidden'=>1]) === false) {
+                return ['code'=>1001, 'msg'=>lang('set_err')];
+            }
+            return ['code'=>1, 'msg'=>'已从我的账变中隐藏'];
+        } catch (\Throwable $error) {
+            return ['code'=>1001, 'msg'=>lang('set_err')];
+        }
+    }
 }

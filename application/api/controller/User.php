@@ -546,14 +546,15 @@ class User extends Base
         $page = max(1, intval($param['page'] ?? 1));
         $limit = max(1, min(100, intval($param['limit'] ?? 20)));
         $where = ['user_id' => $uid];
-        $filter = isset($param['filter']) ? trim($param['filter']) : '';
+        if (isset($param['filter']) && !is_string($param['filter'])) { return json(['code'=>1001, 'msg'=>lang('param_err')]); }
+        $filter = trim($param['filter'] ?? '');
         if ($filter === 'income') {
             $where['plog_type'] = [1, 2, 3, 4, 5, 6, 10, 11];
         } elseif ($filter === 'expense') {
             $where['plog_type'] = [7, 8, 9];
         }
         $order = 'plog_id desc';
-        $res = (new \app\common\model\Plog())->listData($where, $order, $page, $limit);
+        $res = (new \app\common\model\Plog())->listForUser($uid, $where, $order, $page, $limit);
         $list = isset($res['list']) ? $res['list'] : [];
         $out = [];
         foreach ($list as $row) {
@@ -576,36 +577,17 @@ class User extends Base
     }
 
     /**
-     * 删除积分日志
-     * api.php/user/del_plog (POST) 参数同 index user/plog_del：ids、all=1 清空
+     * 隐藏会员积分日志，原始账变保留
+     * api.php/user/del_plog (POST) 参数同 index user/plog_del：ids、all=1 隐藏全部
      */
     public function del_plog(\think\Request $request)
     {
+        if (!$request->isPost()) { return json(['code'=>1001, 'msg'=>lang('param_err')]); }
         $check = (new \app\common\model\User())->checkLogin();
         if ($check['code'] > 1) return json(['code' => 1401, 'msg' => lang('api/please_login_first')]);
-        $uid = intval($check['info']['user_id']);
-        $param = $request->post();
-        $idsRaw = isset($param['ids']) ? htmlspecialchars(urldecode(trim($param['ids']))) : '';
-        $all = isset($param['all']) ? $param['all'] : '';
-        if (empty($idsRaw) && empty($all)) {
-            return json(['code' => 1001, 'msg' => lang('param_err')]);
-        }
-        $where = ['user_id' => $uid];
-        if ((string)$all !== '1') {
-            $arr = [];
-            foreach (explode(',', $idsRaw) as $v) {
-                $v = abs(intval($v));
-                if ($v > 0) {
-                    $arr[$v] = $v;
-                }
-            }
-            if (empty($arr)) {
-                return json(['code' => 1001, 'msg' => lang('param_err')]);
-            }
-            $where['plog_id'] = array_values($arr);
-        }
-        $return = (new \app\common\model\Plog())->delData($where);
-        return json($return);
+        $ids = \app\common\util\LogSelection::ids($request->post());
+        if ($ids === null) { return json(['code'=>1001, 'msg'=>lang('param_err')]); }
+        return json((new \app\common\model\Plog())->hideForUser($check['info']['user_id'], $ids));
     }
 
     /**

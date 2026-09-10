@@ -47,6 +47,7 @@ jobs:
         run: |
           php tests/run_audit.php --suite=unit,models,financial
           node --check template/default/asset/js/user-buy-upgrade-ajax.js
+          node --check template/default/asset/js/user-plog-list.js
           node tests/security_audit_order_price_js.js
       - name: Prepare dedicated MySQL fixtures and verify InnoDB schema
         run: |
@@ -78,6 +79,7 @@ jobs:
         run: |
           php tests/run_audit.php --suite=financial
           php tests/security_audit_payment_schema.php
+          php tests/security_audit_ledger_schema.php
       - name: Installer failure boundaries as the unprivileged runner
         run: php tests/run_audit.php --suite=install
       - name: Real MySQL installation through Web and CLI paths
@@ -111,6 +113,19 @@ jobs:
           test "$ready" = 1
           bash tests/admin_smoke.sh http://127.0.0.1:8813
           python3 tests/admin_write_smoke.py http://127.0.0.1:8813
+      - name: Member and admin ledger retention over HTTP
+        run: |
+          set -euo pipefail
+          php -S 127.0.0.1:8814 >/tmp/ledger_srv.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          ready=0
+          for ((attempt=0; attempt<30; attempt++)); do
+            if curl --silent --fail --max-time 3 -o /dev/null http://127.0.0.1:8814/index.php/user/login; then ready=1; break; fi
+            sleep 1
+          done
+          test "$ready" = 1
+          python3 tests/ledger_http_smoke.py http://127.0.0.1:8814
       - name: Preserve diagnostics
         if: always()
         uses: actions/upload-artifact@v4
@@ -119,6 +134,7 @@ jobs:
           path: |
             /tmp/php-lint.json
             /tmp/admin_srv.log
+            /tmp/ledger_srv.log
             runtime/*/log/
             runtime/log/
           if-no-files-found: ignore

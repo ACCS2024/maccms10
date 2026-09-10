@@ -537,9 +537,11 @@ CREATE TABLE `mac_plog` (
   `user_id_1` int(10) NOT NULL DEFAULT '0',
   `plog_type` tinyint(1) unsigned NOT NULL DEFAULT '1',
   `plog_points` int unsigned NOT NULL DEFAULT '0',
+  `plog_user_hidden` tinyint unsigned NOT NULL DEFAULT '0',
   `plog_time` int(10) unsigned NOT NULL DEFAULT '0',
   `plog_remarks` varchar(100) NOT NULL DEFAULT '',
   PRIMARY KEY (`plog_id`),
+  KEY `user_visibility` (`user_id`,`plog_user_hidden`,`plog_id`),
   KEY `user_id` (`user_id`),
   KEY `plog_type` (`plog_type`) USING BTREE
 ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8;

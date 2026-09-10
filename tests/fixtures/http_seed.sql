@@ -11,5 +11,8 @@ VALUES (1,'CI Topic',1,UNIX_TIMESTAMP(),'ci','测试专题');
 INSERT INTO mac_admin (admin_id,admin_name,admin_pwd,admin_status,admin_auth)
 VALUES (1,'admin',MD5('admin888'),1,'');
 
-INSERT INTO mac_user (user_id,user_name,user_pwd,user_status,group_id,user_random)
-VALUES (1,'CI Smoke User',MD5('fixture-password'),1,2,'fixture-user-random');
+INSERT INTO mac_user (user_id,user_name,user_pwd,user_status,group_id,user_random,user_points)
+VALUES (1,'CI Smoke User',MD5('fixture-password'),1,2,'fixture-user-random',20);
+
+INSERT INTO mac_plog (plog_id,user_id,plog_type,plog_points,plog_time,plog_remarks)
+VALUES (1,1,1,20,UNIX_TIMESTAMP(),'CI fixture recharge');

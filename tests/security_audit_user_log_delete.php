@@ -27,7 +27,11 @@ namespace {
         }
         $GLOBALS['user'] = ['user_id'=>1];
     }
-    function state($model): array { return \think\facade\Db::name($model)->order(strtolower($model).'_id')->select()->toArray(); }
+    function state($model): array {
+        $query = \think\facade\Db::name($model)->order(strtolower($model).'_id');
+        if ($model === 'Plog') { $query->where('plog_user_hidden', 0); }
+        return $query->select()->toArray();
+    }
     function deletion($model, array $params, string $method = 'POST'): array {
         $request = (new \think\Request())->withServer(['REQUEST_METHOD'=>$method])->withPost($params)->withGet($params);
         \think\Container::getInstance()->instance('request',$request);
@@ -38,7 +42,7 @@ namespace {
         foreach (['Ulog','Plog'] as $model) {
             $prefix = strtolower($model);
             \think\facade\Db::execute('DROP TABLE IF EXISTS audit_log_delete_'.$prefix);
-            \think\facade\Db::execute('CREATE TABLE audit_log_delete_'.$prefix.' ('.$prefix.'_id INTEGER PRIMARY KEY,user_id INTEGER,'.$prefix.'_type INTEGER)');
+            \think\facade\Db::execute('CREATE TABLE audit_log_delete_'.$prefix.' ('.$prefix.'_id INTEGER PRIMARY KEY,user_id INTEGER,'.$prefix.'_type INTEGER'.($model === 'Plog' ? ',plog_user_hidden INTEGER NOT NULL DEFAULT 0' : '').')');
             seedLogs($model);
             $result = deletion($model,['ids'=>'1,3,4','type'=>'2','all'=>'0']);
             verify($result['code'] === 1 && array_column(state($model),$prefix.'_id') === [2,3], 'Selected deletion must remove only owned IDs, preserving foreign rows');
