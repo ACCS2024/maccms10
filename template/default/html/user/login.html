@@ -37,6 +37,13 @@
 						<input type="password" data-placeholder="user_place_mm" id="user_pwd" name="user_pwd" class="reg-control" placeholder="">
 						<span class="auth-pwd-eye" data-target="#user_pwd" role="button" tabindex="0" aria-label="显示或隐藏密码"></span>
 					</div>
+                {if condition="$GLOBALS['config']['user']['login_verify'] eq 1"}
+                <div class="auth-field-label" data-lang="user_yanzhengma">验证码</div>
+                <div class="reg-group verify_code">
+                    <input type="text" name="verify" class="reg-control w150" autocomplete="off" maxlength="255" data-placeholder="user_place_yanzm" placeholder="请输入验证码">
+                    <img class="fr m-hi auth-login-verify" src="{:url('verify/index')}" onclick="this.src=this.src.split('?')[0]+'?t='+Date.now()" alt="单击刷新验证码">
+                </div>
+                {/if}
 					<div class="auth-invite-collapsible">
 						<div class="auth-invite-toggle-row">
 							<button type="button" class="auth-invite-toggle js-auth-invite-toggle" aria-expanded="false">
@@ -247,13 +254,20 @@
 				beforeSend: function () {
 					$("#btn_submit_login").val(typeof MAC !== 'undefined' && MAC.GetLang ? MAC.GetLang('string_auth_loading') : '加载中...');
 				},
-				success: function (r) {
+					success: function (r) {
+                        if (r.registration_required === 1 && typeof r.registration_url === 'string') {
+                            var registration = new URL(r.registration_url, window.location.href);
+                            if (registration.origin === window.location.origin) { window.location.assign(registration.href); return; }
+                        }
+                        if (r.pending_approval === 1) { $('#error_tip_login').text(r.msg).show(); return; }
 					if(r.code==1){
 						location.href="{:url('user/index')}";
 						$('#error_tip_login').hide();
 					}
 					else{
-						$('#error_tip_login').html(r.msg).show();
+						$('#error_tip_login').text(r.msg).show();
+                            $('#fm-login input[name=verify]').val('');
+                            $('#fm-login .auth-login-verify').trigger('click');
 						$('#fm-login .reg-group').addClass('err');
 					}
 				},

@@ -298,22 +298,28 @@ class User extends Base
      */
     public function login_or_register(\think\Request $request)
     {
+        if (!$request->isPost()) { return json(['code'=>1001, 'msg'=>lang('param_err')]); }
         // IP 速率限制：防止暴力破解
         $rlCheck = $this->_checkLoginRateLimit();
         if ($rlCheck !== true) {
             return $rlCheck;
         }
 
-        $param = $request->param();
+        $param = $request->post();
         if (empty($param['user_name']) || empty($param['user_pwd'])) {
             return json(['code' => 1001, 'msg' => lang('api/user_name_pwd_empty')]);
         }
 
         $res = (new \app\common\model\User())->loginOrRegister($param);
 
-        if ($res['code'] > 1) {
-            return json($res);
+        if (!empty($res['registration_required'])) {
+            $base = rtrim(str_replace('\\', '/', dirname($request->baseFile())), '/.');
+            $res['registration_url'] = '/'.ltrim($base.'/index.php/user/reg', '/');
+            if (is_string($param['invite_code'] ?? null) && preg_match('/^[A-Za-z0-9]{1,20}$/D', trim($param['invite_code']))) {
+                $res['registration_url'] .= '?invite_code='.rawurlencode(trim($param['invite_code']));
+            }
         }
+        if ($res['code'] > 1 || !empty($res['pending_approval'])) { return json($res); }
 
         $info = $res['info'];
         return json([
@@ -328,7 +334,7 @@ class User extends Base
                 'user_phone'     => $info['user_phone'],
                 'group_id'       => $info['group_id'],
                 'user_points'    => $info['user_points'],
-                'user_exp'       => $info['user_exp'],
+                'user_exp'       => ($info['user_exp'] ?? 0),
                 'user_reg_time'  => $info['user_reg_time'],
                 'user_portrait'  => mac_get_user_portrait($info['user_id']),
                 'user_invite_code' => $info['user_invite_code'],
@@ -343,17 +349,23 @@ class User extends Base
      */
     public function login(\think\Request $request)
     {
+        if (!$request->isPost()) { return json(['code'=>1001, 'msg'=>lang('param_err')]); }
         // IP 速率限制：防止暴力破解
         $rlCheck = $this->_checkLoginRateLimit();
         if ($rlCheck !== true) {
             return $rlCheck;
         }
 
-        $param = $request->param();
+        $param = $request->post();
         if (empty($param['user_name']) || empty($param['user_pwd'])) {
             return json(['code' => 1001, 'msg' => lang('api/user_name_pwd_empty')]);
         }
-        $res = (new \app\common\model\User())->login(['user_name' => $param['user_name'], 'user_pwd' => $param['user_pwd']]);
+        $options = ['return_info'=>true];
+        if (array_key_exists('type', $param)) {
+            if (!in_array($param['type'], ['name','email','phone'], true)) { return json(['code'=>1001, 'msg'=>lang('param_err')]); }
+            $options['identity_field'] = ['name'=>'user_name','email'=>'user_email','phone'=>'user_phone'][$param['type']];
+        }
+        $res = (new \app\common\model\User())->login($param, $options);
         if ($res['code'] > 1) return json($res);
         $info = $res['info'];
         return json(['code' => 1, 'msg' => lang('model/user/login_ok'), 'info' => [
@@ -364,7 +376,7 @@ class User extends Base
             'user_phone'    => $info['user_phone'],
             'group_id'      => $info['group_id'],
             'user_points'   => $info['user_points'],
-            'user_exp'      => $info['user_exp'],
+            'user_exp'      => ($info['user_exp'] ?? 0),
             'user_reg_time' => $info['user_reg_time'],
             'user_portrait' => mac_get_user_portrait($info['user_id']),
         ]]);

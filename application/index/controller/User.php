@@ -169,11 +169,11 @@ class User extends Base
     public function login()
     {
         if (Request()->isPost()) {
-            $param = \think\facade\Request::param();
+            $param = \think\facade\Request::post();
             $res = (new \app\common\model\User())->login($param);
             return json($res);
         }
-        if (!empty(cookie('user_id') && !empty(cookie('user_name')))) {
+        if (\app\common\util\PointsBalance::amount($GLOBALS['user']['user_id'] ?? null) !== null) {
             return redirect('user/index');
         }
         return $this->fetch('user/login');

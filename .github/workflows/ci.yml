@@ -53,6 +53,7 @@ jobs:
           node --check template/default/asset/js/user-bind.js
           node --check static/js/user-unbind.js
           node tests/security_audit_order_price_js.js
+          node tests/framework_audit_auto_registration_frontend.js
       - uses: actions/setup-node@v4
         with:
           node-version: '20'

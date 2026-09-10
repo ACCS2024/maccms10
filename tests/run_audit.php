@@ -19,7 +19,7 @@ $groups = [
         ['framework_audit_csv.php'], ['framework_audit_request_injection.php'], ['framework_audit_receive.php'], ['framework_audit_request_security.php'],
         ['framework_audit_api_runtime.php'], ['framework_audit_api_validation.php'],
         ['framework_audit_api_defaults.php'], ['framework_audit_detail_routes.php'],
-        ['framework_audit_user_forms.php'], ['framework_audit_user_lists.php'], ['framework_audit_ulog_template.php'], ['security_audit_member_order_url.php'], ['security_audit_order_amount.php'], ['security_audit_order_price_template.php'],
+        ['framework_audit_user_forms.php'], ['framework_audit_auto_registration_views.php'], ['framework_audit_user_lists.php'], ['framework_audit_ulog_template.php'], ['security_audit_member_order_url.php'], ['security_audit_order_amount.php'], ['security_audit_order_price_template.php'],
         ['validator_audit_chatroom_danmaku.php'],
         ['framework_audit_strict_errors.php', 'strict'], ['framework_audit_strict_errors.php', 'default'],
         ['security_audit_admin.php'], ['security_audit_annex.php'], ['security_audit_api.php'],
@@ -37,7 +37,7 @@ $groups = [
     // Default: SQLite. FRAMEWORK_AUDIT_MYSQL=1 selects only the dedicated audit database.
     'models' => [
         ['framework_audit_ai_task.php'], ['framework_audit_ai_task.php', 'default-prefix'],
-        ['framework_audit_user_registration.php'], ['framework_audit_registration_transactions.php'],
+        ['framework_audit_user_registration.php'], ['framework_audit_registration_transactions.php'], ['framework_audit_auto_registration.php'],
         ['framework_audit_user_binding.php'], ['framework_audit_user_messages.php'], ['framework_audit_password_reset.php'], ['framework_audit_password_changes.php'], ['framework_audit_lists.php'], ['framework_audit_collection_nodes.php'],
         ['framework_audit_queries.php'], ['framework_audit_payment.php'],
         ['framework_audit_cash.php'], ['framework_audit_admin_session.php'], ['framework_audit_member_session.php'],

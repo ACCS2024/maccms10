@@ -212,6 +212,12 @@ class User extends Base
 
     public function register($param, bool $trustedOauth = false)
     {
+        return $this->createAccount($param, $trustedOauth, 6, false);
+    }
+
+    /** Internal mode is selected by server code, never by request flags. */
+    private function createAccount($param, bool $trustedOauth, int $minimumNameLength, bool $autoLogin)
+    {
         if (!is_array($param)) {
             return ['code' => 1001, 'msg' => lang('param_err')];
         }
@@ -278,7 +284,7 @@ class User extends Base
         if (empty($data['user_name']) || empty($data['user_pwd']) || empty($data['user_pwd2'])) {
             return ['code' => 1002, 'msg' => lang('model/user/input_require')];
         }
-        if (!$is_from_3rdparty && !captcha_check((string)($data['verify'] ?? '')) && $config['user']['reg_verify'] == 1) {
+        if (!$is_from_3rdparty && $config['user']['reg_verify'] == 1 && !captcha_check($data['verify'])) {
             return ['code' => 1003, 'msg' => lang('verify_err')];
         }
         if ($data['user_pwd'] !== $data['user_pwd2']) {
@@ -299,9 +305,12 @@ class User extends Base
         }
 
         $validate = mac_validate('User');
-        if (!$validate->scene('add')->check($data)) {
-            return ['code' => 1007, 'msg' => lang('param_err').'：' . $validate->getError()];
+        $validate->scene('add')->rule('user_name', 'require|min:'.$minimumNameLength);
+        if (!$validate->check($data)) {
+            return ['code'=>1007, 'msg'=>lang('param_err').'：'.$validate->getError()];
         }
+        if ($autoLogin && ($config['user']['login_verify'] ?? 0) == 1 && $config['user']['reg_verify'] == 0
+            && !captcha_check($data['verify'])) { return ['code'=>1003, 'msg'=>lang('verify_err')]; }
 
         foreach (['reg_status', 'reg_phone_sms', 'reg_email_sms'] as $key) {
             if (!in_array($config['user'][$key] ?? null, [0, 1, '0', '1'], true)) {
@@ -431,9 +440,16 @@ class User extends Base
                 $invitation = $this->addInviteCount($uid, $nid);
                 if (($invitation['code'] ?? null) !== 1) { throw new \RuntimeException('Invitation registration failed'); }
             }
+            $created = Db::name('User')->master()->where('user_id', $nid)->find();
+            if ($autoLogin && (int)$created['user_status'] === 1) { $created = $this->writeAccountLogin($created); }
+            $cookieGroup = $autoLogin && (int)$created['user_status'] === 1 ? $this->loginCookieGroup($created) : [];
             Db::commit();
             $started = false;
-            return ['code'=>1, 'msg'=>lang('model/user/reg_ok')];
+            if (!$autoLogin) { return ['code'=>1, 'msg'=>lang('model/user/reg_ok')]; }
+            $result = ['code'=>1, 'msg'=>lang('model/user/reg_ok'), 'action'=>'register'];
+            if ((int)$created['user_status'] !== 1) { $result['msg'] = '注册成功，请等待管理员审核'; return $result + ['pending_approval'=>1]; }
+            $this->_setLoginCookie($created, $created['user_random'], $cookieGroup);
+            return $result + ['info'=>$this->stripSensitiveFields($created)];
         } catch (\Throwable $error) {
             if ($started) { Db::rollback(); }
             return ['code'=>1010, 'msg'=>lang('model/user/reg_err')];
@@ -625,298 +641,168 @@ class User extends Base
      */
     public function loginOrRegister($param)
     {
-        $config = config('maccms');
-        $password_raw = trim($param['user_pwd']);
-        $user_name = htmlspecialchars(urldecode(trim($param['user_name'])));
-
-        if (empty($user_name) || empty($password_raw)) {
-            return ['code' => 1001, 'msg' => lang('model/user/input_require')];
+        if (!is_array($param)) { return ['code'=>1001, 'msg'=>lang('param_err')]; }
+        foreach (['user_name','user_pwd','verify','invite_code'] as $field) {
+            if (array_key_exists($field, $param) && !is_string($param[$field])) { return ['code'=>1001, 'msg'=>lang('param_err')]; }
+            $param[$field] = $param[$field] ?? '';
         }
-
-        // 查找用户是否已存在
-        $row = $this->where('user_name', $user_name)->find();
-
-        if (!empty($row)) {
-            // ---- 帐号存在：校验密码(安全加固V4:兼容md5/bcrypt + 透明升级)----
-            if (!mac_password_verify($password_raw, $row['user_pwd'])) {
-                return ['code' => 1003, 'msg' => lang('pass_err')];
+        $configuration = config('maccms')['user'] ?? null;
+        if (!is_array($configuration)) { return ['code'=>1001, 'msg'=>lang('param_err')]; }
+        foreach (['status','reg_open','reg_verify','reg_phone_sms','reg_email_sms'] as $field) {
+            if (!in_array($configuration[$field] ?? null, [0,1,'0','1'], true)) { return ['code'=>1001, 'msg'=>lang('param_err')]; }
+        }
+        if (!in_array(array_key_exists('login_verify', $configuration) ? $configuration['login_verify'] : 0, [0,1,'0','1'], true)) { return ['code'=>1001, 'msg'=>lang('param_err')]; }
+        if ((int)$configuration['status'] !== 1) { return ['code'=>1005, 'msg'=>lang('model/user/user_feature_closed')]; }
+        if (!mb_check_encoding($param['user_name'], 'UTF-8') || str_contains($param['user_name'], "\0")
+            || strlen($param['user_name']) > 1024 || strlen($param['user_pwd']) > 4096) { return ['code'=>1001, 'msg'=>lang('param_err')]; }
+        $name = htmlspecialchars(urldecode(trim($param['user_name'])));
+        try {
+            $existing = $this->where('user_name', $name)->find();
+            if ($existing) {
+                $result = $this->login($param, ['return_info'=>true, 'identity_field'=>'user_name']);
+                return ($result['code'] ?? null) === 1 ? $result + ['action'=>'login'] : $result;
             }
-            if (mac_password_need_rehash($row['user_pwd'])) {
-                $this->where('user_id', $row['user_id'])->update(['user_pwd' => mac_password_hash($password_raw)]);
+            if ((int)$configuration['reg_open'] !== 1) { return ['code'=>1001, 'msg'=>lang('model/user/not_open_reg')]; }
+            if (!preg_match('/^[A-Za-z0-9]{3,30}$/D', $name)) { return ['code'=>1006, 'msg'=>lang('model/user/name_alnum_3_30')]; }
+            if ($configuration['reg_verify'] || $configuration['reg_phone_sms'] || $configuration['reg_email_sms']) {
+                return ['code'=>1013, 'msg'=>'请前往注册页面完成验证', 'registration_required'=>1];
             }
-            if ($row['user_status'] != 1) {
-                return ['code' => 1004, 'msg' => lang('model/user/account_disabled')];
-            }
-
-            // 会员过期降级
-            $login_group_ids = explode(',', $row['group_id']);
-            $update = [];
-            if (max($login_group_ids) > 2 && $row['user_end_time'] < time()) {
-                $row['group_id'] = 2;
-                $update['group_id'] = 2;
-            }
-
-            $random = md5(rand(10000000, 99999999));
-            $update['user_random'] = $random;
-            $update['user_login_ip'] = mac_get_ip_long();
-            $update['user_login_time'] = time();
-            $update['user_login_num'] = $row['user_login_num'] + 1;
-            $update['user_last_login_time'] = $row['user_login_time'];
-            $update['user_last_login_ip'] = $row['user_login_ip'];
-
-            $this->where('user_id', $row['user_id'])->update($update);
-
-            $this->_setLoginCookie($row, $random);
-
-            $info = $this->where('user_id', $row['user_id'])->find();
-            if ($info) {
-                $info = $info->toArray();
-            }
-            $info = $this->stripSensitiveFields($info);
-
-            return ['code' => 1, 'msg' => lang('model/user/login_ok'), 'action' => 'login', 'info' => $info];
-        }
-
-        // ---- 帐号不存在：自动注册 ----
-        if ($config['user']['status'] == 0) {
-            return ['code' => 1005, 'msg' => lang('model/user/user_feature_closed')];
-        }
-
-        // 用户名格式校验：仅英文+数字
-        if (!preg_match("/^[a-zA-Z\d]{3,30}$/i", $user_name)) {
-            return ['code' => 1006, 'msg' => lang('model/user/name_alnum_3_30')];
-        }
-
-        // 敏感词过滤
-        $filter = !empty($GLOBALS['config']['user']['filter_words']) ? $GLOBALS['config']['user']['filter_words'] : '';
-        if (!empty($filter)) {
-            $filter_arr = explode(',', $filter);
-            $f_name = str_replace($filter_arr, '', $user_name);
-            if ($f_name != $user_name) {
-                return ['code' => 1008, 'msg' => lang('model/user/name_has_sensitive_word')];
-            }
-        }
-
-        // IP 注册限制
-        $ip = mac_get_ip_long();
-        if (!empty($GLOBALS['config']['user']['reg_num']) && $GLOBALS['config']['user']['reg_num'] > 0) {
-            $where2 = [];
-            $where2['user_reg_ip'] = $ip;
-            $where2[] = ['user_reg_time', '>', strtotime('today')];
-            $cc = $this->where($where2)->count();
-            if ($cc >= $GLOBALS['config']['user']['reg_num']) {
-                return ['code' => 1009, 'msg' => lang('model/user/reg_daily_limit_reached')];
-            }
-        }
-
-        // 密码长度校验
-        if (strlen($password_raw) < 6) {
-            return ['code' => 1010, 'msg' => lang('model/user/pass_length_err')];
-        }
-
-        // 创建用户
-        $random = md5(rand(10000000, 99999999));
-        $fields = [];
-        $fields['user_name'] = $user_name;
-        $fields['user_pwd'] = mac_password_hash($password_raw);
-        $fields['group_id'] = $this->_def_group;
-        $fields['user_points'] = intval($config['user']['reg_points']);
-        $fields['user_status'] = intval($config['user']['reg_status']);
-        $fields['user_reg_time'] = time();
-        $fields['user_reg_ip'] = $ip;
-        $fields['user_random'] = $random;
-        $fields['user_login_time'] = time();
-        $fields['user_login_ip'] = $ip;
-        $fields['user_login_num'] = 1;
-
-        $res = $this->insert($fields);
-        if ($res < 1) {
-            return ['code' => 1011, 'msg' => lang('model/user/reg_fail_try_later')];
-        }
-        $nid = $this->getLastInsID();
-
-        // 生成邀请码
-        $invite_code = $this->generateUniqueInviteCode($nid);
-        $this->where('user_id', $nid)->update(['user_invite_code' => $invite_code]);
-
-        // 处理邀请码
-        $invite_code_param = trim($param['invite_code'] ?? '');
-        if (!empty($invite_code_param)) {
-            $uid = $this->getUserIdByInviteCode($invite_code_param);
-            if ($uid > 0) {
-                $invite = $this->where('user_id', $uid)->find();
-                if ($invite) {
-                    $upd = [];
-                    $upd['user_pid'] = $invite['user_id'];
-                    $upd['user_pid_2'] = $invite['user_pid'];
-                    $upd['user_pid_3'] = $invite['user_pid_2'];
-                    $this->where('user_id', $nid)->update($upd);
-
-                    $this->pendingRegistrationSourceId = (int)$nid;
-                    $invitation = $this->addInviteCount($uid, $nid);
-                    if (($invitation['code'] ?? null) !== 1) { return $invitation; }
-                }
-            }
-        }
-
-        // 注册后自动登录
-        $row = $this->where('user_id', $nid)->find();
-        if ($row) {
-            $this->_setLoginCookie($row, $random);
-            $info = $row->toArray();
-            $info = $this->stripSensitiveFields($info);
-            return ['code' => 1, 'msg' => lang('model/user/reg_ok_logged_in'), 'action' => 'register', 'info' => $info];
-        }
-
-        return ['code' => 1, 'msg' => lang('index/reg_ok'), 'action' => 'register'];
+            // This one-password UI intentionally confirms its own original bytes; no external OAuth exemption.
+            $param['user_pwd2'] = $param['user_pwd'];
+            return $this->createAccount($param, false, 3, true);
+        } catch (\Throwable $error) { return ['code'=>1010, 'msg'=>lang('model/user/reg_err')]; }
     }
 
     /**
      * 设置登录 Cookie（loginOrRegister / login 共用）
      */
-    private function _setLoginCookie($row, $random)
+    private function loginCookieGroup(array $row): array
     {
-        $group_list = (new \app\common\model\Group())->getCache('group_list');
-        $group_ids = explode(',', $row['group_id']);
-        $group = [];
-        foreach ($group_ids as $gid) {
-            if (isset($group_list[$gid])) {
-                $group[] = $group_list[$gid];
-            }
+        $groups = (new \app\common\model\Group())->getCache('group_list');
+        if (!is_array($groups)) { throw new \RuntimeException('Login membership metadata is unavailable'); }
+        foreach (explode(',', $row['group_id']) as $id) {
+            if (isset($groups[$id]) && isset($groups[$id]['group_id'], $groups[$id]['group_name'])) { return $groups[$id]; }
         }
+        throw new \RuntimeException('Login membership metadata is unavailable');
+    }
 
+    private function _setLoginCookie(array $row, string $random, array $group): void
+    {
         // user_id / user_name 是展示型标识(非凭据),前台主题的 JS 会读它们来决定
         // 显示「登录」还是用户名(例:template/default/asset/js/foot-expand.js 的
         // $.cookie("user_id")),所以单独放开 HttpOnly;真正的登录令牌 user_check
         // 沿用 config/cookie.php 的 httponly=true,JS 读不到。
         cookie('user_id', $row['user_id'], ['expire' => 2592000, 'httponly' => false]);
         cookie('user_name', $row['user_name'], ['expire' => 2592000, 'httponly' => false]);
-        cookie('group_id', !empty($group[0]['group_id']) ? $group[0]['group_id'] : $this->_def_group, ['expire' => 2592000]);
-        cookie('group_name', !empty($group[0]['group_name']) ? $group[0]['group_name'] : '', ['expire' => 2592000]);
+        cookie('group_id', !empty($group['group_id']) ? $group['group_id'] : $this->_def_group, ['expire' => 2592000]);
+        cookie('group_name', !empty($group['group_name']) ? $group['group_name'] : '', ['expire' => 2592000]);
         cookie('user_check', md5($random . '-' . $row['user_name'] . '-' . $row['user_id'] . '-'), ['expire' => 2592000]);
         cookie('user_portrait', mac_get_user_portrait($row['user_id']), ['expire' => 2592000]);
     }
 
     public function login($param, array $options = [])
     {
-        if (!is_array($param)) {
-            return ['code' => 1001, 'msg' => lang('param_err')];
+        if (!is_array($param)) { return ['code'=>1001, 'msg'=>lang('param_err')]; }
+        $userConfiguration = $GLOBALS['config']['user'] ?? [];
+        if (!is_array($userConfiguration)) { return ['code'=>1001, 'msg'=>lang('param_err')]; }
+        $enabled = array_key_exists('status', $userConfiguration) ? $userConfiguration['status'] : 1;
+        if (!in_array($enabled, [0,1,'0','1'], true)) { return ['code'=>1001, 'msg'=>lang('param_err')]; }
+        if ((int)$enabled !== 1) { return ['code'=>1005, 'msg'=>lang('model/user/user_feature_closed')]; }
+        foreach (['user_name','user_pwd','verify','openid','col'] as $field) {
+            if (array_key_exists($field, $param) && !is_string($param[$field])) { return ['code'=>1001, 'msg'=>lang('param_err')]; }
+            $param[$field] = $param[$field] ?? '';
         }
-        foreach (['user_name', 'user_pwd', 'verify', 'openid', 'col'] as $key) {
-            if (isset($param[$key]) && !is_scalar($param[$key])) {
-                return ['code' => 1001, 'msg' => lang('param_err')];
-            }
-            $param[$key] = (string) ($param[$key] ?? '');
-        }
-        // Request parameters cannot select the password-free OAuth authentication path.
-        if (($options['trusted_oauth'] ?? false) !== true) {
-            $param['openid'] = $param['col'] = '';
-        }
-        // 安全加固:登录按 IP 温和限流(默认开启,失败开放),防撞库/暴力破解。
-        // 覆盖 index 登录与 Auth::jwt() 等所有调用方;api/User 控制器另有 10/60s 限流,
-        // 本阈值(20/120s)更宽松,不改变其既有行为,仅补齐此前未受保护的入口。
-        if (!mac_fe_write_throttle('fe_login', 120, 20)) {
-            return ['code' => 1429, 'msg' => lang('frequently')];
-        }
-        $data = [];
-        $password_raw = trim($param['user_pwd']);
-        $data['user_name'] = htmlspecialchars(urldecode(trim($param['user_name'])));
-        $data['user_pwd'] = htmlspecialchars(urldecode(trim($param['user_pwd'])));
-        $data['verify'] = $param['verify'];
-        $data['openid'] = htmlspecialchars(urldecode(trim($param['openid'])));
-        $data['col'] = htmlspecialchars(urldecode(trim($param['col'])));
-
-        if (empty($data['openid'])) {
-            if (empty($data['user_name']) || empty($data['user_pwd'])) {
-                return ['code' => 1001, 'msg' => lang('model/user/input_require')];
-            }
-            if ($GLOBALS['config']['user']['login_verify'] ==1 && !captcha_check((string)($data['verify'] ?? ''))) {
-                return ['code' => 1002, 'msg' => lang('verify_err')];
-            }
-            $where = [];
-            $pattern = '/\w+([-+.]\w+)*@\w+([-.]\w+)*\.\w+([-.]\w+)*/';
-            if (!preg_match($pattern, $data['user_name'])) {
-                $where['user_name'] = $data['user_name'];
-            } else {
-                $where['user_email'] = $data['user_name'];
-            }
-            // 安全加固(V4):密码不再进 WHERE(并移除明文 OR 分支),改为取行后 mac_password_verify 校验
+        if (($options['trusted_oauth'] ?? false) !== true) { $param['openid'] = $param['col'] = ''; }
+        if (!mac_fe_write_throttle('fe_login', 120, 20)) { return ['code'=>1429, 'msg'=>lang('frequently')]; }
+        $password = trim($param['user_pwd']);
+        if (strlen($param['user_name']) > 1024 || strlen($param['user_pwd']) > 4096 || strlen($param['verify']) > 255
+            || !mb_check_encoding($param['user_name'], 'UTF-8') || str_contains($param['user_name'], "\0")
+            || str_contains($param['user_pwd'], "\0")) { return ['code'=>1001, 'msg'=>lang('param_err')]; }
+        $name = htmlspecialchars(urldecode(trim($param['user_name'])));
+        $oauth = $param['openid'] !== '';
+        $where = ['user_status'=>1];
+        if ($oauth) {
+            if (!in_array($param['col'], ['user_openid_qq','user_openid_weixin'], true) || strlen($param['openid']) > 40
+                || !mb_check_encoding($param['openid'], 'UTF-8') || str_contains($param['openid'], "\0")) { return ['code'=>1001, 'msg'=>lang('param_err')]; }
+            $where[$param['col']] = $param['openid'];
         } else {
-            if (empty($data['openid']) || empty($data['col'])) {
-                return ['code' => 1001, 'msg' => lang('model/user/input_require')];
+            if ($name === '' || $password === '') { return ['code'=>1001, 'msg'=>lang('model/user/input_require')]; }
+            $verify = array_key_exists('login_verify', $userConfiguration) ? $userConfiguration['login_verify'] : 0;
+            if (!in_array($verify, [0,1,'0','1'], true)) { return ['code'=>1001, 'msg'=>lang('param_err')]; }
+            if ((int)$verify === 1 && !captcha_check($param['verify'])) { return ['code'=>1002, 'msg'=>lang('verify_err')]; }
+            $identity = $options['identity_field'] ?? (filter_var($name, FILTER_VALIDATE_EMAIL) !== false ? 'user_email' : 'user_name');
+            if (!in_array($identity, ['user_name','user_email','user_phone'], true)) { return ['code'=>1001, 'msg'=>lang('param_err')]; }
+            $where[$identity] = $name;
+        }
+        $started = false;
+        try {
+            // Resolve via the normal model boundary first; duplicate identities are rejected below under locks.
+            if (!$this->where($where)->find()) { return ['code'=>1003, 'msg'=>lang('model/user/not_found')]; }
+            if (!$this->accountTransactionsAvailable()) { throw new \RuntimeException('Transactional account table required'); }
+            Db::startTrans(); $started = true;
+            $rows = Db::name('User')->where($where)->limit(2)->lock(true)->select()->toArray();
+            if (count($rows) !== 1) { throw new \RuntimeException('Login identity is unavailable or ambiguous'); }
+            $row = $rows[0];
+            $hash = null;
+            if (!$oauth) {
+                $legacy = strlen($row['user_pwd']) === 32 && ctype_xdigit($row['user_pwd']);
+                if ((!$legacy && strlen($password) > 72) || !$this->passwordMatches($password, $row['user_pwd'])) {
+                    Db::rollback(); $started = false;
+                    return ['code'=>1003, 'msg'=>lang('model/user/not_found')];
+                }
+                // Preserve unusually long legacy MD5 passwords until an explicit password change; bcrypt truncates after 72 bytes.
+                if (strlen($password) <= 72 && mac_password_need_rehash($row['user_pwd'])) { $hash = mac_password_hash($password); }
             }
-            if (!in_array($data['col'], ['user_openid_qq', 'user_openid_weixin'])) {
-                return ['code' => 1002, 'msg' => lang('param_err') . ': col'];
+            $row = $this->writeAccountLogin($row, $hash);
+            $cookieGroup = ($options['set_cookie'] ?? true) !== false ? $this->loginCookieGroup($row) : [];
+            Db::commit(); $started = false;
+            if (($options['set_cookie'] ?? true) !== false) { $this->_setLoginCookie($row, $row['user_random'], $cookieGroup); }
+            $out = ['code'=>1, 'msg'=>lang('model/user/login_ok')];
+            if (!empty($options['return_meta'])) {
+                $out['meta'] = ['user_id'=>(int)$row['user_id'], 'user_name'=>$row['user_name'], 'user_random'=>$row['user_random']];
             }
-            $where[$data['col']] = $data['openid'];
+            if (!empty($options['return_info'])) { $out['info'] = $this->stripSensitiveFields($row); }
+            return $out;
+        } catch (\Throwable $error) {
+            if ($started) { Db::rollback(); }
+            return ['code'=>1004, 'msg'=>lang('model/user/update_login_err')];
         }
-        $where['user_status'] = 1;
-        $row = $this->where($where)->find();
+    }
 
-        if(empty($row)) {
-            return ['code' => 1003, 'msg' => lang('model/user/not_found')];
+    private function accountTransactionsAvailable(): bool
+    {
+        $type = Db::connect()->getConfig('type');
+        if ($type === 'sqlite') { return true; }
+        if ($type !== 'mysql') { return false; }
+        $rows = Db::query('SELECT ENGINE AS engine FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=?', [$this->getTable()], true);
+        return count($rows) === 1 && strtoupper((string)$rows[0]['engine']) === 'INNODB';
+    }
+
+    /** Caller owns the User row lock and transaction; password and session rotate in one exact UPDATE. */
+    private function writeAccountLogin(array $row, ?string $hash = null): array
+    {
+        $userId = \app\common\util\PointsBalance::amount($row['user_id'] ?? null);
+        $ip = \app\common\util\PointsBalance::amount(mac_get_ip_long(), true);
+        $now = \app\common\util\PointsBalance::amount(time());
+        $count = \app\common\util\PointsBalance::amount($row['user_login_num'] ?? null, true);
+        $lastTime = \app\common\util\PointsBalance::amount($row['user_login_time'] ?? null, true);
+        $lastIp = \app\common\util\PointsBalance::amount($row['user_login_ip'] ?? null, true);
+        $end = \app\common\util\PointsBalance::amount($row['user_end_time'] ?? null, true);
+        if ($userId === null || $ip === null || $now === null || $count === null || $count === \app\common\util\PointsBalance::MAX
+            || $lastTime === null || $lastIp === null || $end === null || !is_string($row['group_id'] ?? null)
+            || !preg_match('/^[0-9]+(?:,[0-9]+)*$/D', $row['group_id'])) { throw new \RuntimeException('Invalid login state'); }
+        $groups = explode(',', $row['group_id']);
+        foreach ($groups as $group) {
+            $id = \app\common\util\PointsBalance::amount($group);
+            if ($id === null || $id > 32767) { throw new \RuntimeException('Invalid login group'); }
         }
-
-        // 安全加固(V4):密码登录(非openid)取行后校验,兼容旧md5与bcrypt,成功后透明升级
-        if (empty($data['openid'])) {
-            if (!$this->passwordMatches($password_raw, $row['user_pwd'])) {
-                return ['code' => 1003, 'msg' => lang('model/user/not_found')];
-            }
-            if (mac_password_need_rehash($row['user_pwd'])) {
-                $this->where('user_id', $row['user_id'])->update(['user_pwd' => mac_password_hash($password_raw)]);
-            }
-        }
-
-        $login_group_ids = explode(',', $row['group_id']);
-        if(max($login_group_ids) > 2 &&  $row['user_end_time'] < time()) {
-            $row['group_id'] = 2;
-            $update['group_id'] = 2;
-        }
-
-        $random = bin2hex(random_bytes(16));
-        $update['user_random'] = $random;
-        $update['user_login_ip'] = mac_get_ip_long();
-        $update['user_login_time'] = time();
-        $update['user_login_num'] = $row['user_login_num'] + 1;
-        $update['user_last_login_time'] = $row['user_login_time'];
-        $update['user_last_login_ip'] = $row['user_login_ip'];
-
-        $res = $this->where($where)->update($update);
-        if ($res < 1) {
-            return ['code' => 1004, 'msg' => lang('model/user/update_login_err')];
-        }
-
-        //用户组
-        $group_list = (new \app\common\model\Group())->getCache('group_list');
-        $group_ids = explode(',', $row['group_id']);
-        $group = [];
-        foreach($group_ids as $gid){
-            if(isset($group_list[$gid])){
-                $group[] = $group_list[$gid];
-            }
-        }
-
-        $setCookie = !isset($options['set_cookie']) || $options['set_cookie'];
-        if ($setCookie) {
-            // 同上:展示型标识放开 HttpOnly,令牌 user_check 不放开。
-            cookie('user_id', $row['user_id'],['expire'=>2592000,'httponly'=>false] );
-            cookie('user_name', $row['user_name'],['expire'=>2592000,'httponly'=>false] );
-            cookie('group_id', $group[0]['group_id'],['expire'=>2592000] );
-            cookie('group_name', $group[0]['group_name'],['expire'=>2592000] );
-            cookie('user_check', md5($random . '-' .$row['user_name'] . '-' . $row['user_id'] .'-' ),['expire'=>2592000] );
-            cookie('user_portrait', mac_get_user_portrait($row['user_id']),['expire'=>2592000] );
-        }
-
-        $out = ['code' => 1, 'msg' => lang('model/user/login_ok')];
-        if (!empty($options['return_meta'])) {
-            $out['meta'] = [
-                'user_id'     => (int)$row['user_id'],
-                'user_name'   => (string)$row['user_name'],
-                'user_random' => (string)$random,
-            ];
-        }
-
-        return $out;
+        $fields = ['user_random'=>bin2hex(random_bytes(16)), 'user_login_ip'=>$ip, 'user_login_time'=>$now,
+            'user_login_num'=>$count + 1, 'user_last_login_time'=>$lastTime, 'user_last_login_ip'=>$lastIp];
+        if (max($groups) > 2 && $end < $now) { $fields['group_id'] = '2'; }
+        if ($hash !== null) { $fields['user_pwd'] = $hash; }
+        if (Db::name('User')->where('user_id', $userId)->update($fields) !== 1) { throw new \RuntimeException('Login write failed'); }
+        $this->assertRegistrationFields($userId, $fields);
+        return array_replace($row, $fields);
     }
 
     public function expire()

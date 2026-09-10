@@ -1622,6 +1622,15 @@
                         var _pathBase = (maccms.path || '/').replace(/\/+$/, '');
                         var _loginOrRegUrl = (_pathBase ? _pathBase + '/' : '/') + 'api.php/user/login_or_register';
                         MAC.Ajax(_loginOrRegUrl, 'post', 'json', $('.mac_login_form').serialize(), function (r) {
+                            if (r.registration_required === 1 && typeof r.registration_url === 'string') {
+                                var registration = new URL(r.registration_url, window.location.href);
+                                if (registration.origin === window.location.origin) { window.location.assign(registration.href); return; }
+                            }
+                            if (r.pending_approval === 1) { MAC.alert(r.msg); return; }
+                            if (r.code !== 1) {
+                                $('.mac_login_form input[name=verify]').val('');
+                                $('.mac_login_form .auth-login-verify').trigger('click');
+                            }
                             if (r.msg != '') {
                                 MAC.alert(r.msg);
                             }

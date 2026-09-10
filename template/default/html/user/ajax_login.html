@@ -13,6 +13,13 @@
 					<input data-placeholder="user_place_mm" type="password" name="user_pwd" id="ajax_user_pwd" class="mac_u_pwd reg-control" placeholder="">
 					<span class="auth-pwd-eye" data-target="#ajax_user_pwd" role="button" tabindex="0" aria-label="显示或隐藏密码"></span>
 				</div>
+                {if condition="$GLOBALS['config']['user']['login_verify'] eq 1"}
+                <div class="auth-field-label" data-lang="user_yanzhengma">验证码</div>
+                <div class="reg-group verify_code">
+                    <input type="text" name="verify" class="reg-control w150" autocomplete="off" maxlength="255" data-placeholder="user_place_yanzm" placeholder="请输入验证码">
+                    <img class="fr m-hi auth-login-verify" src="{:url('verify/index')}" onclick="this.src=this.src.split('?')[0]+'?t='+Date.now()" alt="单击刷新验证码">
+                </div>
+                {/if}
 				<div class="auth-invite-collapsible">
 					<div class="auth-invite-toggle-row">
 						<button type="button" class="auth-invite-toggle js-auth-invite-toggle" aria-expanded="false">

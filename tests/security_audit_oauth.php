@@ -2,7 +2,7 @@
 // No application boot, database, provider request or live session is used.
 namespace app\common\model {
     class Base {
-        public function where(...$args) { throw new \QueryReached(); }
+        public function where(...$args) { $GLOBALS['oauth_fixture_query_reached'] = true; throw new \QueryReached(); }
     }
 }
 namespace {
@@ -24,8 +24,9 @@ namespace {
         ++$checks;
     }
     function reachesQuery(callable $call, $label) {
-        try { $call(); } catch (QueryReached $e) { check(true, $label); return; }
-        throw new RuntimeException('FAIL: ' . $label);
+        $GLOBALS['oauth_fixture_query_reached'] = false;
+        try { $call(); } catch (QueryReached $e) {}
+        check($GLOBALS['oauth_fixture_query_reached'], $label);
     }
     set_error_handler(static function ($severity, $message, $file, $line) {
         throw new ErrorException($message, 0, $severity, $file, $line);
