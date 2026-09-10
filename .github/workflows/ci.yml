@@ -45,6 +45,10 @@ jobs:
           composer --working-dir=extend/upyun audit --locked --no-dev
       - name: Compile the installed tree including dependencies
         run: php tests/php_lint.php --all --json=/tmp/php-installed-lint.json
+      - name: Offline supply-chain policy and evidence-preserving audit fixtures
+        run: |
+          python3 tests/security_audit_supply_chain.py
+          python3 tools/security/maccms_audit.py --root . --profile source --data-parser application/common/util/DataConfig.php --json /tmp/maccms-supply-chain.json --write-baseline /tmp/maccms-source-baseline.json
       - name: Independent regression suites and SQLite models
         run: |
           php tests/run_audit.php --suite=unit,models,financial,upload,storage,remote_upload
@@ -75,6 +79,11 @@ jobs:
           CHROMIUM_BINARY="$browser_binary" node tests/browser/suggest_history.cjs
           CHROMIUM_BINARY="$browser_binary" PHP_BINARY=php node tests/browser/purchase_csrf_php.cjs
           CHROMIUM_BINARY="$browser_binary" PHP_BINARY=php node tests/browser/editor_textarea.cjs
+          if ! command -v ffmpeg >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install -y --no-install-recommends ffmpeg
+          fi
+          CHROMIUM_BIN="$browser_binary" node tests/security_audit_frontend_supply_chain.js
       - name: Prepare dedicated MySQL fixtures and verify InnoDB schema
         run: |
           set -euo pipefail
@@ -249,11 +258,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Install shellcheck
-        run: sudo apt-get update -qq && sudo apt-get install -y shellcheck
+      - name: Install shellcheck and nginx
+        run: sudo apt-get update -qq && sudo apt-get install -y shellcheck nginx
+      - name: Verify static HTML CSP on isolated Nginx
+        run: python3 tests/security_audit_nginx_static_csp.py --nginx /usr/sbin/nginx
       - name: Check deploy and test shell scripts
         run: |
           set -euo pipefail
+          shellcheck bin/deploy-155.sh
           fail=0
           while IFS= read -r -d '' file; do
             shellcheck "$file" || fail=1
