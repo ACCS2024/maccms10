@@ -88,7 +88,9 @@ function mac_tpl_vod_type_cover($typeId)
 
     $resolve = function ($startId, array $map) use ($typeList) {
         $tid = (int) $startId;
-        while ($tid > 0) {
+        $visited = [];
+        while ($tid > 0 && !isset($visited[$tid])) {
+            $visited[$tid] = true;
             if (isset($map[(string) $tid])) {
                 return $map[(string) $tid];
             }
@@ -3817,6 +3819,10 @@ function mac_url($model,$param=[],$info=[])
         default:
             $url = url($model,mac_url_vars($param));
             break;
+    }
+    // A static route with an empty configured path must still yield a usable URL.
+    if (empty($path) && !isset($url)) {
+        $url = (string) url($model, mac_url_vars($param));
     }
     if(!empty($path)) {
         $path = str_replace($replace_from, $replace_to, $path);
