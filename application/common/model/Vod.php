@@ -862,15 +862,13 @@ class Vod extends Base {
             $where=[];
             $where['vod_id'] = $data['vod_id'];
             $data = $this->filterFields($data);
+            // Capture the previous group before UPDATE replaces the name.
+            $old_name = $this->master()->where('vod_id', $data['vod_id'])->value('vod_name');
             $res = $this->where($where)->update($data);
-            //编辑 先获取到之前的name
-            $old_name = $this->where('vod_id',$data['vod_id'])->value('vod_name');
-            if($old_name!=$data['vod_name']){
+            if (is_string($old_name) && $old_name !== $data['vod_name']) {
                 $this->cacheRepeatWithName($old_name);
-                $this->cacheRepeatWithName($data['vod_name']);
-            }else{
-                $this->cacheRepeatWithName($data['vod_name']);
             }
+            $this->cacheRepeatWithName($data['vod_name']);
             $seoObjId = intval($data['vod_id']);
         }
         else{
@@ -1027,6 +1025,7 @@ class Vod extends Base {
 
     public function cacheRepeatWithName($name)
     {
+        $rebuilt = false;
         try{
             Db::execute('delete from `' . config('database.connections.mysql.prefix') . 'vod_repeat` where name1 =?', [$name]);
             Db::execute('INSERT INTO `' . config('database.connections.mysql.prefix') . 'vod_repeat` (SELECT min(vod_id)as id1,vod_name as name1 FROM ' . config('database.connections.mysql.prefix') . 'vod WHERE vod_name = ? AND vod_recycle_time = 0 GROUP BY name1 HAVING COUNT(name1)>1)', [$name]);
@@ -1034,9 +1033,13 @@ class Vod extends Base {
             Db::execute('DROP TABLE IF EXISTS ' . config('database.connections.mysql.prefix') . 'vod_repeat');
             Db::execute('CREATE TABLE `' . config('database.connections.mysql.prefix') . 'vod_repeat` (`id1` int unsigned DEFAULT NULL, `name1` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT \'\') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci');
             Db::execute('ALTER TABLE `' . config('database.connections.mysql.prefix') . 'vod_repeat` ADD INDEX `name1` (`name1`(100))');
+            $rebuilt = true;
         }
-        Db::execute('INSERT INTO `' . config('database.connections.mysql.prefix') . 'vod_repeat` (SELECT min(vod_id)as id1,vod_name as name1 FROM ' .
-            config('database.connections.mysql.prefix') . 'vod WHERE vod_recycle_time = 0 GROUP BY name1 HAVING COUNT(name1)>1)');
+        // A normal single-name refresh must not append every other duplicate group.
+        if ($rebuilt) {
+            Db::execute('INSERT INTO `' . config('database.connections.mysql.prefix') . 'vod_repeat` (SELECT min(vod_id)as id1,vod_name as name1 FROM ' .
+                config('database.connections.mysql.prefix') . 'vod WHERE vod_recycle_time = 0 GROUP BY name1 HAVING COUNT(name1)>1)');
+        }
         Cache::set('vod_repeat_table_created_time',time());
     }
     public function  createRepeatCache()

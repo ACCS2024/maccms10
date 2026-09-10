@@ -54,13 +54,13 @@ def main():
             else:
                 raise RuntimeError("Disposable MySQL fixture did not become ready")
             for image in images:
-                for prefix in ["/"]:
+                for test in ["framework_audit_vod_save.php", "framework_audit_vod_repeat.php"]:
                     subprocess.run([
                         "docker", "run", "--rm", "--network", "none", "--env-file", str(env_file),
                         "-e", "FRAMEWORK_AUDIT_MYSQL=1",
                         "-v", str(root) + ":/app:ro", "-v", str(sockets) + ":/audit",
                         "-w", "/app", "--entrypoint", "php", image,
-                        "/app/tests/framework_audit_vod_save.php",
+                        "/app/tests/" + test,
                     ], check=True, timeout=120)
         finally:
             if started:
