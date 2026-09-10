@@ -1,0 +1,9 @@
+{
+  "findings": [],
+  "limits": "Known indicators and policy checks only; a compromised host must be rebuilt from trusted media.",
+  "ok": true,
+  "profile": "source",
+  "quarantine_manifest": null,
+  "root": "/home/dev/maccms-cleanup-20260911/staged-tree",
+  "schema": 1
+}
