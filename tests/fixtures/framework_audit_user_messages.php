@@ -60,7 +60,7 @@ if ($mysql) {
 } else {
     \think\facade\Db::execute('CREATE TABLE audit_user (user_id INTEGER PRIMARY KEY, user_name TEXT, user_email TEXT,
         user_phone TEXT, user_question TEXT, user_answer TEXT, user_status INTEGER DEFAULT 1, user_pwd TEXT CHECK(user_pwd != "fixture-reject-write"),
-        user_random TEXT DEFAULT "fixture-session")');
+        user_random TEXT DEFAULT "27a3cdfa9e70e883209a8dd590321657")');
     \think\facade\Db::execute('CREATE TABLE audit_msg (msg_id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER DEFAULT 0,
         msg_type INTEGER DEFAULT 0, msg_status INTEGER DEFAULT 0, msg_to TEXT, msg_code TEXT, msg_content TEXT, msg_time INTEGER)');
 }

@@ -9,7 +9,7 @@ foreach([0,1,2,3,4] as $uid){$r=artApi('get_read_page',['art_id'=>1,'page'=>2],$
 $session=$grant();
 $r=artApi('get_read_page',['art_id'=>1,'page'=>2],2,[],$session);check($r['info']['can_read']===1 && $r['info']['page']===2,'A verified password and trusted VIP can read the selected chapter');noArtSecrets($r,['BODY-PAGE-2']);
 $r=artApi('get_read_page',['art_id'=>1,'page'=>2],0,[],$session);check($r['info']['can_read']===0 && !$r['info']['password_required'],'A guest password grant does not waive points');noArtSecrets($r);
-$validCookie=['user_id'=>'2','user_name'=>'member-2','user_check'=>md5('fixture-2-member-2-2-')];
+$validCookie=['user_id'=>'2','user_name'=>'member-2','user_check'=>md5(md5('fixture-2').'-member-2-2-')];
 $r=artApi('get_read_page',['art_id'=>1,'page'=>1],0,[],$session,$validCookie);check($r['info']['can_read']===1,'Trusted Cookie and Bearer authorize through the same real user model');noArtSecrets($r,['BODY-PAGE-1']);
 $invalidCookie=$validCookie;$invalidCookie['user_check']='wrong';$r=artApi('get_read_page',['art_id'=>1],0,[],$session,$invalidCookie);check($r['info']['can_read']===0,'A forged Cookie cannot authorize a protected chapter');noArtSecrets($r);
 foreach([['user_status'=>0],['user_end_time'=>time()-100]] as $change){\think\facade\Db::name('user')->where('user_id',2)->update($change);$r=artApi('get_read_page',['art_id'=>1],2,[],$session);check($r['info']['can_read']===0,'Disabled or expired VIP cannot bypass article points');noArtSecrets($r);\think\facade\Db::name('user')->where('user_id',2)->update(['user_status'=>1,'user_end_time'=>time()+3600,'group_id'=>'3']);}

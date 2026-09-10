@@ -78,7 +78,7 @@ function commentSeed(): void {
     Db::name('User')->delete(true);
     foreach ([1=>'alice',2=>'bob'] as $uid=>$name) {
         Db::name('User')->insert(['user_id'=>$uid, 'user_name'=>$name, 'user_nick_name'=>$name . '-nickname',
-            'user_random'=>'fixture-nonce-' . $uid, 'user_status'=>1,'group_id'=>'2']);
+            'user_random'=>md5('fixture-nonce-' . $uid), 'user_status'=>1,'group_id'=>'2']);
     }
     foreach (['vod','art','topic','actor','role','website','manga'] as $target) {
         Db::name($target)->delete(true);

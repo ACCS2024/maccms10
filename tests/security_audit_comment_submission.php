@@ -53,7 +53,7 @@ foreach (['index','api'] as $entry) {
     commentSeed();
     $GLOBALS['config']['app']['api_jwt_enabled'] = '1';
     $GLOBALS['config']['app']['api_jwt_secret'] = str_repeat('isolated-fixture-',3);
-    $token = JwtService::encode(1, 'fixture-nonce-1');
+    $token = JwtService::encode(1, md5('fixture-nonce-1'));
     check(publicComment($entry,$valid + $forged,'POST',[],'Bearer ' . $token)['code'] === 1
         && (int)commentRows()[1]['user_id'] === 1, "$entry valid bearer authentication lost comment ownership");
     $GLOBALS['comment_cookies'] = [];

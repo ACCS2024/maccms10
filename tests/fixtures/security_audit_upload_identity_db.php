@@ -100,7 +100,7 @@ namespace {
     foreach ([1, 2, 4294967295] as $id) {
         mkdir('upload/user/'.($id % 10), 0777, true);
         imagejpeg($canvas, 'upload/user/'.($id % 10).'/'.$id.'.jpg');
-        Db::name('User')->insert(['user_id'=>$id, 'user_name'=>'fixture'.$id, 'user_random'=>'upload-random-'.$id,
+        Db::name('User')->insert(['user_id'=>$id, 'user_name'=>'fixture'.$id, 'user_random'=>md5('upload-random-'.$id),
             'user_status'=>1, 'group_id'=>'2', 'user_portrait'=>'upload/user/'.($id % 10).'/'.$id.'.jpg']);
     }
     Db::name('Admin')->insert(['admin_id'=>2, 'admin_name'=>'editor', 'admin_pwd'=>'fixture-hash', 'admin_auth'=>',upload/upload,']);
@@ -128,7 +128,7 @@ namespace {
     function uploadIdentityMember(int $id = 1): void {
         $name = 'fixture'.$id;
         $GLOBALS['upload_cookies'] = ['user_id'=>(string)$id, 'user_name'=>$name,
-            'user_check'=>md5('upload-random-'.$id.'-'.$name.'-'.$id.'-')];
+            'user_check'=>md5(md5('upload-random-'.$id).'-'.$name.'-'.$id.'-')];
     }
     function uploadIdentityAdmin(string $permissions = ',upload/upload,', int $id = 2): void {
         Db::name('Admin')->where('admin_id', $id)->update(['admin_auth'=>$permissions]);

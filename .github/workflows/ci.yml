@@ -90,6 +90,7 @@ jobs:
       - name: MySQL model regressions
         env:
           PURCHASE_CSRF_MYSQL: '1'
+          MEMBER_COOKIE_MYSQL: '1'
           FRAMEWORK_AUDIT_MYSQL: '1'
           FRAMEWORK_AUDIT_HOST: 127.0.0.1
           FRAMEWORK_AUDIT_PASSWORD: audit-fixture

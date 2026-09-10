@@ -835,24 +835,34 @@ class User extends Base
 
     public function checkLogin(bool $persistExpiredGroup = true)
     {
-        $jwt = JwtService::bearerFromRequest();
-        if ($jwt !== '' && JwtService::isEnabled()) {
+        $header = request()->header('Authorization');
+        // Disabled JWT retains its established Cookie behavior; an enabled malformed Bearer cannot fall back.
+        $jwtEnabled = $header !== null && $header !== '' && JwtService::isEnabled();
+        if ($jwtEnabled && $header !== null && !is_string($header)) {
+            return ['code' => 1003, 'msg' => lang('model/user/not_login')];
+        }
+        $bearer = $jwtEnabled && is_string($header) && preg_match('/^\s*Bearer(?:\s|$)/i', $header);
+        if ($bearer) {
+            if (strlen($header) > 8256 || !preg_match('/^[ \t]*Bearer[ \t]+([A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+)[ \t]*$/iD', $header, $parts)) {
+                return ['code' => 1003, 'msg' => lang('model/user/not_login')];
+            }
+            $jwt = $parts[1];
             $pl = JwtService::decodeAndVerify($jwt);
             if (!is_array($pl)) {
                 return ['code' => 1003, 'msg' => lang('model/user/not_login')];
             }
-            $uid = (int)($pl['sub'] ?? 0);
-            $rnd = (string)($pl['rnd'] ?? '');
-            if ($uid < 1 || $rnd === '') {
+            $uid = $this->sessionOwnerId($pl['sub'] ?? null);
+            $rnd = $pl['rnd'] ?? null;
+            if ($uid === null || !$this->validSessionRandom($rnd)) {
                 return ['code' => 1003, 'msg' => lang('model/user/not_login')];
             }
             $whereJwt = ['user_id' => $uid, 'user_status' => 1];
-            $rowJwt = $this->field('*')->where($whereJwt)->find();
+            $rowJwt = $this->master()->field('*')->where($whereJwt)->find();
             if (empty($rowJwt)) {
                 return ['code' => 1002, 'msg' => lang('model/user/not_login')];
             }
             $info = $rowJwt->toArray();
-            if (!isset($info['user_random']) || !hash_equals((string)$info['user_random'], $rnd)) {
+            if (!$this->validSessionRandom($info['user_random'] ?? null) || !hash_equals($info['user_random'], $rnd)) {
                 return ['code' => 1003, 'msg' => lang('model/user/not_login')];
             }
 
@@ -863,29 +873,28 @@ class User extends Base
         $user_name = cookie('user_name');
         $user_check = cookie('user_check');
 
-        // Cookies may be absent or parsed as arrays. Reject malformed credentials before string operations.
-        if ((!is_string($user_id) && !is_int($user_id)) || !is_string($user_name) || !is_string($user_check)
-            || strlen((string)$user_id) > 128 || strlen($user_name) > 1024 || strlen($user_check) > 256) {
-            return ['code' => 1001, 'msg' => lang('model/user/not_login')];
-        }
-        $user_id = \app\common\util\PointsBalance::amount(urldecode(trim((string)$user_id)));
-        $user_name = htmlspecialchars(urldecode(trim($user_name)));
-        $user_check = urldecode(trim($user_check));
-
-        if ($user_id === null || $user_name === '' || !preg_match('/^[a-f0-9]{32}$/D', $user_check)) {
+        // Native setcookie/PHP already handles the transport encoding; authenticate the original parsed bytes.
+        $user_id = $this->sessionOwnerId($user_id);
+        if ($user_id === null || !is_string($user_name) || $user_name === '' || strlen($user_name) > 120
+            || !mb_check_encoding($user_name, 'UTF-8') || mb_strlen($user_name, 'UTF-8') > 30
+            || preg_match('/[\x00-\x1f\x7f]/', $user_name) || !is_string($user_check)
+            || !preg_match('/^[a-f0-9]{32}$/D', $user_check)) {
             return ['code' => 1001, 'msg' => lang('model/user/not_login')];
         }
 
         $where = [];
         $where['user_id'] = $user_id;
-        $where['user_name'] = $user_name;
         $where['user_status'] = 1;
 
-        $info = $this->field('*')->where($where)->find();
+        $info = $this->master()->field('*')->where($where)->find();
         if(empty($info)) {
             return ['code' => 1002, 'msg' => lang('model/user/not_login')];
         }
         $info = $info->toArray();
+        if (!$this->validSessionRandom($info['user_random'] ?? null) || !is_string($info['user_name'] ?? null)
+            || !hash_equals($info['user_name'], $user_name)) {
+            return ['code' => 1003, 'msg' => lang('model/user/not_login')];
+        }
         $login_check = md5($info['user_random'] . '-' . $info['user_name']. '-' . $info['user_id'] .'-' );
         // 安全加固:登录态 cookie 校验改用常量时间比较(与上方 JWT 分支的 hash_equals 一致),
         // 杜绝对 user_check 的计时侧信道伪造;功能等价,零回归。
@@ -894,6 +903,19 @@ class User extends Base
         }
 
         return $this->finalizeUserLoginPayload($info, $where, $persistExpiredGroup);
+    }
+
+    private function sessionOwnerId($value): ?int
+    {
+        if (PHP_INT_SIZE < 8 || (!is_string($value) && !is_int($value)) || !preg_match('/^[1-9][0-9]{0,9}$/D', (string)$value)
+            || (int)$value > 4294967295) { return null; }
+        return (int)$value;
+    }
+
+    private function validSessionRandom($value): bool
+    {
+        // Older installations used 32-character ASCII random strings; new writes use 32 hex characters.
+        return is_string($value) && preg_match('/^[A-Za-z0-9]{32}$/D', $value) === 1;
     }
 
     /**

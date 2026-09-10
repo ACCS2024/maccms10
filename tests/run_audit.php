@@ -40,7 +40,7 @@ $groups = [
         ['framework_audit_user_registration.php'], ['framework_audit_registration_transactions.php'], ['framework_audit_auto_registration.php'],
         ['framework_audit_user_binding.php'], ['framework_audit_user_messages.php'], ['framework_audit_find_password.php'], ['framework_audit_password_reset.php'], ['framework_audit_password_changes.php'], ['framework_audit_lists.php'], ['framework_audit_collection_nodes.php'],
         ['framework_audit_queries.php'], ['framework_audit_payment.php'],
-        ['framework_audit_cash.php'], ['framework_audit_admin_session.php'], ['framework_audit_member_session.php'], ['framework_audit_auth_jwt.php'], ['framework_audit_purchase_csrf.php'], ['framework_audit_video_purchase.php'],
+        ['framework_audit_cash.php'], ['framework_audit_admin_session.php'], ['framework_audit_member_session.php'], ['framework_audit_member_cookie.php'], ['framework_audit_auth_jwt.php'], ['framework_audit_purchase_csrf.php'], ['framework_audit_video_purchase.php'],
         ['framework_audit_checkout.php'], ['security_audit_user_log_delete.php'], ['framework_audit_ulog_users.php'], ['framework_audit_ulog_writes.php'], ['framework_audit_ledger_usernames.php'], ['framework_audit_type_navigation.php'], ['framework_audit_vod_home.php'],
     ],
     // Separate environment: MEMBERSHIP_AUDIT_MYSQL selects the financial installation schema.

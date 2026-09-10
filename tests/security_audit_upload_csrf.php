@@ -37,7 +37,7 @@ uploadIdentityDenied(fn() => (new Upload())->upload(), 'Base64 bypassed cookie C
 uploadIdentityRequest(['imgdata'=>$base64, 'csrf_token'=>'upload-identity-csrf'], 'POST', false, ['X-CSRF-Token'=>null]);
 check((new Upload())->upload()['code'] === 1, 'Valid form-token base64 portrait failed');
 
-$jwt = JwtService::encode(1, 'upload-random-1');
+$jwt = JwtService::encode(1, md5('upload-random-1'));
 $GLOBALS['upload_cookies'] = [];
 uploadIdentityRequest([], 'POST', true, ['authorization'=>'Bearer '.$jwt, 'X-CSRF-Token'=>null]);
 $GLOBALS['upload_session'] = [];

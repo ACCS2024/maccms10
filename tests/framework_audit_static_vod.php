@@ -65,7 +65,7 @@ $app->config->set($players,'vodplayer');$app->config->set($players,'voddowner');
 function vodRequest(array $parameters=[],int $uid=0,array $state=[],string $action='get_play_info',?string $sessionId=null,array $cookies=[]):void {
     global $app;
     $_COOKIE=$cookies;$_REQUEST=[];
-    $header=$uid>0?['authorization'=>'Bearer '.JwtService::encode($uid,'fixture-'.$uid)]:[];
+    $header=$uid>0?['authorization'=>'Bearer '.JwtService::encode($uid,md5('fixture-'.$uid))]:[];
     $r=think\Request::__make($app)->withGet($parameters)->withHeader($header)->withServer(['REQUEST_METHOD'=>'GET'])->setController('Vod')->setAction($action);
     $s=new think\Session($app);if($sessionId!==null)$s->setId($sessionId);$s->init();foreach($state as $key=>$value)$s->set($key,$value);
     $r->withSession($s);$app->instance('request',$r);$app->instance('session',$s);$app->instance('cookie',new think\Cookie($r));
@@ -118,7 +118,7 @@ $tables=['vod','user','ulog','type','group'];$exports=[];
 try {
     $ddl=file_get_contents(dirname(__DIR__).'/application/install/sql/install.sql');
     foreach($tables as $table){preg_match('/CREATE TABLE `mac_'.preg_quote($table,'/').'` \(.*?\) ENGINE=[^;]+;/s',$ddl,$m);Db::execute(str_replace('`mac_'.$table.'`','`audit_resource_'.$table.'`',$m[0]));}
-    Db::name('user')->insert(['user_id'=>2,'user_name'=>'member-2','user_random'=>'fixture-2','user_status'=>1,'group_id'=>'3','user_points'=>100,'user_end_time'=>time()+3600]);
+    Db::name('user')->insert(['user_id'=>2,'user_name'=>'member-2','user_random'=>md5('fixture-2'),'user_status'=>1,'group_id'=>'3','user_points'=>100,'user_end_time'=>time()+3600]);
     $row=['vod_id'=>1,'vod_name'=>'Secret title','vod_en'=>'rewritten-video','vod_status'=>1,'type_id'=>1,'vod_points'=>9,'vod_points_play'=>3,'vod_points_down'=>4,'vod_pwd'=>'PWD-DETAIL','vod_pwd_play'=>'PWD-PLAY','vod_pwd_down'=>'PWD-DOWN','vod_content'=>'','vod_plot_name'=>'','vod_plot_detail'=>''];
     foreach(['play','down'] as $operation){$row['vod_'.$operation.'_from']='backup$$$source$$$backup';$row['vod_'.$operation.'_url']='备用$https://fixture.invalid/MEDIA-'.strtoupper($operation).'-3$$$#第二集$https://fixture.invalid/MEDIA-'.strtoupper($operation).'-1##第四集$https://fixture.invalid/MEDIA-'.strtoupper($operation).'-2$$$';}
     Db::name('vod')->insert($row);

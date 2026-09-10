@@ -81,7 +81,7 @@ Db::name('User')->where('user_id',1)->delete();
 uploadIdentityRequest();
 uploadIdentityDenied(fn() => (new Upload())->upload(), 'Deleted member retained access through a global/cookie snapshot');
 Db::name('User')->insert($saved);
-$token = app\common\util\JwtService::encode(1, 'upload-random-1');
+$token = app\common\util\JwtService::encode(1, md5('upload-random-1'));
 $GLOBALS['upload_cookies'] = [];
 uploadIdentityRequest([], 'POST', true, ['authorization'=>'Bearer '.$token]);
 check((new Upload())->upload()['code'] === 1, 'Valid bearer identity failed a normal model upload');

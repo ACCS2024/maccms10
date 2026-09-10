@@ -74,7 +74,7 @@ $cache->data['resource_fixture_group_list']=$groups;$cache->data['resource_fixtu
 function artRequest(array $parameters=[],int $uid=0,array $state=[],string $action='get_read_page',?string $sessionId=null,array $cookies=[]):void {
     global $app;
     $_COOKIE=$cookies;$_REQUEST=[];
-    $header=$uid>0?['authorization'=>'Bearer '.JwtService::encode($uid,'fixture-'.$uid)]:[];
+    $header=$uid>0?['authorization'=>'Bearer '.JwtService::encode($uid,md5('fixture-'.$uid))]:[];
     $r=think\Request::__make($app)->withGet($parameters)->withHeader($header)->withServer(['REQUEST_METHOD'=>'GET'])->setController('Art')->setAction($action);
     $s=new think\Session($app);if($sessionId!==null)$s->setId($sessionId);$s->init();foreach($state as $key=>$value)$s->set($key,$value);
     $r->withSession($s);$app->instance('request',$r);$app->instance('session',$s);$app->instance('cookie',new think\Cookie($r));
@@ -104,7 +104,7 @@ $tables=['art','user','ulog','type','group'];
 try {
     $ddl=file_get_contents(dirname(__DIR__).'/application/install/sql/install.sql');
     foreach($tables as $table){preg_match('/CREATE TABLE `mac_'.preg_quote($table,'/').'` \(.*?\) ENGINE=[^;]+;/s',$ddl,$m);Db::execute(str_replace('`mac_'.$table.'`','`audit_resource_'.$table.'`',$m[0]));}
-    foreach([1=>'2',2=>'3',3=>'4',4=>'2,5'] as $id=>$group)Db::name('user')->insert(['user_id'=>$id,'user_name'=>'member-'.$id,'user_random'=>'fixture-'.$id,'user_status'=>1,'group_id'=>$group,'user_points'=>100,'user_end_time'=>time()+3600]);
+    foreach([1=>'2',2=>'3',3=>'4',4=>'2,5'] as $id=>$group)Db::name('user')->insert(['user_id'=>$id,'user_name'=>'member-'.$id,'user_random'=>md5('fixture-'.$id),'user_status'=>1,'group_id'=>$group,'user_points'=>100,'user_end_time'=>time()+3600]);
     $row=['art_id'=>1,'art_name'=>'Public article name','art_en'=>'rewritten-article','art_status'=>1,'type_id'=>1,'art_points'=>9,'art_points_detail'=>3,'art_pwd'=>'PWD-ART',
         'art_blurb'=>'Public introduction','art_title'=>'First$$$Second$$$Third','art_note'=>'One$$$Two$$$Three','art_content'=>'<p>BODY-PAGE-1</p>$$$<p>BODY-PAGE-2</p>$$$<p>BODY-PAGE-3</p>'];
     Db::name('art')->insert($row);

@@ -87,9 +87,9 @@ function noPrivatePageCache(IdentityController $controller):void {
 try {
     Db::execute('CREATE TABLE audit_identity_group (group_id INTEGER PRIMARY KEY)');
     Db::execute('CREATE TABLE audit_identity_user (user_id INTEGER PRIMARY KEY,user_name VARCHAR(100),user_pwd VARCHAR(100),user_random VARCHAR(64),user_status INTEGER DEFAULT 1,group_id VARCHAR(20),user_end_time INTEGER,user_points INTEGER DEFAULT 20)');
-    foreach([[1,'member','2'],[2,'vip','3'],[3,'multi','2,4'],[4,'expired','3']] as [$id,$name,$group])Db::name('user')->insert(['user_id'=>$id,'user_name'=>$name,'user_pwd'=>'PRIVATE-PASSWORD-HASH','user_random'=>'fixture-'.$id,'group_id'=>$group,'user_end_time'=>$id===4?time()-60:time()+3600]);
-    $valid=['user_id'=>'1','user_name'=>'member','user_check'=>md5('fixture-1-member-1-')];
-    $token=JwtService::encode(2,'fixture-2');
+    foreach([[1,'member','2'],[2,'vip','3'],[3,'multi','2,4'],[4,'expired','3']] as [$id,$name,$group])Db::name('user')->insert(['user_id'=>$id,'user_name'=>$name,'user_pwd'=>'PRIVATE-PASSWORD-HASH','user_random'=>md5('fixture-'.$id),'group_id'=>$group,'user_end_time'=>$id===4?time()-60:time()+3600]);
+    $valid=['user_id'=>'1','user_name'=>'member','user_check'=>md5(md5('fixture-1').'-member-1-')];
+    $token=JwtService::encode(2,md5('fixture-2'));
     // This is the original failure: real User accepts this token, while old label_user skipped it.
     $controller=identityRequest([],['authorization'=>'Bearer '.$token]);$user=$controller->identify();
     check($user['user_id']===2 && $user['vip_nav']===1,'Pure Bearer must reach actual verified VIP identity through label_user');
@@ -97,11 +97,12 @@ try {
     check(!isset($controller->assigned['user']['user_pwd'],$controller->assigned['user']['user_random']),'Template user must not include authentication secrets');
     check(isset($user['user_pwd'],$user['user_random']),'Server user compatibility is preserved');
     check(!mac_page_cache_eligible(),'Bearer identity must never enter shared page cache');privateResponse();noPrivatePageCache($controller);
-    foreach([$valid,array_replace($valid,['user_id'=>'%31'])] as $credentials){
+    foreach([$valid,array_replace($valid,['user_id'=>1])] as $credentials){
         $controller=identityRequest($credentials);$user=$controller->identify();
-        check($user['user_id']===1 && $user['vip_nav']===0,'Existing Cookie login encoding stays valid');
+        check($user['user_id']===1 && $user['vip_nav']===0,'Existing original parsed Cookie identity stays valid');
         check(!mac_page_cache_eligible(),'Cookie identity must not enter page cache');privateResponse();noPrivatePageCache($controller);
     }
+    $controller=identityRequest(array_replace($valid,['user_id'=>'%31']));check($controller->identify()['user_id']===0,'Already parsed double-encoded Cookie id is not decoded again');privateResponse();
     $controller=identityRequest($valid,['authorization'=>'Bearer '.$token]);check($controller->identify()['user_id']===2,'Enabled valid Bearer takes precedence over other user Cookie');
     $controller=identityRequest($valid,['authorization'=>'Bearer '.$token.'x']);check($controller->identify()['user_id']===0,'Invalid enabled Bearer must not fall back to a valid Cookie');privateResponse();
     foreach(['user_id','user_name','user_check'] as $key){
@@ -112,12 +113,12 @@ try {
         }
     }
     $controller=identityRequest(['is_member'=>'1','group_id'=>'4']);$user=$controller->identify();check($user['user_id']===0 && $user['vip_nav']===0,'Client presentation/group cookies must not create a VIP badge');
-    $controller=identityRequest([],['authorization'=>'Bearer '.JwtService::encode(3,'fixture-3')]);$user=$controller->identify();check($user['group_id']==='2,4' && $user['vip_nav']===1 && count($user['groups'])===2,'Verified multiple groups survive label_user');
-    $controller=identityRequest([],['authorization'=>'Bearer '.JwtService::encode(4,'fixture-4')]);$user=$controller->identify();check($user['group_id']===2 && $user['vip_nav']===0,'Expired VIP uses the model downgrade contract');
+    $controller=identityRequest([],['authorization'=>'Bearer '.JwtService::encode(3,md5('fixture-3'))]);$user=$controller->identify();check($user['group_id']==='2,4' && $user['vip_nav']===1 && count($user['groups'])===2,'Verified multiple groups survive label_user');
+    $controller=identityRequest([],['authorization'=>'Bearer '.JwtService::encode(4,md5('fixture-4'))]);$user=$controller->identify();check($user['group_id']===2 && $user['vip_nav']===0,'Expired VIP uses the model downgrade contract');
     check((int)Db::name('user')->where('user_id',4)->value('group_id')===2,'Expired group is updated by the real User model');
     foreach([['user_status'=>0],['user_random'=>'rotated']] as $change){
         Db::name('user')->where('user_id',2)->update($change);$controller=identityRequest([],['authorization'=>'Bearer '.$token]);check($controller->identify()['user_id']===0,'Disabled/rotated user invalidates Bearer at label_user');
-        Db::name('user')->where('user_id',2)->update(['user_status'=>1,'user_random'=>'fixture-2']);
+        Db::name('user')->where('user_id',2)->update(['user_status'=>1,'user_random'=>md5('fixture-2')]);
     }
     $GLOBALS['config']['app']['api_jwt_enabled']='0';$controller=identityRequest($valid,['authorization'=>'Bearer '.$token.'x']);check($controller->identify()['user_id']===1,'JWT-disabled deployments retain the model Cookie fallback');$GLOBALS['config']['app']['api_jwt_enabled']='1';
     $controller=identityRequest();$user=$controller->identify();check($user['user_id']===0 && $user['user_points']===0 && $user['group']['group_id']===1,'Absent credentials use the guest group');

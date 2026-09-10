@@ -60,7 +60,7 @@ namespace {
     $GLOBALS['user'] = ['user_id'=>0, 'user_name'=>''];
     $GLOBALS['form_deliveries'] = $GLOBALS['form_captcha_calls'] = [];
     \think\facade\Db::execute('CREATE TABLE audit_user (user_id INTEGER PRIMARY KEY, user_name TEXT, user_email TEXT,
-        user_phone TEXT, user_question TEXT, user_answer TEXT, user_pwd TEXT, user_random TEXT DEFAULT "fixture-session")');
+        user_phone TEXT, user_question TEXT, user_answer TEXT, user_pwd TEXT, user_random TEXT DEFAULT "27a3cdfa9e70e883209a8dd590321657")');
     \think\facade\Db::name('User')->insert(['user_id'=>1, 'user_name'=>'fixture-user', 'user_email'=>'fixture@example.invalid',
         'user_phone'=>'13000000000', 'user_question'=>'Fixture question', 'user_answer'=>'Fixture answer', 'user_pwd'=>'initial-fixture']);
     \think\facade\Db::execute('CREATE TABLE audit_msg (msg_id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER DEFAULT 0,

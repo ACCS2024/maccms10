@@ -14,8 +14,8 @@ function request() { return $GLOBALS['member_session_request']; }
 $GLOBALS['member_session_request'] = new think\Request();
 Db::execute('ALTER TABLE audit_user ADD COLUMN user_status INTEGER DEFAULT 1');
 Db::execute('ALTER TABLE audit_user ADD COLUMN user_random VARCHAR(64)');
-Db::name('User')->insert(['user_id'=>1,'user_name'=>'member','user_random'=>'fixture-session']);
-$valid = ['user_id'=>'1','user_name'=>'member','user_check'=>md5('fixture-session-member-1-')];
+Db::name('User')->insert(['user_id'=>1,'user_name'=>'member','user_random'=>md5('fixture-session')]);
+$valid = ['user_id'=>'1','user_name'=>'member','user_check'=>md5(md5('fixture-session').'-member-1-')];
 $model = new User();
 $GLOBALS['member_session_cookies'] = [];
 expect($model->checkLogin()['code'] === 1001, 'Absent cookies must return not logged in without diagnostics');
@@ -25,7 +25,7 @@ foreach (array_keys($valid) as $field) {
         expect($model->checkLogin()['code'] !== 1, 'Malformed credential accepted: '.$field);
     }
 }
-foreach (['0','-1','1x','1e0','4294967296',str_repeat('1',129)] as $bad) {
+foreach (['0','-1','1x','1e0','%31','4294967296',str_repeat('1',129)] as $bad) {
     $GLOBALS['member_session_cookies'] = array_replace($valid,['user_id'=>$bad]);
     expect($model->checkLogin()['code'] !== 1,'Malformed owner cookie accepted');
 }
@@ -33,9 +33,9 @@ foreach ([['user_check'=>str_repeat('0',32)],['user_check'=>str_repeat('a',257)]
     $GLOBALS['member_session_cookies'] = array_replace($valid,$bad);
     expect($model->checkLogin()['code'] !== 1,'Invalid/oversized cookie accepted');
 }
-foreach (['1',1,'%31'] as $id) {
+foreach (['1',1] as $id) {
     $GLOBALS['member_session_cookies'] = array_replace($valid,['user_id'=>$id]);
-    expect($model->checkLogin()['code'] === 1,'Valid historical cookie encoding stopped working');
+    expect($model->checkLogin()['code'] === 1,'Valid original parsed cookie stopped working');
 }
 foreach ([['user_status'=>0],['user_random'=>'rotated'],['user_name'=>'renamed']] as $change) {
     $GLOBALS['member_session_cookies'] = $valid;
@@ -44,7 +44,7 @@ foreach ([['user_status'=>0],['user_random'=>'rotated'],['user_name'=>'renamed']
     Db::name('User')->where('user_id',1)->update($before);
 }
 $GLOBALS['config']['app'] += ['api_jwt_enabled'=>'1','api_jwt_secret'=>str_repeat('fixture-',8),'api_jwt_iss'=>'member-session-audit'];
-$token=JwtService::encode(1,'fixture-session');
+$token=JwtService::encode(1,md5('fixture-session'));
 $GLOBALS['member_session_cookies'] = ['user_id'=>[]];
 $GLOBALS['member_session_request'] = (new think\Request())->withHeader(['authorization'=>'Bearer '.$token]);
 expect($model->checkLogin()['code'] === 1,'Valid bearer credentials must not depend on cookies');

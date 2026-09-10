@@ -69,7 +69,7 @@ $app->config->set($players,'vodplayer');$app->config->set($players,'voddowner');
 function vodRequest(array $parameters=[],int $uid=0,array $state=[],string $action='get_play_info',?string $sessionId=null,array $cookies=[]):void {
     global $app;
     $_COOKIE=$cookies;$_REQUEST=[];
-    $header=$uid>0?['authorization'=>'Bearer '.JwtService::encode($uid,'fixture-'.$uid)]:[];
+    $header=$uid>0?['authorization'=>'Bearer '.JwtService::encode($uid,md5('fixture-'.$uid))]:[];
     $r=think\Request::__make($app)->withGet($parameters)->withHeader($header)->withServer(['REQUEST_METHOD'=>'GET'])->setController('Vod')->setAction($action);
     $s=new think\Session($app);if($sessionId!==null)$s->setId($sessionId);$s->init();foreach($state as $key=>$value)$s->set($key,$value);
     $r->withSession($s);$app->instance('request',$r);$app->instance('session',$s);$app->instance('cookie',new think\Cookie($r));
@@ -100,7 +100,7 @@ $tables=['vod','user','ulog','type','group','role'];
 try {
     $ddl=file_get_contents(dirname(__DIR__).'/application/install/sql/install.sql');
     foreach($tables as $table){if(!preg_match('/CREATE TABLE `mac_'.preg_quote($table,'/').'` \(.*?\) ENGINE=[^;]+;/s',$ddl,$m))throw new RuntimeException('Missing fixture DDL');Db::execute(str_replace('`mac_'.$table.'`','`audit_resource_'.$table.'`',$m[0]));}
-    foreach([[1,'2'],[2,'3'],[3,'4'],[4,'2,5']] as [$id,$group])Db::name('user')->insert(['user_id'=>$id,'user_name'=>'member-'.$id,'user_random'=>'fixture-'.$id,'user_status'=>1,'group_id'=>$group,'user_points'=>100,'user_end_time'=>time()+3600]);
+    foreach([[1,'2'],[2,'3'],[3,'4'],[4,'2,5']] as [$id,$group])Db::name('user')->insert(['user_id'=>$id,'user_name'=>'member-'.$id,'user_random'=>md5('fixture-'.$id),'user_status'=>1,'group_id'=>$group,'user_points'=>100,'user_end_time'=>time()+3600]);
     $vodDefaults=['vod_content'=>'','vod_play_url'=>'','vod_down_url'=>'','vod_plot_name'=>'','vod_plot_detail'=>''];
     Db::name('vod')->insert(['vod_id'=>1,'vod_name'=>'Video','vod_en'=>'video-one','vod_status'=>1,'type_id'=>1,'vod_points'=>9,'vod_points_play'=>3,'vod_points_down'=>4,
         'vod_play_from'=>'source$$$backup','vod_play_url'=>'第一集$https://fixture.invalid/MEDIA-PLAY-1#第二集$https://fixture.invalid/MEDIA-PLAY-2$$$备用集$https://fixture.invalid/MEDIA-PLAY-3',
@@ -115,7 +115,7 @@ try {
         $res=vodApi('get_'.$flag.'_info',['id'=>1],3);check($res['info']['can_'.$flag]===0,'VIP without category permission stays denied');noVodSecrets($res);
     }
 
-    $validCookie=['user_id'=>'2','user_name'=>'member-2','user_check'=>md5('fixture-2-member-2-2-')];
+    $validCookie=['user_id'=>'2','user_name'=>'member-2','user_check'=>md5(md5('fixture-2').'-member-2-2-')];
     $r=vodApi('get_play_info',['id'=>1],0,[],null,$validCookie);check($r['info']['can_play']===1,'Existing valid Cookie identity authorizes the same resource as Bearer');noVodSecrets($r,['MEDIA-PLAY-1']);
     $forged=$validCookie;$forged['user_check']='wrong';$r=vodApi('get_play_info',['id'=>1],0,[],null,$forged);check($r['info']['can_play']===0,'A forged Cookie cannot authorize video access');noVodSecrets($r);
     purchase(4,4,1,1,3);purchase(1,4,1,2,3);purchase(1,5,1,1,4);purchase(1,4,1,1,0);purchase(1,4,1,1,3,2);
