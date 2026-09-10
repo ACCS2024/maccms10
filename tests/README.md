@@ -53,6 +53,7 @@ HTTP 测试需要全新、可丢弃的 checkout：依次载入 `application/inst
 docker build --build-arg PHP_VERSION=8.4 -t maccms-audit:8.4 docker
 python3 tests/run_hits_buffer_audit.py maccms-audit:8.4
 python3 tests/run_collection_audit.py maccms-audit:8.4
+python3 tests/run_database_audit.py maccms-audit:8.4
 python3 tests/run_baidu_urlsend_audit.py maccms-audit:8.4
 python3 tests/run_sdk_redirect_audit.py maccms-audit:8.4
 python3 tests/run_apache_boundary_audit.py maccms-audit:8.4
