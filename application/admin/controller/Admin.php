@@ -42,7 +42,27 @@ class Admin extends Base
     {
         if (Request()->isPost()) {
             $param = \think\facade\Request::post();
-            if(!in_array('index/welcome',$param['admin_auth'])){
+            if (isset($param['admin_id']) && (!is_scalar($param['admin_id'])
+                || ((int)$param['admin_id'] === 1 && (int)$this->_admin['admin_id'] !== 1))) {
+                return $this->error(lang('permission_denied'));
+            }
+            if ((int)($param['admin_id'] ?? 0) === 1 && isset($param['admin_status']) && (string)$param['admin_status'] !== '1') {
+                return $this->error(lang('permission_denied'));
+            }
+            $param['admin_auth'] = $param['admin_auth'] ?? [];
+            if (!is_array($param['admin_auth'])) {
+                return $this->error(lang('param_err'));
+            }
+            foreach ($param['admin_auth'] as $auth) {
+                if (!is_string($auth) || substr_count($auth, '/') !== 1) {
+                    return $this->error(lang('param_err'));
+                }
+                [$controller, $action] = explode('/', $auth, 2);
+                if (!$this->check_auth($controller, $action)) {
+                    return $this->error(lang('permission_denied'));
+                }
+            }
+            if(!in_array('index/welcome',$param['admin_auth'], true)){
                 $param['admin_auth'][] = 'index/welcome';
             }
             $validate = mac_validate('Token');
@@ -145,17 +165,16 @@ class Admin extends Base
     public function del()
     {
         $param = \think\facade\Request::param();
-        $ids = $param['ids'];
+        $ids = $this->requestedAdminIds($param['ids'] ?? null);
 
         if(!empty($ids)){
-            $where=[];
-            $where['admin_id'] = $ids;
-            if(!is_array($ids)) {
-                $ids = explode(',', $ids);
+            if (in_array(1, $ids, true)) {
+                return $this->error(lang('permission_denied'));
             }
-            if(in_array($this->_admin['admin_id'],$ids)){
+            if(in_array((int)$this->_admin['admin_id'],$ids, true)){
                 return $this->error(lang('admin/admin/del_cur_err'));
             }
+            $where = [['admin_id', 'in', $ids]];
             $res = (new \app\common\model\Admin())->delData($where);
             if($res['code']>1){
                 return $this->error($res['msg']);
@@ -168,13 +187,15 @@ class Admin extends Base
     public function field()
     {
         $param = \think\facade\Request::param();
-        $ids = $param['ids'];
-        $col = $param['col'];
-        $val = $param['val'];
+        $ids = $this->requestedAdminIds($param['ids'] ?? null);
+        $col = $param['col'] ?? '';
+        $val = $param['val'] ?? '';
 
         if(!empty($ids) && in_array($col,['admin_status']) && in_array($val,['0','1'])){
-            $where=[];
-            $where['admin_id'] = mac_where_ids($ids);
+            if (in_array(1, $ids, true) || ($val == '0' && in_array((int)$this->_admin['admin_id'], $ids, true))) {
+                return $this->error(lang('permission_denied'));
+            }
+            $where = [['admin_id', 'in', $ids]];
 
             $res = (new \app\common\model\Admin())->fieldData($where,$col,$val);
             if($res['code']>1){
@@ -183,6 +204,26 @@ class Admin extends Base
             return $this->success($res['msg']);
         }
         return $this->error(lang('param_err'));
+    }
+
+    private function requestedAdminIds($input): ?array
+    {
+        if (is_int($input)) {
+            $input = [$input];
+        } elseif (is_string($input)) {
+            $input = explode(',', $input);
+        }
+        if (!is_array($input) || $input === []) {
+            return null;
+        }
+        $ids = [];
+        foreach ($input as $id) {
+            if ((!is_string($id) && !is_int($id)) || !ctype_digit((string)$id) || (int)$id < 1) {
+                return null;
+            }
+            $ids[] = (int)$id;
+        }
+        return array_values(array_unique($ids));
     }
 
 }

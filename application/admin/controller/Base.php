@@ -61,7 +61,7 @@ class Base extends All
             $this->_pagesize = $GLOBALS['config']['app']['pagesize'];
             $this->_makesize = $GLOBALS['config']['app']['makesize'];
 
-            if($this->_cl!='Update' && !$this->check_auth($this->_cl,$this->_ac)){
+            if(!$this->check_auth($this->_cl,$this->_ac)){
                 // 同理:error() 在非 AJAX 下已 throw;AJAX 下返回 json,需显式 throw 才能中断,
                 // 避免无权限的 AJAX 请求继续执行动作。
                 throw new \think\exception\HttpResponseException($this->error(lang('permission_denied')));
