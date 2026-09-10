@@ -14,7 +14,7 @@ class Qiniu
         $this->config = $config;
     }
 
-    public function submit($file_path)
+    public function submit($file_path, bool $verified = false)
     {
         $bucket = $GLOBALS['config']['upload']['api']['qiniu']['bucket'];
         $accessKey = $GLOBALS['config']['upload']['api']['qiniu']['accesskey'];
@@ -34,6 +34,9 @@ class Qiniu
             return $file_path;
         }
         if ($error !== null || !is_array($result)) { return $file_path; }
+        if ($verified && (($result['newName'] ?? null) !== $file_path
+            || \app\common\util\PointsBalance::amount($result['fsize'] ?? null, true) !== filesize($filePath)
+            || !is_string($result['hash'] ?? null) || $result['hash'] === '')) { return $file_path; }
         $baseUrl = $GLOBALS['config']['upload']['api']['qiniu']['url'] ?? '';
         return StorageResult::complete($file_path, rtrim($baseUrl, '/') . '/' . $file_path, $this->config);
     }

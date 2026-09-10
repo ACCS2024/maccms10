@@ -14,7 +14,7 @@ class Upyun
         $this->config = $config;
     }
 
-    public function submit($file_path)
+    public function submit($file_path, bool $verified = false)
     {
         $bucket = $GLOBALS['config']['upload']['api']['upyun']['bucket'];
         $username = $GLOBALS['config']['upload']['api']['upyun']['username'];
@@ -28,13 +28,16 @@ class Upyun
         $_file = fopen($filePath, 'rb');
         if ($_file === false) { return $file_path; }
         try {
-            $result = $client->write($file_path, $_file);
+            $result = $verified
+                ? (new \Upyun\Uploader($bucketConfig))->upload($file_path, $_file, [], false)
+                : $client->write($file_path, $_file);
         } catch (\Throwable $e) {
             return $file_path;
         } finally {
             if (is_resource($_file)) { fclose($_file); }
         }
-        if ($result === false) { return $file_path; }
+        if ($result === false || ($verified && (!$result instanceof \Psr\Http\Message\ResponseInterface
+            || !in_array($result->getStatusCode(), [200, 201, 204], true)))) { return $file_path; }
         $baseUrl = $GLOBALS['config']['upload']['api']['upyun']['url'] ?? '';
         return StorageResult::complete($file_path, rtrim($baseUrl, '/') . '/' . $file_path, $this->config);
     }

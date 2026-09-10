@@ -15,7 +15,7 @@ class Ftp
         $this->config = $config;
     }
 
-    public function submit($file_path)
+    public function submit($file_path, bool $verified = false)
     {
         $settings = $GLOBALS['config']['upload']['api']['ftp'];
         $ftp_config = [
@@ -50,7 +50,7 @@ class Ftp
         } catch (\Throwable $e) {
             $uploaded = false;
         }
-        if (!$uploaded) {
+        if (!$uploaded || ($verified && $uploaded !== true)) {
             self::$failedConnections[$connectionKey] = true;
             unset(self::$connections[$connectionKey]);
             return $file_path;

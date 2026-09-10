@@ -13,7 +13,7 @@ class S3
         $this->config = $config;
     }
 
-    public function submit($file_path)
+    public function submit($file_path, bool $verified = false)
     {
         $bucket = $GLOBALS['config']['upload']['api']['s3']['bucket'];
         $accessKey = $GLOBALS['config']['upload']['api']['s3']['accesskey'];
@@ -54,6 +54,10 @@ class S3
             if (is_resource($body)) { fclose($body); }
         }
 
+        if ($verified && (!$result instanceof \Aws\ResultInterface
+            || !in_array($result['@metadata']['statusCode'] ?? null, [200, 201, 204], true))) {
+            return $file_path;
+        }
         if (!empty($domain)) {
             $url = rtrim($domain, '/') . '/' . $bucket . '/' . $key;
         } else {
