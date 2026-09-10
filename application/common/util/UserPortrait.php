@@ -17,6 +17,7 @@ final class UserPortrait
     /** Call once with the actual result IDs before rendering a list of avatars. */
     public static function prefetch(array $ids): void
     {
+        if ($ids === []) { return; }
         $context = self::context();
         self::$requests ??= new \WeakMap();
         $cache = self::$requests[$context] ?? [];
