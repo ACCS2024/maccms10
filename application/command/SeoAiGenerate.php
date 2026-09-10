@@ -7,7 +7,7 @@ use think\console\Input;
 use think\console\input\Option;
 use think\console\Output;
 use think\facade\Db;
-use think\Log;
+use think\facade\Log;
 
 class SeoAiGenerate extends Command
 {
@@ -28,7 +28,7 @@ class SeoAiGenerate extends Command
 
         if (!in_array($mid, [1, 2])) {
             $output->writeln('invalid mid, use 1 or 2');
-            return;
+            return 2;
         }
 
         $rows = [];
@@ -58,7 +58,7 @@ class SeoAiGenerate extends Command
             $id = intval($row['id']);
             try {
                 $res = SeoAi::generateByMidObj($mid, $id);
-            } catch (\Exception $e) {
+            } catch (\Throwable $e) {
                 Log::error('AI SEO generate failed (mid=' . $mid . ', id=' . $id . '): ' . $e->getMessage());
                 $fail++;
                 $output->writeln('fail: ' . $id . ' - ' . $e->getMessage());
@@ -74,5 +74,6 @@ class SeoAiGenerate extends Command
         }
 
         $output->writeln('done, success=' . $ok . ', fail=' . $fail);
+        return $fail > 0 ? 1 : 0;
     }
 }

@@ -288,7 +288,7 @@ class Tune extends Command
     // 可自动写入的安全 drop-in 目标(*.d 新增独立文件,非破坏性)
     private function dropinTargets($d, $r)
     {
-        $g = function ($n) use ($r) { return $this->genOne($n, $r, $d); };
+        $g = function ($n) use ($r, $d) { return $this->genOne($n, $r, $d); };
         $targets = [];
         // PHP:写到所有检测到的 conf.d
         if (!empty($d['confd'])) {
