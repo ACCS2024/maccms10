@@ -9,6 +9,9 @@ if($case==='permissions'&&posix_geteuid()===0) {
     if(!posix_setgid(65534)||!posix_setuid(65534))throw new RuntimeException('Permission fixture requires unprivileged execution');
 }
 require dirname(__DIR__,2).'/vendor/autoload.php';
+$downloadDatabaseDirectory = sys_get_temp_dir().'/download-commit-db-'.bin2hex(random_bytes(12));
+if (!mkdir($downloadDatabaseDirectory,0700)) { throw new RuntimeException('Cannot create durable fixture database'); }
+define('UPLOAD_AUDIT_SQLITE_DATABASE',$downloadDatabaseDirectory.'/fixture.sqlite');
 class DownloadAssetCommitSqlite extends think\db\connector\Sqlite {
     public function __construct(array $config=[]) {$config['type']='sqlite';parent::__construct($config);}
     public function commit(): void {
@@ -22,6 +25,7 @@ class DownloadAssetCommitSqlite extends think\db\connector\Sqlite {
 define('UPLOAD_AUDIT_SQLITE_DRIVER','\\DownloadAssetCommitSqlite');
 require __DIR__.'/download_asset_io.php';
 require __DIR__.'/security_audit_remote_upload_db.php';
+register_shutdown_function(static fn()=>audit_remove_temp($downloadDatabaseDirectory));
 use think\facade\Db;
 $source='https://1.1.1.1/ordinary-worker-picture';$GLOBALS['download_asset_bytes']=[$source=>file_get_contents('source.png')];$GLOBALS['download_asset_calls']=0;
 uploadIdentityRequest([], 'GET', false);

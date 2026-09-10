@@ -12,6 +12,7 @@ final class LocalAttachment
     private const IMAGES = ['jpg','jpeg','png','gif','webp'];
     private const FILES = ['doc','docx','xls','xlsx','ppt','pptx','pdf','wps','txt','rar','zip','torrent'];
     private const MEDIA = ['rm','rmvb','avi','mkv','mp4','mp3'];
+    private static ?\WeakMap $uncertainRequests = null;
 
     public static function store(array $parameters, array $config): array
     {
@@ -41,8 +42,13 @@ final class LocalAttachment
             || !preg_match('/^[a-z0-9_]{1,64}$/D', $parameters['flag'])) {
             throw new \InvalidArgumentException('Invalid local attachment flag');
         }
+        $request = request();
+        if (isset((self::$uncertainRequests ??= new \WeakMap())[$request])) {
+            throw new \RuntimeException('A previous attachment outcome in this request requires inspection');
+        }
         $stage = null; $published = []; $directories = []; $remote = null;
         $connection = null; $transaction = false; $committed = false; $commitStarted = false;
+        $pdo = null; $beginAttempted = false; $transactionUncertain = false;
         try {
             $stage = rtrim(sys_get_temp_dir(), DIRECTORY_SEPARATOR) . '/maccms-attachment-' . bin2hex(random_bytes(16));
             if (!@mkdir($stage, 0700)) { throw new \RuntimeException('Cannot create upload staging directory'); }
@@ -82,6 +88,9 @@ final class LocalAttachment
             if ($download !== null) { $manifest['scope'] = 'download'; $manifest['resource_url_limit'] = 1024; }
             self::manifest($stage, $manifest);
             $connection = Db::connect();
+            if ($connection->getConfig('break_reconnect')) {
+                throw new \RuntimeException('Attachment owner requires a connection without automatic reconnect');
+            }
             Db::name('Annex')->getTableFields();
             if ($owner !== null) { Db::name('User')->getTableFields(); }
             if ($connection->getPdo() && $connection->getPdo()->inTransaction()) {
@@ -89,6 +98,7 @@ final class LocalAttachment
             }
             $connection->query('SELECT 1', [], true);
             if ($connection->getPdo()->inTransaction()) { throw new \RuntimeException('Upload must own its master transaction'); }
+            $pdo = $connection->getPdo();
             if ($connection->getPdo()->getAttribute(\PDO::ATTR_DRIVER_NAME) === 'mysql') {
                 foreach ($owner === null ? ['Annex'] : ['Annex', 'User'] as $model) {
                     $engines = $connection->query('SELECT ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?', [Db::name($model)->getTable()], true);
@@ -109,7 +119,17 @@ final class LocalAttachment
                     self::manifest($stage, $manifest);
                 });
             }
+            $connection->query('SELECT 1', [], true);
+            if (!self::originalTransaction($connection, $pdo, false)) {
+                $transactionUncertain = true;
+                throw new \RuntimeException('Attachment connection changed before its transaction');
+            }
+            $beginAttempted = true;
             $connection->startTrans(); $transaction = true;
+            if (!self::originalTransaction($connection, $pdo, true)) {
+                $transactionUncertain = true;
+                throw new \RuntimeException('Attachment transaction did not start on its original connection');
+            }
             if ($owner !== null) {
                 $user = Db::name('User')->master()->field('user_id,user_status,user_portrait')->where('user_id', $owner)->lock(true)->find();
                 if (!$user || ($requireActiveOwner && (string)$user['user_status'] !== '1')) {
@@ -118,11 +138,19 @@ final class LocalAttachment
             }
             $annexIds = [];
             foreach ($records as $record) {
+                if (!self::originalTransaction($connection, $pdo, true)) {
+                    $transactionUncertain = true;
+                    throw new \RuntimeException('Attachment transaction identity changed');
+                }
                 if (Db::name('Annex')->where('annex_file', $record['annex_file'])->count() !== 0) {
                     throw new \RuntimeException('Attachment identity already exists');
                 }
                 $started = time();
                 $saved = (new Annex())->saveData($record);
+                if (!self::originalTransaction($connection, $pdo, true)) {
+                    $transactionUncertain = true;
+                    throw new \RuntimeException('Attachment metadata left its owner transaction');
+                }
                 if (($saved['code'] ?? null) !== 1) { throw new \RuntimeException('Attachment metadata rejected'); }
                 $rows = Db::name('Annex')->master()->where('annex_file', $record['annex_file'])->limit(2)->select()->toArray();
                 if (count($rows) !== 1 || ($rows[0]['annex_file'] ?? null) !== $record['annex_file']
@@ -149,8 +177,16 @@ final class LocalAttachment
                 }
             }
             if ($remote !== null) { $remote->recordReferences($annexIds); }
+            if (!self::originalTransaction($connection, $pdo, true)) {
+                $transactionUncertain = true;
+                throw new \RuntimeException('Attachment references left their owner transaction');
+            }
             $commitStarted = true;
-            $connection->commit(); $transaction = false; $committed = true;
+            $connection->commit();
+            if (!self::originalTransaction($connection, $pdo, false)) {
+                throw new \RuntimeException('Attachment commit completion was not confirmed');
+            }
+            $transaction = false; $committed = true;
             if ($owner !== null) { UserPortrait::forget($owner); }
             if ($remote !== null) {
                 $remote->cleanup($config);
@@ -163,13 +199,22 @@ final class LocalAttachment
             $data['thumb'] = array_slice($descriptors, 1);
             return $data;
         } catch (\Throwable $error) {
-            if ($transaction && $connection !== null) {
-                try { $connection->rollback(); } catch (\Throwable $rollbackError) { /* The transaction may have lost its connection. */ }
+            if ($beginAttempted && !$committed && $connection !== null && $pdo !== null) {
+                $cleaned = self::rollbackOriginalTransaction($connection, $pdo, $transaction);
+                $transactionUncertain = $transactionUncertain || !$cleaned;
+            }
+            if (!$committed && ($commitStarted || $transactionUncertain)) {
+                self::$uncertainRequests ??= new \WeakMap();
+                self::$uncertainRequests[$request] = true;
             }
             if ($commitStarted && !$committed && $stage !== null) {
                 // Do not delete files referenced by a COMMIT whose acknowledgement may have been lost.
                 try { self::manifest($stage, array_merge($manifest, ['state'=>'commit_outcome_unknown'])); } catch (\Throwable $manifestError) {}
                 error_log('Upload commit outcome unknown; inspect private manifest: ' . $stage . '/manifest.json');
+            } elseif ($transactionUncertain && $stage !== null) {
+                try { self::manifest($stage, array_merge($manifest, ['state'=>'rollback_outcome_unknown',
+                    'begin_attempted'=>$beginAttempted, 'begin_confirmed'=>$transaction])); } catch (\Throwable $manifestError) {}
+                error_log('Upload rollback outcome unknown; inspect private manifest: ' . $stage . '/manifest.json');
             } elseif ($remote !== null && $remote->hasAttempt() && $stage !== null) {
                 try { self::manifest($stage, array_merge($manifest, ['state'=>'remote_reference_failed'])); } catch (\Throwable $manifestError) {}
                 error_log('Remote upload reference failed; inspect private manifest: ' . $stage . '/manifest.json');
@@ -177,12 +222,47 @@ final class LocalAttachment
             throw $error;
         } finally {
             $retainRemoteEvidence = !$committed && $remote !== null && $remote->hasAttempt();
-            if (!$committed && !$commitStarted && !$retainRemoteEvidence) {
+            if (!$committed && !$commitStarted && !$retainRemoteEvidence && !$transactionUncertain) {
                 foreach (array_reverse($published) as $file) { if (is_file($file) && !is_link($file)) { @unlink($file); } }
                 foreach (array_reverse($directories) as $directory) { @rmdir($directory); }
             }
-            if ($stage !== null && (!$commitStarted || $committed) && !$retainRemoteEvidence) { self::removeStage($stage); }
+            if ($stage !== null && (!$commitStarted || $committed) && !$retainRemoteEvidence && !$transactionUncertain) { self::removeStage($stage); }
         }
+    }
+
+    private static function originalTransaction($connection, \PDO $pdo, bool $active): bool
+    {
+        try {
+            return Db::connect() === $connection && $connection->getPdo() === $pdo && $pdo->inTransaction() === $active;
+        } catch (\Throwable $error) { return false; }
+    }
+
+    /** One ORM rollback and, only for this owned original PDO, one bounded fallback. */
+    private static function rollbackOriginalTransaction($connection, \PDO $pdo, bool $beginConfirmed): bool
+    {
+        $integrity = self::originalTransaction($connection, $pdo, true);
+        if (!$beginConfirmed) {
+            try { $integrity = Db::connect() === $connection && $connection->getPdo() === $pdo; }
+            catch (\Throwable $error) { $integrity = false; }
+        }
+        $ended = false; $repair = false;
+        try {
+            if ($connection->getPdo() !== $pdo) { throw new \RuntimeException('Original attachment PDO was replaced'); }
+            $connection->rollback();
+            $ended = !$pdo->inTransaction();
+        } catch (\Throwable $error) { $repair = true; }
+        if (!$ended) {
+            $repair = true;
+            try {
+                if ($pdo->inTransaction()) { $pdo->rollBack(); }
+                $ended = !$pdo->inTransaction();
+            } catch (\Throwable $error) { $ended = false; }
+        }
+        if ($repair) {
+            try { if ($connection->getPdo() === $pdo) { $connection->close(); } }
+            catch (\Throwable $error) { $integrity = false; }
+        }
+        return $ended && $integrity;
     }
 
     private static function receive(string $stage, array $parameters): array
