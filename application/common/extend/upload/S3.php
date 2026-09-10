@@ -2,7 +2,6 @@
 namespace app\common\extend\upload;
 
 use Aws\S3\S3Client;
-use Aws\Exception\AwsException;
 
 class S3
 {
@@ -24,7 +23,6 @@ class S3
         $basepath = !empty($GLOBALS['config']['upload']['api']['s3']['basepath']) ? $GLOBALS['config']['upload']['api']['s3']['basepath'] : '';
         $domain = !empty($GLOBALS['config']['upload']['api']['s3']['domain']) ? $GLOBALS['config']['upload']['api']['s3']['domain'] : '';
 
-        require_once ROOT_PATH . 'extend/aws/autoload.php';
         $options = [
             'region'  => $region,
             'version' => '2006-03-01',
@@ -37,24 +35,30 @@ class S3
             $options['endpoint'] = $endpoint;
             $options['use_path_style_endpoint'] = true;
         }
-        $s3 = new S3Client($options);
+        $filePath = ROOT_PATH . $file_path;
+        if (!is_file($filePath) || !is_readable($filePath)) { return $file_path; }
+        $body = fopen($filePath, 'rb');
+        if ($body === false) { return $file_path; }
         try {
-            $filePath = ROOT_PATH . $file_path;
+            $s3 = new S3Client($options);
             $key = !empty($basepath) ? rtrim($basepath, '/') . '/' . ltrim($file_path, '/') : $file_path;
             $result = $s3->putObject([
                 'Bucket' => $bucket,
                 'Key'    => $key,
-                'Body'   => fopen($filePath, 'r'),
+                'Body'   => $body,
                 'ACL'    => 'public-read'
             ]);
-        } catch (AwsException $e) {
-            echo $e->getMessage() . "\n";
+        } catch (\Throwable $e) {
+            return $file_path;
+        } finally {
+            if (is_resource($body)) { fclose($body); }
         }
 
-        empty($this->config['keep_local']) && @unlink($filePath);
         if (!empty($domain)) {
-            return rtrim($domain, '/') . '/' . $bucket . '/' . $key;
+            $url = rtrim($domain, '/') . '/' . $bucket . '/' . $key;
+        } else {
+            $url = $result['ObjectURL'] ?? '';
         }
-        return $result['ObjectURL'];
+        return StorageResult::complete($file_path, $url, $this->config);
     }
 }

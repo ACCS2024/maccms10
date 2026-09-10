@@ -28,8 +28,13 @@ class Qiniu
         $token = $auth->uploadToken($bucket,$file_path,$expires,$return);
         $filePath = ROOT_PATH . $file_path;
         $uploadMgr = new UploadManager();
-        $a = $uploadMgr->putFile($token, $file_path, $filePath);
-        empty($this->config['keep_local']) && @unlink($filePath);
-        return $GLOBALS['config']['upload']['api']['qiniu']['url'] . '/' . $file_path;
+        try {
+            [$result, $error] = $uploadMgr->putFile($token, $file_path, $filePath);
+        } catch (\Throwable $e) {
+            return $file_path;
+        }
+        if ($error !== null || !is_array($result)) { return $file_path; }
+        $baseUrl = $GLOBALS['config']['upload']['api']['qiniu']['url'] ?? '';
+        return StorageResult::complete($file_path, rtrim($baseUrl, '/') . '/' . $file_path, $this->config);
     }
 }

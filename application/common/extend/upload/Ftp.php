@@ -56,8 +56,6 @@ class Ftp
             return $file_path;
         }
 
-        $filePath = ROOT_PATH . $file_path;
-        empty($this->config['keep_local']) && @unlink($filePath);
-        return $settings['url'] . '/' . $file_path;
+        return StorageResult::complete($file_path, rtrim($settings['url'] ?? '', '/') . '/' . $file_path, $this->config);
     }
 }

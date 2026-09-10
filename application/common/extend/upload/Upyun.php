@@ -23,11 +23,19 @@ class Upyun
         require_once ROOT_PATH . 'extend/upyun/vendor/autoload.php';
         $bucketConfig = new Config($bucket, $username, $pwd);
         $client = new upOper($bucketConfig);
-        $_file = fopen($file_path, 'r');
-        $a = $client->write($file_path, $_file);
         $filePath = ROOT_PATH . $file_path;
-        unset($_file);
-        empty($this->config['keep_local']) && @unlink($filePath);
-        return $GLOBALS['config']['upload']['api']['upyun']['url'] . '/' . $file_path;
+        if (!is_file($filePath) || !is_readable($filePath)) { return $file_path; }
+        $_file = fopen($filePath, 'rb');
+        if ($_file === false) { return $file_path; }
+        try {
+            $result = $client->write($file_path, $_file);
+        } catch (\Throwable $e) {
+            return $file_path;
+        } finally {
+            if (is_resource($_file)) { fclose($_file); }
+        }
+        if ($result === false) { return $file_path; }
+        $baseUrl = $GLOBALS['config']['upload']['api']['upyun']['url'] ?? '';
+        return StorageResult::complete($file_path, rtrim($baseUrl, '/') . '/' . $file_path, $this->config);
     }
 }

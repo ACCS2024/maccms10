@@ -21,11 +21,11 @@ class Weibo
         $res = $weibo->check();
 
         if($res['code']>1){
-            echo $res['msg'];die;
+            return $file_path;
         }
-        $res = $weibo->upload($file_path,false,$weibo->_config['cookie']);
+        $res = $weibo->upload(ROOT_PATH . $file_path, false, $weibo->_config['cookie']);
         if(!empty($res['url'])){
-            return $res['url'];
+            return StorageResult::complete($file_path, $res['url'], $this->config);
         }
         return $file_path;
     }

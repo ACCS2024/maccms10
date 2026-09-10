@@ -27,16 +27,15 @@ class Uomg
         $data['file'] = 'multipart';
 
         if (class_exists('CURLFile')) {
-            $data['Filedata'] = new \CURLFile(realpath($file_path));
+            $data['Filedata'] = new \CURLFile($filePath);
         } else {
-            $data['Filedata'] = '@'.realpath($file_path);
+            $data['Filedata'] = '@'.$filePath;
         }
 
         $html = mac_curl_post($url,$data);
-        $json = @json_decode($html,true);
-        if($json['code']=='1'){
-            $file_path = $json['imgurl'];
-            empty($this->config['keep_local']) && @unlink($filePath);
+        $json = is_string($html) ? json_decode($html, true) : null;
+        if (is_array($json) && isset($json['code']) && (string)$json['code'] === '1') {
+            return StorageResult::complete($file_path, $json['imgurl'] ?? '', $this->config);
         }
 
         return $file_path;

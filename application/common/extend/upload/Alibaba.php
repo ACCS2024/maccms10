@@ -20,15 +20,15 @@ class Alibaba
         $data['scene'] = 'aeMessageCenterV2ImageRule';
         $data['name'] = 'player.jpg';
         if (class_exists('CURLFile')) {
-            $data['file'] = new \CURLFile(realpath($file_path));
+            $data['file'] = new \CURLFile($filePath);
         } else {
-            $data['file'] = '@'.realpath($file_path);
+            $data['file'] = '@'.$filePath;
         }
 
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $url);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
         curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 120);
         curl_setopt($ch, CURLOPT_TIMEOUT, 120);
         $httpheader[] = "Accept:application/json";
@@ -46,11 +46,10 @@ class Alibaba
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
         $html = @curl_exec($ch);
         curl_close($ch);
-        $json = @json_decode($html,true);
+        $json = is_string($html) ? json_decode($html, true) : null;
 
-        if($json['code']=='0'){
-            $file_path = $json['url'];
-            empty($this->config['keep_local']) && @unlink($filePath);
+        if (is_array($json) && isset($json['code']) && (string)$json['code'] === '0') {
+            return StorageResult::complete($file_path, $json['url'] ?? '', $this->config);
         }
 
         return $file_path;
