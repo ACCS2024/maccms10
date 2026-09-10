@@ -6,7 +6,7 @@ class Vod extends Base
 {
     public function __construct()
     {
-        if (in_array(strtolower(request()->action()), ['play', 'player', 'down', 'downer'], true)
+        if (in_array(strtolower(request()->action()), ['play', 'player', 'down', 'downer', 'resource'], true)
             && !\app\common\util\ContentResource::scalarParameters(array_merge(request()->param(), $_REQUEST))) {
             throw new \think\exception\HttpResponseException(\think\Response::create(lang('param_err'), 'html', 400));
         }
@@ -112,6 +112,29 @@ class Vod extends Base
             return $this->label_fetch('vod/player_pwd');
         }
         return $this->label_fetch( mac_tpl_fetch('vod',$info['vod_tpl_play'],'play') );
+    }
+
+    /** Stable numeric-ID entry for static redirects; all content authorization remains dynamic. */
+    public function resource()
+    {
+        $param = request()->param();
+        $id = \app\common\util\ContentResource::positiveInt($param['id'] ?? null);
+        $flag = $param['operation'] ?? null;
+        if ($id === null || !in_array($flag, ['play', 'down'], true)) {
+            $this->page_error(lang('param_err'));
+        }
+        $result = (new \app\common\model\Vod())->infoData(['vod_id' => $id, 'vod_status' => 1], '*', 0);
+        if ($result['code'] !== 1) {
+            $this->page_error($result['msg']);
+        }
+        $info = $this->label_vod_play($flag, $result['info']);
+        if ($flag === 'play' && $info['vod_copyright'] == 1 && $GLOBALS['config']['app']['copyright_status'] == 3) {
+            return $this->label_fetch('vod/copyright');
+        }
+        if (!\app\common\util\ContentPassword::vodState($info, $flag)['verified']) {
+            return $this->label_fetch('vod/' . ($flag === 'play' ? 'player' : 'downer') . '_pwd');
+        }
+        return $this->label_fetch(mac_tpl_fetch('vod', $info['vod_tpl_' . $flag], $flag));
     }
 
     public function player()

@@ -241,13 +241,11 @@ try {
         Db::name('vod')->where('vod_id',1)->update(['vod_pwd_'.$flag=>'']);
     }
 
-    // Make must return a failed result before page writes or progress updates in all static modes.
+    // Direct static label use remains forbidden; Make now writes separately verified safe redirects.
     foreach([2,3,4] as $view){foreach(['play','down'] as $flag){
         $GLOBALS['config']['view']=['vod_detail'=>2,'vod_play'=>1,'vod_down'=>1];$GLOBALS['config']['view']['vod_'.$flag]=$view;
         vodRequest(['id'=>1],2);request()->withHeader(['x-requested-with'=>'XMLHttpRequest'])->withServer(['HTTP_X_REQUESTED_WITH'=>'XMLHttpRequest']);$sqlTrace=[];
-        $make=(new ReflectionClass(app\admin\controller\Make::class))->newInstanceWithoutConstructor();$make->_param=['tab'=>'vod'];$response=$make->info();
-        $result=json_decode($response->getContent(),true);check($result['code']===0 && str_contains($result['msg'],'动态授权') && app\common\controller\All::$lastJumpCode===0,'Make reports static resource generation as a controlled failure');check($sqlTrace===[],'Rejected generation never advances DB progress');
-        $page=new VodPageProbe();$method=new ReflectionMethod($page,'label_vod_play');$denied=false;try{$method->invoke($page,$flag,[],$view);}catch(RuntimeException $e){$denied=str_contains($e->getMessage(),'动态授权');}check($denied && $page->assigned===[],'Direct static label use cannot bypass the Make guard');
+        $page=new VodPageProbe();$method=new ReflectionMethod($page,'label_vod_play');$denied=false;try{$method->invoke($page,$flag,[],$view);}catch(RuntimeException $e){$denied=str_contains($e->getMessage(),'动态授权');}check($denied && $page->assigned===[],'Direct static label use cannot render authorization-dependent resource HTML');
     }}
     $GLOBALS['config']['view']=['vod_detail'=>2,'vod_play'=>1,'vod_down'=>1];vodRequest(['id'=>1]);$page=new VodPageProbe();$row=(new app\common\model\Vod())->infoData(['vod_id'=>1],'*',0)['info'];(new ReflectionMethod($page,'label_vod_detail'))->invoke($page,$row,2);noVodSecrets($page->assigned);check(isset($page->assigned['obj']['vod_play_list'][1]['urls'][1]['play_link']),'Static detail rendering retains the safe directory');
     echo 'framework_audit_vod_access: '.$checks.' checks passed on PHP '.PHP_VERSION.' / MySQL'.PHP_EOL;

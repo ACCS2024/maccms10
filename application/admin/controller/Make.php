@@ -630,13 +630,6 @@ class Make extends Base
 
     public function info()
     {
-        if (($this->_param['tab'] ?? '') === 'vod'
-            && ((int)($GLOBALS['config']['view']['vod_play'] ?? 0) >= 2
-                || (int)($GLOBALS['config']['view']['vod_down'] ?? 0) >= 2)) {
-            // Fail before writing any page or advancing generation progress. A static response
-            // cannot reevaluate the visitor's purchase/password; safe dynamic shells follow separately.
-            return $this->error('播放和下载资源需要动态授权，暂不能生成静态页面；请将播放、下载设为动态后生成详情页');
-        }
         $where = [];
 
         $ids = $this->_param['ids'];
@@ -875,56 +868,26 @@ class Make extends Base
                 }
                 $_REQUEST['id'] = $v['vod_id'];
                 
-                $update_ids[] = $v['vod_id'];
-                $flag = ['play','down'];
-                foreach($flag as $f) {
-                    $GLOBALS['aid'] = mac_get_aid('vod',$f);
-
-                    $this->label_maccms();
-                    //播放页 和 下载页
-                    if ($GLOBALS['config']['view']['vod_'.$f] < 2) {
-
+                foreach (['play', 'down'] as $flag) {
+                    $mode = (int)($GLOBALS['config']['view']['vod_' . $flag] ?? 0);
+                    if ($mode < 2) {
+                        continue;
                     }
-                    else{
-                        if ($GLOBALS['config']['view']['vod_'.$f] == 2) {
-                        	$_REQUEST['sid'] = 1;
-                        	$_REQUEST['nid'] = 1;
-                            $info = $this->label_vod_play($f,$v,$GLOBALS['config']['view']['vod_'.$f]);
-                            $link =  ($f=='play' ?mac_url_vod_play($v,['sid'=>1,'nid'=>1]) : mac_url_vod_down($v,['sid'=>1,'nid'=>1]) );
-                            $this->buildHtml($link, './', mac_tpl_fetch('vod', $info['vod_tpl_'.$f], $f) );
-                            $this->echoLink($f, $link, '', 0);
+                    try {
+                        $pages = \app\common\util\StaticVideoRedirect::pages($v, $flag, $mode);
+                        foreach ($pages as $page) {
+                            $content = \app\common\util\StaticVideoRedirect::render($page);
+                            \app\common\util\StaticVideoRedirect::write($page['url'], $content, ROOT_PATH);
+                            $this->echoLink($flag . '-' . $page['sid'] . '-' . $page['nid'], $page['url'], '', 0);
                         }
-                        elseif ($GLOBALS['config']['view']['vod_'.$f] == 3) {
-                            for ($i = 1; $i <= $v['vod_'.$f.'_total']; $i++) {
-                                for ($j = 1; $j <= $v['vod_'.$f.'_list'][$i]['url_count']; $j++) {
-                                	$_REQUEST['sid'] = $i;
-                                	$_REQUEST['nid'] = $j;
-                                    $info = $this->label_vod_play($f,$v,$GLOBALS['config']['view']['vod_'.$f]);
-                                    $link = ($f=='play' ? mac_url_vod_play($v, ['sid' => $i, 'nid' => $j]) : mac_url_vod_down($v, ['sid' => $i, 'nid' => $j]) );
-                                    $link_sp = explode('?',$link);
-                                    $this->buildHtml($link_sp[0], './', mac_tpl_fetch('vod', $info['vod_tpl_'.$f], $f) );
-                                    if($i==1 && $j==1) {
-                                        $this->echoLink('' . $f . '-' . $i . '-' . $j, $link, '', 0);
-                                    }
-                                }
-                            }
+                        if ($pages === []) {
+                            $this->echoLink($flag . '：无可用资源，跳过静态跳转页', '', '', 0);
                         }
-                        elseif ($GLOBALS['config']['view']['vod_'.$f] == 4) {
-                            $tmp_play_list = $v['vod_'.$f.'_list'];
-                            for ($i = 1; $i <= $v['vod_'.$f.'_total']; $i++) {
-                                $v['vod_'.$f.'_list'] = [];
-                                $v['vod_'.$f.'_list'][$i] = $tmp_play_list[$i];
-                                $info = $this->label_vod_play($f,$v,$GLOBALS['config']['view']['vod_'.$f]);
-                                $link = ($f=='play' ? mac_url_vod_play($v, ['sid' => $i]) : mac_url_vod_down($v, ['sid' => $i]) );
-                                $link_sp = explode('?',$link);
-                                $this->buildHtml($link_sp[0], './', mac_tpl_fetch('vod', $info['vod_tpl_'.$f], $f) );
-                                if($i==1) {
-                                    $this->echoLink('' . $f . '-' . $i, $link, '', 0);
-                                }
-                            }
-                        }
+                    } catch (\Throwable $error) {
+                        return $this->error('静态播放或下载跳转页生成失败，请检查站内 HTML 路径与写入权限');
                     }
                 }
+                $update_ids[] = $v['vod_id'];
                 echo '<br>';
             }
         }
