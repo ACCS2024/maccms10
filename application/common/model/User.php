@@ -1647,6 +1647,17 @@ class User extends Base
         if ($fee_points === null || $source_user_id === null) {
             throw new \RuntimeException('invalid reward parameters');
         }
+        $type = Db::connect()->getConfig('type');
+        if ($type === 'mysql') {
+            $tables = [Db::name('User')->getTable(), Db::name('Plog')->getTable()];
+            $rows = Db::query('SELECT TABLE_NAME AS name, ENGINE AS engine FROM information_schema.TABLES '
+                .'WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME IN (?,?)', $tables, true);
+            foreach ($rows as $row) {
+                $index = array_search($row['name'], $tables, true);
+                if ($index !== false && strtoupper((string)$row['engine']) === 'INNODB') { unset($tables[$index]); }
+            }
+            if ($tables !== []) { throw new \RuntimeException('reward requires transactional tables'); }
+        } elseif ($type !== 'sqlite') { throw new \RuntimeException('unsupported reward storage'); }
         Db::startTrans();
         try {
             $source = $this->where('user_id', $source_user_id)->find();
@@ -1669,15 +1680,27 @@ class User extends Base
                 }
                 $recipients[$recipient] = true;
                 $points = (int)$points;
-                if (!\app\common\util\PointsBalance::credit($recipient, $points)) {
+                $before = \app\common\util\PointsBalance::amount(Db::name('User')->master()
+                    ->where('user_id', $recipient)->lock(true)->value('user_points'), true);
+                if ($before === null || !\app\common\util\PointsBalance::credit($recipient, $points)) {
                     throw new \RuntimeException('reward credit rejected');
                 }
-                $log = (new \app\common\model\Plog())->saveData([
+                $after = Db::name('User')->master()->where('user_id', $recipient)->value('user_points');
+                if ((string)$after !== (string)($before + $points)) {
+                    throw new \RuntimeException('reward balance was not stored exactly');
+                }
+                $expected = [
                     'user_id'=>$recipient, 'plog_type'=>$log_type, 'plog_points'=>$points,
                     'plog_remarks'=>lang('model/user/reward_tip', [$source_user_id, $source['user_name'], $fee_points, $points]),
-                ]);
-                if (($log['code'] ?? null) !== 1) {
-                    throw new \RuntimeException('reward ledger failed');
+                ];
+                $ledger = new Plog();
+                $log = $ledger->saveData($expected);
+                if (($log['code'] ?? null) !== 1) { throw new \RuntimeException('reward ledger failed'); }
+                $stored = Db::name('Plog')->master()->where('plog_id', $ledger->getLastInsID())->find();
+                foreach ($expected as $field=>$value) {
+                    if (!$stored || (string)$stored[$field] !== (string)$value) {
+                        throw new \RuntimeException('reward ledger was not stored exactly');
+                    }
                 }
             }
             Db::commit();
