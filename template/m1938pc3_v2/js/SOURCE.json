@@ -1,0 +1,27 @@
+{
+  "purpose": "Replace a poisoned old-theme jQuery core and a third-party script loader masquerading as lazyload.",
+  "files": {
+    "jquery.js": {
+      "version": "3.7.1",
+      "source": "https://code.jquery.com/jquery-3.7.1.min.js",
+      "sha256": "fc9a93dd241f6b045cbff0481cf4e1901becd0e12fb45166a8f17f95823f0b1a",
+      "commit": "f79d5f1a337528940ab7029d4f8bbba72326f269",
+      "git_source": "https://raw.githubusercontent.com/jquery/jquery/f79d5f1a337528940ab7029d4f8bbba72326f269/dist/jquery.min.js"
+    },
+    "jquery.lazyload.js": {
+      "version": "1.9.7",
+      "commit": "218e50eb4999fe59ac94b939a65c8c988d1d420b",
+      "source": "https://raw.githubusercontent.com/tuupola/jquery_lazyload/218e50eb4999fe59ac94b939a65c8c988d1d420b/jquery.lazyload.min.js",
+      "sha256": "80351098c2478918bb80008d7836499305bf6f4d4b2abf742b8823255bbb0d8e"
+    }
+  },
+  "removed_files_sha256": {
+    "jquery.js": "6ad4fa64e5979085b38af7995979cbe18d0c82f2bf6178b5db761666dc822c1a",
+    "jquery.lazyload.js": "9e31b2d470f49e6eae4b1526f892581f9abf00ed12d34d920e63c4cbc030cb34"
+  },
+  "comparison": {
+    "jquery_1_9_1_official_source": "https://code.jquery.com/jquery-1.9.1.min.js",
+    "jquery_1_9_1_sha256": "c12f6098e641aaca96c60215800f18f5671039aecf812217fab3c0d152f6adb4",
+    "upstream_prefix_matched_bytes_after_normalizing_newlines": 92629
+  }
+}

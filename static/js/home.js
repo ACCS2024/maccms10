@@ -141,32 +141,27 @@ var MAC={
             }
         })
     },
-    'Qrcode':{
-        'Init':function(){
-            $('.mac_qrcode').attr('src', maccms.path +'/index.php/qrcode/index.html?url='+ MAC.Url);
+    'Qrcode': {
+        'Init': function () {
+            var path = typeof maccms !== 'undefined' ? String(maccms.path || '').replace(/\/+$/, '') : '';
+            $('.mac_qrcode').attr('src', path + '/index.php/qrcode/index.html?url=' + encodeURIComponent(MAC.Url));
         }
     },
     'Shorten': {
-        'Init':function(){
-            if($('.mac_shorten').length==0){
-                return;
+        'Init': function () {
+            if ($('.mac_shorten').length) {
+                MAC.Shorten.Get();
             }
-            MAC.Shorten.Get();
         },
-        'Get':function(url,call){
-            url=url||location.href;
-            MAC.Ajax(''+ encodeURIComponent(url),'get','jsonp','',function(r){
-                if (r.code == 1) {
-                    if($('.mac_shorten').length>0) {
-                        $('.mac_shorten').val(r.data.url_short);
-                        $('.mac_shorten').html(r.data.url_short);
-                    }
-                    if(call){
-                        call(r);
-                    }
-
-                }
-            });
+        'Get': function (url, call) {
+            // Sharing stays on this site; preserve the legacy callback payload without a remote JSONP service.
+            url = String(url || location.href);
+            var result = { code: 1, data: { url_short: url } };
+            $('.mac_shorten').val(url).text(url);
+            if (typeof call === 'function') {
+                call(result);
+            }
+            return result;
         }
     },
     'Image':{
