@@ -222,6 +222,7 @@ jobs:
           python3 tests/run_art_resource_audit.py maccms-ci:${{ matrix.php }}
           python3 tests/run_public_content_query_audit.py maccms-ci:${{ matrix.php }}
           python3 tests/run_search_suggest_audit.py maccms-ci:${{ matrix.php }}
+          python3 tests/run_unified_search_audit.py maccms-ci:${{ matrix.php }}
           python3 tests/run_manga_parser_audit.py maccms-ci:${{ matrix.php }}
           python3 tests/run_baidu_urlsend_audit.py maccms-ci:${{ matrix.php }}
           python3 tests/run_sdk_redirect_audit.py maccms-ci:${{ matrix.php }}

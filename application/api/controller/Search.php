@@ -7,7 +7,6 @@ use think\facade\Db;
 use think\facade\Cache;
 use app\common\util\ApiMeilisearchSuggest;
 use app\common\util\MeilisearchService;
-use app\common\util\MeilisearchListBridge;
 
 /**
  * 统一搜索 API
@@ -24,8 +23,9 @@ use app\common\util\MeilisearchListBridge;
  *   code=1 成功时 info 含 wd, module, page, limit,
  *   以及 vod/art/manga 各含 total 和 list 数组
  *
- * 数据来源：与单模块 suggest（Vod/Art/Manga 等）保持一致——
- *   优先 Meilisearch（含已发布/未回收过滤），无命中或未启用则回退 MySQL LIKE。
+ * 数据来源：优先 Meilisearch，命中 ID 必须在数据库 writer 上确认已发布、未回收。
+ *   index 保留成功空命中；suggest 空命中回退 LIKE。未启用或搜索服务失败均回退 LIKE。
+ *   本控制器的 writer 保证不延伸到其他单模块 suggest 入口。
  */
 class Search extends Base
 {
@@ -133,7 +133,152 @@ class Search extends Base
     private function resultCacheKey($endpoint, array $params)
     {
         ksort($params);
-        return 'api_search_' . $endpoint . '_' . md5(json_encode($params, JSON_UNESCAPED_UNICODE));
+        return 'api_search_v2_' . $endpoint . '_' . md5(json_encode($params, JSON_UNESCAPED_UNICODE));
+    }
+
+    /** Request-local schema evidence, scoped to the actual connection and table. */
+    private ?\WeakMap $publicationSchemas = null;
+    private ?object $schemaRequest = null;
+
+    private function normalizedParameters(array $param, bool $index): ?array
+    {
+        $raw = $param['wd'] ?? null;
+        if ((!is_string($raw) && !is_int($raw)) || strlen((string)$raw) > 4096
+            || preg_match('//u', (string)$raw) !== 1 || preg_match('/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/', (string)$raw)) {
+            return null;
+        }
+        $wd = trim((string)$raw);
+        if ($wd === '') { return null; }
+        $wd = mb_substr($wd, 0, 50, 'UTF-8');
+        $limit = $this->paginationInteger($param['limit'] ?? null, $index ? 10 : 5);
+        if ($limit === null) { return null; }
+        $limit = max(1, min($index ? 50 : 10, $limit));
+        $out = ['wd'=>$wd, 'limit'=>$limit];
+        if (!$index) { return $out; }
+        $module = $param['module'] ?? 'all';
+        if ((!is_string($module) && !is_int($module)) || strlen((string)$module) > 32) { return null; }
+        $module = strtolower(trim((string)$module));
+        if (!in_array($module, ['all','vod','art','manga'], true)) { $module = 'all'; }
+        $page = $this->paginationInteger($param['page'] ?? null, 1);
+        if ($page === null) { return null; }
+        $page = max(1, $page);
+        if ($page - 1 > intdiv(PHP_INT_MAX, $limit)) { return null; }
+        return $out + ['module'=>$module, 'page'=>$page, 'offset'=>($page - 1) * $limit];
+    }
+
+    private function paginationInteger(mixed $raw, int $default): ?int
+    {
+        if ($raw === null) { return $default; }
+        if ((!is_int($raw) && !is_string($raw)) || strlen((string)$raw) > 32) { return null; }
+        $raw = trim((string)$raw);
+        if (!preg_match('/^[+-]?[0-9]{1,10}$/D', $raw)) { return null; }
+        $value = (int)$raw;
+        if (PHP_INT_SIZE < 8 || $value < -4294967295 || $value > 4294967295) { return null; }
+        return $value;
+    }
+
+    /** Like PublicContentQuery, omit recycle only when read-only schema discovery proves it absent. */
+    private function publishedQuery(string $kind): \think\db\Query
+    {
+        if (!isset(self::$kindRichMeta[$kind])) { throw new \InvalidArgumentException('Unsupported search kind'); }
+        $request = request();
+        if ($this->schemaRequest !== $request) { $this->schemaRequest = $request; $this->publicationSchemas = new \WeakMap(); }
+        $query = Db::name($kind)->master();
+        $connection = $query->getConnection();
+        $table = $query->getTable();
+        $schemas = $this->publicationSchemas[$connection] ?? [];
+        if (!isset($schemas[$table])) {
+            if (!$connection->getPdo() instanceof \PDO) { $connection->query('SELECT 1', [], true); }
+            $driver = $connection->getPdo()->getAttribute(\PDO::ATTR_DRIVER_NAME);
+            if ($driver === 'mysql') {
+                $rows = $connection->query('SELECT COLUMN_NAME AS field FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=?', [$table], true);
+            } elseif ($driver === 'sqlite') {
+                $rows = $connection->query('SELECT name AS field FROM pragma_table_info(?)', [$table], true);
+            } else { throw new \RuntimeException('Unsupported search schema driver'); }
+            $fields = array_column($rows, 'field');
+            if (!in_array($kind.'_id', $fields, true) || !in_array($kind.'_status', $fields, true)) {
+                throw new \RuntimeException('Public search schema could not be confirmed');
+            }
+            $conditions = [[$kind.'_status', '=', 1]];
+            if (in_array($kind.'_recycle_time', $fields, true)) { $conditions[] = [$kind.'_recycle_time', '=', 0]; }
+            $schemas[$table] = $conditions;
+            $this->publicationSchemas[$connection] = $schemas;
+        }
+        return $query->where($schemas[$table]);
+    }
+
+    private function resultIds(array $rows, string $kind, int $maximum): ?array
+    {
+        if (!array_is_list($rows) || count($rows) > $maximum) { return null; }
+        $ids = [];
+        foreach ($rows as $row) {
+            if (!is_array($row) || ($row['module'] ?? null) !== $kind) { return null; }
+            $id = $row['id'] ?? null;
+            if ((!is_int($id) && !is_string($id)) || !preg_match('/^[1-9][0-9]{0,9}$/D', (string)$id)
+                || (int)$id > 4294967295 || isset($ids[(int)$id])) { return null; }
+            $ids[(int)$id] = (int)$id;
+        }
+        return array_values($ids);
+    }
+
+    private function allVisible(string $kind, array $ids): bool
+    {
+        $query = $this->publishedQuery($kind);
+        return $ids === [] || (int)$query->whereIn($kind.'_id', $ids)->count() === count($ids);
+    }
+
+    private function cachedIndexVisible(array $cached, array $param): bool
+    {
+        $info = $cached['info'] ?? null;
+        $kinds = $param['module'] === 'all' ? ['vod','art','manga'] : [$param['module']];
+        if (($cached['code'] ?? null) !== 1 || !is_string($cached['msg'] ?? null) || !is_array($info)
+            || array_diff(array_keys($cached), ['code','msg','info'])
+            || array_diff(array_keys($info), array_merge(['wd','module','page','limit'], $kinds))) { return false; }
+        foreach (['module','page','limit'] as $key) { if (($info[$key] ?? null) !== $param[$key]) { return false; } }
+        foreach ($kinds as $kind) {
+            $part = $info[$kind] ?? null;
+            if (!is_array($part) || array_diff(array_keys($part), ['total','list']) || !is_int($part['total'] ?? null)
+                || $part['total'] < 0 || !is_array($part['list'] ?? null)) { return false; }
+            $ids = $this->resultIds($part['list'], $kind, $param['limit']);
+            if ($ids === null || count($ids) > $part['total']) { return false; }
+            foreach ($part['list'] as $row) {
+                if (count($row) !== 22 || array_diff(array_keys($row), ['id','name','en','sub','pic','actor','director','remarks','score','area','year','class','tag','blurb','time','hits','link','type_id','type_id_1','type_is_vip_exclusive','module','module_name'])) { return false; }
+                foreach (['id','time','hits','type_id','type_id_1','type_is_vip_exclusive'] as $field) { if (!is_int($row[$field] ?? null)) { return false; } }
+                foreach (['name','en','sub','pic','actor','director','remarks','area','year','class','tag','blurb','link','module','module_name'] as $field) { if (!is_string($row[$field] ?? null)) { return false; } }
+                if (!is_string($row['score']) && !is_int($row['score']) && !is_float($row['score'])) { return false; }
+            }
+            if (!$this->allVisible($kind, $ids)) { return false; }
+        }
+        return true;
+    }
+
+    private function cachedSuggestVisible(array $cached, int $limit): bool
+    {
+        $info = $cached['info'] ?? null;
+        if (($cached['code'] ?? null) !== 1 || !is_string($cached['msg'] ?? null) || !is_array($info)
+            || array_diff(array_keys($cached), ['code','msg','info']) || array_diff(array_keys($info), ['wd','total','list'])
+            || !is_array($info['list'] ?? null) || !array_is_list($info['list']) || count($info['list']) > 3 * $limit
+            || ($info['total'] ?? null) !== count($info['list'])) { return false; }
+        $groups = ['vod'=>[], 'art'=>[], 'manga'=>[]];
+        foreach ($info['list'] as $row) {
+            if (!is_array($row) || count($row) !== 7 || !is_int($row['id'] ?? null) || !is_string($row['module'] ?? null) || !isset($groups[$row['module']])
+                || array_diff(array_keys($row), ['id','name','en','pic','link','module','module_name'])) { return false; }
+            foreach (['name','en','pic','link','module_name'] as $field) { if (!is_string($row[$field] ?? null)) { return false; } }
+            $groups[$row['module']][] = $row;
+        }
+        foreach ($groups as $kind=>$rows) {
+            $ids = $this->resultIds($rows, $kind, $limit);
+            if ($ids === null || !$this->allVisible($kind, $ids)) { return false; }
+        }
+        return true;
+    }
+
+    private function unavailable(string $endpoint, \Throwable $error)
+    {
+        try {
+            \think\facade\Log::error('Unified Search '.$endpoint.' failed: '.get_class($error).' at '.basename($error->getFile()).':'.$error->getLine());
+        } catch (\Throwable $loggingError) {}
+        return json(['code'=>1002, 'msg'=>'搜索暂不可用，请稍后再试']);
     }
 
     /**
@@ -141,41 +286,26 @@ class Search extends Base
      */
     public function index(\think\Request $request)
     {
-        $param = $request->param();
+        try { return $this->indexResult($request); }
+        catch (\Throwable $error) { return $this->unavailable('index', $error); }
+    }
 
-        // 关键字校验
-        $wd = trim($param['wd'] ?? '');
-        if (empty($wd)) {
-            return json(['code' => 1001, 'msg' => '参数错误: wd 不能为空']);
+    private function indexResult(\think\Request $request)
+    {
+        $param = $this->normalizedParameters($request->param(), true);
+        if ($param === null) { return json(['code'=>1001, 'msg'=>'参数错误']); }
+        ['wd'=>$wd, 'module'=>$module, 'limit'=>$limit, 'page'=>$page, 'offset'=>$offset] = $param;
+        if (($GLOBALS['config']['app']['search'] ?? '0') != '1') {
+            return json(['code'=>999, 'msg'=>'搜索功能已关闭']);
         }
-        if (mb_strlen($wd) > 50) {
-            $wd = mb_substr($wd, 0, 50);
-        }
-
-        // 检查站点搜索开关
-        if ($GLOBALS['config']['app']['search'] != '1') {
-            return json(['code' => 999, 'msg' => '搜索功能已关闭']);
-        }
-
-        // 模块范围
-        $module = strtolower(trim($param['module'] ?? 'all'));
-        $allowModules = ['all', 'vod', 'art', 'manga'];
-        if (!in_array($module, $allowModules)) {
-            $module = 'all';
-        }
-
-        // 分页参数
-        $limit = max(1, min(50, intval($param['limit'] ?? 10)));
-        $page = max(1, intval($param['page'] ?? 1));
-        $offset = ($page - 1) * $limit;
 
         // SQL 安全过滤（保留 CJK 字符；走 trait 上的统一方法）
         $safeWd = $this->format_sql_string($wd);
-        if (empty($safeWd)) {
+        if ($safeWd === '') {
             return json(['code' => 1001, 'msg' => '参数错误: 关键字无效']);
         }
 
-        // 1) 命中缓存：直接返回，省掉 LIKE 三表扫与 Meili 调用
+        // 1) 缓存仅在 writer 再次核验全部源 ID 后复用，省掉 LIKE 与 Meili 调用
         $cacheKey = $this->resultCacheKey('index', [
             'wd'     => $safeWd,
             'module' => $module,
@@ -183,7 +313,7 @@ class Search extends Base
             'limit'  => $limit,
         ]);
         $cached = Cache::get($cacheKey);
-        if (is_array($cached)) {
+        if (is_array($cached) && $this->cachedIndexVisible($cached, $param)) {
             // 缓存命中也保留 wd 原文用于回显
             if (isset($cached['info']) && is_array($cached['info'])) {
                 $cached['info']['wd'] = $wd;
@@ -230,120 +360,71 @@ class Search extends Base
      */
     private function searchKindRich($kind, $wd, $offset, $limit)
     {
-        $meta = self::$kindRichMeta[$kind] ?? null;
-        if (!$meta) {
-            return ['total' => 0, 'list' => []];
-        }
-
-        // 1) Meilisearch 路径：与单模块 listData 同一套过滤规则
-        $meiliRows = null;
-        $meiliTotal = 0;
+        $meta = self::$kindRichMeta[$kind];
         if (MeilisearchService::enabled()) {
             $filter = MeilisearchService::filterPublishedKind($kind);
-            if ($filter !== '') {
-                $sr = MeilisearchService::search($wd, $filter, $limit, $offset);
-                if (!empty($sr['ok'])) {
-                    $hits = isset($sr['hits']) && is_array($sr['hits']) ? $sr['hits'] : [];
-                    $meiliTotal = max(0, (int)($sr['estimatedTotalHits'] ?? 0));
-                    $re = '/^' . preg_quote($kind, '/') . '_(\d+)$/';
-                    $ids = [];
-                    foreach ($hits as $hit) {
-                        if (!empty($hit['id']) && is_string($hit['id']) && preg_match($re, $hit['id'], $mm)) {
-                            $ids[] = (int)$mm[1];
-                        }
-                    }
-                    $ids = MeilisearchListBridge::refinePrimaryIdsForPublished($ids, $kind);
-                    if (!empty($ids)) {
-                        $meiliRows = $this->loadRowsByIdsRich($kind, $ids, $meta);
-                    } else {
-                        // Meili ok 但无命中：直接返回空（保持与单模块行为一致）
-                        $meiliRows = [];
-                    }
-                }
+            $sr = MeilisearchService::search($wd, $filter, $limit, $offset);
+            if (!empty($sr['ok'])) {
+                $ids = $this->hitIds($kind, $sr['hits'] ?? null, $limit);
+                $rows = $this->loadRowsByIdsRich($kind, $ids, $meta);
+                $list = $this->rowsToRichItems($kind, $rows, $meta);
+                $estimate = max(0, (int)($sr['estimatedTotalHits'] ?? 0));
+                return ['total'=>$list === [] ? $estimate : max($estimate, count($list) + $offset), 'list'=>$list];
             }
         }
-
-        if ($meiliRows !== null) {
-            $list = $this->rowsToRichItems($kind, $meiliRows, $meta);
-            return [
-                'total' => $meiliRows === [] ? $meiliTotal : max($meiliTotal, count($list) + $offset),
-                'list'  => $list,
-            ];
-        }
-
-        // 2) MySQL LIKE 回退
-        $where = [
-            $meta['status'] => 1,
-        ];
-        $where[] = [$meta['like'], 'like', '%' . $wd . '%'];
-        if (!empty($meta['recycle'])) {
-            try {
-                $total = Db::name($meta['table'])->where($where)->where($meta['recycle'], 0)->count();
-            } catch (\Throwable $e) {
-                $total = Db::name($meta['table'])->where($where)->count();
-            }
-        } else {
-            $total = Db::name($meta['table'])->where($where)->count();
-        }
-        $list = [];
-        if ($total > 0) {
-            $q = Db::name($meta['table'])->field($meta['field'])->where($where);
-            if (!empty($meta['recycle'])) {
-                try {
-                    $q->where($meta['recycle'], 0);
-                } catch (\Throwable $e) {
-                    // 容错：某些旧库可能无 recycle 字段
-                }
-            }
-            $rows = $q->order($meta['order'])->limit($offset, $limit)->select();
-            $list = $this->rowsToRichItems($kind, $rows, $meta);
-        }
-
-        return [
-            'total' => (int)$total,
-            'list'  => $list,
-        ];
+        $query = $this->publishedQuery($kind)->where([[$meta['like'], 'like', '%'.$wd.'%']]);
+        $total = (int)(clone $query)->count();
+        if ($offset >= $total) { return ['total'=>$total, 'list'=>[]]; }
+        $rows = $query->field($meta['field'])->order($meta['order'])->limit($offset, $limit)->select()->toArray();
+        return ['total'=>$total, 'list'=>$this->rowsToRichItems($kind, $rows, $meta)];
     }
 
-    /**
-     * 按 ID 列表（Meili 顺序）加载富字段行；status=1 且若有 recycle 字段则 recycle=0。
-     *
-     * @param string             $kind
-     * @param int[]              $ids
-     * @param array<string,mixed> $meta
-     *
-     * @return array<int, array<string, mixed>>
-     */
+    private function hitIds(string $kind, mixed $hits, int $limit): array
+    {
+        $ids = [];
+        foreach (array_slice(is_array($hits) ? $hits : [], 0, $limit) as $hit) {
+            if (is_array($hit) && is_string($hit['id'] ?? null)
+                && preg_match('/^'.preg_quote($kind, '/').'_([1-9][0-9]{0,9})$/D', $hit['id'], $match)
+                && (int)$match[1] <= 4294967295) { $ids[] = (int)$match[1]; }
+        }
+        return array_values(array_unique($ids));
+    }
+
+    /** Preserve the suggestion service's projection, rank order and fallback semantics with writer visibility. */
+    private function suggestKind(string $kind, string $wd, int $limit): array
+    {
+        $meta = [
+            'pk'=>$kind.'_id',
+            'field'=>$kind.'_id,'.$kind.'_name,'.$kind.'_en,'.$kind.'_pic,'.$kind.'_time,type_id,type_id_1',
+        ];
+        $like = $kind.'_name|'.$kind.'_en';
+        if ($kind === 'manga') { $meta['field'] .= ',manga_sub'; $like .= '|manga_sub'; }
+        $rows = [];
+        if (MeilisearchService::enabled()) {
+            $result = MeilisearchService::search($wd, MeilisearchService::filterPublishedKind($kind), $limit, 0);
+            if (!empty($result['ok'])) {
+                $rows = $this->loadRowsByIdsRich($kind, $this->hitIds($kind, $result['hits'] ?? null, $limit), $meta);
+            }
+        }
+        if ($rows === []) {
+            $rows = $this->publishedQuery($kind)->field($meta['field'])
+                ->where([[$like, 'like', '%'.addcslashes($wd, '%_\\').'%']])
+                ->order($meta['pk'].' desc')->limit($limit)->select()->toArray();
+        }
+        return array_map(static fn(array $row)=>ApiMeilisearchSuggest::toSlimItem($kind, $row), $rows);
+    }
+
+    /** Real public database rows in Meili rank order; an exception never relaxes the publication guard. */
     private function loadRowsByIdsRich($kind, array $ids, array $meta)
     {
-        $ids = array_values(array_unique(array_filter(array_map('intval', $ids), static function ($v) {
-            return $v > 0;
-        })));
-        if ($ids === []) {
-            return [];
-        }
-        try {
-            $q = Db::name($meta['table'])->field($meta['field'])->where($meta['status'], 1)->whereIn($meta['pk'], $ids);
-            if (!empty($meta['recycle'])) {
-                $q->where($meta['recycle'], 0);
-            }
-            $rows = $q->select();
-        } catch (\Throwable $e) {
-            $rows = Db::name($meta['table'])->field($meta['field'])->where($meta['status'], 1)->whereIn($meta['pk'], $ids)->select();
-        }
-        if (!is_array($rows) || $rows === []) {
-            return [];
-        }
+        $ids = array_values(array_unique($ids));
+        $query = $this->publishedQuery($kind);
+        if ($ids === []) { return []; }
+        $rows = $query->field($meta['field'])->whereIn($meta['pk'], $ids)->select()->toArray();
         $map = [];
-        foreach ($rows as $row) {
-            $map[(int)$row[$meta['pk']]] = $row;
-        }
+        foreach ($rows as $row) { $map[(int)$row[$meta['pk']]] = $row; }
         $ordered = [];
-        foreach ($ids as $id) {
-            if (!empty($map[$id])) {
-                $ordered[] = $map[$id];
-            }
-        }
+        foreach ($ids as $id) { if (isset($map[$id])) { $ordered[] = $map[$id]; } }
         return $ordered;
     }
 
@@ -463,40 +544,37 @@ class Search extends Base
      *   wd    - string 必填，关键字
      *   limit - number 可选，每个模块返回数量，1~10，默认 5
      *
-     * 数据来源：直接复用 ApiMeilisearchSuggest::suggestListDataRes（与单模块 suggest 同一条路径）。
+     * 数据来源：复用 MeilisearchService 和固定 slim DTO；此公开入口独立读取 writer 发布状态。
      */
     public function suggest(\think\Request $request)
     {
-        $param = $request->param();
+        try { return $this->suggestResult($request); }
+        catch (\Throwable $error) { return $this->unavailable('suggest', $error); }
+    }
 
-        $wd = trim($param['wd'] ?? '');
-        if (empty($wd)) {
-            return json(['code' => 1001, 'msg' => '参数错误: wd 不能为空']);
+    private function suggestResult(\think\Request $request)
+    {
+        $param = $this->normalizedParameters($request->param(), false);
+        if ($param === null) { return json(['code'=>1001, 'msg'=>'参数错误']); }
+        ['wd'=>$wd, 'limit'=>$limit] = $param;
+        if (($GLOBALS['config']['app']['search'] ?? '0') != '1') {
+            return json(['code'=>999, 'msg'=>'搜索功能已关闭']);
         }
-        if (mb_strlen($wd) > 50) {
-            $wd = mb_substr($wd, 0, 50);
-        }
 
-        if ($GLOBALS['config']['app']['search'] != '1') {
-            return json(['code' => 999, 'msg' => '搜索功能已关闭']);
-        }
-
-        $limit = max(1, min(10, intval($param['limit'] ?? 5)));
-
-        // XSS 过滤交给 mac_filter_xss；ApiMeilisearchSuggest 走 Meili / model->listData，
+        // XSS 过滤交给 mac_filter_xss；Meili / 固定字段查询
         // 自带 PDO 预处理，这里无需再做 SQL 关键字剥离（且会破坏中文检索）。
         $wdFilter = function_exists('mac_filter_xss') ? mac_filter_xss($wd) : $wd;
         if ($wdFilter === '') {
             return json(['code' => 1001, 'msg' => '参数错误: 关键字无效']);
         }
 
-        // 1) 命中缓存：直接返回
+        // 1) 缓存仅在 writer 再次核验全部源 ID 后复用
         $cacheKey = $this->resultCacheKey('suggest', [
             'wd'    => $wdFilter,
             'limit' => $limit,
         ]);
         $cached = Cache::get($cacheKey);
-        if (is_array($cached)) {
+        if (is_array($cached) && $this->cachedSuggestVisible($cached, $limit)) {
             if (isset($cached['info']) && is_array($cached['info'])) {
                 $cached['info']['wd'] = $wd;
             }
@@ -517,13 +595,8 @@ class Search extends Base
         $suggestions = [];
 
         foreach (['vod', 'art', 'manga'] as $kind) {
-            $res = ApiMeilisearchSuggest::suggestListDataRes($kind, $wdFilter, $limit);
-            if (!is_array($res) || (int)($res['code'] ?? 0) !== 1) {
-                continue;
-            }
-            $items = isset($res['list']) && is_array($res['list']) ? $res['list'] : [];
-            foreach ($items as $it) {
-                // suggestListDataRes 已输出 slim 结构（含 *_link）；映射为跨模块统一 shape。
+            foreach ($this->suggestKind($kind, $wdFilter, $limit) as $it) {
+                // 固定 slim DTO（含 *_link）映射为跨模块统一 shape。
                 $linkKey = $kind . '_link';
                 $suggestions[] = [
                     'id'          => (int)($it['id'] ?? 0),
