@@ -12,6 +12,9 @@ class Route
 {
     public function execute($addon = null, $controller = null, $action = null)
     {
+        foreach ([$addon, $controller, $action] as $value) {
+            if ($value !== null && !is_string($value)) { throw new HttpException(404, 'Invalid addon route'); }
+        }
         $request   = request();
         $convert   = Config::get('route.url_convert') ?? true;
         $filter    = $convert ? 'strtolower' : 'trim';
@@ -19,6 +22,11 @@ class Route
         $addon      = $addon      ? trim(call_user_func($filter, $addon))      : '';
         $controller = $controller ? trim(call_user_func($filter, $controller)) : 'index';
         $action     = $action     ? trim(call_user_func($filter, $action))     : 'index';
+        if (!preg_match('/^[a-zA-Z0-9_]+$/D', $addon)
+            || !preg_match('/^[a-zA-Z0-9_]+(?:\.[a-zA-Z0-9_]+)*$/D', $controller)
+            || !preg_match('/^[a-zA-Z][a-zA-Z0-9_]*$/D', $action)) {
+            throw new HttpException(404, 'Invalid addon route');
+        }
 
         Event::trigger('addon_begin', $request);
 
@@ -46,6 +54,10 @@ class Route
 
         $vars = [];
         if (is_callable([$instance, $action])) {
+            $method = new \ReflectionMethod($instance, $action);
+            if ($method->isStatic() || $method->isConstructor() || $method->getDeclaringClass()->getName() === Controller::class) {
+                throw new HttpException(404, 'Invalid addon action');
+            }
             $call = [$instance, $action];
         } elseif (is_callable([$instance, '_empty'])) {
             $call = [$instance, '_empty'];

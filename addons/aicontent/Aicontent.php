@@ -27,13 +27,13 @@ class Aicontent extends Addons
      */
     public function install(): bool
     {
-        $sqlFile = $this->addon_path . 'install.sql';
+        $sqlFile = $this->addons_path . 'install.sql';
         if (is_file($sqlFile)) {
             $sql = file_get_contents($sqlFile);
             $statements = array_filter(array_map('trim', explode(';', $sql)));
             foreach ($statements as $statement) {
                 if ($statement) {
-                    \think\Db::execute($statement);
+                    \think\facade\Db::execute($statement);
                 }
             }
         }
@@ -48,6 +48,11 @@ class Aicontent extends Addons
     public function enable(): bool
     {
         $this->deployAssets();
+        return true;
+    }
+
+    public function disable(): bool
+    {
         return true;
     }
 
@@ -73,7 +78,7 @@ class Aicontent extends Addons
      */
     private function deployAssets()
     {
-        $srcBase = $this->addon_path . 'assets' . DS;
+        $srcBase = $this->addons_path . 'assets' . DS;
         $dstBase = ROOT_PATH . 'static' . DS . 'addons' . DS . 'aicontent' . DS;
 
         if (!is_dir($srcBase)) {
@@ -123,7 +128,9 @@ class Aicontent extends Addons
                 continue;
             }
             $path = $dir . DS . $item;
-            if (is_dir($path)) {
+            if (is_link($path)) {
+                unlink($path);
+            } elseif (is_dir($path)) {
                 $this->removeDir($path);
             } else {
                 unlink($path);
@@ -138,7 +145,7 @@ class Aicontent extends Addons
      */
     public function uninstall(): bool
     {
-        \think\Db::execute('DROP TABLE IF EXISTS `mac_ai_task`');
+        \think\facade\Db::execute('DROP TABLE IF EXISTS `mac_ai_task`');
 
         $target = ROOT_PATH . 'static' . DS . 'addons' . DS . 'aicontent';
         if (is_link($target)) {
@@ -204,9 +211,8 @@ class Aicontent extends Addons
         // and {:lang('key')} in templates return the correct locale strings.
         // ThinkPHP 5.0 does not expose getLangSet(); read the cookie that MaCMS
         // sets when the admin switches language, then fall back to the app config.
-        $locale = \think\Cookie::get('think_lang')
-               ?: \think\Config::get('default_lang')
-               ?: 'en';
+        $locale = \think\facade\Lang::getLangSet();
+        $locale = str_starts_with(strtolower($locale), 'zh') ? 'zh-cn' : 'en';
         $langFile = ADDON_PATH . 'aicontent' . DS . 'lang' . DS . $locale . '.php';
         if (!is_file($langFile)) {
             // Normalize: zh-* → zh-cn, anything else → en
@@ -214,22 +220,9 @@ class Aicontent extends Addons
             $langFile = ADDON_PATH . 'aicontent' . DS . 'lang' . DS . $fallback . '.php';
         }
         if (is_file($langFile)) {
-            \think\Lang::load($langFile);
+            \think\facade\Lang::load([$langFile], $locale);
         }
-
-        \think\Loader::addNamespace(
-            'addons\\aicontent\\service',
-            ADDON_PATH . 'aicontent' . DS . 'service' . DS
-        );
-
-        // maccms disables ThinkPHP route checking (url_route_on=false) by default,
-        // which prevents the fastadmin-addons Route::any('addons/:addon/...') from matching.
-        // Only enable route checking when the request targets this addon, to avoid
-        // side-effects on MaCMS's own URL resolution for all other requests.
-        $uri = $_SERVER['REQUEST_URI'] ?? '';
-        if (strpos($uri, 'addons/aicontent') !== false) {
-            \think\App::route(true);
-        }
+        // Composer registers addons\\ and addons_boot() registers the TP8 routes.
     }
 
     /**
@@ -239,10 +232,10 @@ class Aicontent extends Addons
      */
     public function actionBegin(&$params)
     {
-        $request    = \think\Request::instance();
+        $request    = request();
         $controller = strtolower($request->controller());
         $action     = strtolower($request->action());
-        $module     = strtolower($request->module());
+        $module     = strtolower(app()->http->getName());
 
         if ($module !== 'admin') {
             return;
@@ -267,13 +260,16 @@ class Aicontent extends Addons
      */
     public function viewFilter(&$content)
     {
+        // TP8 does not emit the old TP5 action_begin hook; inspect the resolved request at render time.
+        $params = null;
+        $this->actionBegin($params);
         // ── CSRF token ────────────────────────────────────────────────────────
         // Inject only on pages that actually interact with this plugin's API:
         //   - Content edit pages (vod/art/topic info) — flagged by AICONTENT_INJECT
         //   - Addon controller pages (config, generate, index, addon list)
-        $req = \think\Request::instance();
+        $req = request();
         $needsToken = defined('AICONTENT_INJECT')
-            || (strtolower($req->module()) === 'admin'
+            || (strtolower(app()->http->getName()) === 'admin'
                 && strtolower($req->controller()) === 'addon');
         if ($needsToken && strpos($content, '</body>') !== false) {
             $token = self::generateCsrfToken();
@@ -288,7 +284,7 @@ class Aicontent extends Addons
         // Fix logo image URL: info.ini uses /static/addons/... which is root-relative,
         // but MaCMS may be installed in a subdirectory. Prepend ROOT_PATH in JS.
         // Also compact the addon-card action buttons so English labels don't wrap.
-        $req = \think\Request::instance();
+        $req = request();
         if (strtolower($req->controller()) === 'addon'
             && strtolower($req->action()) === 'index') {
             $fix = <<<'JS'
@@ -351,7 +347,7 @@ JS;
         // in case MaCMS does not forward the extend attribute to the rendered <select>.
         $isOurConfigPage = strpos($content, 'id="ai-provider-select"') !== false;
         if (!$isOurConfigPage) {
-            $req = \think\Request::instance();
+            $req = request();
             if (strtolower($req->controller()) === 'addon'
                 && strtolower($req->action()) === 'config'
                 && strtolower($req->param('name', '')) === 'aicontent') {
@@ -382,7 +378,7 @@ JS;
             return;
         }
 
-        $request     = \think\Request::instance();
+        $request     = request();
         $controller  = strtolower($request->controller());
         $isArticle   = ($controller === 'art');
         $contentType = $isArticle ? 'article' : 'video';

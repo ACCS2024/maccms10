@@ -52,7 +52,7 @@
 
         $(document).on('click', '.btn-disable,.btn-enable', function() {
             $.ajax({
-                type: 'get',
+                type: 'post',
                 dataType:'json',
                 url: "{:url('addon/state')}",
                 data:{name:$(this).attr('data-name'),action:$(this).attr('data-action'),force:0},
@@ -68,11 +68,14 @@
             });
         });
         $(document).on('click', '.btn-install', function() {
-
+            $.ajax({type: 'post', dataType: 'json', url: "{:url('addon/install')}",
+                data: {name: $(this).attr('data-name')},
+                success: function(result) { layer.msg(result.msg); if (result.code === 1) load_list(); }
+            });
         });
         $(document).on('click', '.btn-uninstall', function() {
             $.ajax({
-                type: 'get',
+                type: 'post',
                 dataType:'json',
                 url: "{:url('addon/uninstall')}",
                 data:{name:$(this).attr('data-name'),force:0},
@@ -100,8 +103,8 @@
         layer.msg("{:lang('wait_submit')}",{time:500000});
 
         $.ajax({
-            type: 'get',
-            dataType:'jsonp',
+            type: 'post',
+            dataType:'json',
             url: url,
             success:function($r){
                 $.each($r.rows,function(i,row){
@@ -117,7 +120,7 @@
                         }
                     }
                     else{
-                        h+='<a href="javascript:;" class="layui-btn layui-btn-sm btn-install"><i class="layui-icon">&#xe601;</i>{:lang('install')}</a>';
+                        h+='<a href="javascript:;" class="layui-btn layui-btn-sm btn-install" data-name="'+row.name+'"><i class="layui-icon">&#xe601;</i>{:lang('install')}</a>';
                     }
                     h+='</span> <span class="fr" style="margin-top:10px;"> <a href="javascript:;" class="btn-info text-gray " data-name="'+row.name+'" title="{:lang('detail')}"><i class="layui-icon">&#xe63c;</i></a> </span> </div> </div> </div> </div>';
 

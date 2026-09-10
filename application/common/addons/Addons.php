@@ -32,7 +32,7 @@ abstract class Addons
     final public function getInfo(string $name = ''): array
     {
         if (empty($name)) {
-            $name = $this->getName();
+            $name = strtolower($this->getName());
         }
         $info = Config::get($name . '.' . $this->infoRange) ?: [];
         if (empty($info)) {
@@ -47,7 +47,7 @@ abstract class Addons
     final public function getConfig(string $name = ''): array
     {
         if (empty($name)) {
-            $name = $this->getName();
+            $name = strtolower($this->getName());
         }
         $config = [];
         $file   = ADDON_PATH . $name . DS . 'config.php';
@@ -67,7 +67,7 @@ abstract class Addons
     final public function getFullConfig(string $name = ''): array
     {
         if (empty($name)) {
-            $name = $this->getName();
+            $name = strtolower($this->getName());
         }
         $file = ADDON_PATH . $name . DS . 'config.php';
         return is_file($file) ? (include $file ?: []) : [];
@@ -76,7 +76,7 @@ abstract class Addons
     final public function setConfig(string $name = '', array $config = []): bool
     {
         if (empty($name)) {
-            $name = $this->getName();
+            $name = strtolower($this->getName());
         }
         Config::set([$this->configRange => $config], $name);
         return true;
@@ -85,7 +85,7 @@ abstract class Addons
     final public function setInfo(string $name = '', array $array = []): array
     {
         if (empty($name)) {
-            $name = $this->getName();
+            $name = strtolower($this->getName());
         }
         Config::set([$this->infoRange => $array], $name);
         return $array;

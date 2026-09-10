@@ -1,12 +1,8 @@
 <?php
 namespace app\admin\controller;
-use think\facade\Db;
 use think\addons\AddonException;
 use think\addons\Service;
 use think\facade\Cache;
-use think\facade\Config;
-use think\Exception;
-use app\common\util\Dir;
 
 class Addon extends Base
 {
@@ -18,6 +14,7 @@ class Addon extends Base
     public function index()
     {
         $param = \think\facade\Request::param();
+        $param['wd'] = is_string($param['wd'] ?? null) ? $param['wd'] : '';
 
         $this->assign('param',$param);
         $this->assign('title',lang('admin/addon/title'));
@@ -27,7 +24,7 @@ class Addon extends Base
     public function config()
     {
         $param = \think\facade\Request::param();
-        $name = $param['name'];
+        $name = $this->pluginName($param['name'] ?? '');
         if(empty($name)){
             return $this->error(lang('param_err'));
         }
@@ -63,8 +60,8 @@ class Addon extends Base
                 set_addon_fullconfig($name, $config);
                 Service::refresh();
                 return $this->success(lang('save_ok'));
-            } catch (Exception $e) {
-                return $this->error($e->getMessage());
+            } catch (\Throwable $e) {
+                return $this->operationFailure($e);
             }
         }
 
@@ -85,21 +82,9 @@ class Addon extends Base
         $limit = (int)$this->request->get("limit");
         $filter = $this->request->get("filter");
         $search = $this->request->get("search");
-        $search = htmlspecialchars(strip_tags($search));
-        $key = $GLOBALS['config']['app']['cache_flag']. '_'. 'onlineaddons';
-        $onlineaddons = Cache::get($key);
-        if (!is_array($onlineaddons)) {
-            $onlineaddons = [];
-            $response = mac_curl_get( 'http://api.maccms.com/' . 'addon/index');  // 原单字符拼接免杀已还原;该域已被 mac_curl_get 底层拦截
-            $json = !empty($response) ? json_decode($response, true) : [];
-            if (!empty($json['rows'])) {
-                foreach ($json['rows'] as $row) {
-                    $onlineaddons[$row['name']] = $row;
-                }
-            }
-            Cache::set($key, $onlineaddons, 600);
-        }
-        $filter = (array)json_decode($filter, true);
+        $search = htmlspecialchars(strip_tags(is_string($search) ? $search : ''));
+        $onlineaddons = []; // Retired remote catalog is never queried.
+        $filter = is_string($filter) ? (array)json_decode($filter, true) : [];
         $addons = get_addon_list();
         $list = [];
         foreach ($addons as $k => $v) {
@@ -133,7 +118,7 @@ class Addon extends Base
             }
             $v['url'] = addon_url($v['name']);
             $v['createtime'] = filemtime(ADDON_PATH . $v['name']);
-            $v['install'] = '1';
+            $v['install'] = (string)($v['installed'] ?? '1');
             if ($filter && isset($filter['category_id']) && is_numeric($filter['category_id']) && $filter['category_id'] != $v['category_id']) {
                 continue;
             }
@@ -145,8 +130,7 @@ class Addon extends Base
         }
         $result = array("total" => $total, "rows" => $list);
 
-        $callback = $this->request->get('callback') ? "jsonp" : "json";
-        return $callback($result);
+        return json($result);
     }
 
     /**
@@ -154,9 +138,10 @@ class Addon extends Base
      */
     public function install()
     {
+        $this->requirePost();
         $param = \think\facade\Request::param();
-        $name = $param['name'];
-        $force = (int)$param['force'];
+        $name = $this->pluginName($param['name'] ?? '');
+        $force = (int)($param['force'] ?? 0);
         if (!$name) {
             return $this->error(lang('param_err'));
         }
@@ -179,11 +164,11 @@ class Addon extends Base
             $info = get_addon_info($name);
             $info['config'] = get_addon_config($name) ? 1 : 0;
             $info['state'] = 1;
-            return $this->success(lang('install_err'));
+            return $this->success(lang('install_ok'));
         } catch (AddonException $e) {
-            return $this->result($e->getData(), $e->getCode(), $e->getMessage());
-        } catch (Exception $e) {
-            return $this->error($e->getMessage(), $e->getCode());
+            return $this->error($e->getMessage());
+        } catch (\Throwable $e) {
+            return $this->operationFailure($e);
         }
     }
 
@@ -192,9 +177,10 @@ class Addon extends Base
      */
     public function uninstall()
     {
+        $this->requirePost();
         $param = \think\facade\Request::param();
-        $name = $param['name'];
-        $force = (int)$param['force'];
+        $name = $this->pluginName($param['name'] ?? '');
+        $force = (int)($param['force'] ?? 0);
         if (!$name) {
             return $this->error(lang('param_err'));
         }
@@ -208,9 +194,9 @@ class Addon extends Base
             Service::uninstall($name, $force);
             return $this->success(lang('uninstall_ok'));
         } catch (AddonException $e) {
-            return $this->result($e->getData(), $e->getCode(), $e->getMessage());
-        } catch (Exception $e) {
             return $this->error($e->getMessage());
+        } catch (\Throwable $e) {
+            return $this->operationFailure($e);
         }
     }
 
@@ -219,10 +205,14 @@ class Addon extends Base
      */
     public function state()
     {
+        $this->requirePost();
         $param = \think\facade\Request::param();
-        $name = $param['name'];
-        $action = $param['action'];
-        $force = (int)$param['force'];
+        $name = $this->pluginName($param['name'] ?? '');
+        $action = $param['action'] ?? '';
+        if (!in_array($action, ['enable', 'disable'], true)) {
+            return $this->error(lang('param_err'));
+        }
+        $force = (int)($param['force'] ?? 0);
         if (!$name) {
             return $this->error(lang('param_err'));
         }
@@ -237,9 +227,9 @@ class Addon extends Base
             Cache::delete('__menu__');
             return $this->success(lang('opt_ok'));
         } catch (AddonException $e) {
-            return $this->result($e->getData(), $e->getCode(), $e->getMessage());
-        } catch (Exception $e) {
             return $this->error($e->getMessage());
+        } catch (\Throwable $e) {
+            return $this->operationFailure($e);
         }
     }
 
@@ -248,77 +238,8 @@ class Addon extends Base
      */
     public function local()
     {
-        $param = \think\facade\Request::param();
-        // Addon upload disabled; \think\Loader removed in TP8
-        echo 'closed';exit;
-        $file = $this->request->file('file');
-        $addonTmpDir = RUNTIME_PATH . 'addons' . DS;
-        if (!is_dir($addonTmpDir)) {
-            @mkdir($addonTmpDir, 0755, true);
-        }
-        $info = $file->rule('uniqid')->validate(['size' => 10240000, 'ext' => 'zip'])->move($addonTmpDir);
-        if ($info) {
-            $tmpName = substr($info->getFilename(), 0, stripos($info->getFilename(), '.'));
-            $tmpAddonDir = ADDON_PATH . $tmpName . DS;
-            $tmpFile = $addonTmpDir . $info->getSaveName();
-            try {
-                Service::unzip($tmpName);
-                @unlink($tmpFile);
-                $infoFile = $tmpAddonDir . 'info.ini';
-                if (!is_file($infoFile)) {
-                    throw new Exception(lang('admin/addon/lack_config_err'));
-                }
-
-                $config = Config::parse($infoFile, '', $tmpName);
-                $name = isset($config['name']) ? $config['name'] : '';
-                if (!$name) {
-                    throw new Exception(lang('admin/addon/name_empty_err'));
-                }
-
-                $newAddonDir = ADDON_PATH . $name . DS;
-                if (is_dir($newAddonDir)) {
-                    throw new Exception(lang('admin/addon/haved_err'));
-                }
-
-                //重命名插件文件夹
-                rename($tmpAddonDir, $newAddonDir);
-                try {
-                    //默认禁用该插件
-                    $info = get_addon_info($name);
-                    if ($info['state']) {
-                        $info['state'] = 0;
-                        set_addon_info($name, $info);
-                    }
-
-                    //执行插件的安装方法
-                    $class = get_addon_class($name);
-                    if (class_exists($class)) {
-                        $addon = new $class();
-                        $addon->install();
-                    }
-
-                    //导入SQL
-                    Service::importsql($name);
-
-                    $info['config'] = get_addon_config($name) ? 1 : 0;
-                    return $this->success(lang('install_ok'));
-                } catch (Exception $e) {
-                    if (Dir::delDir($newAddonDir) === false) {
-
-                    }
-                    throw new Exception($e->getMessage());
-                }
-            } catch (Exception $e) {
-                @unlink($tmpFile);
-                if (Dir::delDir($tmpAddonDir) === false) {
-
-                }
-                return $this->error($e->getMessage());
-            }
-        } else {
-            // 上传失败获取错误信息
-            return $this->error($file->getError());
-        }
+        $this->requirePost();
+        return json(['code' => 1001, 'msg' => '插件压缩包上传已停用，请部署审核后的本地插件'], 403);
     }
 
     public function add()
@@ -330,7 +251,8 @@ class Addon extends Base
      */
     public function upgrade()
     {
-        $name = $this->request->post("name");
+        $this->requirePost();
+        $name = $this->pluginName($this->request->post('name', ''));
         if (!$name) {
             return $this->error(lang('param_err'));
         }
@@ -354,10 +276,33 @@ class Addon extends Base
             Cache::delete('__menu__');
             return $this->success(lang('update_ok'));
         } catch (AddonException $e) {
-            return $this->result($e->getData(), $e->getCode(), $e->getMessage());
-        } catch (Exception $e) {
             return $this->error($e->getMessage());
+        } catch (\Throwable $e) {
+            return $this->operationFailure($e);
         }
+    }
+
+    private function requirePost(): void
+    {
+        if (!$this->request->isPost()) {
+            throw new \think\exception\HttpResponseException(json(['code' => 1001, 'msg' => '请使用 POST 提交插件操作'], 405));
+        }
+    }
+
+    private function pluginName($name): string
+    {
+        try {
+            return Service::validateName($name);
+        } catch (AddonException $e) {
+            throw new \think\exception\HttpResponseException(json(['code' => 1001, 'msg' => $e->getMessage()], 400));
+        }
+    }
+
+    private function operationFailure(\Throwable $e)
+    {
+        if ($e instanceof \think\exception\HttpResponseException) { throw $e; }
+        \think\facade\Log::error('Addon operation failed: ' . $e->getMessage());
+        return $this->error('插件操作失败，请检查后台日志');
     }
 
 }

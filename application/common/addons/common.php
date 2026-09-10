@@ -34,17 +34,7 @@ function addons_boot(): void
             \think\facade\Cache::set('addons', $config);
         }
 
-        $hooks = app()->isDebug() ? [] : \think\facade\Cache::get('hooks', []);
-        if (empty($hooks)) {
-            $hooks = (array)config('addons.hooks');
-            foreach ($hooks as $key => $values) {
-                if (is_string($values)) {
-                    $values = explode(',', $values);
-                }
-                $hooks[$key] = array_filter(array_map('get_addon_class', (array)$values));
-            }
-            \think\facade\Cache::set('hooks', $hooks);
-        }
+        $hooks = (array)($config['hooks'] ?? []);
 
         // 注册 addon 路由（TP8: 用 append() 传参，不用 ?k=v 查询串）
         $routeArr = (array)config('addons.route');
@@ -77,18 +67,31 @@ function addons_boot(): void
         }
 
         // 先注册监听器，再触发 app_init（顺序颠倒会导致 app_init 无人接收）
+        $viewFilters = [];
         foreach ($hooks as $hookName => $listeners) {
-            foreach ((array)$listeners as $listener) {
-                if ($listener) {
-                    \think\facade\Event::listen($hookName, $listener);
+            foreach (is_string($listeners) ? explode(',', $listeners) : (array)$listeners as $name) {
+                $instance = is_string($name) ? get_addon_instance($name) : null;
+                $method = \think\helper\Str::camel($hookName);
+                if (!$instance || !is_callable([$instance, $method]) || empty($instance->getInfo()['state'])) {
+                    continue;
                 }
+                $reflection = new \ReflectionMethod($instance, $method);
+                if ($reflection->isStatic()) { continue; }
+                $callback = static function ($params = null) use ($instance, $method, $reflection) {
+                    $result = $reflection->getNumberOfParameters() === 0 ? $instance->$method() : $instance->$method($params);
+                    return $result ?? $params;
+                };
+                \think\facade\Event::listen($hookName, $callback);
+                if ($hookName === 'view_filter') { $viewFilters[] = $callback; }
             }
         }
-        if (isset($hooks['app_init'])) {
-            foreach ($hooks['app_init'] as $listener) {
-                \think\facade\Event::trigger('app_init', $listener);
-            }
+        if ($viewFilters) {
+            \think\facade\View::filter(static function (string $content) use ($viewFilters): string {
+                foreach ($viewFilters as $filter) { $content = $filter($content); }
+                return $content;
+            });
         }
+        \think\facade\Event::trigger('app_init', request());
     }
 
     // 注册 addons 默认路由（TP8 可选参数语法：param? 表示可选）
@@ -123,6 +126,9 @@ function get_addon_list(): array
         if ($name === '.' || $name === '..') {
             continue;
         }
+        if (!preg_match('/^[a-zA-Z0-9_]+$/D', $name) || is_link(ADDON_PATH . $name)) {
+            continue;
+        }
         if (is_file(ADDON_PATH . $name)) {
             continue;
         }
@@ -138,7 +144,7 @@ function get_addon_list(): array
             continue;
         }
         $info = parse_ini_file($info_file, true) ?: [];
-        if (!isset($info['name'])) {
+        if (!isset($info['name']) || $info['name'] !== $name) {
             continue;
         }
         $info['url'] = addon_url($name);
@@ -174,13 +180,17 @@ function get_addon_autoload_config(bool $truncate = false): array
     }
 
     foreach ($orderedAddons as $name => $addon) {
-        if (!$addon['state']) {
+        if (empty($addon['state']) || (int)($addon['installed'] ?? 1) !== 1) {
             continue;
         }
-        $methods = (array)get_class_methods('\\addons\\' . $name . '\\' . ucfirst($name));
+        $class = get_addon_class($name);
+        if ($class === '') { continue; }
+        $methods = (array)get_class_methods($class);
         $hooks   = array_diff($methods, $base);
         foreach ($hooks as $hook) {
-            // 保持原始方法名（snake_case），与 Event::trigger() 保持一致
+            $method = new \ReflectionMethod($class, $hook);
+            if ($method->isStatic() || str_starts_with($hook, '_')) { continue; }
+            $hook = \think\helper\Str::snake($hook);
             if (!isset($config['hooks'][$hook])) {
                 $config['hooks'][$hook] = [];
             }
@@ -212,6 +222,10 @@ function get_addon_autoload_config(bool $truncate = false): array
 
 function get_addon_class(string $name, string $type = 'hook', ?string $class = null): string
 {
+    if (!preg_match('/^[a-zA-Z0-9_]+$/D', $name)
+        || ($class !== null && !preg_match('/^[a-zA-Z0-9_]+(?:\.[a-zA-Z0-9_]+)*$/D', $class))) {
+        return '';
+    }
     $name  = strtolower($name);
     $class = is_null($class) ? ucfirst($name) : ucfirst($class);
     if (strpos((string)$class, '.') !== false) {
@@ -283,6 +297,7 @@ function addon_url(string $url, array $vars = [], bool $suffix = true, bool $dom
 
 function set_addon_info(string $name, array $array): bool
 {
+    $name = \think\addons\Service::validateName($name);
     $file  = ADDON_PATH . $name . DS . 'info.ini';
     $addon = get_addon_instance($name);
     if (!$addon) {
@@ -297,19 +312,15 @@ function set_addon_info(string $name, array $array): bool
         if (is_array($val)) {
             $res[] = "[$key]";
             foreach ($val as $skey => $sval) {
-                $res[] = "$skey = " . (is_numeric($sval) ? $sval : $sval);
+                $res[] = "$skey = " . addons_ini_value($sval);
             }
         } else {
-            $res[] = "$key = " . (is_numeric($val) ? $val : $val);
+            $res[] = "$key = " . addons_ini_value($val);
         }
     }
-    if ($handle = fopen($file, 'w')) {
-        fwrite($handle, implode("\n", $res) . "\n");
-        fclose($handle);
-        \think\facade\Config::set(['addoninfo' => null], $name);
-        return true;
-    }
-    throw new \Exception('文件没有写入权限');
+    addons_atomic_write($file, implode("\n", $res) . "\n");
+    \think\facade\Config::set(['addoninfo' => null], $name);
+    return true;
 }
 
 function set_addon_config(string $name, array $config, bool $writefile = true): bool
@@ -335,14 +346,36 @@ function set_addon_config(string $name, array $config, bool $writefile = true): 
 
 function set_addon_fullconfig(string $name, array $array): bool
 {
+    $name = \think\addons\Service::validateName($name);
     $file = ADDON_PATH . $name . DS . 'config.php';
     if (!is_writable($file)) {
         throw new \Exception('文件没有写入权限');
     }
-    if ($handle = fopen($file, 'w')) {
-        fwrite($handle, "<?php\n\nreturn " . var_export($array, true) . ";\n");
-        fclose($handle);
-        return true;
+    addons_atomic_write($file, "<?php\n\nreturn " . var_export($array, true) . ";\n");
+    return true;
+}
+
+function addons_ini_value($value): string
+{
+    if (!is_scalar($value) && $value !== null) { throw new \RuntimeException('Invalid plugin metadata value'); }
+    $value = (string)$value;
+    if (strpbrk($value, "\r\n\0") !== false) { throw new \RuntimeException('Plugin metadata cannot contain newlines'); }
+    return '"' . addcslashes($value, '\\"') . '"';
+}
+
+function addons_atomic_write(string $file, string $content): void
+{
+    if (is_link($file)) { throw new \RuntimeException('Refusing to replace a linked plugin configuration'); }
+    $temporary = tempnam(dirname($file), '.addon-');
+    if ($temporary === false) { throw new \RuntimeException('Cannot create plugin configuration'); }
+    try {
+        if (file_put_contents($temporary, $content, LOCK_EX) !== strlen($content)
+            || !chmod($temporary, is_file($file) ? fileperms($file) & 0777 : 0640)
+            || !rename($temporary, $file)) {
+            throw new \RuntimeException('Cannot save plugin configuration');
+        }
+        if (function_exists('opcache_invalidate')) { opcache_invalidate($file, true); }
+    } finally {
+        if (is_file($temporary)) { unlink($temporary); }
     }
-    throw new \Exception('文件没有写入权限');
 }

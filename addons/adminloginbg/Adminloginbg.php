@@ -14,7 +14,7 @@ class Adminloginbg extends Addons
      * 插件安装方法
      * @return bool
      */
-    public function install()
+    public function install(): bool
     {
         return true;
     }
@@ -23,7 +23,17 @@ class Adminloginbg extends Addons
      * 插件卸载方法
      * @return bool
      */
-    public function uninstall()
+    public function uninstall(): bool
+    {
+        return true;
+    }
+
+    public function enable(): bool
+    {
+        return true;
+    }
+
+    public function disable(): bool
     {
         return true;
     }
@@ -39,7 +49,7 @@ class Adminloginbg extends Addons
             } else {
                 $background = $config['image'];
             }
-            \think\View::instance()->assign('background', $background);
+            \think\facade\View::assign('background', $background);
         }
     }
 
