@@ -127,15 +127,10 @@ class Card extends Base {
     public function useData($card_no,$card_pwd,$user_info)
     {
         $user_id = is_array($user_info) ? \app\common\util\PointsBalance::amount($user_info['user_id'] ?? null) : null;
-        if ((!is_string($card_no) && !is_int($card_no)) || (!is_string($card_pwd) && !is_int($card_pwd)) || $user_id === null) {
-            return ['code' => 1001, 'msg'=>lang('param_err')];
-        }
-        $card_no = (string)$card_no;
-        $card_pwd = (string)$card_pwd;
-        if ($card_no === '' || $card_pwd === '' || strlen($card_no) > 64 || strlen($card_pwd) > 32 || !mb_check_encoding($card_no, 'UTF-8') || !mb_check_encoding($card_pwd, 'UTF-8')
-            || mb_strlen($card_no, 'UTF-8') > 16 || mb_strlen($card_pwd, 'UTF-8') > 8) {
-            return ['code' => 1001, 'msg'=>lang('param_err')];
-        }
+        $credentials = \app\common\util\CardCredentials::parse($card_no, $card_pwd);
+        if ($credentials === null || $user_id === null) { return ['code'=>1001, 'msg'=>lang('param_err')]; }
+        $card_no = $credentials['card_no'];
+        $card_pwd = $credentials['card_pwd'];
 
         $failure = ['code'=>1004, 'msg'=>lang('model/card/update_card_status_err')];
         $notFound = ['code'=>1002, 'msg'=>lang('model/card/not_found')];

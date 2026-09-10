@@ -344,20 +344,21 @@ class Payment extends Base
      */
     public function use_card(\think\Request $request)
     {
+        if (!$request->isPost()) { return json(['code'=>1001, 'msg'=>lang('param_err')]); }
         $auth = $this->_checkLogin();
         if (!$auth['ok']) return $auth['response'];
 
         $param = $request->param();
+        $credentials = \app\common\util\CardCredentials::parse($param['card_no'] ?? null, $param['card_pwd'] ?? null);
+        if ($credentials === null) { return json(['code'=>1001, 'msg'=>lang('param_err')]); }
+        $param = array_replace($param, $credentials);
 
         $validate = new \app\api\validate\Payment();
         if (!$validate->scene($request->action())->check($param)) {
             return json(['code' => 1001, 'msg' => lang('api/param_validate', [$validate->getError()])]);
         }
 
-        $card_no  = htmlspecialchars(urldecode(trim($param['card_no'] ?? '')));
-        $card_pwd = htmlspecialchars(urldecode(trim($param['card_pwd'] ?? '')));
-
-        $res = (new \app\common\model\Card())->useData($card_no, $card_pwd, $auth['user']);
+        $res = (new \app\common\model\Card())->useData($credentials['card_no'], $credentials['card_pwd'], $auth['user']);
         return json($res);
     }
 
