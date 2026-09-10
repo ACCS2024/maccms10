@@ -245,7 +245,7 @@ class Manga extends Base
             ->where($where)
             ->order('manga_' . $by . ' desc')
             ->limit($start, $num)
-            ->select();
+            ->select()->toArray();
 
         foreach ($list as &$v) {
             $v['manga_pic'] = mac_url_img($v['manga_pic']);
@@ -288,7 +288,7 @@ class Manga extends Base
             ->where($where)
             ->order('manga_time desc')
             ->limit($start, $num)
-            ->select();
+            ->select()->toArray();
 
         foreach ($list as &$v) {
             $v['manga_pic'] = mac_url_img($v['manga_pic']);

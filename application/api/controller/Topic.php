@@ -269,7 +269,7 @@ class Topic extends Base
             ->where($where)
             ->order('topic_' . $by . ' desc')
             ->limit($start, $num)
-            ->select();
+            ->select()->toArray();
 
         foreach ($list as &$v) {
             $v['topic_pic'] = mac_url_img($v['topic_pic']);

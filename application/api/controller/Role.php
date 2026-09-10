@@ -109,7 +109,7 @@ class Role extends Base
                 ->where($where)
                 ->order($order)
                 ->limit($offset, $limit)
-                ->select();
+                ->select()->toArray();
 
             foreach ($list as &$v) {
                 $v['role_pic'] = mac_url_img($v['role_pic'] ?? '');
@@ -249,7 +249,7 @@ class Role extends Base
             ->where($where)
             ->order('role_' . $by . ' desc')
             ->limit($start, $num)
-            ->select();
+            ->select()->toArray();
 
         foreach ($list as &$v) {
             $v['role_pic'] = mac_url_img($v['role_pic'] ?? '');

@@ -34,6 +34,6 @@ Runner 创建一次性 MySQL，容器禁用网络并使用 Unix socket；代码�
 
 ## 明确保留的独立问题
 
-Art/Manga 的 `get_latest` 当前仍把 TP8 Collection 传入要求 `array &$list` 的 `mac_append_type_is_vip_exclusive_for_rows()`，合法请求和空结果均会 TypeError。本组测试保留真实类型签名，在异常前从真实链接处理调用观察选中行，并检查实际 SQL；每版报告 8 次此既有故障（两接口 × 有/无记录 × 有/无默认表）。这部分只证明查询前缀正确，不表示这两个接口完整可用。后续 Collection 组应取消已知故障分支，并强制完整 JSON 成功。
+本前缀组首次提交时，Art/Manga 的 `get_latest` 仍把 TP8 Collection 传入要求 `array &$list` 的 `mac_append_type_is_vip_exclusive_for_rows()`，合法请求和空结果均会 TypeError。本组测试保留真实类型签名，在异常前从真实链接处理调用观察选中行，并检查实际 SQL；每版报告 8 次此既有故障（两接口 × 有/无记录 × 有/无默认表）。这部分只证明查询前缀正确，不表示这两个接口完整可用。随后独立的 [Collection 兼容组](api-content-collection.md) 已取消此故障分支，并强制完整 JSON 成功；上面的 252 项结果记录的是前缀组首次提交时的验证。
 
 其他推荐列表的 Collection 加工丢失、可见性/敏感字段、参数及查询成本、旧时间条件数组和筛选缓存命名空间均需独立修复。本组不以机械替换表名前缀宣称这些边界已经解决。

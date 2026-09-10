@@ -426,7 +426,7 @@ class Art extends Base
             ->where($where)
             ->order('art_' . $by . ' desc')
             ->limit($start, $num)
-            ->select();
+            ->select()->toArray();
 
         foreach ($list as &$v) {
             $v['art_pic'] = mac_url_img($v['art_pic']);
@@ -476,7 +476,7 @@ class Art extends Base
             ->where($where)
             ->order('art_time desc')
             ->limit($start, $num)
-            ->select();
+            ->select()->toArray();
 
         foreach ($list as &$v) {
             $v['art_pic'] = mac_url_img($v['art_pic']);

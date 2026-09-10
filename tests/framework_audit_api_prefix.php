@@ -21,16 +21,16 @@ function mac_url_website_detail($row){return prefixLink('website',$row);}
 function mac_url_type($row){return '/type/'.$row['type_id'];}
 function mac_user_fav_state(...$args){return ['is_fav'=>false,'fav_ulog_id'=>0];}
 function mac_user_has_digg(...$args){return false;}
-function mac_get_vip_exclusive_type_ids(){return [];}
-// Keep the production array-by-reference contract. A later Collection group fixes the existing callers.
-function mac_append_type_is_vip_exclusive_for_rows(array &$rows){foreach($rows as &$row){$row['type_is_vip_exclusive']=0;}}
+function mac_get_vip_exclusive_type_ids(){return [1];}
+// Keep the production array-by-reference contract and verify that taxonomy additions survive JSON encoding.
+function mac_append_type_is_vip_exclusive_for_rows(array &$rows){foreach($rows as &$row){$row['type_is_vip_exclusive']=in_array((int)($row['type_id']??0),mac_get_vip_exclusive_type_ids(),true)?1:0;}}
 class PrefixFixtureCache {
     public array $data=[];
     function get($key){return str_ends_with($key,'type_list')?[1=>['type_id'=>1,'type_pid'=>0,'type_en'=>'fixture']]:($this->data[$key]??null);}
     function set($key,$value,...$args){$this->data[$key]=$value;}
 }
 use think\facade\Db;
-$checks=0;$rendered=[];$sql=[];$knownCollectionFailures=0;
+$checks=0;$rendered=[];$sql=[];
 function prefixCheck(bool $condition,string $message): void {global $checks;++$checks;if(!$condition)throw new \RuntimeException($message);}
 $socket=getenv('DATABASE_AUDIT_MYSQL_SOCKET');$database=getenv('DATABASE_AUDIT_DATABASE');
 if(!is_string($socket)||$socket!=='/audit/mysql.sock'||!is_string($database)||!preg_match('/^maccms_audit_backup_[a-f0-9]+$/D',$database)){
@@ -49,17 +49,12 @@ $GLOBALS['config']=['app'=>['cache_flag'=>'prefix_fixture','cache_core'=>0,'coun
 $GLOBALS['user']=['user_id'=>0];
 $kinds=['vod','art','manga','actor','role','topic','website'];
 function prefixCall(string $kind,string $action,array $params=[]): array {
-    global $app,$cache,$sql,$rendered,$knownCollectionFailures;
+    global $app,$cache,$sql,$rendered;
     $cache->data=[];$sql=[];$rendered=[];
     $request=(new \think\Request())->withGet($params)->setController(ucfirst($kind))->setAction($action);
     $app->instance('request',$request);
     $controller=(new \ReflectionClass('app\\api\\controller\\'.ucfirst($kind)))->newInstanceWithoutConstructor();
-    try {$response=$controller->$action($request);$result=json_decode($response->getContent(),true,512,JSON_THROW_ON_ERROR);}
-    catch(\TypeError $error){
-        // Do not widen the helper's signature just to turn a known 500 into a green prefix test.
-        if(!in_array($kind,['art','manga'],true)||$action!=='get_latest'||!str_contains($error->getMessage(),'mac_append_type_is_vip_exclusive_for_rows()')||!str_contains($error->getMessage(),'think\\Collection given'))throw $error;
-        ++$knownCollectionFailures;$result=['known_collection_failure'=>true];
-    }
+    $response=$controller->$action($request);$result=json_decode($response->getContent(),true,512,JSON_THROW_ON_ERROR);
     foreach($sql as $statement){prefixCheck(!preg_match('/\b(?:FROM|JOIN)\s+`?mac_/i',$statement),$kind.'::'.$action.' queried the other table prefix');}
     foreach($rendered as $rowKind=>$rows){foreach($rows as $row){
         if(isset($row[$rowKind.'_name']))prefixCheck(str_starts_with($row[$rowKind.'_name'],'configured-'),$kind.'::'.$action.' rendered foreign '.$rowKind.' data');
@@ -69,13 +64,19 @@ function prefixCall(string $kind,string $action,array $params=[]): array {
 function prefixRows(string $kind,array $result,array $expected): void {
     prefixCheck(($result['code']??null)===1 && isset($result['info']['rows']),$kind.' list keeps its JSON envelope');
     prefixCheck(array_map('intval',array_column($result['info']['rows'],$kind.'_id'))===$expected,$kind.' list returns configured rows in the expected order');
-    foreach($result['info']['rows'] as $row)prefixCheck(str_starts_with($row[$kind.'_name'],'configured-'),$kind.' list contains another prefix');
+    foreach($result['info']['rows'] as $row){
+        prefixCheck(str_starts_with($row[$kind.'_name'],'configured-'),$kind.' list contains another prefix');
+        prefixCheck($row[$kind.'_pic']==='/fixture/configured-cover.png',$kind.' list keeps picture transformation in serialized JSON');
+        prefixCheck(($row[$kind.'_link']??null)==='/'.$kind.'/'.$row[$kind.'_id'],$kind.' list keeps generated links in serialized JSON');
+        if(in_array($kind,['art','manga'],true))prefixCheck(($row[$kind.'_time_text']??null)===date('m-d',(int)$row[$kind.'_time']),$kind.' list keeps formatted time');
+        if($kind==='topic')prefixCheck(($row['topic_empty']??null)===0,'Default topic recommendations keep the non-placeholder marker');
+    }
 }
 try {
     foreach($kinds as $kind){
         $columns=[$kind.'_id INTEGER PRIMARY KEY','type_id INTEGER NOT NULL DEFAULT 1','type_id_1 INTEGER NOT NULL DEFAULT 1','group_id INTEGER NOT NULL DEFAULT 0'];
-        foreach(['name','en','sub','alias','author','actor','director','sex','area','class','year','pic','pic_thumb','pic_slide','logo','content','blurb','remarks','rel_vod','rel_art'] as $field)$columns[]=$kind.'_'.$field." VARCHAR(255) NOT NULL DEFAULT ''";
-        foreach(['status','time','hits','hits_day','hits_week','hits_month','score','points','level','rid','recycle_time'] as $field)$columns[]=$kind.'_'.$field.' INTEGER NOT NULL DEFAULT 0';
+        foreach(['name','en','sub','alias','author','actor','director','sex','area','class','year','pic','pic_thumb','pic_slide','logo','content','blurb','remarks','rel_vod','rel_art','letter'] as $field)$columns[]=$kind.'_'.$field." VARCHAR(255) NOT NULL DEFAULT ''";
+        foreach(['status','time','time_add','hits','hits_day','hits_week','hits_month','score','points','level','rid','recycle_time'] as $field)$columns[]=$kind.'_'.$field.' INTEGER NOT NULL DEFAULT 0';
         foreach(['mac_','audit_api_'] as $prefix){
             Db::execute('DROP TABLE IF EXISTS '.$prefix.$kind);Db::execute('CREATE TABLE '.$prefix.$kind.' ('.implode(',',$columns).')');
             foreach($prefix==='mac_'?[10,20,30,99]:[10,20,30,40] as $id){
@@ -109,7 +110,7 @@ try {
         }
         $missing=prefixCall('topic','get_detail',['topic_id'=>99]);
         prefixCheck($missing['code']===1 && empty($missing['info']),'Topic keeps its existing empty-detail JSON contract without cross-prefix fallback');
-        foreach(['actor'=>'get_recommend','art'=>'get_hot','manga'=>'get_hot','topic'=>'get_recommend'] as $kind=>$action){
+        foreach(['actor'=>'get_recommend','art'=>'get_hot','manga'=>'get_hot','topic'=>'get_recommend','role'=>'get_recommend'] as $kind=>$action){
             prefixRows($kind,prefixCall($kind,$action,['num'=>2,'start'=>1]),[30,20]);
             prefixRows($kind,prefixCall($kind,$action,['num'=>2,'start'=>99]),[]);
         }
@@ -119,12 +120,14 @@ try {
         foreach(['art','manga'] as $kind){
             foreach([1=>[30,20],99=>[]] as $start=>$ids){
                 $result=prefixCall($kind,'get_latest',['num'=>2,'start'=>$start]);
-                if(isset($result['known_collection_failure'])){
-                    prefixCheck(array_map('intval',array_column($rendered[$kind]??[],$kind.'_id'))===$ids,$kind.' latest query selects configured pagination before the independently tracked Collection failure');
-                    prefixCheck((bool)array_filter($sql,static fn($statement)=>str_contains($statement,'`audit_api_'.$kind.'`')&&str_starts_with($statement,'SELECT')),$kind.' latest executes the configured query even for an empty result');
-                }else{prefixRows($kind,$result,$ids);}
+                prefixRows($kind,$result,$ids);
+                foreach($result['info']['rows'] as $row)prefixCheck(($row['type_is_vip_exclusive']??null)===1,$kind.' latest preserves the taxonomy helper output');
             }
         }
+        $roleList=prefixCall('role','get_list',['offset'=>1,'limit'=>2]);
+        prefixRows('role',$roleList,[30,20]);
+        prefixCheck(array_column($roleList['info']['rows'],'vod_name')===['configured-vod20','configured-vod20'],'Role list preserves related video titles after both transformation loops');
+        prefixRows('role',prefixCall('role','get_list',['offset'=>99,'limit'=>2]),[]);
         foreach(['get_year'=>'year','get_class'=>'class','get_area'=>'area'] as $action=>$field){
             $result=prefixCall('vod',$action,['type_id_1'=>1]);$rows=$result['info']['rows'];sort($rows);
             prefixCheck($rows===['configured-'.$field.'10','configured-'.$field.'20','configured-'.$field.'30','configured-'.$field.'40'],$action.' queries configured metadata');
@@ -132,7 +135,7 @@ try {
             prefixCheck(prefixCall('vod',$action,['type_id_1'=>999])['info']['rows']===[],$action.' keeps empty metadata arrays');
         }
     }
-    echo 'framework_audit_api_prefix: '.$checks.' checks passed on PHP '.PHP_VERSION.' / MySQL; '.$knownCollectionFailures.' known latest-list Collection failures observed (not fixed in this group)'.PHP_EOL;
+    echo 'framework_audit_api_prefix: '.$checks.' checks passed on PHP '.PHP_VERSION.' / MySQL; all content list responses serialized successfully'.PHP_EOL;
 } finally {
     foreach($kinds as $kind)foreach(['mac_','audit_api_'] as $prefix)Db::execute('DROP TABLE IF EXISTS '.$prefix.$kind);
     Db::execute('DROP TABLE IF EXISTS audit_api_type');

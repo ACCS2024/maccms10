@@ -191,7 +191,7 @@ class Actor extends Base
             ->where($where)
             ->order('actor_' . $by . ' desc')
             ->limit($start, $num)
-            ->select();
+            ->select()->toArray();
 
         foreach ($list as &$v) {
             $v['actor_pic'] = mac_url_img($v['actor_pic']);
