@@ -80,3 +80,9 @@ AiSearch 的 Collection 问题已经在 c84bc161 通过实际 MySQL 修复；不
 见[固定阶段记录](phase-verification-691eb9ab.md)：level 1 为 410、level 5 为 1,180，均无全局分析错误；PHPCompatibility 0 错误、8 警告。两档 Vod 模型均减少 11 项。level 5 新增 VodRepeatCatalog::insertGroups 的 `BaseQuery::group` 方法推导：锁定 ORM 的 `newQuery(): BaseQuery` 实际按配置创建 SQL Query 子类，该子类提供 group；真实 MySQL 已执行这条路径。它与实际缺失方法或默认运行失败须分开记录，后续进一步明确所支持的查询构造器合同，不能仅为减小数字追加忽略规则。
 
 正文边界扩查在固定后台模板中定位到 124 个含服务端变量的 textarea，八个正文/剧情已修复。其余位置既有直接原文，也有 htmlspecialchars、mac_filter_xss 和旧分隔处理；数量不是未修漏洞数。评论等部分内容在写入时已经编码，不能一律追加双重编码，否则会改变再次编辑/保存的内容。需结合存储表示和实际模板往返逐项核对。
+
+## f32e4000 重扫
+
+见[固定阶段记录](phase-verification-f32e4000.md)：level 1 为 409、level 5 为 1,178，无全局分析错误；PHPCompatibility 0 错误、8 警告。相对 691eb9ab，User 两档各减少 1 条（返利元数据使用实际连接），ContentPurchase level 5 减少 1 条（删除冗余条件）；没有忽略新增诊断。新金融公共机制和业务适配器在本次两档无文件诊断；这不代替原 PDO 故障与真实数据库验证。
+
+直接 Db 事务调用词法清点为 74 行/20 个方法。Card 的五类故障已有实际证据，Cash、签到/里程碑、任务、Ulog、User 其它账号/奖励方法及备份/统计需按不同业务所有权核实，不能因语法结构相同就认定全部可套同一拥有者策略。

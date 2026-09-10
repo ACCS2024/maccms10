@@ -1,0 +1,232 @@
+{
+  "source_commit": "f32e40009a00b7afb02317d1a4b4ab24cce756cd",
+  "source_tree": "3b145488200613e2c148b50c9d369c52251ca4e4",
+  "production_lock_sha256": "17864e7bf115eb91c0742eeb52c3cd4fea60e3a6b1ae7dc4bc146e3a0250e438",
+  "audit_tool_lock_sha256": "ba1aa580779290fd1437b74d0efce6a3c2a25900c8f28469731d0e65ff79bf5c",
+  "scope": "isolated committed source plus clean locked production vendor; uncommitted working-tree changes excluded",
+  "status": "audit ongoing; no deployment or completeness claim",
+  "installed_compilation": [
+    {
+      "php": "8.3.33",
+      "checked": 5412,
+      "failed": 0,
+      "skipped": [],
+      "report_sha256": "d1d8a257e5134c3158817c52f6c87434310e446bedfa51504bcd911a71f50e45"
+    },
+    {
+      "php": "8.4.25",
+      "checked": 5412,
+      "failed": 0,
+      "skipped": [],
+      "report_sha256": "e992f39637e938afd372770c9958fda82ccfed0ee836f17013ddd01ccdd053b3"
+    }
+  ],
+  "default_regressions": [
+    {
+      "php": "8.3.33",
+      "processes": 148,
+      "failures": 0,
+      "suites": [
+        "unit",
+        "models",
+        "financial",
+        "upload",
+        "storage",
+        "remote_upload"
+      ],
+      "log_sha256": "33552fa63dcb150d8994205321d754a5be7ec950383075f00e18af227894f15d"
+    },
+    {
+      "php": "8.4.25",
+      "processes": 148,
+      "failures": 0,
+      "suites": [
+        "unit",
+        "models",
+        "financial",
+        "upload",
+        "storage",
+        "remote_upload"
+      ],
+      "log_sha256": "5c64134140bc2c5c5b608043b4f0329c354691fa5b859c1bcc0085a36799857c"
+    }
+  ],
+  "static_analysis": {
+    "php": "8.4.25",
+    "target": "PHP 8.3–8.4 compatibility; PHPStan PHP 8.4",
+    "default_summary": {
+      "phpstan": {
+        "exit": 1,
+        "totals": {
+          "errors": 0,
+          "file_errors": 409
+        }
+      },
+      "phpcompatibility": {
+        "exit": 2,
+        "totals": {
+          "errors": 0,
+          "warnings": 8,
+          "fixable": 0
+        }
+      }
+    },
+    "tools": {
+      "dealerdirect/phpcodesniffer-composer-installer": "v1.2.1",
+      "phpcompatibility/php-compatibility": "10.0.0-alpha2",
+      "phpcsstandards/phpcsutils": "1.2.3",
+      "phpstan/phpstan": "2.2.13",
+      "squizlabs/php_codesniffer": "4.0.4"
+    },
+    "reports": {
+      "phpstan_level1": {
+        "totals": {
+          "errors": 0,
+          "file_errors": 409
+        },
+        "report_sha256": "90bac188fddfb619573fea1632291156ae570e2c31b2444085b1b333b1de4560",
+        "categories": {
+          "staticMethod.notFound": 108,
+          "property.notFound": 8,
+          "constant.notFound": 38,
+          "isset.variable": 1,
+          "empty.variable": 14,
+          "variable.undefined": 219,
+          "unset.variable": 4,
+          "constructor.unusedParameter": 1,
+          "closure.unusedUse": 1,
+          "class.notFound": 1,
+          "array.duplicateKey": 14
+        }
+      },
+      "phpstan_level5": {
+        "totals": {
+          "errors": 0,
+          "file_errors": 1178
+        },
+        "report_sha256": "11d7e3ae7e7f4064a30357212129511ae6d3635f36e4be437252535539ef6aff",
+        "categories": {
+          "staticMethod.notFound": 108,
+          "function.alreadyNarrowedType": 41,
+          "property.notFound": 15,
+          "property.protected": 1,
+          "assign.propertyType": 3,
+          "booleanAnd.alwaysFalse": 15,
+          "identical.alwaysFalse": 95,
+          "isset.offset": 24,
+          "method.notFound": 98,
+          "nullCoalesce.offset": 32,
+          "equal.alwaysFalse": 42,
+          "argument.type": 49,
+          "constant.notFound": 38,
+          "argument.byRef": 1,
+          "empty.offset": 3,
+          "binaryOp.invalid": 9,
+          "method.unused": 8,
+          "isset.variable": 1,
+          "greaterOrEqual.alwaysTrue": 2,
+          "empty.variable": 14,
+          "greater.alwaysFalse": 3,
+          "return.type": 66,
+          "greater.alwaysTrue": 12,
+          "deadCode.unreachable": 26,
+          "foreach.nonIterable": 1,
+          "variable.undefined": 219,
+          "throws.notThrowable": 7,
+          "arguments.count": 3,
+          "booleanAnd.rightAlwaysTrue": 14,
+          "if.alwaysTrue": 14,
+          "phpDoc.parseError": 48,
+          "class.notFound": 31,
+          "function.impossibleType": 13,
+          "unset.variable": 4,
+          "notIdentical.alwaysTrue": 18,
+          "offsetAccess.invalidOffset": 3,
+          "parameter.defaultValue": 3,
+          "notIdentical.alwaysFalse": 6,
+          "notEqual.alwaysTrue": 2,
+          "notEqual.alwaysFalse": 3,
+          "empty.expr": 1,
+          "ternary.alwaysTrue": 1,
+          "instanceof.alwaysTrue": 1,
+          "equal.alwaysTrue": 6,
+          "arrayFilter.same": 9,
+          "arrayValues.empty": 1,
+          "booleanNot.alwaysFalse": 5,
+          "booleanOr.alwaysTrue": 6,
+          "identical.alwaysTrue": 4,
+          "constructor.unusedParameter": 1,
+          "booleanOr.rightAlwaysFalse": 1,
+          "if.alwaysFalse": 4,
+          "return.void": 7,
+          "return.phpDocType": 1,
+          "smaller.alwaysFalse": 1,
+          "booleanNot.alwaysTrue": 2,
+          "staticMethod.resultUnused": 2,
+          "nullCoalesce.expr": 2,
+          "offsetAccess.notFound": 6,
+          "closure.unusedUse": 1,
+          "booleanOr.leftAlwaysFalse": 1,
+          "array.duplicateKey": 14,
+          "booleanAnd.rightAlwaysFalse": 1,
+          "property.defaultValue": 2,
+          "property.phpDocType": 1,
+          "property.onlyWritten": 1,
+          "booleanAnd.leftAlwaysTrue": 1
+        }
+      },
+      "phpcompatibility": {
+        "totals": {
+          "errors": 0,
+          "warnings": 8,
+          "fixable": 0
+        },
+        "report_sha256": "6aa2ebe401918dfd920c53168fba99b20df8e3e94c63fade2d0d9b5f6ca4f10f"
+      }
+    }
+  },
+  "focused_regressions": {
+    "reward_membership": {
+      "commit": "251e851b",
+      "sqlite_per_php": 192,
+      "mysql_per_php": 195
+    },
+    "order_owner": {
+      "commit": "9fd9e21a",
+      "sqlite_per_php": 252,
+      "mysql_per_php": 255
+    },
+    "order_authority_storage": {
+      "commit": "f32e4000",
+      "sqlite_per_php": 78,
+      "mysql_per_php": 80,
+      "concurrent_mysql_per_php": 20,
+      "concurrent_workers_per_php": 4
+    }
+  },
+  "focused_log_sha256": {
+    "reward-followups/integration-check1.log": "a3a5a84edc509c53420ebe9d2ab0e917a1931783d81f647a474a0db3a77aa8cd",
+    "reward-followups/integration-check2.log": "fa498548f8a52c577e0d06ae829922d118a4aab6a621d070cd4c9e12f197c3c6",
+    "order-followups/owner-check1.log": "f5cccc64987de8c5ba6c2c6c0622ce2f4efeaea11e5c064dbab8924a6e27fa05",
+    "order-followups/models-check1.log": "9c191885bba0f569df0818ab0836c8de317b0c130dd0f24ced7805237ccaf47e",
+    "order-followups/storage-check1.log": "2760f5803d2028c8e1b518a61f319ded1bb0f69f3444a2bb57d4535a238a91ba",
+    "order-followups/concurrency-check1.log": "c8eb888a0d3b36a17278638aaf24010145f2fcd6bc5c74c8baec5d1db99578fc"
+  },
+  "transaction_candidates": {
+    "raw_Db_call_lines": 74,
+    "lexical_methods": 20,
+    "note": "lexical inventory only; not a vulnerability count and excludes other call forms",
+    "sha256": "f9b8f185ff9656df6961bf8ed5c6389393bfeafa4db838503acb1178b967361a"
+  },
+  "unfixed_boundaries": [
+    "card redemption owner cleanup and silent ledger clipping (18 isolated observations)",
+    "other financial/account and standalone storage transaction cleanup",
+    "persistent financial diagnostics and reconciliation",
+    "atomic/concurrent duplicate catalog rebuild and deferred maintenance",
+    "AI/attachment reference binding and deletion",
+    "other textarea and output contexts",
+    "shared identity/public query freshness",
+    "TP8 upload imports and save-result propagation",
+    "uncommitted configuration and supply-chain integration"
+  ]
+}
