@@ -26,6 +26,14 @@ function mac_validate($name) {
     };
 }
 class MembershipAuditDb extends think\DbManager {
+    protected function createConnection(string|array $config): \think\db\ConnectionInterface {
+        if (!defined('MEMBERSHIP_AUDIT_CONNECTION_CLASS')) { return parent::createConnection($config); }
+        $config = is_array($config) ? $config : $this->getConnectionConfig($config);
+        $class = MEMBERSHIP_AUDIT_CONNECTION_CLASS;
+        $connection = new $class($config);
+        $connection->setDb($this);
+        return $connection;
+    }
     public $beforeStart;
     public function startTrans(): void {
         $hook = $this->beforeStart;
@@ -40,7 +48,8 @@ class MembershipAuditCache {
 $mysql = getenv('MEMBERSHIP_AUDIT_MYSQL') === '1';
 if (!extension_loaded($mysql ? 'pdo_mysql' : 'pdo_sqlite')) { throw new RuntimeException('Required PDO driver unavailable'); }
 $configuration = ['default'=>'audit', 'auto_timestamp'=>false, 'connections'=>['audit'=>[
-    'type'=>$mysql ? 'mysql' : 'sqlite', 'database'=>$mysql ? 'maccms_audit_membership' : ':memory:',
+    'type'=>$mysql ? 'mysql' : 'sqlite', 'database'=>defined('MEMBERSHIP_AUDIT_DATABASE')
+        ? MEMBERSHIP_AUDIT_DATABASE : ($mysql ? 'maccms_audit_membership' : ':memory:'),
     'prefix'=>'audit_', 'hostname'=>getenv('MEMBERSHIP_AUDIT_HOST') ?: '127.0.0.1',
     'username'=>'root', 'password'=>getenv('MEMBERSHIP_AUDIT_PASSWORD') ?: '',
     'charset'=>'utf8mb4', 'trigger_sql'=>false, 'fields_cache'=>false,

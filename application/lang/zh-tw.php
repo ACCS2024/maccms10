@@ -750,6 +750,7 @@ https://www.baidu.com/123.jpg
   'index/ulog_fee' => '收費收據需單獨記錄',
   'index/buy_popedom1' => '您已經購買過此條數據，無需再次支付，請刷新頁面重試！',
   'index/buy_popedom2' => '對不起,更新用戶積分信息失敗，請刷新重試！',
+    'index/buy_popedom_outcome_unknown' => '付款結果尚未確認，請先核對購買記錄，勿重複付款。診斷編號：%s。',
   'index/buy_popedom3' => '對不起,查看此頁面數據需要[%s]積分，您還剩下[%s]積分，請先充值！',
   'index/bind_haved' => '已經綁定該賬號',
   'index/bind_ok' => '綁定成功',

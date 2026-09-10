@@ -67,13 +67,21 @@ final class ContentPurchase
         $userId=PointsBalance::amount($userId);
         $record=$userId!==null && $quote===null ? self::record($userId,$pricedRecord) : null;
         if ($userId===null || ($quote===null && $record===null)) { return ['code'=>2001,'msg'=>lang('param_err')]; }
-        $started=false;
+        $started=false; $ownerScope=null;
+        if ($quote !== null && ($blocked = PurchaseTransaction::blockedResult()) !== null) { return $blocked; }
         try {
             if ($quote!==null && ($pdo=Db::connect()->getPdo()) && $pdo->inTransaction()) {
                 throw new \RuntimeException('A resolved content purchase must own its transaction');
             }
             self::requireTransactionalStorage($resourceMid);
-            Db::startTrans(); $started=true;
+            if ($quote !== null) {
+                if ($resourceMid === null) { throw new \RuntimeException('Missing purchase resource'); }
+                $ownerScope = new PurchaseTransaction($userId, $resourceMid);
+                $ownerScope->begin();
+            } else {
+                Db::startTrans();
+            }
+            $started=true;
             // The same owner lock serializes all purchases before the authoritative receipt/balance reads.
             $user=Db::name('User')->master()->where('user_id',$userId)->lock(true)->find();
             $balance=$user?PointsBalance::amount($user['user_points']??null,true):null;
@@ -81,27 +89,32 @@ final class ContentPurchase
                 throw new \RuntimeException('Purchase owner is unavailable');
             }
             if ($quote!==null) {
+                $ownerScope->assertActive();
                 $resolved=$quote($user);
+                $ownerScope->assertActive();
                 if (!is_array($resolved) || !isset($resolved['code'])) { throw new \RuntimeException('Invalid content quote'); }
                 if (!isset($resolved['record'])) {
-                    Db::rollback(); $started=false;
-                    return $resolved;
+                    return $ownerScope->rollback($resolved);
                 }
                 $record=self::record($userId,$resolved['record']);
                 if ($resolved['code']!==1 || $record===null || $record['ulog_mid']!==$resourceMid || $record['ulog_points']===0) {
                     throw new \RuntimeException('Invalid content quote');
                 }
             }
+            if ($ownerScope !== null) { $ownerScope->record($record); }
             $points=$record['ulog_points'];
             // Use a current read: a transaction's earlier consistent snapshot may predate the lock winner.
             if (Db::name('Ulog')->master()->where($record)->lock(true)->find()) {
+                if ($ownerScope !== null) { return $ownerScope->commit(['code'=>1,'msg'=>lang('index/buy_popedom1')]); }
                 Db::commit(); $started=false;
                 return ['code'=>1,'msg'=>lang('index/buy_popedom1')];
             }
             if ($points>$balance) {
-                Db::rollback(); $started=false;
-                return ['code'=>2002,'msg'=>lang('index/buy_popedom3',[$points,$balance]),
+                $result=['code'=>2002,'msg'=>lang('index/buy_popedom3',[$points,$balance]),
                     'info'=>['need_points'=>$points,'current_points'=>$balance]];
+                if ($ownerScope !== null) { return $ownerScope->rollback($result); }
+                Db::rollback(); $started=false;
+                return $result;
             }
             if ($points>0) {
                 if (Db::name('User')->where('user_id',$userId)->where('user_points',$balance)
@@ -118,13 +131,16 @@ final class ContentPurchase
                     if (!$stored || (string)$stored[$field]!==(string)$value) { throw new \RuntimeException('Purchase ledger was not stored exactly'); }
                 }
                 $reward=(new User())->reward($points,$userId);
+                if ($ownerScope !== null) { $ownerScope->assertActive(); }
                 if (($reward['code']??null)!==1) { throw new \RuntimeException('Purchase referral reward failed'); }
             }
             $saved=(new Ulog())->saveData($record);
             if (($saved['code']??null)!==1) { throw new \RuntimeException('Purchase entitlement failed'); }
+            if ($ownerScope !== null) { return $ownerScope->commit(['code'=>1,'msg'=>lang('save_ok')]); }
             Db::commit(); $started=false;
             return ['code'=>1,'msg'=>lang('save_ok')];
         } catch (\Throwable $error) {
+            if ($ownerScope !== null) { return $ownerScope->rollback(['code'=>2003,'msg'=>lang('index/buy_popedom2')]); }
             if ($started) { Db::rollback(); }
             return ['code'=>2003,'msg'=>lang('index/buy_popedom2')];
         }

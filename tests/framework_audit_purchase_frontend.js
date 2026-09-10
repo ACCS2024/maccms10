@@ -46,6 +46,13 @@ for(const file of source.files) {
         env.requests.at(-1).error({},'timeout');check(env.requests.length===count&&env.responses.length===1&&!env.data['mac-buy-busy'],'Network failure must release the button without automatically retrying a financial request');
         env.invoke();check(env.requests.length===count+1&&env.requests.at(-1).type==='get','Manual retry must fetch a fresh token after either failure stage');
     }
+    for(const code of [2004,2005]) {
+        env=setup(file);env.MAC.User.BuyPopedom(env.button);env.token();
+        const message='The payment outcome could not be confirmed. Check your purchase records before paying again. Diagnostic reference: ordinary-reference.';
+        env.requests[1].success({code,msg:message,info:{outcome:'commit_unknown',retryable:false,reference:'ordinary-reference'}});
+        check(env.requests.length===2&&env.effects.reload===0&&env.effects.login===0&&env.effects.recharge===0,'Unknown purchase must not retry, reload, log out or start recharge');
+        check(env.responses.at(-1).msg===message,'The actual purchase client must display the diagnostic message without replacing it with retry instructions');
+    }
     for(const base of ['https://foreign.invalid/site','//foreign.invalid/site','/fixture?next=','/fixture#fragment']) {
         env=setup(file,base);env.invoke();check(env.requests.length===0&&env.responses[0].code>1,'Malformed or external installation URLs must not receive tokens or credentials');
     }
@@ -68,6 +75,12 @@ for(const file of source.files.filter(file=>file.includes('home-stack'))) {
     env=setup(file);vm.runInContext(source.gateScript,env.context);vm.runInContext('delete window.openRechargeModal',env.context);
     env.handlers['.js-popedom-buy-btn'].call(env.button,{preventDefault(){}});env.token();env.requests[1].success({code:1005,msg:'Not enough points'});
     check(env.location.href==='/fixture/index.php/user/buy','Gate recharge fallback must keep the configured member purchase URL');
+    for(const code of [2004,2005]) {
+        env=setup(file);vm.runInContext(source.gateScript,env.context);
+        env.handlers['.js-popedom-buy-btn'].call(env.button,{preventDefault(){}});env.token();
+        env.requests[1].success({code,msg:'付款结果尚未确认，请先核对购买记录，勿重复付款。诊断编号：ordinary-reference。',info:{retryable:false}});
+        check(env.requests.length===2&&env.effects.recharge===0&&env.effects.reload===0,'Actual upgrade gate must not treat an unknown payment as insufficient points or retry it');
+    }
 }
 for(const [file,method,type] of [['template/default/html/vod/player.html','window.parent.MAC.User.BuyPopedom(this)','4'],['template/m1938pc3_v2/html9/vod/downer.html','window.parent.MAC.User.BuyPopedom(this)','5']]) {
     const markup=fs.readFileSync(path.join(source.root,file),'utf8'),tag=markup.split('<').find(line=>line.includes(method));

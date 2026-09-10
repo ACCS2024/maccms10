@@ -750,6 +750,7 @@ https://www.baidu.com/123.jpg
   'index/ulog_fee' => 'Los recibos de tarifa deben registrarse por separado',
   'index/buy_popedom1' => 'Ya has comprado estos datos, no necesitas pagar de nuevo, por favor actualiza la página.',
   'index/buy_popedom2' => 'Lo siento, hubo un error al actualizar la información de puntos del usuario, por favor actualiza la página.',
+    'index/buy_popedom_outcome_unknown' => 'No se pudo confirmar el resultado del pago. Revise sus compras antes de volver a pagar. Referencia de diagnóstico: %s.',
   'index/buy_popedom3' => 'Lo siento, para ver esta página necesitas %s puntos. Actualmente tienes %s puntos. Por favor, realiza una recarga primero.',
   'index/bind_haved' => 'Ya has vinculado esta cuenta',
   'index/bind_ok' => 'Vinculación exitosa',

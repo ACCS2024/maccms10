@@ -814,6 +814,7 @@ https://www.baidu.com/123.jpg
     'index/ulog_fee'=>'收费收据需单独记录',
     'index/buy_popedom1'=>'您已经购买过此条数据，无需再次支付，请刷新页面重试！',
     'index/buy_popedom2'=>'对不起,更新用户金币信息失败，请刷新重试！',
+    'index/buy_popedom_outcome_unknown' => '付款结果尚未确认，请先核对购买记录，勿重复付款。诊断编号：%s。',
     'index/buy_popedom3'=>'对不起,查看此页面数据需要[%s]金币，您还剩下[%s]金币，请先充值！',
     'index/bind_haved'=>'已经绑定该账号',
     'index/bind_ok'=>'绑定成功',
