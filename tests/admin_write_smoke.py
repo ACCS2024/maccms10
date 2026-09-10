@@ -15,7 +15,7 @@
 前置(由 CI/调用方准备):已灌库、种管理员 admin/admin888、关验证码、种 vod id=1。
 退出码:0 全部通过;1 有失败。
 """
-import os, re, sys, subprocess, urllib.request, urllib.parse, http.cookiejar
+import os, re, sys, subprocess, shlex, urllib.request, urllib.parse, http.cookiejar
 from html.parser import HTMLParser
 
 BASE = (sys.argv[1] if len(sys.argv) > 1 else "http://127.0.0.1:8813").rstrip("/")
@@ -26,13 +26,10 @@ op = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cj))
 fails = []
 
 def db(sql):
-    """执行 SQL,返回首行首列(失败返回 None)。"""
-    try:
-        out = subprocess.run(MYSQL.split() + ["-N", "-e", sql],
-                             capture_output=True, text=True, timeout=15)
-        return out.stdout.strip()
-    except Exception as e:
-        return None
+    """Database verification is mandatory; command failures must fail the test."""
+    out = subprocess.run(shlex.split(MYSQL) + ["-N", "-e", sql],
+                         capture_output=True, text=True, timeout=15, check=True)
+    return out.stdout.strip()
 
 def get(u):
     return op.open(BASE + u, timeout=20).read().decode("utf-8", "ignore")
@@ -98,17 +95,18 @@ if "<title>系统发生错误" in home or "admin_name" in home and "admin_pwd" i
 before = db("SELECT vod_status FROM mac_vod WHERE vod_id=1")
 b, _ = post("/vod/field", {"ids": "1", "col": "vod_status", "val": "0", "start": "", "end": ""})
 after = db("SELECT vod_status FROM mac_vod WHERE vod_id=1")
-check("field 切换", code_of(b) == "1" and (after == "0" or after is None), f"code={code_of(b)} db={after}")
-post("/vod/field", {"ids": "1", "col": "vod_status", "val": "1", "start": "", "end": ""})  # 还原
+check("field 切换", code_of(b) == "1" and after == "0", f"code={code_of(b)} db={after}")
+post("/vod/field", {"ids": "1", "col": "vod_status", "val": before, "start": "", "end": ""})
 
 # 2) 表单保存:round-trip vod/info(改名再改回)
 f = form_of("/vod/info?id=1")
 if f.get("vod_id"):
+    original_name = f["vod_name"]
     f["vod_name"] = "写冒烟保存"
     b, _ = post("/vod/info", f)
     nm = db("SELECT vod_name FROM mac_vod WHERE vod_id=1")
-    check("vod 保存", code_of(b) == "1", f"code={code_of(b)}")
-    f["vod_name"] = "冒烟测试影片"; post("/vod/info", f)  # 还原
+    check("vod 保存", code_of(b) == "1" and nm == "写冒烟保存", f"code={code_of(b)} persisted={nm == '写冒烟保存'}")
+    f["vod_name"] = original_name; post("/vod/info", f)
 else:
     check("vod 保存", False, "未取到编辑表单")
 
@@ -117,10 +115,10 @@ if db("SET SESSION sql_mode=''; INSERT INTO mac_vod (vod_id,type_id,vod_name,vod
       "VALUES (999,6,'待删除',1,UNIX_TIMESTAMP(),'x') ON DUPLICATE KEY UPDATE vod_recycle_time=0,vod_name='待删除'") is not None:
     b, _ = post("/vod/del", {"ids": "999"})
     rec = db("SELECT vod_recycle_time>0 FROM mac_vod WHERE vod_id=999")
-    check("vod 删除", code_of(b) == "1", f"code={code_of(b)} recycled={rec}")
+    check("vod 删除", code_of(b) == "1" and rec == "1", f"code={code_of(b)} recycled={rec}")
     db("DELETE FROM mac_vod WHERE vod_id=999")  # 清理
 else:
-    check("vod 删除", True, "(跳过:无 DB 访问)")
+    check("vod 删除", False, "database fixture unavailable")
 
 # 4) 系统配置保存:round-trip(含表单 __token__,经 mac_validate('Token') 校验)
 cf = form_of("/system/configuser")

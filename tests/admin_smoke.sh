@@ -19,23 +19,25 @@ BASE="${1:-http://127.0.0.1:8813}"
 CJ="$(mktemp)"
 trap 'rm -f "$CJ"' EXIT
 
-curl -s -c "$CJ" -o /dev/null "$BASE/index/login" || true
-curl -s -b "$CJ" -c "$CJ" -H "X-Requested-With: XMLHttpRequest" -X POST "$BASE/index/login" \
-  --data "admin_name=admin&admin_pwd=admin888" -o /dev/null || true
+curl --fail --silent --show-error --connect-timeout 5 --max-time 30 -c "$CJ" -o /dev/null "$BASE/index/login" || exit 1
+curl --fail --silent --show-error --connect-timeout 5 --max-time 30 -b "$CJ" -c "$CJ" -H "X-Requested-With: XMLHttpRequest" -X POST "$BASE/index/login" \
+  --data "admin_name=admin&admin_pwd=admin888" -o /dev/null || exit 1
 
 # 单页判定:输出 ok/FAIL,返回 0/1
 probe() {
   local u="$1" body code loc meta tmpf
   tmpf="$(mktemp)"
   # 单次请求同时取 body+code+redirect,避免多次请求在模板冷编译期结果不一致而误报
-  meta="$(curl -s -b "$CJ" -o "$tmpf" -w '%{http_code}|%{redirect_url}' "$BASE/$u")"
+  meta="$(curl --silent --show-error --connect-timeout 5 --max-time 30 \
+    --location --max-redirs 5 --proto '=http,https' --proto-redir '=http,https' \
+    -b "$CJ" -o "$tmpf" -w '%{http_code}|%{url_effective}' "$BASE/$u")"
   code="${meta%%|*}"
   loc="${meta#*|}"
   body="$(cat "$tmpf")"
   rm -f "$tmpf"
 
-  if [ "$code" -ge 500 ] || [ "$code" = "000" ]; then
-    printf 'FAIL  %-26s -> %s (5xx)\n' "$u" "$code"; return 1
+  if [ "$code" != "200" ] || [ -z "$body" ]; then
+    printf 'FAIL  %-26s -> %s (expected nonempty HTTP 200)\n' "$u" "$code"; return 1
   fi
   case "$loc" in
     *index/login*) printf 'FAIL  %-26s -> %s (跳登录:会话/鉴权未生效)\n' "$u" "$code"; return 1 ;;

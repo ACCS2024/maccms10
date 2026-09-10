@@ -4,10 +4,10 @@
  * 打印 HTTP 状态码(或异常),用于在无 Web 服务器的环境(CI)下抓
  * 「改动把站点改崩」级别的回归(路由/中间件/控制器/模板/ORM 全链路)。
  *
- * 用法:  php tests/http_smoke.php <app> <url>
+ * 用法:  php tests/http_smoke.php <app> <url> [expected_status=200] [required_body_text]
  *   <app> = index | api | admin
  *   <url> = 形如 /vod/type/id/1.html
- * 退出码:0 = 非 5xx(通过);1 = 5xx 或抛异常(失败)。
+ * 退出码:0 = 状态/内容契约通过;1 = 不符合契约或异常。控制器直接 exit 也必须验证。
  *
  * 需先完成安装(application/data/install/install.lock 存在)且 .env 指向可用数据库。
  */
@@ -15,6 +15,36 @@
 $app  = $argv[1] ?? 'index';
 $url  = $argv[2] ?? '/';
 $root = dirname(__DIR__) . '/';
+$expectedStatus = isset($argv[3]) ? (int) $argv[3] : 200;
+$requiredText = $argv[4] ?? '';
+if (!in_array($app, ['index', 'api', 'admin'], true) || $expectedStatus < 100 || $expectedStatus > 599) {
+    fwrite(STDERR, "Invalid smoke test arguments\n");
+    exit(2);
+}
+$verified = false;
+$verify = static function (int $code, string $content) use ($app, $url, $expectedStatus, $requiredText): int {
+    $contentErr = str_contains($content, '<title>系统发生错误</title>')
+        || (strlen($content) < 300 && str_contains($content, '系统核心功能异常'));
+    $ok = $code === $expectedStatus && !$contentErr
+        && ($code !== 200 || trim($content) !== '')
+        && ($requiredText === '' || str_contains($content, $requiredText));
+    printf("[%s] %-44s -> HTTP %d %s\n", $app, $url, $code, $ok ? 'PASS' : 'FAIL (status/body contract)');
+    return $ok ? 0 : 1;
+};
+ob_start();
+register_shutdown_function(static function () use (&$verified, $verify): void {
+    if ($verified) {
+        return;
+    }
+    $body = (string) ob_get_clean();
+    $last = error_get_last();
+    if ($last && in_array($last['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR], true)) {
+        fwrite(STDERR, "Unverified fatal exit: " . $last['message'] . "\n");
+        exit(1);
+    }
+    $verified = true;
+    exit($verify(http_response_code() ?: 200, $body));
+});
 
 $path = parse_url($url, PHP_URL_PATH) ?: '/';
 
@@ -47,13 +77,13 @@ try {
     $application->setAppPath(APP_PATH);
     $response = $application->http->name($app)->path(APP_PATH . $app . '/')->run();
     $code = $response->getCode();
-    // 不只看状态码:完整性守卫/部分异常会以 HTTP 200 返回错误内容,需按内容兜底。
-    $content    = (string) $response->getContent();
-    $contentErr = (strpos($content, '<title>系统发生错误</title>') !== false)
-        || (strlen($content) < 300 && strpos($content, '系统核心功能异常') !== false);
-    printf("[%s] %-44s -> HTTP %d%s\n", $app, $url, $code, $contentErr ? ' (内容错误页)' : '');
-    exit(($code >= 500 || $contentErr) ? 1 : 0);
+    $content = (string) $response->getContent();
+    $content = (string) ob_get_clean() . $content;
+    $verified = true;
+    exit($verify($code, $content));
 } catch (\Throwable $e) {
+    ob_end_clean();
+    $verified = true;
     printf("[%s] %-44s -> EXC %s: %s @ %s:%d\n",
         $app, $url, get_class($e), $e->getMessage(),
         str_replace($root, '', $e->getFile()), $e->getLine());
