@@ -1382,50 +1382,68 @@ class User extends Base
         }
     }
 
+    private function visitTransactionsAvailable(): bool
+    {
+        $type = Db::connect()->getConfig('type');
+        if ($type === 'sqlite') { return true; }
+        if ($type !== 'mysql') { return false; }
+        $tables = [$this->getTable(), (new Visit())->getTable(), (new Plog())->getTable()];
+        $rows = Db::query('SELECT TABLE_NAME AS name, ENGINE AS engine FROM information_schema.TABLES '
+            . 'WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME IN (?,?,?)', $tables, true);
+        foreach ($rows as $row) {
+            $index = array_search($row['name'], $tables, true);
+            if ($index !== false && strtoupper((string)$row['engine']) === 'INNODB') { unset($tables[$index]); }
+        }
+        return $tables === [];
+    }
+
     public function visit($param)
     {
-        $param['uid'] = abs(intval($param['uid']));
-        if ($param['uid'] == 0) {
-            return ['code' => 101, 'msg' =>lang('model/user/id_err')];
+        $userId = is_array($param) ? \app\common\util\PointsBalance::amount($param['uid'] ?? null) : null;
+        if ($userId === null) { return ['code'=>101, 'msg'=>lang('model/user/id_err')]; }
+        $configuration = $GLOBALS['config']['user'] ?? [];
+        $quota = $configuration['invite_visit_num'] ?? 1;
+        // Historical zero/empty configuration means one visit per address per day.
+        if ($quota === '' || $quota === 0 || $quota === '0' || $quota === null) { $quota = 1; }
+        $quota = \app\common\util\PointsBalance::amount($quota);
+        $points = \app\common\util\PointsBalance::amount($configuration['invite_visit_points'] ?? 0, true);
+        $ip = \app\common\util\PointsBalance::amount(mac_get_ip_long(), true);
+        if ($quota === null || $points === null || $ip === null) {
+            return ['code'=>103, 'msg'=>lang('model/user/visit_err')];
         }
-
-        $ip = mac_get_ip_long();
-        $max_cc = $GLOBALS['config']['user']['invite_visit_num'];
-        if(empty($max_cc)){
-            $max_cc=1;
+        $started = false;
+        try {
+            if (!$this->visitTransactionsAvailable()) { throw new \RuntimeException('Transactional visit tables required'); }
+            Db::startTrans(); $started = true;
+            // All requests for this beneficiary acquire the same lock before reading the quota.
+            if (!$this->where('user_id', $userId)->lock(true)->find()) {
+                Db::rollback(); return ['code'=>101, 'msg'=>lang('model/user/id_err')];
+            }
+            $now = time(); $day = strtotime('today', $now); $nextDay = strtotime('+1 day', $day);
+            $count = Db::name('Visit')->where('user_id', $userId)->where('visit_ip', $ip)
+                ->where('visit_time', '>=', $day)->where('visit_time', '<', $nextDay)->lock(true)->count();
+            if ($count >= $quota) { Db::rollback(); return ['code'=>102, 'msg'=>lang('model/user/visit_tip')]; }
+            $referer = mac_get_refer();
+            if (!is_string($referer)) { $referer = ''; }
+            $referer = mb_substr(htmlspecialchars($referer, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'), 0, 100, 'UTF-8');
+            if (Db::name('Visit')->insert(['user_id'=>$userId, 'visit_ip'=>$ip, 'visit_time'=>$now, 'visit_ly'=>$referer]) !== 1) {
+                throw new \RuntimeException('Visit insert failed');
+            }
+            if ($points > 0) {
+                if (!\app\common\util\PointsBalance::credit($userId, $points)) { throw new \RuntimeException('Visit credit failed'); }
+                $log = (new Plog())->saveData(['user_id'=>$userId, 'plog_type'=>3, 'plog_points'=>$points]);
+                if (($log['code'] ?? null) !== 1) { throw new \RuntimeException('Visit ledger failed'); }
+                // Legacy SMALLINT ledgers can silently clip values under non-strict MySQL.
+                $stored = Db::name('Plog')->where('plog_id', Db::name('Plog')->getLastInsID())->lock(true)->find();
+                if (!$stored || (int)$stored['user_id'] !== $userId || (int)$stored['plog_type'] !== 3
+                    || (int)$stored['plog_points'] !== $points) { throw new \RuntimeException('Visit ledger amount mismatch'); }
+            }
+            Db::commit();
+            return ['code'=>1, 'msg'=>lang('model/user/visit_ok')];
+        } catch (\Throwable $error) {
+            if ($started) { Db::rollback(); }
+            return ['code'=>103, 'msg'=>lang('model/user/visit_err')];
         }
-        $todayunix = strtotime("today");
-        $where = [];
-        $where['user_id'] = $param['uid'];
-        $where['visit_ip'] = $ip;
-        $where[] = ['visit_time', '>', $todayunix];
-        $cc = (new \app\common\model\Visit())->where($where)->count();
-        if ($cc>= $max_cc){
-            return ['code' => 102, 'msg' => lang('model/user/visit_tip')];
-        }
-
-        $data = [];
-        $data['user_id'] = $param['uid'];
-        $data['visit_ip'] = $ip;
-        $data['visit_time'] = time();
-        $data['visit_ly'] = htmlspecialchars(mac_get_refer());
-        $res = (new \app\common\model\Visit())->saveData($data);
-
-        if ($res['code'] > 1) {
-            return ['code' => 103, 'msg' => lang('model/user/visit_err')];
-        }
-
-        $res = $this->where('user_id', $param['uid'])->setInc('user_points', intval($GLOBALS['config']['user']['invite_visit_points']));
-        if($res) {
-            //积分日志
-            $data = [];
-            $data['user_id'] = $param['uid'];
-            $data['plog_type'] = 3;
-            $data['plog_points'] = intval($GLOBALS['config']['user']['invite_visit_points']);
-            (new \app\common\model\Plog())->saveData($data);
-        }
-
-        return ['code'=>1,'msg'=>lang('model/user/visit_ok')];
     }
 
     /** Failures throw so callers cannot commit a charge with incomplete reward ledgers. */
