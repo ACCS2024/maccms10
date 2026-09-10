@@ -54,14 +54,34 @@ class Epay {
 
     public function notify()
     {
-        $param = $_REQUEST;
+        $param = ($_SERVER['REQUEST_METHOD'] ?? '') === 'GET' ? $_GET : $_POST;
         // $param['trade_no'] 这是付款人的唯一身份标识或订单ID
         // $param['out_trade_no'] 这是流水号 没有则表示没有付款成功 流水号不同则为不同订单
         // $param['money'] 这是付款金额
 
         unset($param['/payment/notify/pay_type/epay']);
         unset($param['paytype']);
+        unset($param['pay_type']);
         unset($param['s']);
+
+        foreach ($param as $value) {
+            if (!is_string($value) && !is_int($value)) {
+                echo 'fail';
+                return;
+            }
+        }
+        $GLOBALS['config']['pay'] = config('maccms.pay');
+        $epay_config = $GLOBALS['config']['pay']['epay'] ?? [];
+        $paid = $param['money'] ?? '';
+        if (empty($param['out_trade_no']) || empty($param['trade_no']) || empty($param['sign'])
+            || ($param['trade_status'] ?? '') !== 'TRADE_SUCCESS'
+            || ($param['sign_type'] ?? 'MD5') !== 'MD5'
+            || empty($epay_config['appid']) || (string)($param['pid'] ?? '') !== trim((string)$epay_config['appid'])
+            || trim((string)($epay_config['appkey'] ?? '')) === ''
+            || !preg_match('/^[0-9]{1,12}(?:\.[0-9]{1,2})?$/D', (string)$paid) || (float)$paid <= 0) {
+            echo 'fail';
+            return;
+        }
 
         ksort($param); //排序post参数
         reset($param); //内部指针指向数组中的第一个元素
@@ -73,19 +93,16 @@ class Epay {
             }
         }
 
-        $epay_config = $GLOBALS['config']['pay']['epay'];
-        if (!$param['out_trade_no'] || md5(substr($sign, 0, -1) . trim($epay_config['appkey'])) != $param['sign']) {
+        if (!hash_equals(md5(substr($sign, 0, -1) . trim($epay_config['appkey'])), (string)$param['sign'])) {
             echo 'fail';
         }
         else{
             // 安全加固:易支付 money 单位为元,二次核对防改价低付
-            $paid = isset($param['money']) ? $param['money'] : null;
-            $res = (new \app\common\model\Order())->notify($param['out_trade_no'], 'epay', $paid);
-            if($res['code'] >1){
-                echo 'fail2';
-            }
-            else {
-                echo 'success';
+            try {
+                $res = (new \app\common\model\Order())->notify($param['out_trade_no'], 'epay', $paid);
+                echo in_array($res['code'] ?? null, [1, '1'], true) ? 'success' : 'fail';
+            } catch (\Throwable $e) {
+                echo 'fail';
             }
         }
     }
