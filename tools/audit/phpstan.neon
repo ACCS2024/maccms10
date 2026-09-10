@@ -1,0 +1,28 @@
+parameters:
+    level: 1
+    phpVersion: 80400
+    tmpDir: cache/phpstan
+    paths:
+        - ../../application
+        - ../../addons
+        - ../../extend
+        - ../../config
+        - ../../route
+        - ../../index.php
+        - ../../api.php
+        - ../../admin.php
+        - ../../install.php
+        - ../../bin
+        - ../../deploy
+        - ../../migration
+    excludePaths:
+        analyseAndScan:
+            - ../../extend/upyun/vendor
+    bootstrapFiles:
+        - ../../vendor/autoload.php
+    scanFiles:
+        - ../../vendor/topthink/framework/src/helper.php
+        - ../../vendor/topthink/think-helper/src/helper.php
+        - ../../vendor/topthink/think-captcha/src/helper.php
+        - ../../vendor/topthink/think-orm/src/helper.php
+        - ../../vendor/topthink/think-validate/src/helper.php

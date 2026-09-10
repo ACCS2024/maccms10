@@ -32,7 +32,7 @@ $walk = function (string $dir) use (&$walk, &$files, &$skipped, $root, $all): vo
                 $skipped[$relative] = 'repository metadata or JavaScript dependencies';
                 continue;
             }
-            if (!$all && (in_array($relative, ['vendor', 'runtime', 'upload'], true)
+            if (!$all && (in_array($relative, ['vendor', 'runtime', 'upload', 'tools/audit/vendor', 'tools/audit/cache', 'tools/audit/reports'], true)
                 || str_starts_with($relative, 'thinkphp_legacy_'))) {
                 $skipped[$relative] = 'runtime/dependency/archive; included by --all';
                 continue;
