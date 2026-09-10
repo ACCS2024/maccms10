@@ -1,5 +1,7 @@
 <?php
 namespace app\common\util;
+
+use Exception;
 /*
  * PHP QR Code encoder
  *
@@ -205,12 +207,15 @@ namespace app\common\util;
         //----------------------------------------------------------------------
         public static function clearCache()
         {
-            self::$frames = array();
+            QRspec::$frames = array();
         }
         
         //----------------------------------------------------------------------
         public static function buildCache()
         {
+			if (!QR_CACHEABLE || QR_CACHE_DIR === false) {
+				return;
+			}
 			QRtools::markTime('before_build_cache');
 			
 			$mask = new QRmask();
@@ -603,7 +608,7 @@ namespace app\common\util;
             $xStart = $ox-2;
             
             for($y=0; $y<5; $y++) {
-                QRstr::set($frame, $xStart, $yStart+$y, $finder[$y]);
+                qrstr::set($frame, $xStart, $yStart+$y, $finder[$y]);
             }
         }
 
@@ -714,7 +719,7 @@ namespace app\common\util;
             );                            
             
             for($y=0; $y<7; $y++) {
-                QRstr::set($frame, $ox, $oy+$y, $finder[$y]);
+                qrstr::set($frame, $ox, $oy+$y, $finder[$y]);
             }
         }
 
@@ -742,14 +747,14 @@ namespace app\common\util;
             
             $setPattern = str_repeat("\xc0", 8);
             
-            QRstr::set($frame, 0, 7, $setPattern);
-            QRstr::set($frame, $width-8, 7, $setPattern);
-            QRstr::set($frame, 0, $width - 8, $setPattern);
+            qrstr::set($frame, 0, 7, $setPattern);
+            qrstr::set($frame, $width-8, 7, $setPattern);
+            qrstr::set($frame, 0, $width - 8, $setPattern);
         
             // Format info
             $setPattern = str_repeat("\x84", 9);
-            QRstr::set($frame, 0, 8, $setPattern);
-            QRstr::set($frame, $width - 8, 8, $setPattern, 8);
+            qrstr::set($frame, 0, 8, $setPattern);
+            qrstr::set($frame, $width - 8, 8, $setPattern, 8);
             
             $yOffset = $width - 8;
 
@@ -941,21 +946,21 @@ namespace app\common\util;
         public static function png($frame, $filename = false, $pixelPerPoint = 4, $outerFrame = 4,$saveandprint=FALSE) 
         {
             $image = self::image($frame, $pixelPerPoint, $outerFrame);
-            
-            if ($filename === false) {
-                Header("Content-type: image/png");
-                ImagePng($image);
-            } else {
-                if($saveandprint===TRUE){
-                    ImagePng($image, $filename);
-                    header("Content-type: image/png");
-                    ImagePng($image);
-                }else{
-                    ImagePng($image, $filename);
+            try {
+                if ($filename !== false) {
+                    if (!is_string($filename) || $filename === '' || !@ImagePng($image, $filename)) {
+                        throw new \RuntimeException('Unable to write QR PNG');
+                    }
                 }
+                if ($filename === false || $saveandprint === true) {
+                    Header("Content-type: image/png");
+                    if (!ImagePng($image)) {
+                        throw new \RuntimeException('Unable to output QR PNG');
+                    }
+                }
+            } finally {
+                ImageDestroy($image);
             }
-            
-            ImageDestroy($image);
         }
     
         //----------------------------------------------------------------------
@@ -963,24 +968,43 @@ namespace app\common\util;
         {
             $image = self::image($frame, $pixelPerPoint, $outerFrame);
             
-            if ($filename === false) {
-                Header("Content-type: image/jpeg");
-                ImageJpeg($image, null, $q);
-            } else {
-                ImageJpeg($image, $filename, $q);            
+            try {
+                if ($filename === false) {
+                    Header("Content-type: image/jpeg");
+                    if (!ImageJpeg($image, null, $q)) {
+                        throw new \RuntimeException('Unable to output QR JPEG');
+                    }
+                } elseif (!is_string($filename) || $filename === '' || !@ImageJpeg($image, $filename, $q)) {
+                    throw new \RuntimeException('Unable to write QR JPEG');
+                }
+            } finally {
+                ImageDestroy($image);
             }
-            
-            ImageDestroy($image);
         }
     
         //----------------------------------------------------------------------
         private static function image($frame, $pixelPerPoint = 4, $outerFrame = 4) 
         {
+            $pixelPerPoint = filter_var($pixelPerPoint, FILTER_VALIDATE_INT);
+            $outerFrame = filter_var($outerFrame, FILTER_VALIDATE_INT);
+            if (!is_array($frame) || !$frame || !array_is_list($frame) || $pixelPerPoint === false || $pixelPerPoint < 1
+                || $pixelPerPoint > QR_PNG_MAXIMUM_SIZE || $outerFrame === false || $outerFrame < 0
+                || $outerFrame > QR_PNG_MAXIMUM_SIZE) {
+                throw new \InvalidArgumentException('Invalid QR image dimensions');
+            }
             $h = count($frame);
-            $w = strlen($frame[0]);
+            $w = $h;
+            foreach ($frame as $row) {
+                if (!is_string($row) || strlen($row) !== $w || strspn($row, '01') !== $w) {
+                    throw new \InvalidArgumentException('QR frame must be a square binary matrix');
+                }
+            }
             
             $imgW = $w + 2*$outerFrame;
             $imgH = $h + 2*$outerFrame;
+            if ($imgW * $pixelPerPoint > QR_PNG_MAXIMUM_SIZE) {
+                throw new \InvalidArgumentException('QR image exceeds the configured maximum size');
+            }
             
             $base_image =ImageCreate($imgW, $imgH);
             
@@ -1050,14 +1074,23 @@ namespace app\common\util;
 
         public function __construct($mode, $size, $data, $bstream = null) 
         {
+            $size = filter_var($size, FILTER_VALIDATE_INT);
+            if ($size === false || $size < 1 || !is_array($data)) {
+                throw new \InvalidArgumentException('Invalid QR input segment');
+            }
             $setData = array_slice($data, 0, $size);
             
             if (count($setData) < $size) {
-                $setData = array_merge($setData, array_fill(0,$size-count($setData),0));
+                $setData = array_merge($setData, array_fill(0,$size-count($setData),"\0"));
+            }
+            foreach ($setData as $byte) {
+                if (!is_string($byte) || strlen($byte) !== 1) {
+                    throw new \InvalidArgumentException('QR input data must contain single-byte strings');
+                }
             }
         
             if(!QRinput::check($mode, $size, $setData)) {
-                throw new Exception('Error m:'.$mode.',s:'.$size.',d:'.join(',',$setData));
+                throw new \InvalidArgumentException('Invalid QR input mode or data');
                 return null;
             }
             
@@ -1159,7 +1192,7 @@ namespace app\common\util;
         {
             try {
 
-                $bs = new QRbitrtream();
+                $bs = new QRbitstream();
                 
                 $bs->appendNum(4, 0x8);
                 $bs->appendNum(QRspec::lengthIndicator(QR_MODE_KANJI, $version), (int)($this->size / 2));
@@ -1237,7 +1270,7 @@ namespace app\common\util;
         {
             try {
             
-                unset($this->bstream);
+                $this->bstream = null;
                 $words = QRspec::maximumWords($this->mode, $version);
                 
                 if($this->size > $words) {
@@ -1286,7 +1319,7 @@ namespace app\common\util;
 
     class QRinput {
 
-        public $items;
+        public $items = array();
         
         private $version;
         private $level;
@@ -1294,13 +1327,8 @@ namespace app\common\util;
         //----------------------------------------------------------------------
         public function __construct($version = 0, $level = QR_ECLEVEL_L)
         {
-            if ($version < 0 || $version > QRSPEC_VERSION_MAX || $level > QR_ECLEVEL_H) {
-                throw new Exception('Invalid version no');
-                return NULL;
-            }
-            
-            $this->version = $version;
-            $this->level = $level;
+            $this->setVersion($version);
+            $this->setErrorCorrectionLevel($level);
         }
         
         //----------------------------------------------------------------------
@@ -1312,7 +1340,8 @@ namespace app\common\util;
         //----------------------------------------------------------------------
         public function setVersion($version)
         {
-            if($version < 0 || $version > QRSPEC_VERSION_MAX) {
+            $version = filter_var($version, FILTER_VALIDATE_INT);
+            if($version === false || $version < 0 || $version > QRSPEC_VERSION_MAX) {
                 throw new Exception('Invalid version no');
                 return -1;
             }
@@ -1331,7 +1360,8 @@ namespace app\common\util;
         //----------------------------------------------------------------------
         public function setErrorCorrectionLevel($level)
         {
-            if($level > QR_ECLEVEL_H) {
+            $level = filter_var($level, FILTER_VALIDATE_INT);
+            if($level === false || $level < QR_ECLEVEL_L || $level > QR_ECLEVEL_H) {
                 throw new Exception('Invalid ECLEVEL');
                 return -1;
             }
@@ -1363,18 +1393,24 @@ namespace app\common\util;
         
         public function insertStructuredAppendHeader($size, $index, $parity)
         {
-            if( $size > MAX_STRUCTURED_SYMBOLS ) {
+            $size = filter_var($size, FILTER_VALIDATE_INT);
+            $index = filter_var($index, FILTER_VALIDATE_INT);
+            $parity = filter_var($parity, FILTER_VALIDATE_INT);
+            if ($size === false || $size < 1 || $size > MAX_STRUCTURED_SYMBOLS) {
                 throw new Exception('insertStructuredAppendHeader wrong size');
             }
             
-            if( $index <= 0 || $index > MAX_STRUCTURED_SYMBOLS ) {
+            if ($index === false || $index < 1 || $index > $size) {
                 throw new Exception('insertStructuredAppendHeader wrong index');
             }
 
-            $buf = array($size, $index, $parity);
+            if ($parity === false || $parity < 0 || $parity > 255) {
+                throw new Exception('insertStructuredAppendHeader wrong parity');
+            }
+            $buf = array(chr($size), chr($index), chr($parity));
             
             try {
-                $entry = new QRinputItem(QR_MODE_STRUCTURE, 3, buf);
+                $entry = new QRinputItem(QR_MODE_STRUCTURE, 3, $buf);
                 array_unshift($this->items, $entry);
                 return 0;
             } catch (Exception $e) {
@@ -1390,7 +1426,7 @@ namespace app\common\util;
             foreach($this->items as $item) {
                 if($item->mode != QR_MODE_STRUCTURE) {
                     for($i=$item->size-1; $i>=0; $i--) {
-                        $parity ^= $item->data[$i];
+                        $parity ^= ord($item->data[$i]);
                     }
                 }
             }
@@ -1413,7 +1449,7 @@ namespace app\common\util;
         //----------------------------------------------------------------------
         public static function estimateBitsModeNum($size)
         {
-            $w = (int)$size / 3;
+            $w = intdiv($size, 3);
             $bits = $w * 10;
             
             switch($size - $w * 3) {
@@ -1480,7 +1516,7 @@ namespace app\common\util;
         }
         
         //----------------------------------------------------------------------
-        public function estimateBitsModeKanji($size)
+        public static function estimateBitsModeKanji($size)
         {
             return (int)(($size / 2) * 13);
         }
@@ -1548,6 +1584,13 @@ namespace app\common\util;
                 $prev = $version;
                 $bits = $this->estimateBitStreamSize($prev);
                 $version = QRspec::getMinimumVersion((int)(($bits + 7) / 8), $this->level);
+                if ($version < 0 && $prev < QRSPEC_VERSION_MAX) {
+                    // Small-version length fields can overestimate the number of segments.
+                    // Retry with the largest length fields before rejecting a maximum-size payload.
+                    $prev = QRSPEC_VERSION_MAX;
+                    $bits = $this->estimateBitStreamSize($prev);
+                    $version = QRspec::getMinimumVersion((int)(($bits + 7) / 8), $this->level);
+                }
                 if ($version < 0) {
                     return -1;
                 }
@@ -1620,6 +1663,9 @@ namespace app\common\util;
         public function convertData()
         {
             $ver = $this->estimateVersion();
+            if ($ver < 0) {
+                throw new \InvalidArgumentException('Input is too large for a QR symbol');
+            }
             if($ver > $this->getVersion()) {
                 $this->setVersion($ver);
             }
@@ -1632,7 +1678,7 @@ namespace app\common\util;
                     
                 $ver = QRspec::getMinimumVersion((int)(($bits + 7) / 8), $this->level);
                 if($ver < 0) {
-                    throw new Exception('WRONG VERSION');
+                    throw new \InvalidArgumentException('Input is too large for a QR symbol');
                     return -1;
                 } else if($ver > $this->getVersion()) {
                     $this->setVersion($ver);
@@ -2123,7 +2169,7 @@ namespace app\common\util;
             if($ret < 0)
                 return -1;
 
-            return $run;
+            return $p;
         }
 
         //----------------------------------------------------------------------
@@ -2195,7 +2241,7 @@ namespace app\common\util;
                     case QR_MODE_NUM: $length = $this->eatNum(); break;
                     case QR_MODE_AN:  $length = $this->eatAn(); break;
                     case QR_MODE_KANJI:
-                        if ($hint == QR_MODE_KANJI)
+                        if ($this->modeHint == QR_MODE_KANJI)
                                 $length = $this->eatKanji();
                         else    $length = $this->eat8();
                         break;
@@ -2217,7 +2263,7 @@ namespace app\common\util;
             $p = 0;
             
             while ($p<$stringLen) {
-                $mode = self::identifyMode(substr($this->dataStr, $p), $this->modeHint);
+                $mode = $this->identifyMode($p);
                 if($mode == QR_MODE_KANJI) {
                     $p += 2;
                 } else {
@@ -2234,8 +2280,13 @@ namespace app\common\util;
         //----------------------------------------------------------------------
         public static function splitStringToQRinput($string, QRinput $input, $modeHint, $casesensitive = true)
         {
-            if(is_null($string) || $string == '\0' || $string == '') {
+            if (!is_string($string) || $string === '') {
                 throw new Exception('empty string!!!');
+            }
+            $maximum = QRinput::lengthOfCode(QR_MODE_NUM, QRSPEC_VERSION_MAX,
+                QRspec::getDataLength(QRSPEC_VERSION_MAX, $input->getErrorCorrectionLevel()) * 8);
+            if (strlen($string) > $maximum) {
+                throw new \InvalidArgumentException('Input is too large for a QR symbol');
             }
 
             $split = new QRsplit($string, $input, $modeHint);
@@ -2621,13 +2672,13 @@ namespace app\common\util;
                 if (file_exists($fileName)) {
                     $bitMask = self::unserial(file_get_contents($fileName));
                 } else {
-                    $bitMask = $this->generateMaskNo($maskNo, $width, $s, $d);
+                    $bitMask = $this->generateMaskNo($maskNo, $width, $s);
                     if (!file_exists(QR_CACHE_DIR.'mask_'.$maskNo))
                         mkdir(QR_CACHE_DIR.'mask_'.$maskNo);
                     file_put_contents($fileName, self::serial($bitMask));
                 }
             } else {
-                $bitMask = $this->generateMaskNo($maskNo, $width, $s, $d);
+                $bitMask = $this->generateMaskNo($maskNo, $width, $s);
             }
 
             if ($maskGenOnly)
@@ -2937,18 +2988,17 @@ namespace app\common\util;
         //----------------------------------------------------------------------
         public function getCode()
         {
-            $ret;
 
             if($this->count < $this->dataLength) {
                 $row = $this->count % $this->blocks;
-                $col = $this->count / $this->blocks;
+                $col = intdiv($this->count, $this->blocks);
                 if($col >= $this->rsblocks[0]->dataLength) {
                     $row += $this->b1;
                 }
                 $ret = $this->rsblocks[$row]->data[$col];
             } else if($this->count < $this->dataLength + $this->eccLength) {
                 $row = ($this->count - $this->dataLength) % $this->blocks;
-                $col = ($this->count - $this->dataLength) / $this->blocks;
+                $col = intdiv($this->count - $this->dataLength, $this->blocks);
                 $ret = $this->rsblocks[$row]->ecc[$col];
             } else {
                 return 0;
@@ -2970,6 +3020,10 @@ namespace app\common\util;
         //----------------------------------------------------------------------
         public function encodeMask(QRinput $input, $mask)
         {
+            $mask = filter_var($mask, FILTER_VALIDATE_INT);
+            if ($mask === false || $mask < -1 || $mask > 7) {
+                throw new \InvalidArgumentException('QR mask must be -1 or an integer from 0 to 7');
+            }
             if($input->getVersion() < 0 || $input->getVersion() > QRSPEC_VERSION_MAX) {
                 throw new Exception('wrong version');
             }
@@ -3051,7 +3105,7 @@ namespace app\common\util;
         //----------------------------------------------------------------------
         public function encodeString8bit($string, $version, $level)
         {
-            if(string == NULL) {
+            if (!is_string($string) || $string === '') {
                 throw new Exception('empty string!');
                 return NULL;
             }
@@ -3059,7 +3113,12 @@ namespace app\common\util;
             $input = new QRinput($version, $level);
             if($input == NULL) return NULL;
 
-            $ret = $input->append($input, QR_MODE_8, strlen($string), str_split($string));
+            $maximum = QRinput::lengthOfCode(QR_MODE_8, QRSPEC_VERSION_MAX,
+                QRspec::getDataLength(QRSPEC_VERSION_MAX, $input->getErrorCorrectionLevel()) * 8);
+            if (strlen($string) > $maximum) {
+                throw new \InvalidArgumentException('Input is too large for an 8-bit QR symbol');
+            }
+            $ret = $input->append(QR_MODE_8, strlen($string), str_split($string));
             if($ret < 0) {
                 unset($input);
                 return NULL;
@@ -3091,7 +3150,7 @@ namespace app\common\util;
         public static function png($text, $outfile = false, $level = QR_ECLEVEL_L, $size = 3, $margin = 4, $saveandprint=false) 
         {
             $enc = QRencode::factory($level, $size, $margin);
-            return $enc->encodePNG($text, $outfile, $saveandprint=false);
+            return $enc->encodePNG($text, $outfile, $saveandprint);
         }
 
         //----------------------------------------------------------------------
@@ -3218,6 +3277,15 @@ namespace app\common\util;
         //----------------------------------------------------------------------
         public static function factory($level = QR_ECLEVEL_L, $size = 3, $margin = 4)
         {
+            $size = filter_var($size, FILTER_VALIDATE_INT);
+            $margin = filter_var($margin, FILTER_VALIDATE_INT);
+            if ($size === false || $size < 1 || $margin === false || $margin < 0
+                || $margin > (int)((QR_PNG_MAXIMUM_SIZE - 21) / 2)) {
+                throw new \InvalidArgumentException('Invalid QR image size or margin');
+            }
+            if (!is_int($level) && !is_string($level)) {
+                throw new \InvalidArgumentException('Invalid QR error correction level');
+            }
             $enc = new QRencode();
             $enc->size = $size;
             $enc->margin = $margin;
@@ -3227,7 +3295,7 @@ namespace app\common\util;
                 case '1':
                 case '2':
                 case '3':
-                        $enc->level = $level;
+                        $enc->level = (int)$level;
                     break;
                 case 'l':
                 case 'L':
@@ -3245,6 +3313,8 @@ namespace app\common\util;
                 case 'H':
                         $enc->level = QR_ECLEVEL_H;
                     break;
+                default:
+                    throw new \InvalidArgumentException('Invalid QR error correction level');
             }
             
             return $enc;
@@ -3278,7 +3348,10 @@ namespace app\common\util;
             QRtools::markTime('after_encode');
             
             if ($outfile!== false) {
-                file_put_contents($outfile, join("\n", QRtools::binarize($code->data)));
+                if (!is_string($outfile) || $outfile === ''
+                    || @file_put_contents($outfile, join("\n", QRtools::binarize($code->data))) === false) {
+                    throw new \RuntimeException('Unable to write QR text matrix');
+                }
             } else {
                 return QRtools::binarize($code->data);
             }
@@ -3288,25 +3361,35 @@ namespace app\common\util;
         public function encodePNG($intext, $outfile = false,$saveandprint=false) 
         {
             try {
+                $size = filter_var($this->size, FILTER_VALIDATE_INT);
+                $margin = filter_var($this->margin, FILTER_VALIDATE_INT);
+                if ($size === false || $size < 1 || $margin === false || $margin < 0
+                    || $margin > (int)((QR_PNG_MAXIMUM_SIZE - 21) / 2)) {
+                    throw new \InvalidArgumentException('Invalid QR image size or margin');
+                }
             
                 ob_start();
-                $tab = $this->encode($intext);
-                $err = ob_get_contents();
-                ob_end_clean();
+                try {
+                    $tab = $this->encode($intext);
+                    $err = ob_get_contents();
+                } finally {
+                    ob_end_clean();
+                }
                 
                 if ($err != '')
                     QRtools::log($outfile, $err);
                 
-                $maxSize = (int)(QR_PNG_MAXIMUM_SIZE / (count($tab)+2*$this->margin));
+                $maxSize = (int)(QR_PNG_MAXIMUM_SIZE / (count($tab)+2*$margin));
+                if ($maxSize < 1) {
+                    throw new \InvalidArgumentException('QR margin exceeds the configured maximum image size');
+                }
                 
-                QRimage::png($tab, $outfile, min(max(1, $this->size), $maxSize), $this->margin,$saveandprint);
+                QRimage::png($tab, $outfile, min($size, $maxSize), $margin,$saveandprint);
             
             } catch (Exception $e) {
             
                 QRtools::log($outfile, $e->getMessage());
-            
+                throw $e;
             }
         }
     }
-
-

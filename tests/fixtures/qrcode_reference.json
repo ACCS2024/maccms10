@@ -1,0 +1,313 @@
+{
+  "source": "https://github.com/nayuki/QR-Code-generator/blob/v1.8.0/python/qrcodegen.py",
+  "source_sha256": "b089855caf16185c61421ea4927c1b213cf9468940d71fa8ab11ef83662dcc84",
+  "method": "QrCode.encode_segments([single segment], ecc, version, version, mask, boostecl=False); SHA256 of LF-joined binary rows, no trailing LF",
+  "cases": [
+    {
+      "mode": "numeric",
+      "version": 1,
+      "level": "L",
+      "mask": 0,
+      "data_hex": "3031323334353637383930313233",
+      "matrix_sha256": "c23294398b6afa123680681fbd1b1ad73bc70ced9c4c786f325d439d78b1b32d"
+    },
+    {
+      "mode": "numeric",
+      "version": 1,
+      "level": "L",
+      "mask": 1,
+      "data_hex": "3031323334353637383930313233",
+      "matrix_sha256": "c48c9ece09f9aae535ba6b3630ffb5f325287e59cbe3160089ebb7cc0696e6fe"
+    },
+    {
+      "mode": "numeric",
+      "version": 1,
+      "level": "L",
+      "mask": 2,
+      "data_hex": "3031323334353637383930313233",
+      "matrix_sha256": "464e992ebd0521cd708a4becadd407c4777f70a13c8dcdeca1543bbb5f63d9a5"
+    },
+    {
+      "mode": "numeric",
+      "version": 1,
+      "level": "L",
+      "mask": 3,
+      "data_hex": "3031323334353637383930313233",
+      "matrix_sha256": "ecaf13adee4dca340f41463a1e8bceb86c47990b04e26a9d6ec5bf202d5bf1a6"
+    },
+    {
+      "mode": "numeric",
+      "version": 1,
+      "level": "L",
+      "mask": 4,
+      "data_hex": "3031323334353637383930313233",
+      "matrix_sha256": "464106775cdb3fd6a2a91c589cecf6a3f0669e75f5f5d6c7f5c9e2b3db2710b9"
+    },
+    {
+      "mode": "numeric",
+      "version": 1,
+      "level": "L",
+      "mask": 5,
+      "data_hex": "3031323334353637383930313233",
+      "matrix_sha256": "e525927f7df985ee9ce334df2c550f21c18d243a4a1df0584ad8b2014e648b9d"
+    },
+    {
+      "mode": "numeric",
+      "version": 1,
+      "level": "L",
+      "mask": 6,
+      "data_hex": "3031323334353637383930313233",
+      "matrix_sha256": "85d350279c67bd498d9321c36d2ba1abbcc5b9328a0d10a9889b24ba6fde3a87"
+    },
+    {
+      "mode": "numeric",
+      "version": 1,
+      "level": "L",
+      "mask": 7,
+      "data_hex": "3031323334353637383930313233",
+      "matrix_sha256": "3d2f3f431903ce912408a9a34f46c45035e27b8d493d4eda22147eedff2354bb"
+    },
+    {
+      "mode": "alphanumeric",
+      "version": 1,
+      "level": "M",
+      "mask": 0,
+      "data_hex": "48454c4c4f20574f524c44",
+      "matrix_sha256": "83d76f36239756fc557dc381512baad05726203ad76d8f14820ec93a51bdd8ee"
+    },
+    {
+      "mode": "alphanumeric",
+      "version": 1,
+      "level": "M",
+      "mask": 1,
+      "data_hex": "48454c4c4f20574f524c44",
+      "matrix_sha256": "64586c3f3dea3fe7d9d21d9310dd8906a58548cfbddf7eb91c5565132b584220"
+    },
+    {
+      "mode": "alphanumeric",
+      "version": 1,
+      "level": "M",
+      "mask": 2,
+      "data_hex": "48454c4c4f20574f524c44",
+      "matrix_sha256": "20a31645fff40fd6d0acd4dd9a52d2b3967b0f7093f822bd8fc34d75d0ca388c"
+    },
+    {
+      "mode": "alphanumeric",
+      "version": 1,
+      "level": "M",
+      "mask": 3,
+      "data_hex": "48454c4c4f20574f524c44",
+      "matrix_sha256": "6cbc0718b11c1bf8792d0a47185c6bd6476e3ce56cc0a2d127a600176da666a9"
+    },
+    {
+      "mode": "alphanumeric",
+      "version": 1,
+      "level": "M",
+      "mask": 4,
+      "data_hex": "48454c4c4f20574f524c44",
+      "matrix_sha256": "e99ed30cbc56a7036dcac5eec4fa23c48ec50796868e4649ceabbd625663f0e1"
+    },
+    {
+      "mode": "alphanumeric",
+      "version": 1,
+      "level": "M",
+      "mask": 5,
+      "data_hex": "48454c4c4f20574f524c44",
+      "matrix_sha256": "fffe3b3f8c5fe0a6e135716e3c0c4f237a5d6e24b59725b15f6b632324b6f195"
+    },
+    {
+      "mode": "alphanumeric",
+      "version": 1,
+      "level": "M",
+      "mask": 6,
+      "data_hex": "48454c4c4f20574f524c44",
+      "matrix_sha256": "93b61a8d062edd243edfe2eda1baedbd09dabba13c8a099e892ec8c08f881745"
+    },
+    {
+      "mode": "alphanumeric",
+      "version": 1,
+      "level": "M",
+      "mask": 7,
+      "data_hex": "48454c4c4f20574f524c44",
+      "matrix_sha256": "71a56ba00cdc837bf5dbde131b32bf191f1cc78ca5de8a5c2cecc9984e0e68a6"
+    },
+    {
+      "mode": "byte",
+      "version": 1,
+      "level": "Q",
+      "mask": 0,
+      "data_hex": "004869ff",
+      "matrix_sha256": "0d3876ea6e3a4465a2374aeedb6659f02a625e38f804f86e7e0983b587d4b630"
+    },
+    {
+      "mode": "byte",
+      "version": 1,
+      "level": "Q",
+      "mask": 1,
+      "data_hex": "004869ff",
+      "matrix_sha256": "939875e6dde868c633849ff43fb99c21a982335d9580953d62cbde5c825c6e03"
+    },
+    {
+      "mode": "byte",
+      "version": 1,
+      "level": "Q",
+      "mask": 2,
+      "data_hex": "004869ff",
+      "matrix_sha256": "55e16ad2252db835d08f64c135de3198c9b91d24b4630f5d1b9cc78effc398d4"
+    },
+    {
+      "mode": "byte",
+      "version": 1,
+      "level": "Q",
+      "mask": 3,
+      "data_hex": "004869ff",
+      "matrix_sha256": "b421e2d8c8146d0aebc3499faf0a49cd25404eee407c83f6e9cf4abcfa8022e9"
+    },
+    {
+      "mode": "byte",
+      "version": 1,
+      "level": "Q",
+      "mask": 4,
+      "data_hex": "004869ff",
+      "matrix_sha256": "17b0b6ed6d17c47efb8a0b039484ea11a8146d4a1f6aa32fe2523788a8118614"
+    },
+    {
+      "mode": "byte",
+      "version": 1,
+      "level": "Q",
+      "mask": 5,
+      "data_hex": "004869ff",
+      "matrix_sha256": "6306e2b19e781effe53ff3dd27a01b61666d900edfbb501b69073f360108682d"
+    },
+    {
+      "mode": "byte",
+      "version": 1,
+      "level": "Q",
+      "mask": 6,
+      "data_hex": "004869ff",
+      "matrix_sha256": "464bc68c9d56df360914a0434b925b808be3cfb0a2f71fb6099a21c572f52afa"
+    },
+    {
+      "mode": "byte",
+      "version": 1,
+      "level": "Q",
+      "mask": 7,
+      "data_hex": "004869ff",
+      "matrix_sha256": "1dbd96d4d91d6a0e9d8f067f1efe6cc7ae8a5c71b7fac0da65a9edff011a4f8f"
+    },
+    {
+      "mode": "byte",
+      "version": 1,
+      "level": "H",
+      "mask": 0,
+      "data_hex": "6175646974",
+      "matrix_sha256": "1fddc9c34f9db65dc373686b31e33f76a7d46efb89b74221cab2c6c1d1dbe3bf"
+    },
+    {
+      "mode": "byte",
+      "version": 1,
+      "level": "H",
+      "mask": 1,
+      "data_hex": "6175646974",
+      "matrix_sha256": "f598e84498bafeac7038d61790c630c739441173253869f47e9028e001fd96f7"
+    },
+    {
+      "mode": "byte",
+      "version": 1,
+      "level": "H",
+      "mask": 2,
+      "data_hex": "6175646974",
+      "matrix_sha256": "d6b8ecc240352d7834a90fd93c4689b94b73183fe6273b78d4d4ada0ed449826"
+    },
+    {
+      "mode": "byte",
+      "version": 1,
+      "level": "H",
+      "mask": 3,
+      "data_hex": "6175646974",
+      "matrix_sha256": "3f09826d8bdb0015fb09e24e819319ee3f10ca4dac0fe5c19874c00076d160f4"
+    },
+    {
+      "mode": "byte",
+      "version": 1,
+      "level": "H",
+      "mask": 4,
+      "data_hex": "6175646974",
+      "matrix_sha256": "ab9d3c6510192b99449530d2d12705ada347067211b8cf1e40e7eeb1905c1e98"
+    },
+    {
+      "mode": "byte",
+      "version": 1,
+      "level": "H",
+      "mask": 5,
+      "data_hex": "6175646974",
+      "matrix_sha256": "14727e023c95e5e7196c95ea7c3d14213b7fa4863b486dac2b9d19df0993e949"
+    },
+    {
+      "mode": "byte",
+      "version": 1,
+      "level": "H",
+      "mask": 6,
+      "data_hex": "6175646974",
+      "matrix_sha256": "6d20100a68059804e673a3bf2536b4bf3ba7602e611b9eeac073cec445bfbe59"
+    },
+    {
+      "mode": "byte",
+      "version": 1,
+      "level": "H",
+      "mask": 7,
+      "data_hex": "6175646974",
+      "matrix_sha256": "db5af6ae4310646544a87a6ffcecb33858c8eaa7ab41e68e55c13e7ef5eadaa0"
+    },
+    {
+      "mode": "byte",
+      "version": 7,
+      "level": "H",
+      "mask": 3,
+      "data_hex": "6d756c74692d626c6f636b2d6d756c74692d626c6f636b2d6d756c74692d626c6f636b2d6d756c74692d626c6f636b2d",
+      "matrix_sha256": "b04d2b315709dc2bfffd5eb0fe00a06ba60e87e5f43784ebc4bcf655716c10d0"
+    },
+    {
+      "mode": "numeric",
+      "version": 10,
+      "level": "M",
+      "mask": 3,
+      "data_hex": "31323334353637383930313233343536373839303132333435363738393031323334353637383930313233343536373839303132333435363738393031323334353637383930313233343536373839303132333435363738393031323334353637383930313233343536373839303132333435363738393031323334353637383930313233343536373839303132333435363738393031323334353637383930313233343536373839303132333435363738393031323334353637383930313233343536373839303132333435363738393031323334353637383930313233343536373839303132333435363738393031323334353637383930",
+      "matrix_sha256": "f809fd7f96da7f5ec5cab0aeaf5dad012d9e4921856e631357ac297e88a90b99"
+    },
+    {
+      "mode": "byte",
+      "version": 27,
+      "level": "Q",
+      "mask": 3,
+      "data_hex": "e8b7a8e78988e69cace6b58be8af95",
+      "matrix_sha256": "f42c41cae732a369a5d1eb42f44f74f848b29a9853b4a0ef6da000718a46e215"
+    },
+    {
+      "mode": "byte",
+      "version": 40,
+      "level": "L",
+      "mask": 3,
+      "data_hex": "76657273696f6e2d666f727479",
+      "matrix_sha256": "db401409f29d0425591a0d1152f773bcdde9f7261907a21e29b7a49d1c18ad8b"
+    },
+    {
+      "mode": "numeric",
+      "version": 40,
+      "level": "L",
+      "mask": 3,
+      "data_hex": "37",
+      "matrix_sha256": "8a3453ccaad94fd6919a89d36cf3446b3d613b9d7c0ce0edc8dd64ac6f162137",
+      "repeat": 7089
+    },
+    {
+      "mode": "byte",
+      "version": 40,
+      "level": "L",
+      "mask": 3,
+      "data_hex": "78",
+      "matrix_sha256": "23ccd5cfb44b42f0b5f036600d42b16a9b45a711bc48b63d3f8b423771c2b9b4",
+      "repeat": 2953
+    }
+  ]
+}
