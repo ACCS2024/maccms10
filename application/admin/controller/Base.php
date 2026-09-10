@@ -409,6 +409,9 @@ class Base extends All
     {
         $query = Db::name(ucfirst($module));
         $connection = $query->getConnection();
+        if (!$connection instanceof \think\db\PDOConnection) {
+            throw new \RuntimeException('Content import requires PDO storage');
+        }
         $table = $query->getTable();
         if ($connection->getConfig('type') === 'mysql') {
             $rows = $connection->query('SELECT COLUMN_NAME AS name FROM information_schema.COLUMNS '

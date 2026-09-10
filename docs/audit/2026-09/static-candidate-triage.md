@@ -92,3 +92,5 @@ AiSearch 的 Collection 问题已经在 c84bc161 通过实际 MySQL 修复；不
 见[固定阶段记录](phase-verification-cc2d60bf.md)：level 1 409、level 5 1,182，均无全局错误；PHPCompatibility 0 错误、8 警告。level 5 相对 f32e4000 净增 4 条：Base 当前 writer 查询新增 2 条连接接口提示并移除 1 条旧 getTableFields；Payment 卡密新返回分支增加 2 条旧 JSON PHPDoc 类型提示；BulkTableIo 减少 1 条 null 比较；XlsxTableReader 增加 2 条回调状态值推导。全部精确增减、标识和报告摘要均已记录，没有添加忽略规则。
 
 PDO 连接合同和错误 PHPDoc 应进一步明确；XLSX 的回调中实际非空值、列拒绝及空白语义已有执行证据，但不能据此删除全部状态候选。当前直接 Db 事务词法清点 69 行 / 19 个方法，卡密已移出此直接调用集合；其它业务仍需逐项确认。列映射、上传、编码和控制器返回问题已经分批落实，不再列为未验证的旧上传接口候选；Domain/Cj/Vodplayer 等独立入口仍在范围内。
+
+cc2d60bf 后续：[导入 PDO 合同](import-pdo-contract.md)已通过实际实例检查收紧支持范围；双版 SQLite/MySQL 导入回归通过，定向 Base level 5 从 8 条降为 6 条。两条新增连接接口提示已关闭；冻结的完整扫描数字保持不变。
