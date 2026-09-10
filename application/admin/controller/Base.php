@@ -281,7 +281,7 @@ class Base extends All
             return $this->error(lang('admin/batch/io_need_zip'));
         }
         $fields = Db::name(ucfirst($table))->getTableFields();
-        $list = Db::name(ucfirst($table))->where($where)->order("{$table}_id desc")->limit($max)->select();
+        $list = Db::name(ucfirst($table))->where($where)->order("{$table}_id desc")->limit($max)->select()->toArray();
         $base = $table.'_export_' . date('Ymd_His');
         if ($format === 'xlsx') {
             BulkTableIo::exportXlsxDownload($base, $fields, $list);
