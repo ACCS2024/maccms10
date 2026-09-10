@@ -143,7 +143,7 @@ class Admin extends Base {
         if(empty($row) || !mac_password_verify($data['admin_pwd'], $row['admin_pwd'])){
             return ['code'=>1003,'msg'=>lang('access_or_pass_err')];
         }
-        $random = md5(rand(10000000,99999999));
+        $random = bin2hex(random_bytes(16));
         $update['admin_login_ip'] = mac_get_ip_long();
         $update['admin_login_time'] = time();
         $update['admin_login_num'] = $row['admin_login_num'] + 1;
@@ -156,12 +156,13 @@ class Admin extends Base {
         }
 
         $res = $this->where('admin_id', $row['admin_id'])->update($update);
-        if($res===false){
+        if($res !== 1){
             return ['code'=>1004,'msg'=>lang('model/admin/update_login_err')];
         }
 
         session('admin_auth','1');
-        session('admin_info',$row->toArray());
+        // 透明升级密码哈希后，会话必须保存更新后的凭据版本。
+        session('admin_info',array_merge($row->toArray(), $update));
 
         // 安全加固：登录后重新生成 session_id，防止会话固定攻击
         // TP8 使用框架自身的 Session(非原生 PHP session),需用 Session::regenerate
@@ -191,9 +192,22 @@ class Admin extends Base {
             return ['code'=>1009,'msg'=>lang('model/admin/not_login')];
         }
         $info = session('admin_info');
-        if(empty($info)){
+        if (!is_array($info) || (int)($info['admin_id'] ?? 0) < 1
+            || !is_string($info['admin_pwd'] ?? null) || $info['admin_pwd'] === '') {
+            $this->logout();
             return ['code'=>1002,'msg'=>lang('model/admin/not_login')];
         }
+        // 会话是登录时的快照；停用、删除、改密和撤销权限必须在下一次请求生效。
+        $current = $this->where('admin_id', (int)$info['admin_id'])->find();
+        if (!$current || (int)$current['admin_status'] !== 1
+            || (string)$current['admin_name'] !== (string)($info['admin_name'] ?? '')
+            || !hash_equals((string)$current['admin_pwd'], $info['admin_pwd'])) {
+            $this->logout();
+            return ['code'=>1002,'msg'=>lang('model/admin/not_login')];
+        }
+        $info = $current->toArray();
+        session('admin_info', $info);
+        unset($info['admin_pwd']);
         return ['code'=>1,'msg'=>lang('model/admin/haved_login'),'info'=>$info];
     }
 
