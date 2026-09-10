@@ -64,7 +64,10 @@ class Upload {
         $param['thumb'] = empty($param['thumb']) ? '0' : $param['thumb'];
         $param['thumb_class'] = empty($param['thumb_class']) ? '' : $param['thumb_class'];
         $param['user_id'] = empty($param['user_id']) ? '0' : $param['user_id'];
-        $base64_img = $param['imgdata'];
+        $base64_img = $param['imgdata'] ?? '';
+        if (!is_string($base64_img) || strlen($base64_img) > 4 * (int)ceil(\app\common\util\ImageProcessor::MAX_BYTES / 3) + 128) {
+            return self::upload_return(lang('admin/upload/upload_faild'), $param['from']);
+        }
         $data = [];
         $config = (array)config('maccms.site');
         $pre= $config['install_dir'];
@@ -96,7 +99,8 @@ class Upload {
             $uniq = $param['user_id'] % 10;
             $_upload_path .= $uniq .'/';
             $_save_path .= $uniq .'/';
-            $_save_name = $param['user_id'] . '.jpg';
+            // Decode new avatar data before replacing the user's existing JPEG.
+            $_save_name = '.portrait-' . bin2hex(random_bytes(16)) . '.tmp';
 
             if(!file_exists($_save_path)){
                 mac_mkdirss($_save_path);
@@ -129,13 +133,20 @@ class Upload {
             }
             $_save_name = $n_dir . '/' . md5(microtime(true));
         }
-
-
+        $portraitInput = $param['flag'] === 'user' ? $_save_path . $_save_name : null;
+        try {
         if(!empty($base64_img)){
             if(preg_match('/^(data:\s*image\/(\w+);base64,)/', $base64_img, $result)){
-                $type = $result[2];
-                if(in_array($type, explode(',', $upload_image_ext))){
-                    if(!file_put_contents($_save_path.$_save_name, base64_decode(str_replace($result[1], '', $base64_img)))){
+                $extension = strtolower($result[2]);
+                if(in_array($extension, explode(',', $upload_image_ext), true)){
+                    $type = 'image';
+                    if ($param['flag'] !== 'user') { $_save_name .= '.' . $extension; }
+                    $directory = dirname($_save_path . $_save_name);
+                    if (!is_dir($directory) && !@mkdir($directory, 0777, true) && !is_dir($directory)) {
+                        return self::upload_return(lang('admin/upload/upload_faild'), $param['from']);
+                    }
+                    $decoded = base64_decode(substr($base64_img, strlen($result[1])), true);
+                    if($decoded === false || !file_put_contents($_save_path.$_save_name, $decoded)){
                         return self::upload_return(lang('admin/upload/upload_faild'), $param['from']);
                     }
                     $file_size = round(filesize('./'.$_save_path.$_save_name)/1024, 2);
@@ -149,29 +160,37 @@ class Upload {
             }
         }
         else {
-            $file = request()->file($param['input']);
-            if (empty($file)) {
+            try {
+                $file = request()->file($param['input']);
+            } catch (\Throwable $e) {
+                return self::upload_return(lang('admin/upload/upload_faild'), $param['from']);
+            }
+            if (!$file instanceof \think\file\UploadedFile || !$file->isValid()) {
                 return self::upload_return(lang('admin/upload/no_input_file'), $param['from']);
             }
             if ($file->getMime() == 'text/x-php') {
                 return self::upload_return(lang('admin/upload/forbidden_ext'), $param['from']);
             }
 
-            if ($file->checkExt($upload_image_ext)) {
+            $extension = strtolower($file->getOriginalExtension());
+            if (in_array($extension, explode(',', $upload_image_ext), true)) {
                 $type = 'image';
-            } elseif ($file->checkExt($upload_file_ext)) {
+            } elseif (in_array($extension, explode(',', $upload_file_ext), true)) {
                 $type = 'file';
-            } elseif ($file->checkExt($upload_media_ext)) {
+            } elseif (in_array($extension, explode(',', $upload_media_ext), true)) {
                 $type = 'media';
             } else {
                 return self::upload_return(lang('admin/upload/forbidden_ext'), $param['from']);
             }
-            $upfile = $file->move($_upload_path,$_save_name);
-            if (!is_file($_upload_path.$upfile->getSaveName())) {
+            if ($param['flag'] !== 'user') { $_save_name .= '.' . $extension; }
+            $relativeDirectory = dirname($_save_name);
+            $targetDirectory = $_upload_path . ($relativeDirectory === '.' ? '' : $relativeDirectory);
+            try {
+                $upfile = $file->move($targetDirectory, basename($_save_name));
+            } catch (\Throwable $e) {
                 return self::upload_return(lang('admin/upload/upload_faild'), $param['from']);
             }
-            $file_size = round($upfile->getInfo('size')/1024, 2);
-            $_save_name = str_replace('\\', '/', $upfile->getSaveName());
+            $file_size = round($upfile->getSize()/1024, 2);
         }
 
 
@@ -207,17 +226,21 @@ class Upload {
             $new_thumb = $param['user_id'] .'.jpg';
             $new_file = $_save_path . $new_thumb;
             try {
-                $image = \think\Image::open('./' . $file);
+                $image = \app\common\util\ImageProcessor::open('./' . $file);
                 $t_size = explode('x', strtolower($GLOBALS['config']['user']['portrait_size']));
                 if (!isset($t_size[1])) {
                     $t_size[1] = $t_size[0];
                 }
-                $image->thumb($t_size[0], $t_size[1], 6)->save('./' . $new_file);
+                $image->thumb($t_size[0], $t_size[1], 6)->save('./' . $new_file, 'jpeg');
+                clearstatcache(true, './' . $new_file);
                 $file_size = round(filesize('./' .$new_file)/1024, 2);
             }
-            catch(\Exception $e){
+            catch(\Throwable $e){
                 return self::upload_return(lang('admin/upload/make_thumb_faild'), $param['from']);
             }
+            $data['file'] = $new_file;
+            $data['size'] = $file_size;
+            $data['type'] = 'image';
             $update = [];
             $update['user_portrait'] = $new_file;
             $where = [];
@@ -226,11 +249,12 @@ class Upload {
         }
         else {
             if ($type == 'image') {
+                $watermarked = false;
                 if ($config['watermark'] == 1) {
-                    (new \app\common\model\Image())->watermark($data['file'], $config, $param['flag']);
+                    $watermarked = (new \app\common\model\Image())->watermark($data['file'], $config, $param['flag']);
                 }
                 if ($param['thumb'] == 1 && $config['thumb'] == 1) {
-                    $dd = (new \app\common\model\Image())->makethumb($data['file'], $config, $param['flag']);
+                    $dd = (new \app\common\model\Image())->makethumb($data['file'], $config, $param['flag'], 1, $watermarked);
                     if (is_array($dd)) {
                         $data = array_merge($data, $dd);
                     }
@@ -281,7 +305,7 @@ class Upload {
                 $annex['annex_type'] = $type;
                 $annex['annex_size'] = $file_size;
                 (new \app\common\model\Annex())->saveData($annex);
-                $tmp = $data['thumb'][0]['file'];
+                $tmp = $data['thumb'][0]['file'] ?? '';
                 if(!empty($tmp)){
                     $file_size = filesize($tmp);
                     $annex = [];
@@ -296,6 +320,9 @@ class Upload {
             }
         }
         return self::upload_return(lang('admin/upload/upload_success'), $param['from'], 1, $data);
+        } finally {
+            if ($portraitInput !== null && is_file($portraitInput)) { @unlink($portraitInput); }
+        }
     }
 
 
@@ -312,7 +339,7 @@ class Upload {
         elseif(ENTRANCE=='index'){
             $arr['msg'] = $info;
             $arr['code'] = $status;
-            $arr['file'] = MAC_PATH .  $data['file'] . '?'. mt_rand(1000, 9999);
+            $arr['file'] = isset($data['file']) ? MAC_PATH . $data['file'] . '?'. mt_rand(1000, 9999) : '';
         }
         else{
             $arr['msg'] = $info;

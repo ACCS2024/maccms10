@@ -1,13 +1,14 @@
 ARG PHP_VERSION=8.4
 FROM php:${PHP_VERSION}-apache
 
-# 扩展:gd/zip/curl/mbstring/pdo_mysql/mysqli/opcache(性能)+ redis(缓存/会话/计数缓冲)
+# GD 用于普通位图，Imagick 保留 GIF 合成/时序并支持 WebP。
+# 扩展:gd/imagick/zip/curl/mbstring/pdo_mysql/mysqli/opcache + redis
 RUN apt-get update && apt-get install -y --no-install-recommends \
-      libcurl4-openssl-dev libfreetype6-dev libjpeg62-turbo-dev libonig-dev libpng-dev libzip-dev default-mysql-client \
+      libcurl4-openssl-dev libfreetype6-dev libjpeg62-turbo-dev libonig-dev libpng-dev libzip-dev libmagickwand-dev default-mysql-client \
  && docker-php-ext-configure gd --with-freetype --with-jpeg \
  && docker-php-ext-install -j"$(nproc)" curl gd mbstring zip pdo_mysql mysqli opcache \
- && pecl install redis \
- && docker-php-ext-enable redis \
+ && pecl install redis imagick-3.8.1 \
+ && docker-php-ext-enable redis imagick \
  && a2enmod rewrite \
  && rm -rf /var/lib/apt/lists/*
 

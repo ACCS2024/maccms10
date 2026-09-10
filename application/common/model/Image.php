@@ -1,6 +1,6 @@
 <?php
 namespace app\common\model;
-use think\image\Exception;
+use app\common\util\ImageProcessor;
 
 /**
  * 图片处理辅助类：下载/水印/缩略图，全部是文件操作，不落库。
@@ -93,12 +93,13 @@ class Image {
         }
         $file_size = filesize($_upload_path.$file_name);
         // 水印
+        $watermarked = false;
         if ($config['watermark'] == 1) {
-            $this->watermark($_file_path,$config,$flag);
+            $watermarked = $this->watermark($_file_path,$config,$flag);
         }
         // 缩略图
         if ($config['thumb'] == 1) {
-            $this->makethumb($_file_path,$config,$flag);
+            $this->makethumb($_file_path,$config,$flag,1,$watermarked);
         }
         //上传到远程
         $_file_path = (new \app\common\model\Upload())->api($_file_path, $config);
@@ -119,29 +120,39 @@ class Image {
 
     public function watermark($file_path,$config,$flag='vod')
     {
-        if(empty($config['watermark_font'])){
-            $config['watermark_font'] = './static/font/test.ttf';
-        }
         try {
-            $image = \think\Image::open('./' . $file_path);
-            $image->text($config['watermark_content']."", $config['watermark_font'], $config['watermark_size'], $config['watermark_color'],$config['watermark_location'])->save('./' . $file_path);
+            $image = ImageProcessor::open('./' . $file_path);
+            $this->applyWatermark($image, $config);
+            $image->save('./' . $file_path);
+            return true;
         }
-        catch(\Exception $e){
-
+        catch(\Throwable $e){
+            return false;
         }
     }
 
-    public function makethumb($file_path,$config,$flag='vod',$new=1)
+    private function applyWatermark(ImageProcessor $image, array $config): void
     {
-        $thumb_type = $config['thumb_type'];
+        $image->text($config['watermark_content'] ?? '', !empty($config['watermark_font']) ? $config['watermark_font'] : './static/font/test.ttf',
+            $config['watermark_size'] ?? 20, $config['watermark_color'] ?? '#00000000', $config['watermark_location'] ?? 9);
+    }
+
+    public function makethumb($file_path,$config,$flag='vod',$new=1,$watermarked=false)
+    {
+        $thumb_type = $config['thumb_type'] ?? 1;
         $data['thumb'] = [];
         if (!empty($config['thumb_size'])) {
             try {
-                $image = \think\Image::open('./' . $file_path);
                 // 支持多种尺寸的缩略图
                 $thumbs = explode(',', $config['thumb_size']);
+                if (count($thumbs) > 16) { return $data; }
+                foreach ($thumbs as $value) {
+                    if (!preg_match('/^[0-9]{1,4}(x[0-9]{1,4})?$/Di', trim($value))) { return $data; }
+                }
+                $source = ImageProcessor::open('./' . $file_path);
                 foreach ($thumbs as $k => $v) {
-                    $t_size = explode('x', strtolower($v));
+                    $image = $source->copy();
+                    $t_size = explode('x', strtolower(trim($v)));
                     if (!isset($t_size[1])) {
                         $t_size[1] = $t_size[0];
                     }
@@ -149,21 +160,21 @@ class Image {
                     if($new==0){
                         $new_thumb = $file_path;
                     }
-                    $image->thumb($t_size[0], $t_size[1], $thumb_type)->save('./' . $new_thumb);
+                    $image->thumb($t_size[0], $t_size[1], $thumb_type);
+                    if (($config['watermark'] ?? 0) == 1 && !$watermarked) {
+                        $this->applyWatermark($image, $config);
+                    }
+                    $image->save('./' . $new_thumb);
+                    clearstatcache(true, './' . $new_thumb);
                     $thumb_size = round(filesize('./' . $new_thumb) / 1024, 2);
                     $data['thumb'][$k]['type'] = 'image';
                     $data['thumb'][$k]['flag'] = $flag;
                     $data['thumb'][$k]['file'] = $new_thumb;
                     $data['thumb'][$k]['size'] = $thumb_size;
                     $data['thumb'][$k]['ctime'] = request()->time();
-
-                    if ($config['watermark'] == 1) {// 开启文字水印
-                        $image = \think\Image::open('./' . $new_thumb);
-                        $image->text($config['watermark_content'], $config['watermark_font'], $config['watermark_size'], $config['watermark_color'])->save('./' . $new_thumb);
-                    }
                 }
             }
-            catch(\Exception $e){
+            catch(\Throwable $e){
 
             }
         }

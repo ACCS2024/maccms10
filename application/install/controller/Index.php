@@ -321,7 +321,7 @@ class Index extends \app\common\controller\All
             'PDO' => 'class',
             'pdo_mysql' => 'extension', 'zip' => 'extension', 'fileinfo' => 'extension',
             'curl' => 'extension', 'xml' => 'extension', 'dom' => 'extension',
-            'gd' => 'extension', 'iconv' => 'extension', 'json' => 'extension',
+            'gd' => 'extension', 'imagick' => 'extension', 'iconv' => 'extension', 'json' => 'extension',
             'mbstring' => 'extension', 'openssl' => 'extension',
             'file_get_contents' => 'function', 'mb_strlen' => 'function',
         ];
@@ -332,6 +332,10 @@ class Index extends \app\common\controller\All
                 'extension' => extension_loaded($name),
                 default => function_exists($name),
             };
+            if ($name === 'imagick' && $supported) {
+                $version = (string)phpversion('imagick');
+                $supported = version_compare($version, '3.8.1', '>=') && version_compare($version, '4.0.0', '<');
+            }
             $items[] = [$name, lang($supported ? 'install/support' : 'install/not_support'),
                 $supported ? 'yes' : 'no', lang('install/' . ($kind === 'extension' ? 'model' : $kind))];
             if (!$supported) {

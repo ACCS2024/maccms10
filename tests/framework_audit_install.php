@@ -94,10 +94,12 @@ namespace {
         $extensions = array_column(installStep($controller, 'checkFunc'), null, 0);
         installExpect($extensions['PDO'][2] === 'yes' && $extensions['xml'][2] === 'yes', 'Translated labels must not determine PDO/XML capability checks');
         installExpect(!in_array('no', array_column($extensions, 2), true), 'All required extensions must pass in the supported runtime');
-        $GLOBALS['audit_missing_extension'] = 'xml';
-        session('install_error', false);
-        $extensions = array_column(installStep($controller, 'checkFunc'), null, 0);
-        installExpect($extensions['xml'][2] === 'no' && session('install_error') === true, 'Missing XML must block installation');
+        foreach (['xml', 'imagick'] as $missing) {
+            $GLOBALS['audit_missing_extension'] = $missing;
+            session('install_error', false);
+            $extensions = array_column(installStep($controller, 'checkFunc'), null, 0);
+            installExpect($extensions[$missing][2] === 'no' && session('install_error') === true, 'Missing '.$missing.' must block installation');
+        }
         unset($GLOBALS['audit_missing_extension']);
         session('install_error', false);
         installExpect(!in_array('no', array_column(installStep($controller, 'checkDir'), 4), true), 'Directory checks must use APP_PATH instead of the current working directory');

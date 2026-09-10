@@ -192,9 +192,10 @@ class VodAiCover
         $uploadCfg = (array) config('maccms.upload');
         $relativePath = str_replace('\\', '/', $relativePath);
 
+        $watermarked = false;
         if (!empty($uploadCfg['watermark']) && (string) $uploadCfg['watermark'] === '1') {
             try {
-                (new \app\common\model\Image())->watermark($relativePath, $uploadCfg, 'vod');
+                $watermarked = (new \app\common\model\Image())->watermark($relativePath, $uploadCfg, 'vod');
             } catch (\Throwable $e) {
                 Log::error('VodAiCover watermark: ' . $e->getMessage());
             }
@@ -203,7 +204,7 @@ class VodAiCover
         $thumbPath = '';
         if (!empty($uploadCfg['thumb']) && (string) $uploadCfg['thumb'] === '1') {
             try {
-                $dd = (new \app\common\model\Image())->makethumb($relativePath, $uploadCfg, 'vod');
+                $dd = (new \app\common\model\Image())->makethumb($relativePath, $uploadCfg, 'vod', 1, $watermarked);
                 if (!empty($dd['thumb'][0]['file'])) {
                     $thumbPath = (string) $dd['thumb'][0]['file'];
                 }

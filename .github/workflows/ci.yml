@@ -31,7 +31,7 @@ jobs:
       - uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php }}
-          extensions: pdo_mysql, pdo_sqlite, mbstring, gd, curl, fileinfo, dom, xml, simplexml, zip, redis
+          extensions: imagick-3.8.1, pdo_mysql, pdo_sqlite, mbstring, gd, curl, fileinfo, dom, xml, simplexml, zip, redis
           coverage: none
           tools: composer:v2
       - name: Compile all maintained PHP sources with diagnostics enabled
@@ -152,7 +152,7 @@ jobs:
       - uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php }}
-          extensions: pdo_mysql, mbstring, gd, curl, fileinfo, dom, xml, simplexml, zip
+          extensions: imagick-3.8.1, pdo_mysql, mbstring, gd, curl, fileinfo, dom, xml, simplexml, zip
           coverage: none
           tools: composer:v2
       - name: Install application dependencies
