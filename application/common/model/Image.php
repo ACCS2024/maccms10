@@ -3,7 +3,7 @@ namespace app\common\model;
 use app\common\util\ImageProcessor;
 
 /**
- * 图片处理辅助类：下载/水印/缩略图，全部是文件操作，不落库。
+ * 图片处理辅助类：下载/水印/缩略图；下载通过独立附件服务登记文件，不映射 image 表。
  *
  * 【不要让它继承 Base/Model】
  * 本类没有对应的数据表（mac_image 在官方原版与老库中同样不存在）。
@@ -17,105 +17,27 @@ class Image {
 
     public function down_load($url, $config, $flag = 'vod')
     {
-        if (substr($url, 0, 4) == 'http') {
-            return $this->down_exec($url, $config, $flag);
-        } else {
-            return $url;
-        }
+        if (!is_string($url)) { return '#err'; }
+        return preg_match('~^https?://~i', $url) === 1 ? $this->down_exec($url, $config, $flag) : $url;
     }
 
     public function down_exec($url, $config, $flag = 'vod')
     {
-        $upload_image_ext = 'jpg,jpeg,png,gif,webp';
-        $ext = strtolower(pathinfo($url, PATHINFO_EXTENSION));
-        if (!in_array($ext, explode(',', $upload_image_ext))) {
-            $ext = 'jpg';
-        }
-        // 安全加固(V1/SSRF):图片下载仅允许公网 http/https 目标
-        if (!mac_is_safe_remote_url($url)) {
-            return $url . '#err';
-        }
-        $img = mac_curl_get($url);
-        if (empty($img) || strlen($img) < 10) {
-            return $url . '#err';
-        }
-        $file_name = md5(uniqid()) .'.' . $ext;
-        // 上传附件路径
-        $_upload_path = ROOT_PATH . 'upload' . '/' . $flag . '/';
-        // 附件访问路径
-        $_save_path = 'upload'. '/' . $flag . '/' ;
-        $ymd = date('Ymd');
-        $n_dir = $ymd;
-        for($i=1;$i<=100;$i++){
-            $n_dir = $ymd .'-'.$i;
-            $path1 = $_upload_path . $n_dir. '/';
-            if(file_exists($path1)){
-                $farr = glob($path1.'*.*');
-                if($farr){
-                    $fcount = count($farr);
-                    if($fcount>999){
-                        continue;
-                    }
-                    else{
-                        break;
-                    }
-                }
-                else{
-                    break;
-                }
+        $original = is_string($url) ? $url : '';
+        try {
+            if (!is_string($url) || !is_array($config) || !is_string($flag) || $flag === 'user'
+                || !preg_match('/^[a-z0-9_]{1,64}$/D', $flag) || !mac_is_safe_remote_url($url)) {
+                return $original . '#err';
             }
-            else{
-                break;
-            }
+            $bytes = mac_curl_get($url);
+            if (!is_string($bytes) || $bytes === '') { return $original . '#err'; }
+            $asset = \app\common\util\LocalAttachment::storeDownloadedImage($bytes, $config, $flag);
+            return $asset['file'];
+        } catch (\Throwable $error) {
+            // The attachment owner retains evidence after an external effect or ambiguous commit.
+            // Collect/Images still own their later resource-row update; this method only commits the asset catalog.
+            return $original . '#err';
         }
-
-        $_upload_path .= $n_dir . '/';
-        $_save_path .= $n_dir . '/';
-
-        //附件访问地址
-        $_file_path = $_save_path.$file_name;
-        //写入文件
-        $saved_img_path = $_upload_path . $file_name;
-        $r = mac_write_file($saved_img_path, $img);
-        if(!$r){
-            return $url;
-        }
-        // 重新获取文件类型，不满足时，返回老链接
-        $image_info = getimagesize($saved_img_path);
-        $extension_hash = [
-            '1'  => 'gif',
-            '2'  => 'jpg',
-            '3'  => 'png',
-            '18' => 'webp',
-        ];
-        if (!isset($image_info[2]) || !isset($extension_hash[$image_info[2]])) {
-            return $url . '#err';
-        }
-        $file_size = filesize($_upload_path.$file_name);
-        // 水印
-        $watermarked = false;
-        if ($config['watermark'] == 1) {
-            $watermarked = $this->watermark($_file_path,$config,$flag);
-        }
-        // 缩略图
-        if ($config['thumb'] == 1) {
-            $this->makethumb($_file_path,$config,$flag,1,$watermarked);
-        }
-        //上传到远程
-        $_file_path = (new \app\common\model\Upload())->api($_file_path, $config);
-
-        $tmp = $_file_path;
-        if (str_starts_with($tmp, '/upload')) {
-            $tmp = substr($tmp,1);
-        }
-        if (str_starts_with($tmp, 'upload')) {
-            $annex = [];
-            $annex['annex_file'] = $tmp;
-            $annex['annex_type'] = 'image';
-            $annex['annex_size'] = $file_size;
-            (new \app\common\model\Annex())->saveData($annex);
-        }
-        return $_file_path;
     }
 
     /** Strict preparation for new local attachments; failures must not publish a partial image set. */

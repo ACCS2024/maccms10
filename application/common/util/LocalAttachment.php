@@ -18,6 +18,13 @@ final class LocalAttachment
         return self::process($parameters, $config, null, false);
     }
 
+    /** Internal download entry. The caller has fetched bounded bytes; no request upload is fabricated. */
+    public static function storeDownloadedImage(string $bytes, array $config, string $flag): array
+    {
+        return self::process(['flag'=>$flag, 'thumb'=>($config['thumb'] ?? 0) == 1 ? '1' : '0',
+            'thumb_class'=>''], $config, null, false, $bytes);
+    }
+
     /** The upload controller/model supplies the verified owner and server-selected admin context. */
     public static function storeAvatar(array $parameters, array $config, int $owner, bool $requireActiveOwner): array
     {
@@ -27,7 +34,7 @@ final class LocalAttachment
         return self::process($parameters, $config, $owner, $requireActiveOwner);
     }
 
-    private static function process(array $parameters, array $config, ?int $owner, bool $requireActiveOwner): array
+    private static function process(array $parameters, array $config, ?int $owner, bool $requireActiveOwner, ?string $download = null): array
     {
         if (!isset($parameters['flag']) || !is_string($parameters['flag'])
             || ($owner === null && $parameters['flag'] === 'user')
@@ -39,7 +46,7 @@ final class LocalAttachment
         try {
             $stage = rtrim(sys_get_temp_dir(), DIRECTORY_SEPARATOR) . '/maccms-attachment-' . bin2hex(random_bytes(16));
             if (!@mkdir($stage, 0700)) { throw new \RuntimeException('Cannot create upload staging directory'); }
-            [$source, $type] = self::receive($stage, $parameters);
+            [$source, $type] = $download === null ? self::receive($stage, $parameters) : self::receiveDownloadedImage($stage, $download);
             self::scan($source);
             $prepared = [$source];
             if ($owner !== null) {
@@ -72,6 +79,7 @@ final class LocalAttachment
             $manifest = ['state'=>'prepared', 'created'=>time(), 'root'=>realpath(ROOT_PATH),
                 'metadata_table'=>Db::name('Annex')->getTable(), 'files'=>$records];
             if ($owner !== null) { $manifest['avatar_owner'] = $owner; $manifest['owner_table'] = Db::name('User')->getTable(); }
+            if ($download !== null) { $manifest['scope'] = 'download'; $manifest['resource_url_limit'] = 1024; }
             self::manifest($stage, $manifest);
             $connection = Db::connect();
             Db::name('Annex')->getTableFields();
@@ -95,7 +103,7 @@ final class LocalAttachment
                 foreach ($prepared as $index => $file) {
                     self::publish($file, ROOT_PATH . $records[$index]['annex_file'], $records[$index]['annex_size'], $published);
                 }
-                $remote = new RemoteAttachment($provider, $owner);
+                $remote = new RemoteAttachment($provider, $owner, $download !== null);
                 $remote->transfer($records, static function (array $evidence) use ($stage, &$manifest): void {
                     $manifest['remote'] = $evidence;
                     self::manifest($stage, $manifest);
@@ -202,6 +210,20 @@ final class LocalAttachment
         if ($type === null || $file->getSize() > 4294967295) { throw new \RuntimeException('Forbidden attachment'); }
         $file->move($stage, 'source.' . $extension);
         return [$stage . '/source.' . $extension, $type];
+    }
+
+    private static function receiveDownloadedImage(string $stage, string $bytes): array
+    {
+        if ($bytes === '' || strlen($bytes) > ImageProcessor::MAX_BYTES) {
+            throw new \RuntimeException('Downloaded image exceeds its input budget');
+        }
+        $info = @getimagesizefromstring($bytes);
+        $extension = [IMAGETYPE_JPEG=>'jpg', IMAGETYPE_PNG=>'png', IMAGETYPE_GIF=>'gif', IMAGETYPE_WEBP=>'webp'][$info[2] ?? 0] ?? null;
+        if ($extension === null) { throw new \RuntimeException('Downloaded bytes are not a supported image'); }
+        $path = $stage . '/source.' . $extension;
+        if (@file_put_contents($path, $bytes) !== strlen($bytes)) { throw new \RuntimeException('Incomplete downloaded image'); }
+        // prepareLocalUpload subsequently performs full decoding and processing before publication.
+        return [$path, 'image'];
     }
 
     /** Retain the existing edge-signature check, but only on a private staged file. Image decoding is separate. */

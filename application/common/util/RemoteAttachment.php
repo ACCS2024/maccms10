@@ -2,7 +2,7 @@
 declare(strict_types=1);
 namespace app\common\util;
 
-/** One prepared manual upload: no database locks are held while invoking its storage provider. */
+/** One prepared attachment set: no database locks are held while invoking its storage provider. */
 final class RemoteAttachment
 {
     private array $intents = [];
@@ -10,7 +10,10 @@ final class RemoteAttachment
     private bool $attempted = false;
     private bool $ready = false;
 
-    public function __construct(private string $provider, private ?int $owner) {}
+    public function __construct(private string $provider, private ?int $owner, private bool $download = false)
+    {
+        if ($download && $owner !== null) { throw new \InvalidArgumentException('Downloaded assets cannot be avatars'); }
+    }
 
     public static function provider(array $config): ?string
     {
@@ -26,9 +29,17 @@ final class RemoteAttachment
         // Prepare the entire set before any SDK call. Missing/old schema and invalid destinations retain local behavior.
         try {
             $policy = StoragePublicUrl::current($this->provider);
+            if ($this->download) {
+                foreach ($records as $record) {
+                    if (strlen($policy->expected($record['annex_file'])) > 1024) {
+                        throw new \RuntimeException('Download destination exceeds the resource URL column');
+                    }
+                }
+            }
             foreach ($records as $record) {
                 $path = $record['annex_file'];
-                $this->intents[$path] = StorageIntent::prepare($path, $policy, $this->owner === null ? 'attachment' : 'avatar', $this->owner ?? 0);
+                $scope = $this->download ? 'download' : ($this->owner === null ? 'attachment' : 'avatar');
+                $this->intents[$path] = StorageIntent::prepare($path, $policy, $scope, $this->owner ?? 0);
             }
         } catch (\Throwable $error) {
             $journal($this->evidence());
@@ -52,13 +63,24 @@ final class RemoteAttachment
 
     public function evidence(): array
     {
-        return ['ready'=>$this->ready,'attempted'=>$this->attempted,
+        $evidence = ['ready'=>$this->ready,'attempted'=>$this->attempted,
             'intents'=>array_map(static fn($row)=>$row['intent_id'], $this->intents), 'results'=>$this->results];
+        if ($this->download) {
+            $evidence['scope'] = 'download';
+            $evidence['selected_urls'] = [];
+            foreach ($this->results as $path => $result) { $evidence['selected_urls'][$path] = $this->url($path); }
+        }
+        return $evidence;
     }
 
     public function hasAttempt(): bool { return $this->attempted; }
 
-    public function url(string $path): string { return $this->results[$path]['file'] ?? $path; }
+    public function url(string $path): string
+    {
+        $url = $this->results[$path]['file'] ?? $path;
+        // Image services can return an unpredictable but attested URL. Keep the local resource if it will not fit.
+        return $this->download && strlen($url) > 1024 ? $path : $url;
+    }
 
     /** Join exactly the final Annex/User transaction; a no-SDK fallback has no completed transfer to reference. */
     public function recordReferences(array $annexIds): void
@@ -80,6 +102,7 @@ final class RemoteAttachment
             $urls = StorageObjectUrl::resolve(array_keys($this->results));
             foreach ($this->results as $path => $result) {
                 if (($result['remote_confirmed'] ?? false) !== true || ($urls[$path] ?? null) !== $result['file']) { continue; }
+                if ($this->url($path) !== $result['file']) { continue; }
                 StorageIntent::sameSource($this->intents[$path]);
                 @unlink(ROOT_PATH . $path);
             }
