@@ -519,23 +519,33 @@ class Manga extends Base {
 
     public function saveData($data)
     {
+        $data = $this->normalizeSaveInput($data);
+        if ($data === null) {
+            return ['code'=>1001, 'msg'=>lang('param_err')];
+        }
         $validate = mac_validate('Manga');
         if(!$validate->check($data)){
             return ['code'=>1001,'msg'=>lang('param_err').'：'.$validate->getError() ];
         }
         if(isset($data['manga_jumpurl'])){ $data['manga_jumpurl'] = mac_safe_jumpurl($data['manga_jumpurl']); }
 
-        $key = 'manga_detail_'.$data['manga_id'];
+        $id = $data['manga_id'] ?? 0;
+        $en = $data['manga_en'] ?? '';
+        $key = 'manga_detail_'.$id;
         Cache::delete($key);
-        $key = 'manga_detail_'.$data['manga_en'];
+        $key = 'manga_detail_'.$en;
         Cache::delete($key);
-        $key = 'manga_detail_'.$data['manga_id'].'_'.$data['manga_en'];
+        $key = 'manga_detail_'.$id.'_'.$en;
         Cache::delete($key);
 
 
         $type_list = (new \app\common\model\Type())->getCache('type_list');
-        $type_info = $type_list[$data['type_id']];
-        $data['type_id_1'] = $type_info['type_pid'];
+        $type_info = is_array($type_list) ? ($type_list[$data['type_id']] ?? null) : null;
+        $parent = is_array($type_info) ? \app\common\util\PointsBalance::amount($type_info['type_pid'] ?? null, true) : null;
+        if ($parent === null || $parent > 65535) {
+            return ['code'=>1001, 'msg'=>lang('param_err')];
+        }
+        $data['type_id_1'] = $parent;
 
         if(empty($data['manga_en'])){
             $data['manga_en'] = Pinyin::get($data['manga_name']);
@@ -547,19 +557,9 @@ class Manga extends Base {
             $data['manga_pic_screenshot'] = str_replace( array(chr(10),chr(13)), array('','#'),$data['manga_pic_screenshot']);
         }
         if(!empty($data['manga_content'])) {
-            if(is_array($data['manga_content'])){
-                $data['manga_content'] = join('$$$', $data['manga_content']);
-            }
-            if(is_array($data['manga_title'])){
-                $data['manga_title'] = join('$$$', $data['manga_title']);
-            }
-            if(is_array($data['manga_note'])){
-                $data['manga_note'] = join('$$$', $data['manga_note']);
-            }
-
             $pattern_src = '/<img[\s\S]*?src\s*=\s*[\"|\"](.*?)[\"|\"][\s\S]*?>/';
-            @preg_match_all($pattern_src, $data['manga_content'], $match_src1);
-            if (!empty($match_src1)) {
+            preg_match_all($pattern_src, $data['manga_content'], $match_src1);
+            if (!empty($match_src1[1])) {
                 foreach ($match_src1[1] as $v1) {
                     $v2 = str_replace($GLOBALS['config']['upload']['protocol'] . ':', 'mac:', $v1);
                     $data['manga_content'] = str_replace($v1, $v2, $data['manga_content']);
@@ -576,15 +576,15 @@ class Manga extends Base {
         if (isset($data['manga_content']) && $data['manga_content'] !== '') {
             $data['manga_content'] = mac_html_sanitize($data['manga_content']);
         }
-        if(empty($data['manga_blurb'])){
-            $data['manga_blurb'] = mac_substring( str_replace('$$$','', strip_tags($data['manga_content'])),100);
+        if (empty($data['manga_blurb']) && (array_key_exists('manga_content', $data) || $id === 0)) {
+            $data['manga_blurb'] = mac_substring(str_replace('$$$', '', strip_tags($data['manga_content'] ?? '')), 100);
         }
 
         if($data['uptime']==1){
             $data['manga_time'] = time();
         }
         if($data['uptag']==1){
-            $data['manga_tag'] = mac_get_tag($data['manga_name'], $data['manga_content']);
+            $data['manga_tag'] = mac_get_tag($data['manga_name'], $data['manga_content'] ?? '');
         }
         unset($data['uptime']);
         unset($data['uptag']);
@@ -637,6 +637,44 @@ class Manga extends Base {
         MeilisearchSync::afterMangaSave($ixMid);
 
         return ['code'=>1,'msg'=>lang('save_ok')];
+    }
+
+    /** Normalize form omissions before PHP string functions or ORM writes. */
+    private function normalizeSaveInput($data): ?array
+    {
+        if (!is_array($data) || count($data) > 256) {
+            return null;
+        }
+        // Legacy imports can supply flat text fragments. Count and sum before join.
+        foreach (['manga_content', 'manga_title', 'manga_note'] as $field) {
+            if (!array_key_exists($field, $data)) { continue; }
+            $parts = is_array($data[$field]) ? $data[$field] : [$data[$field]];
+            if (count($parts) > 1024) { return null; }
+            $bytes = max(0, count($parts) - 1) * 3;
+            foreach ($parts as $part) {
+                if (!is_string($part) && !is_int($part) && $part !== null) { return null; }
+                $bytes += strlen((string)$part);
+                // Match the public Manga description budget before HTML processing.
+                if ($bytes > 1048576) { return null; }
+            }
+            $data[$field] = implode('$$$', array_map(static fn($part) => (string)$part, $parts));
+        }
+        foreach ($data as $key => $value) {
+            if (!is_string($key) || (!is_scalar($value) && $value !== null)) { return null; }
+        }
+        $id = $data['manga_id'] ?? '';
+        $id = $id === '' ? 0 : \app\common\util\PointsBalance::amount($id, true);
+        $type = \app\common\util\PointsBalance::amount($data['type_id'] ?? null);
+        if ($id === null || $type === null || $type > 65535) { return null; }
+        if ($id === 0) { unset($data['manga_id']); }
+        else { $data['manga_id'] = $id; }
+        $data['type_id'] = $type;
+        foreach (['uptime', 'uptag'] as $field) {
+            $value = $data[$field] ?? 0;
+            if (!in_array($value, [0, 1, '0', '1'], true)) { return null; }
+            $data[$field] = (int)$value;
+        }
+        return $data;
     }
 
     public function delData($where)
