@@ -139,7 +139,7 @@ try{
 [$committed,$before,$pdo]=callerBegin();
 try{
  $scope=new PurchaseTransaction(1,1,true);$scope->begin();Db::name('User')->where('user_id',1)->setDec('user_points',1);
- $target=(new ReflectionProperty(PurchaseTransaction::class,'savepoint'))->getValue($scope);
+ $target=(new ReflectionProperty(app\common\util\FinancialTransaction::class,'savepoint'))->getValue($scope);
  $pdo->exec('RELEASE SAVEPOINT '.$target);$pdo->setAttribute(PDO::ATTR_ERRMODE,PDO::ERRMODE_SILENT);
  $result=$scope->rollback(['code'=>2003,'msg'=>'ordinary failure']);
  check($result['code']===2005 && $pdo->inTransaction() && memberRow(1)['user_points']===99,'A real false PDO return cannot be treated as successful partial rollback');

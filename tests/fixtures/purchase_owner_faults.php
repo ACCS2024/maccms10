@@ -28,7 +28,7 @@ class PurchaseOwnerPdo extends PDO
     public function exec(string $statement): int|false
     {
         foreach (['ROLLBACK TO SAVEPOINT'=>'caller_rollback', 'RELEASE SAVEPOINT'=>'caller_release', 'SAVEPOINT'=>'caller_savepoint'] as $prefix=>$stage) {
-            if (str_starts_with($statement, $prefix . ' mac_purchase_')) {
+            if (str_starts_with($statement, $prefix . ' mac_financial_')) {
                 return PurchaseOwnerFault::wrap($stage, fn()=>parent::exec($statement));
             }
         }
