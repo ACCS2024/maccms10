@@ -39,30 +39,38 @@ class Alipay {
 
     public function notify()
     {
-        $param = \think\facade\Request::param();
+        // POST is the server notification; GET is the legacy browser return.
+        // Do not merge cookies or route parameters into the signed payload.
+        $param = ($_SERVER['REQUEST_METHOD'] ?? '') === 'GET' ? $_GET : $_POST;
         $GLOBALS['config']['pay'] = config('maccms.pay');
         unset($param['/payment/notify/pay_type/alipay']);
-        unset($param['pay_type']);
-
-        $isSign = $this->getSignVeryfy($param, $param["sign"]);
-        //验证成功
-        if($isSign) {
-            if ($param['trade_status'] == 'TRADE_SUCCESS') {
-                // 安全加固:回传支付宝金额(元)做二次核对,防改价低付
-                $paid = isset($param['total_amount']) ? $param['total_amount'] : (isset($param['total_fee']) ? $param['total_fee'] : null);
+        unset($param['pay_type'], $param['s']);
+        foreach ($param as $value) {
+            if (!is_string($value) && !is_int($value)) {
+                echo 'fail';
+                return;
+            }
+        }
+        $paid = $param['total_amount'] ?? $param['total_fee'] ?? '';
+        if (empty($param['out_trade_no']) || empty($param['trade_no'])
+            || !preg_match('/^[0-9]{1,12}(?:\.[0-9]{1,2})?$/D', (string)$paid) || (float)$paid <= 0
+            || ($param['sign_type'] ?? 'MD5') !== 'MD5'
+            || !$this->getSignVeryfy($param, $param['sign'] ?? '')) {
+            echo 'fail';
+            return;
+        }
+        if (in_array($param['trade_status'] ?? '', ['TRADE_SUCCESS', 'TRADE_FINISHED'], true)) {
+            try {
                 $res = (new \app\common\model\Order())->notify($param['out_trade_no'],'alipay',$paid);
-                if($res['code']>1){
-                    echo "fail2";
-                }
-                else{
-                    echo "success2";
-                }
+                echo in_array($res['code'] ?? null, [1, '1'], true) ? 'success' : 'fail';
+            } catch (\Throwable $e) {
+                echo 'fail';
             }
-            else {
-                echo "success";
-            }
-        }else{
-            echo "fail";
+        } elseif (in_array($param['trade_status'] ?? '', ['WAIT_BUYER_PAY', 'TRADE_CLOSED'], true)) {
+            // These notifications are acknowledged without crediting an unpaid order.
+            echo 'success';
+        } else {
+            echo 'fail';
         }
     }
 
@@ -143,13 +151,11 @@ class Alipay {
     }
 
     public function md5Verify($prestr, $sign, $key) {
-        $prestr = $prestr . $key;
-        $mysgin = md5($prestr);
-        if($mysgin == $sign) {
-            return true;
-        }
-        else {
+        if (!is_string($sign) || !is_string($key) || trim($key) === '') {
             return false;
         }
+        $prestr = $prestr . $key;
+        $mysgin = md5($prestr);
+        return hash_equals($mysgin, $sign);
     }
 }
