@@ -48,7 +48,7 @@ class User extends Base
     public function ajax_ulog()
     {
         $param = \think\facade\Request::param();
-        if ($param['ac'] == 'set') {
+        if (($param['ac'] ?? '') == 'set') {
             $data = [];
             $data['ulog_mid'] = intval($param['mid']);
             $data['ulog_rid'] = intval($param['id']);
@@ -82,16 +82,16 @@ class User extends Base
         } else {
             $where = [];
             $where['user_id'] = $GLOBALS['user']['user_id'];
-            $param['page'] = intval($param['page']) < 1 ? 1 : intval($param['page']);
-            $param['limit'] = intval($param['limit']) < 1 ? 10 : intval($param['limit']);
-            if(intval($param['mid'])>0){
-                $where['ulog_mid'] = intval($param['mid']);
+            $param['page'] = intval($param['page'] ?? 1) < 1 ? 1 : intval($param['page'] ?? 1);
+            $param['limit'] = intval($param['limit'] ?? 10) < 1 ? 10 : intval($param['limit'] ?? 10);
+            if(intval($param['mid'] ?? 0)>0){
+                $where['ulog_mid'] = intval($param['mid'] ?? 0);
             }
-            if(intval($param['id'])>0){
-                $where['ulog_rid'] = intval($param['id']);
+            if(intval($param['id'] ?? 0)>0){
+                $where['ulog_rid'] = intval($param['id'] ?? 0);
             }
-            if(intval($param['type'])>0){
-                $where['ulog_type'] = intval($param['type']);
+            if(intval($param['type'] ?? 0)>0){
+                $where['ulog_type'] = intval($param['type'] ?? 0);
             }
             $order = 'ulog_time desc';
             $res = (new \app\common\model\Ulog())->listData($where, $order, $param['page'], $param['limit']);
@@ -687,9 +687,9 @@ class User extends Base
     public function plays()
     {
         $param = \think\facade\Request::param();
-        $param['page'] = intval($param['page']) < 1 ? 1 : intval($param['page']);
-        $param['limit'] = intval($param['limit']) < 20 ? 20 : intval($param['limit']);
-        $param['mid'] = intval($param['mid']);
+        $param['page'] = intval($param['page'] ?? 1) < 1 ? 1 : intval($param['page'] ?? 1);
+        $param['limit'] = intval($param['limit'] ?? 20) < 20 ? 20 : intval($param['limit'] ?? 20);
+        $param['mid'] = intval($param['mid'] ?? 0);
 
         $where = [];
         $where['user_id'] = $GLOBALS['user']['user_id'];
@@ -700,7 +700,7 @@ class User extends Base
         $order = 'ulog_time desc';
         $res = (new \app\common\model\Ulog())->listData($where, $order, $param['page'], $param['limit']);
 
-        $this->assign('param',$param);
+        $this->assign('param', array_merge(mac_param_url(), $param));
         $this->assign('list', $res['list']);
         $page_url = url('user/plays', ['mid' => $param['mid'], 'page' => 'PAGELINK']);
         $pages = mac_page_param($res['total'], $param['limit'], $param['page'], $page_url);
@@ -711,8 +711,8 @@ class User extends Base
     public function downs()
     {
         $param = \think\facade\Request::param();
-        $param['page'] = intval($param['page']) < 1 ? 1 : intval($param['page']);
-        $param['limit'] = intval($param['limit']) < 20 ? 20 : intval($param['limit']);
+        $param['page'] = intval($param['page'] ?? 1) < 1 ? 1 : intval($param['page'] ?? 1);
+        $param['limit'] = intval($param['limit'] ?? 20) < 20 ? 20 : intval($param['limit'] ?? 20);
 
         $where = [];
         $where['user_id'] = $GLOBALS['user']['user_id'];
@@ -721,7 +721,7 @@ class User extends Base
         $order = 'ulog_time desc';
         $res = (new \app\common\model\Ulog())->listData($where, $order, $param['page'], $param['limit']);
 
-        $this->assign('param',$param);
+        $this->assign('param', array_merge(mac_param_url(), $param));
         $this->assign('list', $res['list']);
         $pages = mac_page_param($res['total'], $param['limit'], $param['page'], url('user/downs', ['page' => 'PAGELINK']));
         $this->assign('__PAGING__', $pages);
@@ -731,9 +731,9 @@ class User extends Base
     public function favs()
     {
         $param = \think\facade\Request::param();
-        $param['page'] = intval($param['page']) < 1 ? 1 : intval($param['page']);
-        $param['limit'] = intval($param['limit']) < 20 ? 20 : intval($param['limit']);
-        $param['mid'] = intval($param['mid']);
+        $param['page'] = intval($param['page'] ?? 1) < 1 ? 1 : intval($param['page'] ?? 1);
+        $param['limit'] = intval($param['limit'] ?? 20) < 20 ? 20 : intval($param['limit'] ?? 20);
+        $param['mid'] = intval($param['mid'] ?? 0);
 
         $where = [];
         $where['user_id'] = $GLOBALS['user']['user_id'];
@@ -744,7 +744,7 @@ class User extends Base
         $order = 'ulog_time desc';
         $res = (new \app\common\model\Ulog())->listData($where, $order, $param['page'], $param['limit']);
 
-        $this->assign('param',$param);
+        $this->assign('param', array_merge(mac_param_url(), $param));
         $this->assign('list', $res['list']);
         $page_url = url('user/favs', ['mid' => $param['mid'], 'page' => 'PAGELINK']);
         $pages = mac_page_param($res['total'], $param['limit'], $param['page'], $page_url);
@@ -754,9 +754,9 @@ class User extends Base
 
     public function ulog()
     {
-        $param = \think\facade\Request::param();
-        $param['page'] = intval($param['page']) < 1 ? 1 : intval($param['page']);
-        $param['limit'] = intval($param['limit']) < 20 ? 20 : intval($param['limit']);
+        $param = array_merge(['mid' => 0, 'type' => 0], \think\facade\Request::param());
+        $param['page'] = intval($param['page'] ?? 1) < 1 ? 1 : intval($param['page'] ?? 1);
+        $param['limit'] = intval($param['limit'] ?? 20) < 20 ? 20 : intval($param['limit'] ?? 20);
 
         $where = [];
         $where['user_id'] = $GLOBALS['user']['user_id'];
@@ -770,7 +770,7 @@ class User extends Base
         $order = 'ulog_time desc';
         $res = (new \app\common\model\Ulog())->listData($where, $order, $param['page'], $param['limit']);
 
-        $this->assign('param',$param);
+        $this->assign('param', array_merge(mac_param_url(), $param));
         $this->assign('list', $res['list']);
         $pages = mac_page_param($res['total'], $param['limit'], $param['page'], url('user/ulog', ['page' => 'PAGELINK']));
         $this->assign('__PAGING__', $pages);
@@ -812,9 +812,9 @@ class User extends Base
     public function plog()
     {
         $param = \think\facade\Request::param();
-        $param['page'] = intval($param['page']) < 1 ? 1 : intval($param['page']);
-        $param['limit'] = intval($param['limit']) < 20 ? 20 : intval($param['limit']);
-        $param['filter'] = trim($param['filter']);
+        $param['page'] = intval($param['page'] ?? 1) < 1 ? 1 : intval($param['page'] ?? 1);
+        $param['limit'] = intval($param['limit'] ?? 20) < 20 ? 20 : intval($param['limit'] ?? 20);
+        $param['filter'] = is_scalar($param['filter'] ?? '') ? trim((string)($param['filter'] ?? '')) : '';
 
         $where = [];
         $where['user_id'] = $GLOBALS['user']['user_id'];
@@ -827,7 +827,7 @@ class User extends Base
         $order = 'plog_id desc';
         $res = (new \app\common\model\Plog())->listData($where, $order, $param['page'], $param['limit']);
 
-        $this->assign('param',$param);
+        $this->assign('param', array_merge(mac_param_url(), $param));
         $this->assign('list', $res['list']);
         $page_url = url('user/plog', ['filter' => $param['filter'], 'page' => 'PAGELINK']);
         $pages = mac_page_param($res['total'], $param['limit'], $param['page'], $page_url);
@@ -871,15 +871,15 @@ class User extends Base
             return json($res);
         }
 
-        $param['page'] = intval($param['page']) < 1 ? 1 : intval($param['page']);
-        $param['limit'] = intval($param['limit']) < 20 ? 20 : intval($param['limit']);
+        $param['page'] = intval($param['page'] ?? 1) < 1 ? 1 : intval($param['page'] ?? 1);
+        $param['limit'] = intval($param['limit'] ?? 20) < 20 ? 20 : intval($param['limit'] ?? 20);
 
         $where = [];
         $where['user_id'] = $GLOBALS['user']['user_id'];
         $order = 'cash_id desc';
         $res = (new \app\common\model\Cash())->listData($where, $order, $param['page'], $param['limit']);
 
-        $this->assign('param',$param);
+        $this->assign('param', array_merge(mac_param_url(), $param));
         $this->assign('list', $res['list']);
         $pages = mac_page_param($res['total'], $param['limit'], $param['page'], url('user/cash', ['page' => 'PAGELINK']));
         $this->assign('__PAGING__', $pages);
@@ -915,10 +915,10 @@ class User extends Base
 
     public function reward()
     {
-        $param = \think\facade\Request::param();
+        $param = array_merge(['level' => 1], \think\facade\Request::param());
 
-        $param['page'] = intval($param['page']) < 1 ? 1 : intval($param['page']);
-        $param['limit'] = intval($param['limit']) < 20 ? 20 : intval($param['limit']);
+        $param['page'] = intval($param['page'] ?? 1) < 1 ? 1 : intval($param['page'] ?? 1);
+        $param['limit'] = intval($param['limit'] ?? 20) < 20 ? 20 : intval($param['limit'] ?? 20);
 
         $where = [];
         if($param['level']=='2'){
@@ -942,7 +942,7 @@ class User extends Base
             }
         }
 
-        $this->assign('param',$param);
+        $this->assign('param', array_merge(mac_param_url(), $param));
         $this->assign('list', $res['list']);
         $pages = mac_page_param($res['total'], $param['limit'], $param['page'], url('user/reward', ['level'=>$param['level'], 'page' => 'PAGELINK']));
         $this->assign('__PAGING__', $pages);
@@ -952,8 +952,8 @@ class User extends Base
     public function orders()
     {
         $param = \think\facade\Request::param();
-        $param['page'] = intval($param['page']) < 1 ? 1 : intval($param['page']);
-        $param['limit'] = intval($param['limit']) < 20 ? 20 : intval($param['limit']);
+        $param['page'] = intval($param['page'] ?? 1) < 1 ? 1 : intval($param['page'] ?? 1);
+        $param['limit'] = intval($param['limit'] ?? 20) < 20 ? 20 : intval($param['limit'] ?? 20);
 
         $where = [];
         $where['o.user_id'] = $GLOBALS['user']['user_id'];
@@ -963,7 +963,7 @@ class User extends Base
 
         $pages = mac_page_param($res['total'], $param['limit'], $param['page'], url('user/orders', ['page' => 'PAGELINK']));
         $this->assign('__PAGING__', $pages);
-        $this->assign('param',$param);
+        $this->assign('param', array_merge(mac_param_url(), $param));
         $this->assign('list', $res['list']);
         return $this->fetch('user/orders');
     }
@@ -987,8 +987,8 @@ class User extends Base
     public function cards()
     {
         $param = \think\facade\Request::param();
-        $param['page'] = intval($param['page']) < 1 ? 1 : intval($param['page']);
-        $param['limit'] = intval($param['limit']) < 20 ? 20 : intval($param['limit']);
+        $param['page'] = intval($param['page'] ?? 1) < 1 ? 1 : intval($param['page'] ?? 1);
+        $param['limit'] = intval($param['limit'] ?? 20) < 20 ? 20 : intval($param['limit'] ?? 20);
 
         $where = [];
         $where['user_id'] = $GLOBALS['user']['user_id'];
@@ -999,7 +999,7 @@ class User extends Base
 
         $pages = mac_page_param($res['total'], $param['limit'], $param['page'], url('user/cards', ['page' => 'PAGELINK']));
         $this->assign('__PAGING__', $pages);
-        $this->assign('param',$param);
+        $this->assign('param', array_merge(mac_param_url(), $param));
         $this->assign('list', $res['list']);
         return $this->fetch('user/cards');
     }
@@ -1024,8 +1024,8 @@ class User extends Base
     public function invite()
     {
         $param = \think\facade\Request::param();
-        $param['page']  = intval($param['page'])  < 1 ? 1  : intval($param['page']);
-        $param['limit'] = intval($param['limit']) < 1 ? 20 : intval($param['limit']);
+        $param['page']  = intval($param['page'] ?? 1)  < 1 ? 1  : intval($param['page'] ?? 1);
+        $param['limit'] = intval($param['limit'] ?? 20) < 1 ? 20 : intval($param['limit'] ?? 20);
 
         $user_id     = $GLOBALS['user']['user_id'];
         $invite_code = $GLOBALS['user']['user_invite_code'];
@@ -1079,7 +1079,7 @@ class User extends Base
         $this->assign('invite_link_code', $invite_link_code);
         $this->assign('total',            intval($total));
         $this->assign('list',             $invitees);
-        $this->assign('param',            $param);
+        $this->assign('param', array_merge(mac_param_url(), $param));
 
         $pages = mac_page_param($total, $param['limit'], $param['page'], url('user/invite', ['page' => 'PAGELINK']));
         $this->assign('__PAGING__', $pages);
