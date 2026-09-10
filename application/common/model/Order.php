@@ -61,18 +61,24 @@ class Order extends Base {
         }
 
         $data['order_time'] = time();
-        if(!empty($data['order_id'])){
-            $where=[];
-            $where['order_id'] = $data['order_id'];
-            $data = $this->filterFields($data);
-            $res = $this->where($where)->update($data);
-        }
-        else{
-            $data = $this->filterFields($data);
-            $res = $this->insert($data);
+        try {
+            if(!empty($data['order_id'])){
+                $where=[];
+                $where['order_id'] = $data['order_id'];
+                $data = $this->filterFields($data);
+                $res = $this->where($where)->update($data);
+            }
+            else{
+                $data = $this->filterFields($data);
+                $res = $this->insert($data);
+            }
+        } catch (\Throwable $e) {
+            // Unique order-code conflicts and storage failures are controlled errors.
+            // Never expose the SQL statement or an existing order's details.
+            return ['code'=>1002,'msg'=>lang('save_err')];
         }
         if(false === $res){
-            return ['code'=>1002,'msg'=>lang('save_err').'：'.$this->getError() ];
+            return ['code'=>1002,'msg'=>lang('save_err')];
         }
         return ['code'=>1,'msg'=>lang('save_ok')];
     }

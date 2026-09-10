@@ -522,7 +522,7 @@ CREATE TABLE `mac_order` (
   `order_pay_time` int(10) unsigned NOT NULL DEFAULT '0' ,
   `order_remarks` varchar(100) NOT NULL DEFAULT '' ,
   PRIMARY KEY (`order_id`),
-  KEY `order_code` (`order_code`) USING BTREE,
+  UNIQUE KEY `order_code` (`order_code`) USING BTREE,
   KEY `user_id` (`user_id`) USING BTREE,
   KEY `order_time` (`order_time`) USING BTREE
 ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 ;
@@ -536,7 +536,7 @@ CREATE TABLE `mac_plog` (
   `user_id` int(10) unsigned NOT NULL DEFAULT '0',
   `user_id_1` int(10) NOT NULL DEFAULT '0',
   `plog_type` tinyint(1) unsigned NOT NULL DEFAULT '1',
-  `plog_points` smallint(6) unsigned NOT NULL DEFAULT '0',
+  `plog_points` int unsigned NOT NULL DEFAULT '0',
   `plog_time` int(10) unsigned NOT NULL DEFAULT '0',
   `plog_remarks` varchar(100) NOT NULL DEFAULT '',
   PRIMARY KEY (`plog_id`),
