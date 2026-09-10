@@ -22,10 +22,10 @@ final class Config
     private $zoneCache;
 
     // 构造函数
-    public function __construct(Zone $z = null)
+    public function __construct(?Zone $z = null)
     {
         $this->zone = $z;
-        $this->useHTTPS = false;
+        $this->useHTTPS = true;
         $this->useCdnDomains = false;
         $this->zoneCache = array();
     }

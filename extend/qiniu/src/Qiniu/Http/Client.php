@@ -78,16 +78,16 @@ final class Client
         $options = array(
             CURLOPT_USERAGENT => self::userAgent(),
             CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_SSL_VERIFYPEER => false,
-            CURLOPT_SSL_VERIFYHOST => false,
+            CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_SSL_VERIFYHOST => 2,
             CURLOPT_HEADER => true,
             CURLOPT_NOBODY => false,
             CURLOPT_CUSTOMREQUEST => $request->method,
             CURLOPT_URL => $request->url
         );
 
-        // Handle open_basedir & safe mode
-        if (!ini_get('safe_mode') && !ini_get('open_basedir')) {
+        // Keep the existing open_basedir restriction; PHP no longer has safe_mode.
+        if (!ini_get('open_basedir')) {
             $options[CURLOPT_FOLLOWLOCATION] = true;
         }
 
@@ -127,7 +127,7 @@ final class Client
         $headerLines = explode("\r\n", $raw);
         foreach ($headerLines as $line) {
             $headerLine = trim($line);
-            $kv = explode(':', $headerLine);
+            $kv = explode(':', $headerLine, 2);
             if (count($kv) > 1) {
                 $headers[$kv[0]] = trim($kv[1]);
             }
