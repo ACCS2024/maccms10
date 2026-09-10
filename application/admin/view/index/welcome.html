@@ -210,7 +210,7 @@
                             <span
                                 class="text-xs uppercase text-[#4B5563]">{:lang('admin/index/welcome/filed_max_upload')}</span>
                             <span class="text-sm text-gray-800 ">
-                                <?php echo get_cfg_var("file_uploads") ? get_cfg_var("upload_max_filesize") : $error;?>
+                                <?php echo ini_get("file_uploads") ? ini_get("upload_max_filesize") : lang("close");?>
                             </span>
                         </li>
                         <li class="flex justify-between items-center">
@@ -562,7 +562,7 @@
     <!--        </tr>-->
     <!--        <tr>-->
     <!--            <td>{:lang('admin/index/welcome/filed_max_upload')}</td>-->
-    <!--            <td><?php echo get_cfg_var("file_uploads") ? get_cfg_var("upload_max_filesize") : $error;?></td>-->
+    <!--            <td><?php echo ini_get("file_uploads") ? ini_get("upload_max_filesize") : lang("close");?></td>-->
     <!--        </tr>-->
     <!--        <tr>-->
     <!--            <td>{:lang('admin/index/welcome/filed_date')}</td>-->
