@@ -810,7 +810,6 @@ https://www.baidu.com/123.jpg
     'index/ok'=>'操作成功！',
     'index/pwd_repeat'=>'请不要重复验证!',
     'index/pwd_frequently'=>'请不要频繁请求，请稍后重试!',
-    'index/pwd_repeat'=>'请不要重复验证!',
     'index/no_login'=>'未登录',
     'index/ulog_fee'=>'收费收据需单独记录',
     'index/buy_popedom1'=>'您已经购买过此条数据，无需再次支付，请刷新页面重试！',
@@ -980,7 +979,6 @@ https://www.baidu.com/123.jpg
     'admin/index/iframe'=>'布局切换成功，跳转中',
     'admin/index/pass_err'=>'密码错误',
     'admin/index/unlock_ok'=>'解锁成功',
-    'admin/index/title'=>'后台管理中心',
     'admin/index/welcome/today_visit_count'  => '本日用户访问',
     'admin/index/welcome/today_money_get'  => '本日入金总额',
     'admin/index/welcome/system_status'  => '系统资讯',
@@ -1411,9 +1409,6 @@ https://www.baidu.com/123.jpg
     'admin/system/configinterface/actor_type'=>'演员分类转换',
     'admin/system/configinterface/website_type'=>'网址分类转换',
     'admin/system/configinterface/manga_type'=>'漫画分类转换',
-    'admin/system/configinterface/title'=>'站外入库配置',
-    'admin/system/configinterface/title'=>'站外入库配置',
-    'admin/system/configinterface/title'=>'站外入库配置',
 
 
 
@@ -1943,7 +1938,6 @@ https://www.baidu.com/123.jpg
     'admin/vodplayer/title'=>'播放器管理',
     'admin/voddowner/title'=>'下载器管理',
     'admin/vodplayer/alone_api_url'=>'独立接口地址',
-    'admin/vodplayer/alone_api_url'=>'独立接口地址',
     'admin/vodplayer/code_tip'=>'唯一标识英文、纯数字会自动加_，禁止出现./\\等符号',
     'admin/vodplayer/name_tip'=>'中文名称',
     'admin/vodplayer/api_url'=>'接口地址',
@@ -1984,7 +1978,6 @@ https://www.baidu.com/123.jpg
                         3，导入文本格式是：域名$网站名称$关键字$描述$模板$模板目录$广告目录$地圖目錄。每行一个网站。清空原有数据。<br>
                         4. 如設置了地圖目錄需站長自行配置nginx重定向，URL為：rss/$地圖目錄/index.xml。<br>',
 
-    'admin/domain/title'=>'站群管理',
 
 
     'admin/website/title'=>'网址管理',
