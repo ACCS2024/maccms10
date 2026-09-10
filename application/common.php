@@ -699,7 +699,8 @@ function mac_extends_list($flag)
     foreach($file_list as $k=>$v) {
         $cl = str_replace([$path . '/', '.php'], '', $v);
         $cp = 'app\\common\\extend\\'.$flag.'\\' . $cl;
-        if (class_exists($cp)) {
+        // Helper classes may share an extension directory; only named providers are selectable.
+        if (class_exists($cp) && is_string(get_class_vars($cp)['name'] ?? null)) {
             $c = new $cp;
             $res['ext_list'][$cl] = $c->name;
             if(file_exists( './application/admin/view/extend/'.$flag.'/'.strtolower($cl) .'.html')) {
