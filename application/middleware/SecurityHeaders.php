@@ -9,6 +9,17 @@ class SecurityHeaders
         unset($GLOBALS['_mac_page_cacheable']);
         $contentEntrance = defined('ENTRANCE') && in_array(ENTRANCE, ['index', 'api'], true);
         $privateContext = $contentEntrance && \app\common\util\ContentCachePolicy::hasPrivateContext($request);
+        // Collection progress and legacy controllers may flush or exit inside $next.
+        // Set the mandatory policy before invoking them, while headers can still be sent.
+        $earlyApp = [];
+        if (class_exists(\think\facade\Config::class)) {
+            $earlyApp = \think\facade\Config::get('maccms.app', []);
+        } elseif (isset($GLOBALS['config']['app'])) {
+            $earlyApp = $GLOBALS['config']['app'];
+        }
+        if (!headers_sent()) {
+            header('Content-Security-Policy: ' . self::scriptCspPolicy(is_array($earlyApp) ? $earlyApp : []));
+        }
         $response = $next($request);
 
         // 采集进度页用 mac_echo() 边跑边 flush(见 common.php),响应头此刻早已发出。
@@ -50,9 +61,10 @@ class SecurityHeaders
             $response->header(['Cache-Control' => 'public, max-age=' . (int)$GLOBALS['_mac_page_cacheable']]);
         }
 
-        if (defined('ENTRANCE') && ENTRANCE === 'install') {
-            return $response;
-        }
+        // Always enforce the local-script boundary, including installation and legacy sites
+        // whose optional CSP switch is still 0. Additional policies may only tighten it.
+        $baseline = self::scriptCspPolicy($app);
+        $response->header(['Content-Security-Policy' => $baseline]);
 
         $cspMode = isset($app['security_csp']) ? (string)$app['security_csp'] : '0';
         if ($cspMode === '' || $cspMode === '0') {
@@ -72,7 +84,7 @@ class SecurityHeaders
         if ($cspMode === '2') {
             $response->header(['Content-Security-Policy-Report-Only' => $policy]);
         } else {
-            $response->header(['Content-Security-Policy' => $policy]);
+            $response->header(['Content-Security-Policy' => $baseline . ', ' . $policy]);
         }
 
         return $response;
@@ -80,11 +92,12 @@ class SecurityHeaders
 
     public static function defaultCspPolicy(): string
     {
-        return implode(' ', [
+        return implode('; ', [
             "default-src 'self'",
             "base-uri 'self'",
             "object-src 'none'",
-            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https: http:",
+            // The separate mandatory script policy narrows these to self/approved origins.
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https:",
             "style-src 'self' 'unsafe-inline' https: http:",
             "img-src 'self' data: blob: https: http:",
             "font-src 'self' data: https: http:",
@@ -93,6 +106,29 @@ class SecurityHeaders
             "frame-src 'self' https: http:",
             "worker-src 'self' blob:",
             "form-action 'self' https: http:",
-        ]);
+        ]) . ';';
+    }
+
+    /** Explicitly approved HTTPS asset origins only; never wildcard hosts, keywords or paths. */
+    public static function scriptCspPolicy(array $app): string
+    {
+        $sources = $app['security_script_sources'] ?? [];
+        if (is_string($sources)) { $sources = preg_split('/\s+/', trim($sources)); }
+        $allowed = [];
+        foreach (is_array($sources) ? array_slice($sources, 0, 32) : [] as $source) {
+            if (!is_string($source) || strlen($source) > 300 || preg_match('/[\x00-\x20\x7f\\\\]/', $source)) { continue; }
+            $parts = parse_url($source);
+            if (!is_array($parts) || strtolower($parts['scheme'] ?? '') !== 'https'
+                || empty($parts['host'])
+                || isset($parts['user']) || isset($parts['pass']) || isset($parts['query']) || isset($parts['fragment'])
+                || !in_array($parts['path'] ?? '', ['', '/'], true)) { continue; }
+            $host = rtrim(strtolower($parts['host']), '.');
+            if (!preg_match('/^(?=.{1,253}$)[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)*$/D', $host)) { continue; }
+            $origin = 'https://' . $host . (isset($parts['port']) ? ':' . $parts['port'] : '');
+            if (function_exists('mac_is_official_url') && mac_is_official_url($origin)) { continue; }
+            $allowed[$origin] = true;
+        }
+        return "script-src 'self' 'unsafe-inline' 'unsafe-eval'" . ($allowed ? ' ' . implode(' ', array_keys($allowed)) : '')
+            . "; object-src 'none'; base-uri 'self'; worker-src 'self' blob:;";
     }
 }

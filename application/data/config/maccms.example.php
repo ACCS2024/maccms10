@@ -132,6 +132,8 @@ return array (
     'security_xss_admin' => '0',
     'security_xss_skip_json' => '1',
     'security_headers_base' => '1',
+    // Local scripts are always enforced; optional CSP adds restrictions/reporting.
+    'security_script_sources' => '', // Reviewed HTTPS origins for your own static asset hosting only.
     'security_csp' => '0',
     'security_csp_policy' => '',
     'security_csp_report_uri' => '',
