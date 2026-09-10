@@ -1,6 +1,7 @@
 <?php
 /** Runs inside a disposable Apache container whose document root contains only artificial fixtures. */
 declare(strict_types=1);
+require_once '/source/application/middleware/SecurityHeaders.php';
 if (!str_contains((string)@file_get_contents('/var/www/html/.env'), 'PRIVATE_FIXTURE_SENTINEL')) {
     throw new RuntimeException('Only the fake document root is allowed');
 }
@@ -21,7 +22,12 @@ $request = static function (string $path, ?array $post = null, bool $head = fals
         CURLOPT_PROXY => '', CURLOPT_TIMEOUT => 5, CURLOPT_PATH_AS_IS => true,
         CURLOPT_HTTPHEADER => ['Authorization: Bearer fixture-token'],
         CURLOPT_HEADERFUNCTION => static function ($curl, string $line) use (&$headers): int {
-            if (str_contains($line, ':')) { [$name, $value] = explode(':', $line, 2); $headers[strtolower($name)] = trim($value); }
+            if (str_contains($line, ':')) {
+                [$name, $value] = explode(':', $line, 2);
+                $name = strtolower($name);
+                $headers[$name] = $name === 'content-security-policy' && isset($headers[$name])
+                    ? $headers[$name] . "\n" . trim($value) : trim($value);
+            }
             return strlen($line);
         }]);
     if ($post !== null) { curl_setopt_array($curl, [CURLOPT_POST => true, CURLOPT_POSTFIELDS => http_build_query($post)]); }
@@ -58,6 +64,7 @@ foreach (['/.env', '/%2eenv', '/.env.backup', '/.git/config', '/.git/HEAD', '/.%
     '/upload/payload.php/anything.jpg', '/upload/payload.php%2fanything.jpg', '/upload/../application/fixture.txt',
     '/upload/%2e%2e/application/fixture.txt', '/upload/linked-env.jpg', '/static_new/linked-internal/fixture.txt',
     '/upload/override/.htaccess', '/static_new/empty/', '/template/audit/assets/source.php.css', '/template/audit/assets/source.sql.css', '/upload/secret.ini.txt',
+    '/static/player/source.php.html', '/static/player/source.bak.html', '/upload/page.html',
     '/template/audit/asset/language/private.properties', '/template/audit/asset/language/strings_zh.properties.bak',
     '/template/audit/asset/language/strings_zh.properties.php', '/template/audit/settings.properties', '/upload/strings_zh.properties',
     '/template/linked/asset/language/strings_zh.properties', '/template/audit/asset/language/strings_zh.properties/path'] as $path) {
@@ -88,6 +95,20 @@ foreach ([
     [$status, $body] = $request($path . '?v=fixture');
     $check($status === 200 && $body === $expected, 'Public asset keeps its existing URL/body: ' . $path . ' status=' . $status);
 }
+$staticPolicy = \app\middleware\SecurityHeaders::scriptCspPolicy([]);
+$dynamicPolicy = \app\middleware\SecurityHeaders::scriptCspPolicy([
+    'security_script_sources' => ['https://approved.example.invalid']]);
+foreach (['/static_new/ueditor/dialogs/preview/preview.html', '/static/player/index.html', '/static/player/',
+    '/static/player/frame.htm', '/static_new/player/frame.HTML', '/vod/detail/1.html', '/404.html',
+    '/template/audit/help/help.html', '/addons/audit/assets/dialog.html'] as $path) {
+    [$status, $body, $headers] = $request($path . '?v=csp-fixture');
+    $check($status === 200 && $body === '<p>PUBLIC_HTML_FIXTURE</p>', 'Static HTML remains readable: ' . $path);
+    $check(($headers['content-security-policy'] ?? '') === $staticPolicy, 'Standalone HTML enforces the local script policy: ' . $path);
+}
+[$status, $body, $headers] = $request('/static/player/index.html', null, true);
+$check($status === 200 && $body === '' && ($headers['content-security-policy'] ?? '') === $staticPolicy,
+    'Static HTML HEAD response retains its enforced policy');
+$check(!isset($request('/static_new/js/app.js')[2]['content-security-policy']), 'Static JavaScript does not receive an HTML response policy');
 foreach (['/upload/vod/picture.png', '/upload/user/avatar.webp', '/template/audit/images/logo.png', '/addons/audit/logo.png'] as $path) {
     [$status, $body, $headers] = $request($path);
     $check($status === 200 && str_starts_with($body, "\x89PNG\r\n\x1a\n") && str_starts_with($headers['content-type'] ?? '', 'image/'),
@@ -101,13 +122,15 @@ foreach ([['/', 'index.php', ''], ['/index.php', 'index.php', ''],
     ['/addons/audit/api/generate', 'index.php', 'addons/audit/api/generate'],
     ['/search/%E4%B8%AD%E6%96%87%20test.html', 'index.php', 'search/中文 test.html']
 ] as [$path, $entry, $route]) {
-    [$status, $body] = $request($path . '?q=one%26two' . (!str_contains($path, '.php') && $path !== '/' ? '&s=override-attempt' : ''), ['text' => '正文', 'id' => '7']);
+    [$status, $body, $headers] = $request($path . '?q=one%26two' . (!str_contains($path, '.php') && $path !== '/' ? '&s=override-attempt' : ''), ['text' => '正文', 'id' => '7']);
     $check($status === 200, 'Front controller remains reachable: ' . $path . ' status=' . $status);
     $result = json_decode($body, true, 512, JSON_THROW_ON_ERROR);
     $check($result['entry'] === $entry && $result['route'] === $route, 'Real ThinkPHP Request receives the intended entry/PATH_INFO: ' . $path . ' actual=' . json_encode($result, JSON_UNESCAPED_UNICODE));
     $check($result['query']['q'] === 'one&two' && $result['post'] === ['text' => '正文', 'id' => '7'] && $result['method'] === 'POST',
         'Rewrites preserve query, POST body and method: ' . $path);
     $check($result['authorization'] === 'Bearer fixture-token', 'API authorization header survives Apache handling');
+    $check(($headers['content-security-policy'] ?? '') === $dynamicPolicy,
+        'PHP retains exactly its approved-origin policy after rewrite/PATH_INFO handling: ' . $path);
 }
 [$status, $body] = $request('/.env', null, true);
 $check($status === 403 && $body === '', 'HEAD also rejects private files without a body');

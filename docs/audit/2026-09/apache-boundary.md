@@ -20,6 +20,8 @@
 
 后续完整应用联调发现通用 `.properties` 拒绝规则同时拦截了默认模板的中英文语言包。现在仅放行 `/template/<规范目录名>/asset/language/strings_en.properties` 和 `strings_zh.properties`，以纯文本返回；其他 properties、备份/脚本双扩展、PATH_INFO 和链接到私有文件的符号链接仍拒绝。正向 Location 例外与精确 rewrite 规则配套，文件系统的脚本禁用、点路径拒绝和不跟随符号链接继续生效。
 
+供应链清理补充：Dockerfile 启用 `headers` 模块，实际 `.htm` / `.html` 文件响应设置与 PHP 一致的默认脚本 CSP；PHP 重写/PATH_INFO 响应保留应用批准的额外来源，不叠加静态策略。以 PHP 8.3.33、8.4.25 旧审计镜像分别挂载工作区新配置，新增检查后各通过 236 项 HTTP 断言。此轮挂载验证不等于新镜像已构建或现网已加载；用法与独立 Nginx 片段见 [静态 HTML CSP](../../security/static-html-csp.md)。
+
 Apache 的覆盖范围和段合并顺序参见 [AllowOverride](https://httpd.apache.org/docs/2.4/mod/core.html#allowoverride)、[配置段合并](https://httpd.apache.org/docs/2.4/sections.html)；rewrite 转义及子请求行为参见 [rewrite flags](https://httpd.apache.org/docs/2.4/rewrite/flags.html)。保护文件和资源放行规则必须一起审查，不能只依赖一个后缀拒绝清单。
 
 ## 验证

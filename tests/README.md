@@ -70,6 +70,8 @@ python3 -m venv /tmp/maccms-qr-venv
 
 容器回归需要 Docker、Python 3；HitsBuffer 还需要宿主 redis-server，百度 TLS 测试需要 openssl。各运行器创建并清理自己的临时服务。QR 测试独立解码实际 PNG，避免只比较生成器自身结果。Apache 测试用纯假站点验证镜像内默认配置和真实 TP8 Request，不请求仓库秘密文件；完整业务 HTTP 由另一层单独覆盖。
 
+独立静态 HTML 的 CSP 也包含在 Apache 回归中：静态播放器/编辑器、HTM、DirectoryIndex、HEAD 必须带头，PHP 的批准脚本来源不能被覆盖。仅验证工作区配置时可给旧审计镜像加 `--working-config`，默认仍验证镜像自身配置。Nginx 片段另以 `python3 tests/security_audit_nginx_static_csp.py --nginx /path/to/nginx` 运行真实回环 HTTP 检查，覆盖上游缓存 MISS/HIT 与头继承；CI 的 shellcheck job 安装 Nginx 并执行。配置用法及适用边界见 [静态 HTML CSP](../docs/security/static-html-csp.md)。
+
 ## 工作流与静态分析
 
 push / pull request 工作流分别在 PHP 8.3、8.4 执行编译、锁定依赖检查、独立回归、SQLite/MySQL、安装、前台/API、后台及实际 Docker 镜像集成；ShellCheck 单独检查 deploy/tests 脚本。远程工作流需要提交推送后才会运行，本地等价验证不能表述为 GitHub CI 已通过。

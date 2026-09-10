@@ -11,8 +11,11 @@ import time
 
 ENTRY = '''<?php
 require '/source/vendor/autoload.php';
+require_once '/source/application/middleware/SecurityHeaders.php';
 $request = \\think\\Request::__make(new \\think\\App('/tmp/apache-audit-app/'));
 header('Content-Type: application/json');
+header('Content-Security-Policy: ' . \\app\\middleware\\SecurityHeaders::scriptCspPolicy([
+    'security_script_sources' => ['https://approved.example.invalid']]));
 echo json_encode(['entry' => basename(__FILE__), 'route' => $request->pathinfo(),
     'query' => $_GET, 'post' => $_POST, 'method' => $_SERVER['REQUEST_METHOD'],
     'uri' => $_SERVER['REQUEST_URI'], 'authorization' => $request->header('authorization'),
@@ -24,7 +27,10 @@ SCRIPT = "<?php echo 'UPLOAD_' . 'EXECUTED'; file_put_contents('/tmp/apache-audi
 def main():
     root = Path(__file__).resolve().parents[1]
     baseline = '--baseline' in sys.argv
-    images = [arg for arg in sys.argv[1:] if arg != '--baseline'] or (['maccms-audit-production84:20260910'] if baseline else ['maccms-audit-apache83:20260910', 'maccms-audit-apache84:20260910'])
+    working_config = '--working-config' in sys.argv
+    if baseline and working_config:
+        raise SystemExit('--baseline cannot use the hardened --working-config')
+    images = [arg for arg in sys.argv[1:] if arg not in ['--baseline', '--working-config']] or (['maccms-audit-production84:20260910'] if baseline else ['maccms-audit-apache83:20260910', 'maccms-audit-apache84:20260910'])
     with tempfile.TemporaryDirectory(prefix='maccms-apache-boundary-') as temporary:
         directory = Path(temporary)
         directory.chmod(0o755)
@@ -48,6 +54,7 @@ def main():
                      'addons/audit/config.php', 'addons/audit/info.ini', 'addons/audit/view/private.html',
                      'static_new/app.js.bak', 'upload/leak.sql', 'upload/shell.php.jpg',
                      'template/audit/assets/source.php.css', 'template/audit/assets/source.sql.css', 'upload/secret.ini.txt',
+                     'static/player/source.php.html', 'static/player/source.bak.html', 'upload/page.html',
                      'template/audit/asset/language/private.properties', 'template/audit/asset/language/strings_zh.properties.bak',
                      'template/audit/asset/language/strings_zh.properties.php', 'template/audit/settings.properties', 'upload/strings_zh.properties']:
             write(name, 'PRIVATE_FIXTURE_SENTINEL')
@@ -65,7 +72,7 @@ def main():
             write(name, 'PUBLIC_STYLE_FIXTURE')
         for name in ['static/ueditor/config.json', 'template/audit/asset/lottie/logo.json']:
             write(name, '{"fixture":"public"}')
-        for name in ['static_new/ueditor/dialogs/preview/preview.html', 'static/player/index.html', 'vod/detail/1.html', '404.html', 'template/audit/help/help.html', 'addons/audit/assets/dialog.html']:
+        for name in ['static_new/ueditor/dialogs/preview/preview.html', 'static/player/index.html', 'static/player/frame.htm', 'static_new/player/frame.HTML', 'vod/detail/1.html', '404.html', 'template/audit/help/help.html', 'addons/audit/assets/dialog.html']:
             write(name, '<p>PUBLIC_HTML_FIXTURE</p>')
         for name in ['robots.txt', 'sitemap.xml', 'baidu_audit_verify.txt', '.well-known/acme-challenge/audit-token']:
             write(name, 'PUBLIC_TEXT_FIXTURE')
@@ -82,9 +89,15 @@ def main():
         for image_name in images:
             name = 'maccms-apache-boundary-' + secrets.token_hex(5)
             try:
-                subprocess.run(['docker', 'run', '--rm', '-d', '--network', 'none', '--name', name,
-                                '-v', str(directory) + ':/var/www/html:ro', '-v', str(root) + ':/source:ro',
-                                image_name], check=True, stdout=subprocess.DEVNULL)
+                command = ['docker', 'run', '--rm', '-d', '--network', 'none', '--name', name,
+                           '-v', str(directory) + ':/var/www/html:ro', '-v', str(root) + ':/source:ro']
+                if working_config:
+                    command += ['-v', str(root / 'docker/apache/maccms.conf') + ':/etc/apache2/sites-available/000-default.conf:ro']
+                command.append(image_name)
+                if working_config:
+                    # Old audit images predate mod_headers; enable it only in this disposable container.
+                    command += ['sh', '-c', 'a2enmod headers >/dev/null && exec apache2-foreground']
+                subprocess.run(command, check=True, stdout=subprocess.DEVNULL)
                 deadline = time.monotonic() + 15
                 while time.monotonic() < deadline:
                     result = subprocess.run(['docker', 'exec', name, 'php', '-r',

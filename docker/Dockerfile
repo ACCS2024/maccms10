@@ -9,7 +9,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
  && docker-php-ext-install -j"$(nproc)" curl gd mbstring zip pdo_mysql mysqli opcache \
  && pecl install redis imagick-3.8.1 \
  && docker-php-ext-enable redis imagick \
- && a2enmod rewrite \
+ && a2enmod rewrite headers \
  && rm -rf /var/lib/apt/lists/*
 
 # Default HTTP boundary lives in the image, not a writable repository .htaccess.
