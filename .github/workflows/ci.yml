@@ -208,6 +208,10 @@ jobs:
           python3 tests/run_baidu_urlsend_audit.py maccms-ci:${{ matrix.php }}
           python3 tests/run_sdk_redirect_audit.py maccms-ci:${{ matrix.php }}
           python3 tests/run_apache_boundary_audit.py maccms-ci:${{ matrix.php }}
+      - name: Native cache credentials, timeouts and expiration
+        run: |
+          docker build --build-arg AUDIT_BASE=maccms-ci:${{ matrix.php }} -f tests/fixtures/cache_runtime.Dockerfile -t maccms-cache-ci:${{ matrix.php }} .
+          docker run --rm --network none -e CACHE_AUDIT_REQUIRE_NATIVE=1 -v "$PWD:/app:ro" -w /app --entrypoint php maccms-cache-ci:${{ matrix.php }} tests/framework_audit_cache_connection.php
       - name: Decode generated QR images with an independent implementation
         run: |
           python3 -m venv /tmp/maccms-qr-venv

@@ -43,28 +43,12 @@ class System extends Base
 
     public function test_cache()
     {
-        $param = \think\facade\Request::param();
-
-        if (!isset($param['type']) || empty($param['host']) || empty($param['port'])) {
-            return $this->error(lang('param_err'));
+        if (request()->method(true) !== 'POST' || !request()->isPost()) {
+            return json(['code'=>1001, 'msg'=>lang('param_err')]);
         }
-
-        $options = [
-            'type' => $param['type'],
-            'host' => $param['host'],
-            'port' => $param['port'],
-            'username' => $param['username'],
-            'password' => $param['password']
-        ];
-
-        if ($param['type'] == 'redis' && isset($param['db']) && intval($param['db']) > 0) {
-            $options['select'] = intval($param['db']);
-        }
-
-        $hd = Cache::connect($options);
-        $hd->set('test', 'test');
-
-        return json(['code' => 1, 'msg' => lang('test_ok')]);
+        return json(\app\common\util\CacheConnection::probe(
+            \think\facade\Request::post(), $GLOBALS['config']['app']['cache_timeout'] ?? null
+        ));
     }
 
     public function config()

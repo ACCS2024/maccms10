@@ -21,50 +21,6 @@ $_f    = __DIR__ . '/../application/extra/maccms.php';
 $_m    = file_exists($_f) ? (include $_f) : [];
 $_app  = (is_array($_m) && isset($_m['app']) && is_array($_m['app'])) ? $_m['app'] : [];
 
-$_type = strtolower(trim((string)($_app['cache_type'] ?? 'file')));
-if (!in_array($_type, ['file', 'memcache', 'memcached', 'redis'], true)) {
-    $_type = 'file';
-}
-// 与 TP5 的 behavior/Init.php 同一套兜底:小于 1 视为未配置,给 60 秒下限
-$_expire  = (int)($_app['cache_time'] ?? 0);
-if ($_expire < 1) {
-    $_expire = 60;
-}
-$_timeout = ((float)($_app['cache_timeout'] ?? 0)) > 0 ? (float)$_app['cache_timeout'] : 1.5;
-
-return [
-    'default' => $_type,
-    'stores'  => [
-        'file' => [
-            'type'   => 'file',
-            'path'   => '',
-            'prefix' => '',
-            'expire' => $_expire,
-        ],
-        'redis' => [
-            'type'     => 'redis',
-            'host'     => (string)($_app['cache_host']     ?? '127.0.0.1'),
-            'port'     => (int)($_app['cache_port']        ?? 6379),
-            'username' => (string)($_app['cache_username'] ?? ''),
-            'password' => (string)($_app['cache_password'] ?? ''),
-            'select'   => (int)($_app['cache_db']          ?? 0),
-            'timeout'  => $_timeout,
-            'expire'   => $_expire,
-            'prefix'   => '',
-        ],
-        'memcache' => [
-            'type'   => 'memcache',
-            'host'   => (string)($_app['cache_host'] ?? '127.0.0.1'),
-            'port'   => (int)($_app['cache_port']    ?? 11211),
-            'expire' => $_expire,
-            'prefix' => '',
-        ],
-        'memcached' => [
-            'type'   => 'memcached',
-            'host'   => (string)($_app['cache_host'] ?? '127.0.0.1'),
-            'port'   => (int)($_app['cache_port']    ?? 11211),
-            'expire' => $_expire,
-            'prefix' => '',
-        ],
-    ],
-];
+// One contract serves production stores and the administrator connection probe.
+// Network stores are validated lazily unless selected as the default backend.
+return \app\common\util\CacheConnection::configuration($_app);
