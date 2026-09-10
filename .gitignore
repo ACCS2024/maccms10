@@ -43,3 +43,7 @@ application/data/asset_version.txt
 # 历史教训:这个文件曾被 track,里面存的是冒烟机的值,乐播新机部署后主题变 vozy、
 # site_url 指着 216.180.225.139、图床指向 img.test.com,全站封面 404。
 application/extra/maccms.php
+
+# Python audit tooling creates these disposable bytecode caches.
+__pycache__/
+*.py[cod]
