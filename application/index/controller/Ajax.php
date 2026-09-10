@@ -168,14 +168,14 @@ class Ajax extends Base
         $msOn = MeilisearchService::enabled() ? '1' : '0';
         $cacheKey = 'search:suggest:v3:' . md5($mid . '|' . mb_strtolower($wd, 'UTF-8') . '|' . $limit . '|' . $orderMode . '|' . $msOn);
         $debounceSec = max(1, intval(isset($appCfg['search_suggest_debounce_sec']) ? $appCfg['search_suggest_debounce_sec'] : 1));
-        $ipDebounceKey = 'search:suggest:debounce:' . md5($ip . '|' . $mid . '|' . mb_strtolower($wd, 'UTF-8') . '|' . $limit . '|' . $msOn);
+        $ipDebounceKey = 'search:suggest:debounce:' . md5($ip . '|' . $mid . '|' . mb_strtolower($wd, 'UTF-8') . '|' . $limit . '|' . $orderMode . '|' . $msOn);
         $cached = Cache::get($cacheKey);
-        if (is_array($cached)) {
+        if (is_array($cached) && ApiMeilisearchSuggest::cachedResultIsVisible($pre, $cached)) {
             $cached['url'] = $url;
             return json($cached);
         }
         $debounced = Cache::get($ipDebounceKey);
-        if (is_array($debounced)) {
+        if (is_array($debounced) && ApiMeilisearchSuggest::cachedResultIsVisible($pre, $debounced)) {
             $debounced['url'] = $url;
             return json($debounced);
         }

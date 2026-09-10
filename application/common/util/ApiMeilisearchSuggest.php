@@ -5,8 +5,7 @@ namespace app\common\util;
 use think\facade\Db;
 
 /**
- * API 搜索建议：Meilisearch + filterPublishedKind + refinePrimaryIdsForPublished，
- * 与列表/详情同一套已发布/未回收过滤；失败时回退 model listData（含各模型 recycle 合并）。
+ * API 搜索建议：Meilisearch 命中与 MySQL 回退共用只读的已发布/未回收查询和固定字段投影。
  */
 class ApiMeilisearchSuggest
 {
@@ -58,7 +57,7 @@ class ApiMeilisearchSuggest
             'pk' => 'role_id',
             'status' => 'role_status',
             'recycle' => null,
-            'field' => 'role_id,role_name,role_en,role_pic,role_time,type_id',
+            'field' => 'role_id,role_name,role_en,role_pic,role_time',
             'like' => 'role_name|role_en',
             'list' => 'std',
             'fallback_addition' => 0,
@@ -102,6 +101,51 @@ class ApiMeilisearchSuggest
         return '%' . addcslashes((string)$wd, '%_\\') . '%';
     }
 
+    private static function publishedQuery(array $meta): \think\db\Query
+    {
+        $query = Db::name($meta['table'])->where($meta['status'], 1);
+        $recycle = $meta['recycle'];
+        // Older schemas may lack this column; an unrelated SQL failure must never remove a guard.
+        if ($recycle !== null && $recycle !== '' && in_array($recycle, $query->getTableFields(), true)) {
+            $query->where($recycle, 0);
+        }
+        return $query;
+    }
+
+    private static function fallbackResult(array $meta, $keyword, int $limit, string $order, bool $showTotal): array
+    {
+        $limit = max(1, min(1000, $limit));
+        $query = self::publishedQuery($meta)->where([[$meta['like'], 'like', self::sqlLikeContains($keyword)]]);
+        $total = $showTotal ? (int)(clone $query)->count() : 0;
+        $rows = $query->field($meta['field'])->order($order)->limit($limit)->select()->toArray();
+        return ['code' => 1, 'msg' => lang('data_list'), 'page' => 1, 'pagecount' => ceil($total / $limit),
+            'limit' => $limit, 'total' => $total, 'list' => $rows];
+    }
+
+    /** Cache reuse is limited to the fixed Ajax DTO and currently visible source IDs. */
+    public static function cachedResultIsVisible($kind, array $result): bool
+    {
+        $meta = self::meta($kind);
+        $rows = $result['list'] ?? null;
+        if (!$meta || ($result['code'] ?? null) !== 1 || !is_array($rows) || !array_is_list($rows) || count($rows) > 50) {
+            return false;
+        }
+        $ids = [];
+        foreach ($rows as $row) {
+            if (!is_array($row) || array_diff(array_keys($row), ['id', 'name', 'en', 'pic'])
+                || !is_string($row['name'] ?? null) || !is_string($row['en'] ?? null) || !is_string($row['pic'] ?? null)) {
+                return false;
+            }
+            $id = $row['id'] ?? null;
+            if ((!is_int($id) && !is_string($id)) || !preg_match('/^[1-9][0-9]{0,9}$/D', (string)$id)
+                || (int)$id > 4294967295 || isset($ids[(int)$id])) {
+                return false;
+            }
+            $ids[(int)$id] = true;
+        }
+        return $ids === [] || (int)self::publishedQuery($meta)->whereIn($meta['pk'], array_keys($ids))->count() === count($ids);
+    }
+
     /**
      * Meili 命中后按顺序拉取 DB 行（status=1 + recycle=0 若存在列）。
      *
@@ -118,10 +162,7 @@ class ApiMeilisearchSuggest
         if (!$m || empty($ids)) {
             return [];
         }
-        $table = $m['table'];
         $pk = $m['pk'];
-        $st = $m['status'];
-        $rc = $m['recycle'];
         $field = $m['field'];
         $ids = array_values(array_unique(array_filter(array_map('intval', $ids), static function ($v) {
             return $v > 0;
@@ -129,20 +170,8 @@ class ApiMeilisearchSuggest
         if ($ids === []) {
             return [];
         }
-        try {
-            $q = Db::name($table)->field($field)->where($st, 1)->whereIn($pk, $ids);
-            if ($rc !== null && $rc !== '') {
-                $q->where($rc, 0);
-            }
-            $rows = $q->select();
-        } catch (\Throwable $e) {
-            if ($rc !== null && $rc !== '') {
-                $rows = Db::name($table)->field($field)->where($st, 1)->whereIn($pk, $ids)->select();
-            } else {
-                throw $e;
-            }
-        }
-        if (!is_array($rows) || $rows === []) {
+        $rows = self::publishedQuery($m)->field($field)->whereIn($pk, $ids)->select()->toArray();
+        if ($rows === []) {
             return [];
         }
         $mapRows = [];
@@ -189,11 +218,7 @@ class ApiMeilisearchSuggest
                 $ids[] = (int)$mm[1];
             }
         }
-        $ids = MeilisearchListBridge::refinePrimaryIdsForPublished($ids, $k);
-        if ($ids === []) {
-            return [];
-        }
-
+        // The ordered query performs the same fresh publication/recycle check in one lookup.
         return self::orderedDbRowsByIds($k, $ids, $m);
     }
 
@@ -212,23 +237,7 @@ class ApiMeilisearchSuggest
         if (!$m) {
             return ['code' => 1001, 'msg' => 'param_err', 'page' => 1, 'pagecount' => 0, 'limit' => $limit, 'total' => 0, 'list' => []];
         }
-        $like = self::sqlLikeContains($wd);
-        $where = [
-            $m['status'] => 1,
-        ];
-        $where[] = [$m['like'], 'like', $like];
-        $order = $m['pk'] . ' desc';
-        $model = model($m['model']);
-        $field = $m['field'];
-        if ($m['list'] === 'topic') {
-            return $model->listData($where, $order, 1, $limit, 0, $field, 1);
-        }
-        if ($m['list'] === 'vod') {
-            return $model->listData($where, $order, 1, $limit, 0, $field, 1, 1);
-        }
-        $addition = isset($m['fallback_addition']) ? (int)$m['fallback_addition'] : 1;
-
-        return $model->listData($where, $order, 1, $limit, 0, $field, $addition, 1);
+        return self::fallbackResult($m, $wd, (int)$limit, $m['pk'] . ' desc', true);
     }
 
     /**
@@ -348,7 +357,7 @@ class ApiMeilisearchSuggest
     }
 
     /**
-     * 前台 Ajax suggest：列表项为 id/name/en/pic（与历史模板一致），数据路径与 API 一致（Meili + refine + 未回收；否则 MySQL + status + LIKE）。
+     * 前台 Ajax suggest：列表项为 id/name/en/pic；Meili 命中与 MySQL 回退均核验发布/回收状态。
      *
      * @param string $kind       vod|art|topic|actor|role|website
      * @param string $orderMode  SearchService::suggestOrder 的 mode（仅 MySQL 回退时生效）
@@ -382,24 +391,14 @@ class ApiMeilisearchSuggest
             ];
         }
 
-        $like = self::sqlLikeContains($wd);
-        $where = [
-            $m['status'] => 1,
-        ];
-        $where[] = [$m['like'], 'like', $like];
         $order = SearchService::suggestOrder($k, $orderMode);
-        $modelName = $m['model'];
-        $field = $k . '_id as id,' . $k . '_name as name,' . $k . '_en as en,' . $k . '_pic as pic';
-        if ($k === 'topic') {
-            $field = 'topic_id as id,topic_name as name,topic_en as en,topic_pic as pic';
-            $res = (new \app\common\model\Topic())->listData($where, $order, 1, $limit, 0, $field, 0);
-        } else {
-            $res = model($modelName)->listData($where, $order, 1, $limit, 0, $field, 0, 0);
-        }
-        if ($res['code'] == 1 && !empty($res['list'])) {
-            foreach ($res['list'] as $kk => $v) {
-                $res['list'][$kk]['pic'] = mac_url_img($v['pic'] ?? '');
+        $res = self::fallbackResult($m, $wd, (int)$limit, $order, false);
+        if ($res['code'] == 1) {
+            $list = [];
+            foreach ($res['list'] as $row) {
+                $list[] = self::rowToAjaxSuggestItem($k, $row);
             }
+            $res['list'] = $list;
         }
 
         return $res;
