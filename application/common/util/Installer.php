@@ -155,9 +155,8 @@ class Installer
         $file = $root . '.env';
 
         // ThinkPHP 用 parse_ini_file($file, true, INI_SCANNER_RAW) 读 .env。
-        // RAW 模式下【不会】剥离引号 —— 写 DB_PASS="x" 读回来就是带引号的 "x"。
-        // 所以一律写裸值;同时 RAW 模式仍会把 ; 当行注释、把引号当词法符号,
-        // 这类字符无法安全表达,宁可报错也不要写出一个能解析但值是错的文件。
+        // 这里沿用裸值格式并拒绝注释、引号和换行;写入临时文件后,
+        // 同时校验 INI 解析与 Env 的布尔值转换,通过后才替换已有配置。
         $pairs = [
             'DB_HOST'    => $cfg['hostname'],
             'DB_PORT'    => $cfg['hostport'],
@@ -180,33 +179,17 @@ class Installer
         $lines[] = '';
         $content = implode("\n", $lines);
 
-        // 原子写入,避免半截文件被并发请求读到
-        $tmp = $file . '.tmp' . getmypid();
-        if (false === @file_put_contents($tmp, $content)) {
-            throw new \RuntimeException("无法写入 {$tmp}(检查目录权限)");
-        }
-        @chmod($tmp, 0640);
-        // 口令文件不给 other 读;属主/属组对齐 application/ 目录,
-        // 否则 CLI 以 root 装站、FPM 以 www 运行时,PHP 读不到 .env 会连不上库。
-        $st = @stat($this->appPath);
-        if ($st !== false) {
-            @chown($tmp, $st['uid']);
-            @chgrp($tmp, $st['gid']);
-        }
-        if (!@rename($tmp, $file)) {
-            @unlink($tmp);
-            throw new \RuntimeException("无法写入 {$file}(检查权限)");
-        }
-
-        // 回读校验:必须用和 think\Env::load() 完全相同的解析方式,
-        // 否则校验通过而框架读到的是另一回事。
-        $back = @parse_ini_file($file, true, INI_SCANNER_RAW);
-        if (!is_array($back)
-            || ($back['DB_NAME'] ?? null) !== (string)$cfg['database']
-            || ($back['DB_USER'] ?? null) !== (string)$cfg['username']
-            || ($back['DB_PASS'] ?? null) !== (string)$cfg['password']) {
-            throw new \RuntimeException('.env 写入校验失败(凭据回读不一致)');
-        }
+        $this->writeValidatedFile($file, $content, static function ($temporary) use ($pairs) {
+            $back = @parse_ini_file($temporary, true, INI_SCANNER_RAW);
+            $env = new \think\Env();
+            $env->load($temporary);
+            foreach ($pairs as $key => $value) {
+                if (!is_array($back) || ($back[$key] ?? null) !== (string)$value
+                    || $env->get($key) !== (string)$value) {
+                    throw new \RuntimeException('.env 写入校验失败(凭据回读不一致)');
+                }
+            }
+        });
     }
 
     /**
@@ -224,11 +207,12 @@ class Installer
             $this->arraySet($cfg, $path, $val);
         }
         $file = $this->appPath . 'extra/maccms.php';
-        mac_arr2file($file, $cfg);
-        $back = is_file($file) ? include $file : null;
-        if (!is_array($back)) {
-            throw new \RuntimeException("maccms.php 写入失败:{$file}");
-        }
+        $content = "<?php\nreturn " . var_export($cfg, true) . ";\n";
+        $this->writeValidatedFile($file, $content, static function ($temporary) use ($cfg) {
+            if ((include $temporary) !== $cfg) {
+                throw new \RuntimeException('maccms.php 写入校验失败');
+            }
+        });
     }
 
     /**
@@ -238,11 +222,17 @@ class Installer
      */
     public function importSqlFile($absPath, $prefix)
     {
-        if (!is_file($absPath)) {
-            return 0;
+        if (!is_file($absPath) || !is_readable($absPath)) {
+            throw new \RuntimeException('SQL 文件不存在或不可读:' . basename($absPath));
         }
         $sql  = file_get_contents($absPath);
-        $list = array_filter(mac_parse_sql($sql, 0, ['mac_' => $prefix]));
+        if ($sql === false || trim($sql) === '') {
+            throw new \RuntimeException('SQL 文件为空或读取失败:' . basename($absPath));
+        }
+        $list = array_filter(mac_parse_sql($sql, 0, ['mac_' => $prefix]), static fn ($statement) => trim($statement) !== '');
+        if (!$list) {
+            throw new \RuntimeException('SQL 文件没有可执行语句:' . basename($absPath));
+        }
         $n = 0;
         foreach ($list as $stmt) {
             try {
@@ -274,7 +264,7 @@ class Installer
             'admin_status' => 1,
             'admin_auth'   => '',
         ]);
-        if (false === $ok) {
+        if ($ok !== 1) {
             throw new \RuntimeException('管理员创建失败:' . $admin->getError());
         }
     }
@@ -300,6 +290,42 @@ class Installer
     }
 
     // ---- 内部工具 ----
+
+    /** 校验临时文件后原子替换,任何失败均保留已有配置。 */
+    private function writeValidatedFile(string $file, string $content, callable $validate): void
+    {
+        $directory = dirname($file);
+        if (!is_dir($directory) || !is_writable($directory)) {
+            throw new \RuntimeException('配置目录不可写:' . $directory);
+        }
+        $temporary = @tempnam($directory, '.install-');
+        if ($temporary === false) {
+            throw new \RuntimeException('无法创建配置临时文件');
+        }
+        try {
+            if (@file_put_contents($temporary, $content) !== strlen($content)) {
+                throw new \RuntimeException('配置写入不完整');
+            }
+            $validate($temporary);
+            @chmod($temporary, 0640);
+            // CLI 以 root 安装时沿用 application 目录属主,让 FPM 可以读取配置。
+            $stat = @stat($this->appPath);
+            if ($stat !== false) {
+                @chown($temporary, $stat['uid']);
+                @chgrp($temporary, $stat['gid']);
+            }
+            if (!@rename($temporary, $file)) {
+                throw new \RuntimeException('无法替换配置文件:' . $file);
+            }
+            if (function_exists('opcache_invalidate')) {
+                opcache_invalidate($file, true);
+            }
+        } finally {
+            if (is_file($temporary)) {
+                @unlink($temporary);
+            }
+        }
+    }
 
     /** 反引号转义标识符(库名/表名) */
     protected function quoteIdent($name)
