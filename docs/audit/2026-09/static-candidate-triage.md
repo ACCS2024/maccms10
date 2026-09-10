@@ -86,3 +86,9 @@ AiSearch 的 Collection 问题已经在 c84bc161 通过实际 MySQL 修复；不
 见[固定阶段记录](phase-verification-f32e4000.md)：level 1 为 409、level 5 为 1,178，无全局分析错误；PHPCompatibility 0 错误、8 警告。相对 691eb9ab，User 两档各减少 1 条（返利元数据使用实际连接），ContentPurchase level 5 减少 1 条（删除冗余条件）；没有忽略新增诊断。新金融公共机制和业务适配器在本次两档无文件诊断；这不代替原 PDO 故障与真实数据库验证。
 
 直接 Db 事务调用词法清点为 74 行/20 个方法。Card 的五类故障已有实际证据，Cash、签到/里程碑、任务、Ulog、User 其它账号/奖励方法及备份/统计需按不同业务所有权核实，不能因语法结构相同就认定全部可套同一拥有者策略。
+
+## cc2d60bf 重扫
+
+见[固定阶段记录](phase-verification-cc2d60bf.md)：level 1 409、level 5 1,182，均无全局错误；PHPCompatibility 0 错误、8 警告。level 5 相对 f32e4000 净增 4 条：Base 当前 writer 查询新增 2 条连接接口提示并移除 1 条旧 getTableFields；Payment 卡密新返回分支增加 2 条旧 JSON PHPDoc 类型提示；BulkTableIo 减少 1 条 null 比较；XlsxTableReader 增加 2 条回调状态值推导。全部精确增减、标识和报告摘要均已记录，没有添加忽略规则。
+
+PDO 连接合同和错误 PHPDoc 应进一步明确；XLSX 的回调中实际非空值、列拒绝及空白语义已有执行证据，但不能据此删除全部状态候选。当前直接 Db 事务词法清点 69 行 / 19 个方法，卡密已移出此直接调用集合；其它业务仍需逐项确认。列映射、上传、编码和控制器返回问题已经分批落实，不再列为未验证的旧上传接口候选；Domain/Cj/Vodplayer 等独立入口仍在范围内。

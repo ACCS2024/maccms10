@@ -1,0 +1,318 @@
+{
+  "source_commit": "cc2d60bfc71b898d19124e54130b83eb2f3e4c3c",
+  "source_tree": "30757369a2f50c6a2cc12a282d3c7ffaad678a6d",
+  "production_lock_sha256": "17864e7bf115eb91c0742eeb52c3cd4fea60e3a6b1ae7dc4bc146e3a0250e438",
+  "audit_tool_lock_sha256": "ba1aa580779290fd1437b74d0efce6a3c2a25900c8f28469731d0e65ff79bf5c",
+  "scope": "isolated committed source plus clean locked production vendor; uncommitted working-tree changes excluded",
+  "status": "audit ongoing; no deployment or completeness claim",
+  "installed_compilation": [
+    {
+      "php": "8.3.33",
+      "checked": 5424,
+      "failed": 0,
+      "skipped": [],
+      "report_sha256": "0480e0a5169c468c0d9e315f46f41ac2af926084f72ab7e95a97ac62f9f8685c"
+    },
+    {
+      "php": "8.4.25",
+      "checked": 5424,
+      "failed": 0,
+      "skipped": [],
+      "report_sha256": "2c5665d2bf925fd9db0ce4c1b61c41cd660345aaab0a15ecea9f97a76264f895"
+    }
+  ],
+  "default_regressions": [
+    {
+      "php": "8.3.33",
+      "processes": 155,
+      "failures": 0,
+      "suites": [
+        "unit",
+        "models",
+        "financial",
+        "upload",
+        "storage",
+        "remote_upload"
+      ],
+      "log_sha256": "0e92f2c2dca200bcbcd40d1837d054924c398ee596e96f4d0958effcb16b070e"
+    },
+    {
+      "php": "8.4.25",
+      "processes": 155,
+      "failures": 0,
+      "suites": [
+        "unit",
+        "models",
+        "financial",
+        "upload",
+        "storage",
+        "remote_upload"
+      ],
+      "log_sha256": "9148460fb8775dde50f1b356d7bb009b49ea3dadb32a25635edca94f87dacde3"
+    }
+  ],
+  "static_analysis": {
+    "php": "8.4.25",
+    "target": "PHP 8.3–8.4 compatibility; PHPStan PHP 8.4",
+    "tools": {
+      "dealerdirect/phpcodesniffer-composer-installer": "v1.2.1",
+      "phpcompatibility/php-compatibility": "10.0.0-alpha2",
+      "phpcsstandards/phpcsutils": "1.2.3",
+      "phpstan/phpstan": "2.2.13",
+      "squizlabs/php_codesniffer": "4.0.4"
+    },
+    "reports": {
+      "phpstan_level1": {
+        "totals": {
+          "errors": 0,
+          "file_errors": 409
+        },
+        "report_sha256": "ffcbb29b0d0dfc05ca45dbd5e2672a30a7bb675ff6afefabdbf11d0ead17504b",
+        "categories": {
+          "staticMethod.notFound": 108,
+          "property.notFound": 8,
+          "constant.notFound": 38,
+          "isset.variable": 1,
+          "empty.variable": 14,
+          "variable.undefined": 219,
+          "unset.variable": 4,
+          "constructor.unusedParameter": 1,
+          "closure.unusedUse": 1,
+          "class.notFound": 1,
+          "array.duplicateKey": 14
+        }
+      },
+      "phpstan_level5": {
+        "totals": {
+          "errors": 0,
+          "file_errors": 1182
+        },
+        "report_sha256": "9557154e236ca3ed2977309b5896f731f33e19532212ff821498c113fd4c457d",
+        "categories": {
+          "staticMethod.notFound": 108,
+          "function.alreadyNarrowedType": 41,
+          "property.notFound": 15,
+          "property.protected": 1,
+          "assign.propertyType": 3,
+          "booleanAnd.alwaysFalse": 16,
+          "identical.alwaysFalse": 94,
+          "isset.offset": 24,
+          "method.notFound": 99,
+          "nullCoalesce.offset": 32,
+          "equal.alwaysFalse": 42,
+          "argument.type": 49,
+          "constant.notFound": 38,
+          "argument.byRef": 1,
+          "empty.offset": 3,
+          "binaryOp.invalid": 9,
+          "method.unused": 8,
+          "isset.variable": 1,
+          "greaterOrEqual.alwaysTrue": 2,
+          "empty.variable": 14,
+          "greater.alwaysFalse": 3,
+          "return.type": 68,
+          "greater.alwaysTrue": 12,
+          "deadCode.unreachable": 26,
+          "foreach.nonIterable": 1,
+          "variable.undefined": 219,
+          "throws.notThrowable": 7,
+          "arguments.count": 3,
+          "booleanAnd.rightAlwaysTrue": 14,
+          "if.alwaysTrue": 14,
+          "phpDoc.parseError": 48,
+          "class.notFound": 31,
+          "function.impossibleType": 13,
+          "unset.variable": 4,
+          "notIdentical.alwaysTrue": 18,
+          "offsetAccess.invalidOffset": 3,
+          "parameter.defaultValue": 3,
+          "notIdentical.alwaysFalse": 7,
+          "notEqual.alwaysTrue": 2,
+          "notEqual.alwaysFalse": 3,
+          "empty.expr": 1,
+          "ternary.alwaysTrue": 1,
+          "instanceof.alwaysTrue": 1,
+          "equal.alwaysTrue": 6,
+          "arrayFilter.same": 9,
+          "arrayValues.empty": 1,
+          "booleanNot.alwaysFalse": 5,
+          "booleanOr.alwaysTrue": 6,
+          "identical.alwaysTrue": 4,
+          "constructor.unusedParameter": 1,
+          "booleanOr.rightAlwaysFalse": 1,
+          "if.alwaysFalse": 4,
+          "return.void": 7,
+          "return.phpDocType": 1,
+          "smaller.alwaysFalse": 1,
+          "booleanNot.alwaysTrue": 2,
+          "staticMethod.resultUnused": 2,
+          "nullCoalesce.expr": 2,
+          "offsetAccess.notFound": 6,
+          "closure.unusedUse": 1,
+          "booleanOr.leftAlwaysFalse": 1,
+          "array.duplicateKey": 14,
+          "booleanAnd.rightAlwaysFalse": 1,
+          "property.defaultValue": 2,
+          "property.phpDocType": 1,
+          "property.onlyWritten": 1,
+          "booleanAnd.leftAlwaysTrue": 1
+        }
+      },
+      "phpcompatibility": {
+        "totals": {
+          "errors": 0,
+          "warnings": 8,
+          "fixable": 0
+        },
+        "report_sha256": "c6943b79b24a55f1758349cccae823bd579cccd74bf4b537b115519fe47e54d6"
+      }
+    },
+    "delta_from_f32e4000": {
+      "phpstan_level1": {},
+      "phpstan_level5": {
+        "application/admin/controller/Base.php": {
+          "added": [
+            {
+              "identifier": "method.notFound",
+              "message": "Call to an undefined method think\\db\\ConnectionInterface::query().",
+              "count": 2
+            }
+          ],
+          "removed": [
+            {
+              "identifier": "method.notFound",
+              "message": "Call to an undefined method think\\db\\BaseQuery::getTableFields().",
+              "count": 1
+            }
+          ]
+        },
+        "application/api/controller/Payment.php": {
+          "added": [
+            {
+              "identifier": "return.type",
+              "message": "Method app\\api\\controller\\Payment::use_card() should return app\\api\\controller\\JSON but returns think\\response\\Json.",
+              "count": 2
+            }
+          ],
+          "removed": []
+        },
+        "application/common/util/BulkTableIo.php": {
+          "added": [],
+          "removed": [
+            {
+              "identifier": "identical.alwaysFalse",
+              "message": "Strict comparison using === between mixed and null will always evaluate to false.",
+              "count": 1
+            }
+          ]
+        },
+        "application/common/util/XlsxTableReader.php": {
+          "added": [
+            {
+              "identifier": "booleanAnd.alwaysFalse",
+              "message": "Result of && is always false.",
+              "count": 1
+            },
+            {
+              "identifier": "notIdentical.alwaysFalse",
+              "message": "Strict comparison using !== between '' and '' will always evaluate to false.",
+              "count": 1
+            }
+          ],
+          "removed": []
+        }
+      }
+    }
+  },
+  "focused_regressions": {
+    "card_owner": {
+      "commit": "0f652bd4",
+      "sqlite_per_php": 80,
+      "mysql_per_php": 84
+    },
+    "card_identity": {
+      "commit": "919b6b4c",
+      "sqlite_per_php": 40,
+      "mysql_per_php": 40
+    },
+    "card_ingress": {
+      "commit": "3962133e",
+      "sqlite_per_php": 212,
+      "mysql_per_php": 212
+    },
+    "import_preparation": {
+      "commit": "bd9f6f80",
+      "art_sqlite_mysql": [
+        191,
+        573
+      ],
+      "manga_sqlite_mysql": [
+        158,
+        474
+      ],
+      "vod_mysql": 507
+    },
+    "import_source_rows": {
+      "commit": "7778576e",
+      "per_php": 25
+    },
+    "import_ingress": {
+      "commit": "ed27ba16",
+      "multipart_per_php": 36,
+      "art_sqlite_mysql": [
+        81,
+        81
+      ],
+      "manga_sqlite_mysql": [
+        81,
+        81
+      ],
+      "vod_mysql": 85
+    },
+    "import_columns": {
+      "commit": "cc2d60bf",
+      "parser_per_php": 81,
+      "art_sqlite_mysql": [
+        102,
+        102
+      ],
+      "manga_sqlite_mysql": [
+        102,
+        102
+      ],
+      "vod_mysql": 106
+    }
+  },
+  "post_snapshot": {
+    "commit": "b1d1b39a",
+    "scope": "CSV text preflight; not included in the frozen full compilation/static/default-suite figures",
+    "parser_per_php": 78,
+    "parser_peak_mib": 22,
+    "art_sqlite_mysql": [
+      114,
+      114
+    ],
+    "manga_sqlite_mysql": [
+      114,
+      114
+    ],
+    "vod_mysql": 118
+  },
+  "focused_log_sha256": {
+    "card-followups/check1.log": "02ac7b690d8f8c06071b387d9ee4ff889997ed8f170510c8c6b7ea27000b1dac",
+    "card-followups/credentials-check1.log": "342bb9ed6a212127f45a9a82c136282c44c74722ebdcf2f7ec50440f09684480",
+    "card-followups/ingress-check1.log": "782ad3939da169c77232c319cecbc5220ff838e16e69b0cce11bdd7f04e02297",
+    "import-followups/prepare-check1.log": "40b3c55f716fbf4255ac637aa8e37487b7712c3bd60469a8fbfaf8edca189f78",
+    "import-followups/row-numbers-check1.log": "004687349ae5f818f097d86012919d982d0823850a631828b4306329ade93f9f",
+    "import-followups/ingress-check3.log": "efe027a78a24349eddab39dee4d73e2108251b5eaa46e64810763006e5ae0dcd",
+    "import-followups/columns-check1.log": "47f91ffce4d4bb843a7feb1861f9d04edb105672bd435595340971367ce79780",
+    "import-followups/text-check1.log": "91cbec9f4e921503e54974e01205b0115a13f712430b2fd2e742e5f48456ee6a"
+  },
+  "transaction_candidates": {
+    "raw_Db_call_lines": 69,
+    "lexical_methods": 19,
+    "note": "lexical inventory only; not a vulnerability count and excludes other call forms",
+    "sha256": "8f4785b461590a1dab05d43e22b016c6034a9cea3c79fea572fac19aa49d0249"
+  },
+  "evidence_directory": "/tmp/maccms-audit-20260910/phase-cc2d60bf"
+}

@@ -23,4 +23,4 @@
 
 阶段分类入口：[框架与运行边界](framework.md)、[安全与账务](security.md)、[静态候选](static-candidate-triage.md)、[跨模块复审](cross-cutting-followups.md)。后续专项报告分别记录对应提交范围与验证限制；以每个提交的测试快照为准。
 
-最新固定快照记录：[f32e4000 阶段完整复验](phase-verification-f32e4000.md)，含双版本 5,412 文件编译、各 148 默认回归进程，以及未抑制的 level 1 / level 5 静态分类。较早记录见 [691eb9ab](phase-verification-691eb9ab.md)、[fc8c07ce](phase-verification-fc8c07ce.md)、[91486040](phase-verification-91486040.md)、[52f70b90](phase-verification-52f70b90.md)、[cdc213f](phase-verification-cdc213f.md) 与 [1a36cb4](phase-verification-1a36cb4.md)；后续批次独立验证和记账。
+最新固定快照记录：[cc2d60bf 阶段完整复验](phase-verification-cc2d60bf.md)，含双版本 5,424 文件编译、各 155 默认回归进程，以及未抑制的 level 1 / level 5 静态分类。其后 CSV 文本预检独立提交和验证。较早记录见 [f32e4000](phase-verification-f32e4000.md)、[691eb9ab](phase-verification-691eb9ab.md)、[fc8c07ce](phase-verification-fc8c07ce.md)、[91486040](phase-verification-91486040.md)、[52f70b90](phase-verification-52f70b90.md)、[cdc213f](phase-verification-cdc213f.md) 与 [1a36cb4](phase-verification-1a36cb4.md)。
