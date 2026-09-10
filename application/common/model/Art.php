@@ -519,23 +519,33 @@ class Art extends Base {
 
     public function saveData($data)
     {
+        $data = $this->normalizeSaveInput($data);
+        if ($data === null) {
+            return ['code'=>1001, 'msg'=>lang('param_err')];
+        }
         $validate = mac_validate('Art');
         if(!$validate->check($data)){
             return ['code'=>1001,'msg'=>lang('param_err').'：'.$validate->getError() ];
         }
         if(isset($data['art_jumpurl'])){ $data['art_jumpurl'] = mac_safe_jumpurl($data['art_jumpurl']); }
 
-        $key = 'art_detail_'.$data['art_id'];
+        $id = $data['art_id'] ?? 0;
+        $en = $data['art_en'] ?? '';
+        $key = 'art_detail_'.$id;
         Cache::delete($key);
-        $key = 'art_detail_'.$data['art_en'];
+        $key = 'art_detail_'.$en;
         Cache::delete($key);
-        $key = 'art_detail_'.$data['art_id'].'_'.$data['art_en'];
+        $key = 'art_detail_'.$id.'_'.$en;
         Cache::delete($key);
 
 
         $type_list = (new \app\common\model\Type())->getCache('type_list');
-        $type_info = $type_list[$data['type_id']];
-        $data['type_id_1'] = $type_info['type_pid'];
+        $type_info = is_array($type_list) ? ($type_list[$data['type_id']] ?? null) : null;
+        $parent = is_array($type_info) ? \app\common\util\PointsBalance::amount($type_info['type_pid'] ?? null, true) : null;
+        if ($parent === null || $parent > 65535) {
+            return ['code'=>1001, 'msg'=>lang('param_err')];
+        }
+        $data['type_id_1'] = $parent;
 
         if(empty($data['art_en'])){
             $data['art_en'] = Pinyin::get($data['art_name']);
@@ -547,13 +557,9 @@ class Art extends Base {
             $data['art_pic_screenshot'] = str_replace( array(chr(10),chr(13)), array('','#'),$data['art_pic_screenshot']);
         }
         if(!empty($data['art_content'])) {
-            $data['art_content'] = join('$$$', $data['art_content']);
-            $data['art_title'] = join('$$$', $data['art_title']);
-            $data['art_note'] = join('$$$', $data['art_note']);
-
             $pattern_src = '/<img[\s\S]*?src\s*=\s*[\"|\'](.*?)[\"|\'][\s\S]*?>/';
-            @preg_match_all($pattern_src, $data['art_content'], $match_src1);
-            if (!empty($match_src1)) {
+            preg_match_all($pattern_src, $data['art_content'], $match_src1);
+            if (!empty($match_src1[1])) {
                 foreach ($match_src1[1] as $v1) {
                     $v2 = str_replace($GLOBALS['config']['upload']['protocol'] . ':', 'mac:', $v1);
                     $data['art_content'] = str_replace($v1, $v2, $data['art_content']);
@@ -569,16 +575,19 @@ class Art extends Base {
         // 需要富文本净化，去除 script/iframe/on事件/js伪协议，防存储型 XSS。
         if (isset($data['art_content']) && $data['art_content'] !== '') {
             $data['art_content'] = mac_html_sanitize($data['art_content']);
+            if (strlen($data['art_content']) > 8388608 || substr_count($data['art_content'], '$$$') >= 1024) {
+                return ['code'=>1001, 'msg'=>lang('param_err')];
+            }
         }
-        if(empty($data['art_blurb'])){
-            $data['art_blurb'] = mac_substring( str_replace('$$$','', strip_tags($data['art_content'])),100);
+        if (empty($data['art_blurb']) && (array_key_exists('art_content', $data) || $id === 0)) {
+            $data['art_blurb'] = mac_substring(str_replace('$$$', '', strip_tags($data['art_content'] ?? '')), 100);
         }
 
         if($data['uptime']==1){
             $data['art_time'] = time();
         }
         if($data['uptag']==1){
-            $data['art_tag'] = mac_get_tag($data['art_name'], $data['art_content']);
+            $data['art_tag'] = mac_get_tag($data['art_name'], $data['art_content'] ?? '');
         }
         unset($data['uptime']);
         unset($data['uptag']);
@@ -640,6 +649,49 @@ class Art extends Base {
         MeilisearchSync::afterArtSave($ixArtId);
 
         return ['code'=>1,'msg'=>lang('save_ok')];
+    }
+
+    /** Normalize form omissions before PHP string functions or ORM writes. */
+    private function normalizeSaveInput($data): ?array
+    {
+        if (!is_array($data) || count($data) > 256) {
+            return null;
+        }
+        // Forms send page arrays; CSV/database rows send already joined strings.
+        foreach (['art_content', 'art_title', 'art_note'] as $field) {
+            if (!array_key_exists($field, $data)) { continue; }
+            $limit = $field === 'art_content' ? 8388608 : 1048576;
+            $parts = is_array($data[$field]) ? $data[$field] : [$data[$field]];
+            if (count($parts) > 1024) { return null; }
+            $bytes = max(0, count($parts) - 1) * 3;
+            foreach ($parts as $part) {
+                if (!is_string($part) && !is_int($part) && $part !== null) { return null; }
+                $bytes += strlen((string)$part);
+                if ($bytes > $limit) { return null; }
+            }
+            $data[$field] = implode('$$$', array_map(static fn($part) => (string)$part, $parts));
+            if (substr_count($data[$field], '$$$') >= 1024) { return null; }
+        }
+        foreach ($data as $key => $value) {
+            if (!is_string($key) || (!is_scalar($value) && $value !== null)) { return null; }
+        }
+        $id = $data['art_id'] ?? '';
+        $id = $id === '' ? 0 : \app\common\util\PointsBalance::amount($id, true);
+        $type = \app\common\util\PointsBalance::amount($data['type_id'] ?? null);
+        if ($id === null || $type === null || $type > 65535) { return null; }
+        if ($id === 0) {
+            unset($data['art_id']);
+            // Installation MEDIUMTEXT columns are NOT NULL with no defaults.
+            $data += ['art_content'=>'', 'art_title'=>'', 'art_note'=>''];
+        }
+        else { $data['art_id'] = $id; }
+        $data['type_id'] = $type;
+        foreach (['uptime', 'uptag'] as $field) {
+            $value = $data[$field] ?? 0;
+            if (!in_array($value, [0, 1, '0', '1'], true)) { return null; }
+            $data[$field] = (int)$value;
+        }
+        return $data;
     }
 
     public function delData($where)
