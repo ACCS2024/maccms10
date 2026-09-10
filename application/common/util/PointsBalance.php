@@ -9,12 +9,12 @@ final class PointsBalance
 {
     public const MAX = 4294967295;
 
-    public static function amount($value): ?int
+    public static function amount($value, bool $allowZero = false): ?int
     {
         if (PHP_INT_SIZE < 8 || (!is_int($value) && !is_string($value))
             || !preg_match('/^[0-9]{1,10}$/D', (string)$value)) { return null; }
         $value = (int)$value;
-        return $value > 0 && $value <= self::MAX ? $value : null;
+        return $value <= self::MAX && ($value > 0 || $allowZero) ? $value : null;
     }
 
     /**

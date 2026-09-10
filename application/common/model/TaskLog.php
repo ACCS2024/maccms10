@@ -64,7 +64,21 @@ class TaskLog extends Base {
             'log_time' => time(),
             'log_claim_time' => 0,
         ];
-        Db::name('TaskLog')->insert($data);
+        try {
+            Db::name('TaskLog')->insert($data);
+        } catch (\think\db\exception\PDOException $e) {
+            $error = $e->getData()['PDO Error Info'] ?? [];
+            if (($error['SQLSTATE'] ?? '') !== '23000'
+                || !in_array((int)($error['Driver Error Code'] ?? 0), [1062, 19], true)) {
+                throw $e;
+            }
+            // A competing creator may have won the existing unique user/task/date key.
+            $existing = Db::name('TaskLog')->where($where)->lock(true)->find();
+            if ($existing) {
+                return $existing;
+            }
+            throw $e;
+        }
         $data['log_id'] = Db::name('TaskLog')->getLastInsID();
         return $data;
     }
@@ -82,25 +96,43 @@ class TaskLog extends Base {
      */
     public function addProgress($user_id, $task_action, $increment = 1)
     {
+        $user_id = \app\common\util\PointsBalance::amount($user_id);
+        $increment = \app\common\util\PointsBalance::amount($increment);
+        if ($user_id === null || $increment === null || !is_string($task_action)
+            || $task_action === '' || strlen($task_action) > 50) {
+            return ['code' => 1002, 'msg' => lang('param_err')];
+        }
         $task = Db::name('Task')->where(['task_action' => $task_action, 'task_status' => 1])->find();
         if (!$task) {
             return ['code' => 1001, 'msg' => lang('task/not_found')];
         }
-        $date = date('Y-m-d');
-        $log = $this->getOrCreateDaily($user_id, $task['task_id'], $task_action, $date);
-
-        if ($log['log_status'] >= 1) {
-            return ['code' => 1, 'msg' => lang('task/already_done'), 'info' => $log];
+        Db::startTrans();
+        try {
+            $log = $this->getOrCreateDaily($user_id, $task['task_id'], $task_action);
+            // Re-read after locking: a stale progress writer must never reopen a paid claim.
+            $log = Db::name('TaskLog')->where('log_id', $log['log_id'])->lock(true)->find();
+            if (!$log) {
+                throw new \RuntimeException('task progress missing');
+            }
+            if ((int)$log['log_status'] >= 1) {
+                Db::commit();
+                return ['code' => 1, 'msg' => lang('task/already_done'), 'info' => $log];
+            }
+            $new_progress = min((int)$log['log_progress'] + $increment, (int)$task['task_target']);
+            $update = ['log_progress' => $new_progress];
+            if ($new_progress >= (int)$task['task_target']) {
+                $update['log_status'] = 1;
+            }
+            $changed = Db::name('TaskLog')->where('log_id', $log['log_id'])->where('log_status', 0)->update($update);
+            if ($changed !== 1) {
+                throw new \RuntimeException('task progress rejected');
+            }
+            Db::commit();
+            return ['code' => 1, 'msg' => 'ok', 'info' => array_merge($log, $update)];
+        } catch (\Throwable $e) {
+            Db::rollback();
+            return ['code' => 1002, 'msg' => lang('save_err')];
         }
-
-        $new_progress = min($log['log_progress'] + $increment, $task['task_target']);
-        $update = ['log_progress' => $new_progress];
-        if ($new_progress >= $task['task_target']) {
-            $update['log_status'] = 1;
-        }
-        Db::name('TaskLog')->where('log_id', $log['log_id'])->update($update);
-        $log = array_merge($log, $update);
-        return ['code' => 1, 'msg' => 'ok', 'info' => $log];
     }
 
     /**
@@ -108,6 +140,11 @@ class TaskLog extends Base {
      */
     public function claimReward($user_id, $task_id)
     {
+        $user_id = \app\common\util\PointsBalance::amount($user_id);
+        $task_id = \app\common\util\PointsBalance::amount($task_id);
+        if ($user_id === null || $task_id === null) {
+            return ['code' => 1001, 'msg' => lang('param_err')];
+        }
         $task = Db::name('Task')->where(['task_id' => $task_id, 'task_status' => 1])->find();
         if (!$task) {
             return ['code' => 1001, 'msg' => lang('task/not_found')];
@@ -129,12 +166,22 @@ class TaskLog extends Base {
         if ($log['log_status'] == 2) {
             return ['code' => 1004, 'msg' => lang('task/already_claimed')];
         }
+        // SignLog owns the sign reward and its ledger. Never pay it a second time here.
+        if ($task['task_action'] === 'daily_sign') {
+            return ['code' => 1003, 'msg' => lang('task/not_completed')];
+        }
 
         // 发放积分（事务保护，与 SignLog::doSign / SignMilestone::claimMilestone 一致）
-        $points = $task['task_points'];
+        $points = \app\common\util\PointsBalance::amount($task['task_points'], true);
+        if ($points === null) {
+            return ['code' => 1005, 'msg' => lang('save_err')];
+        }
 
         Db::startTrans();
         try {
+            if (!Db::name('User')->where('user_id', $user_id)->lock(true)->find()) {
+                throw new \RuntimeException('task recipient missing');
+            }
             // 原子认领:仅当 log_status 仍为 1(已完成未领取)时置 2;受影响行数==1 才算抢到本次领取。
             // 修复 TOCTOU:此处是对已存在行的 UPDATE,不受唯一索引保护(不同于 SignLog/SignMilestone 的 INSERT),
             // 并发/重放请求若都读到 log_status==1 会重复发放积分。必须用条件 UPDATE + 受影响行数闸门。
@@ -143,13 +190,15 @@ class TaskLog extends Base {
                 'log_points' => $points,
                 'log_claim_time' => time(),
             ]);
-            if (empty($claim)) {
+            if ($claim !== 1) {
                 // 0 行:已被(并发的)其它请求领取
                 Db::rollback();
                 return ['code' => 1004, 'msg' => lang('task/already_claimed')];
             }
 
-            Db::name('User')->where('user_id', $user_id)->setInc('user_points', $points);
+            if ($points > 0 && !\app\common\util\PointsBalance::credit($user_id, $points)) {
+                throw new \RuntimeException('task credit rejected');
+            }
 
             // 积分日志 plog_type=11 任务/签到奖励（与 SignLog::doSign 一致；9 保留为提现）
             $plog = [
@@ -164,7 +213,7 @@ class TaskLog extends Base {
             }
 
             Db::commit();
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Db::rollback();
             return ['code' => 1005, 'msg' => lang('save_err')];
         }
@@ -218,12 +267,13 @@ class TaskLog extends Base {
             if ($detected && (!$log || $log['log_status'] == 0)) {
                 // 检测到已完成，自动更新记录
                 $log_record = $this->getOrCreateNewbie($user_id, $t['task_id'], $t['task_action']);
-                Db::name('TaskLog')->where('log_id', $log_record['log_id'])->update([
+                Db::name('TaskLog')->where('log_id', $log_record['log_id'])->where('log_status', 0)->update([
                     'log_progress' => $t['task_target'],
                     'log_status' => 1,
                 ]);
-                $t['progress'] = (int)$t['task_target'];
-                $t['status'] = 1;
+                $current = Db::name('TaskLog')->where('log_id', $log_record['log_id'])->find();
+                $t['progress'] = (int)($current['log_progress'] ?? 0);
+                $t['status'] = (int)($current['log_status'] ?? 0);
             } else {
                 $t['progress'] = $log ? (int)$log['log_progress'] : 0;
                 $t['status'] = $log ? (int)$log['log_status'] : 0;

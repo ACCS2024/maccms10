@@ -15,6 +15,10 @@ class SignLog extends Base {
      */
     public function doSign($user_id)
     {
+        $user_id = \app\common\util\PointsBalance::amount($user_id);
+        if ($user_id === null) {
+            return ['code' => 1002, 'msg' => lang('param_err')];
+        }
         $today = date('Y-m-d');
         $exists = Db::name('SignLog')->where(['user_id' => $user_id, 'sign_date' => $today])->find();
         if ($exists) {
@@ -28,12 +32,18 @@ class SignLog extends Base {
 
         // 取签到任务积分
         $task = Db::name('Task')->where(['task_action' => 'daily_sign', 'task_status' => 1])->find();
-        $base_points = $task ? (int)$task['task_points'] : 5;
+        $base_points = \app\common\util\PointsBalance::amount($task ? $task['task_points'] : 5, true);
+        if ($base_points === null) {
+            return ['code' => 1002, 'msg' => lang('save_err')];
+        }
 
         $total_points = $base_points;
 
         Db::startTrans();
         try {
+            if (!Db::name('User')->where('user_id', $user_id)->lock(true)->find()) {
+                throw new \RuntimeException('sign recipient missing');
+            }
             // 插入签到记录
             Db::name('SignLog')->insert([
                 'user_id' => $user_id,
@@ -44,7 +54,9 @@ class SignLog extends Base {
             ]);
 
             // 发放签到积分到用户余额（与任务中心「领取奖励」一致，并写积分流水）
-            Db::name('User')->where('user_id', $user_id)->setInc('user_points', $total_points);
+            if ($total_points > 0 && !\app\common\util\PointsBalance::credit($user_id, $total_points)) {
+                throw new \RuntimeException('sign credit rejected');
+            }
 
             $taskName = $task ? (string)$task['task_name'] : lang('task/daily_sign_task');
             $plog = [
@@ -60,23 +72,29 @@ class SignLog extends Base {
 
             // 同步每日签到任务进度；若本次已达成且积分已在上方发放，则标记为已领取，避免任务中心重复领
             if ($task) {
-                (new \app\common\model\TaskLog())->addProgress($user_id, 'daily_sign', 1);
+                $progress = (new \app\common\model\TaskLog())->addProgress($user_id, 'daily_sign', 1);
+                if (($progress['code'] ?? null) !== 1) {
+                    throw new \RuntimeException('sign progress rejected');
+                }
                 $log = Db::name('TaskLog')->where([
                     'user_id' => $user_id,
                     'task_id' => $task['task_id'],
                     'log_date' => $today,
                 ])->find();
                 if ($log && (int)$log['log_status'] === 1) {
-                    Db::name('TaskLog')->where('log_id', $log['log_id'])->update([
+                    $claimed = Db::name('TaskLog')->where('log_id', $log['log_id'])->where('log_status', 1)->update([
                         'log_status' => 2,
                         'log_points' => (int)$task['task_points'],
                         'log_claim_time' => time(),
                     ]);
+                    if ($claimed !== 1) {
+                        throw new \RuntimeException('sign task claim rejected');
+                    }
                 }
             }
 
             Db::commit();
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Db::rollback();
             return ['code' => 1002, 'msg' => lang('save_err')];
         }

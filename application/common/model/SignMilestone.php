@@ -141,6 +141,11 @@ class SignMilestone extends Base {
      */
     public function claimMilestone($user_id, $milestone_id, $serial_days)
     {
+        $user_id = \app\common\util\PointsBalance::amount($user_id);
+        $milestone_id = \app\common\util\PointsBalance::amount($milestone_id);
+        if ($user_id === null || $milestone_id === null) {
+            return ['code' => 1001, 'msg' => lang('param_err')];
+        }
         $milestone = Db::name('SignMilestone')
             ->where(['milestone_id' => $milestone_id, 'milestone_status' => 1])
             ->find();
@@ -163,10 +168,16 @@ class SignMilestone extends Base {
             return ['code' => 1003, 'msg' => lang('milestone/already_claimed')];
         }
 
-        $points = (int)$milestone['milestone_points'];
+        $points = \app\common\util\PointsBalance::amount($milestone['milestone_points'], true);
+        if ($points === null) {
+            return ['code' => 1004, 'msg' => lang('save_err')];
+        }
 
         Db::startTrans();
         try {
+            if (!Db::name('User')->where('user_id', $user_id)->lock(true)->find()) {
+                throw new \RuntimeException('milestone recipient missing');
+            }
             Db::name('SignMilestoneLog')->insert([
                 'user_id' => $user_id,
                 'milestone_id' => $milestone_id,
@@ -175,7 +186,9 @@ class SignMilestone extends Base {
                 'log_time' => time(),
             ]);
 
-            Db::name('User')->where('user_id', $user_id)->setInc('user_points', $points);
+            if ($points > 0 && !\app\common\util\PointsBalance::credit($user_id, $points)) {
+                throw new \RuntimeException('milestone credit rejected');
+            }
 
             $plog = [
                 'user_id' => $user_id,
@@ -189,7 +202,7 @@ class SignMilestone extends Base {
             }
 
             Db::commit();
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Db::rollback();
             return ['code' => 1004, 'msg' => lang('save_err')];
         }
