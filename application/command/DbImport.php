@@ -8,7 +8,7 @@ use think\console\input\Option;
 use think\console\Output;
 
 /**
- * 从 .sql 文件恢复数据库(复用 mac_parse_sql,支持表前缀替换)。
+ * 从 .sql 文件逐语句恢复数据库,支持带反引号表名的前缀替换。
  *   php think db:import --file=backup.sql [--src-prefix=mac_ --dst-prefix=site1_]
  */
 class DbImport extends Command
@@ -38,13 +38,18 @@ class DbImport extends Command
         $map = [];
         $src = trim((string)$input->getOption('src-prefix'));
         $dst = trim((string)$input->getOption('dst-prefix'));
+        if (($src === '') !== ($dst === '')
+            || ($src !== '' && (!preg_match('/^[a-zA-Z0-9_]+$/D', $src) || !preg_match('/^[a-zA-Z0-9_]+$/D', $dst)))) {
+            $output->writeln('<error>源前缀和目标前缀须同时提供,并且只包含字母、数字、下划线。</error>');
+            return 2;
+        }
         if ($src !== '' && $dst !== '') {
             $map = [$src => $dst];
         }
 
         try {
             $n = (new DbBackup())->import($file, $map);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             $output->writeln('<error>' . $e->getMessage() . '</error>');
             return 6;
         }

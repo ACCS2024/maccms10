@@ -7,7 +7,7 @@ use think\facade\Db;
  * 轻量数据库备份/恢复服务(PDO 实现,不依赖 mysqldump,供 CLI db:export / db:import 复用)。
  *
  * 设计取舍:面向开发/测试站点(数据量小)。导出为标准 .sql(DROP+CREATE+INSERT),
- * 恢复复用 mac_parse_sql(与安装器同一套 SQL 解析,支持表前缀替换)。
+ * 恢复流式扫描 SQL 语句,仅对带反引号表名进行前缀替换。
  * 大表请用 mysqldump;本服务以"零依赖、可移植、可被 reinstall/clone 复用"为目标。
  */
 class DbBackup
@@ -117,27 +117,46 @@ class DbBackup
         }
     }
 
-    /**
-     * 从 .sql 文件恢复(复用 mac_parse_sql,可选表前缀替换 ['old_'=>'new_'])。
-     * @return int 执行语句数
-     * @throws \RuntimeException
-     */
+    /** Import a trusted local table dump without buffering the whole file or changing quoted data. */
     public function import($file, array $prefixMap = [])
     {
-        if (!is_file($file)) {
-            throw new \RuntimeException("文件不存在:{$file}");
-        }
-        $list = array_filter(mac_parse_sql(file_get_contents($file), 0, $prefixMap));
-        $n = 0;
-        foreach ($list as $stmt) {
-            try {
-                Db::execute($stmt);
-                $n++;
-            } catch (\Exception $e) {
-                throw new \RuntimeException('第 ' . ($n + 1) . ' 条语句执行失败:' . $e->getMessage());
+        if (!is_string($file) || $file === '' || str_contains($file, "\0") || str_contains($file, '://')
+            || !is_file($file) || is_link($file)) { throw new \RuntimeException('导入文件必须是可读普通文件'); }
+        $stream = null; $settings = null; $count = 0;
+        try {
+            $stream = @fopen($file, 'rb');
+            if ($stream === false || !@flock($stream, LOCK_SH | LOCK_NB)) { throw new \RuntimeException('无法打开或锁定导入文件'); }
+            $reader = new SqlDumpStream($stream, $prefixMap);
+            // Capture the write connection: DDL in a dump must never commit a caller-owned transaction.
+            $saved = Db::query('SELECT @@SESSION.sql_mode AS mode, @@SESSION.foreign_key_checks AS fk, @@SESSION.autocommit AS autocommit, @@SESSION.character_set_client AS client, @@SESSION.character_set_results AS results, @@SESSION.collation_connection AS collation', [], true)[0];
+            if (Db::connect()->getPdo()->inTransaction()) { throw new \RuntimeException('导入需要独立数据库连接事务'); }
+            $settings = $saved;
+            Db::execute('SET SESSION AUTOCOMMIT=1');
+            Db::execute("SET SESSION SQL_MODE='NO_AUTO_VALUE_ON_ZERO'");
+            Db::execute('SET SESSION FOREIGN_KEY_CHECKS=0');
+            $statements = 0;
+            foreach ($reader->statements() as $statement) { $statements++; }
+            if ($statements === 0) { throw new \RuntimeException('导入文件没有 SQL 语句'); }
+            if (!rewind($stream)) { throw new \RuntimeException('无法重新读取导入文件'); }
+            // A lexical preflight catches unterminated quotes/comments before the first DROP executes.
+            $reader = new SqlDumpStream($stream, $prefixMap);
+            foreach ($reader->statements() as $statement) {
+                Db::execute($statement); $count++;
+            }
+            if (Db::connect()->getPdo()->inTransaction()) { throw new \RuntimeException('导入文件中的事务未结束'); }
+            return $count;
+        } catch (\Throwable $error) {
+            throw new \RuntimeException('第 '.($count+1).' 条语句前后导入失败: '.$error->getMessage(), 0, $error);
+        } finally {
+            if (is_resource($stream)) { flock($stream, LOCK_UN); fclose($stream); }
+            if ($settings !== null) {
+                $pdo = Db::connect()->getPdo();
+                if ($pdo && $pdo->inTransaction()) { Db::rollback(); }
+                Db::execute('SET SESSION FOREIGN_KEY_CHECKS='.(int)$settings['fk'].', AUTOCOMMIT='.(int)$settings['autocommit']);
+                Db::execute('SET SESSION SQL_MODE=?', [$settings['mode']]);
+                Db::execute('SET SESSION character_set_client=?, character_set_results=?, collation_connection=?', [$settings['client'],$settings['results'],$settings['collation']]);
             }
         }
-        return $n;
     }
 
     /** 反引号包裹(标识符来自本库 SHOW TABLES,可信;仍做转义) */
