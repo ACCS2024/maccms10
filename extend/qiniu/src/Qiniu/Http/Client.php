@@ -80,16 +80,13 @@ final class Client
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_SSL_VERIFYPEER => true,
             CURLOPT_SSL_VERIFYHOST => 2,
+            // Cloud API redirects must not replay upload bytes/tokens to a new target.
+            CURLOPT_FOLLOWLOCATION => false,
             CURLOPT_HEADER => true,
             CURLOPT_NOBODY => false,
             CURLOPT_CUSTOMREQUEST => $request->method,
             CURLOPT_URL => $request->url
         );
-
-        // Keep the existing open_basedir restriction; PHP no longer has safe_mode.
-        if (!ini_get('open_basedir')) {
-            $options[CURLOPT_FOLLOWLOCATION] = true;
-        }
 
         if (!empty($request->headers)) {
             $headers = array();
@@ -118,6 +115,9 @@ final class Client
         $headers = self::parseHeaders(substr($result, 0, $header_size));
         $body = substr($result, $header_size);
         curl_close($ch);
+        if ($code >= 300 && $code < 400) {
+            return new Response($code, $duration, $headers, $body, 'Unexpected redirect from Qiniu API');
+        }
         return new Response($code, $duration, $headers, $body, null);
     }
 

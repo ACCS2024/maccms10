@@ -24,6 +24,7 @@ class SyncVideo {
     public function process($params, $path) {
         $client = new Client([
             'timeout' => $this->config->timeout,
+            'allow_redirects' => false,
         ]);
 
         $path = '/' . $this->config->serviceName . $path;
@@ -36,6 +37,7 @@ class SyncVideo {
             'json' => $params
         ]);
 
+        Rest::rejectRedirect($response);
         $body = $response->getBody()->getContents();
         return json_decode($body, true);
     }

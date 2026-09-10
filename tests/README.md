@@ -54,6 +54,7 @@ docker build --build-arg PHP_VERSION=8.4 -t maccms-audit:8.4 docker
 python3 tests/run_hits_buffer_audit.py maccms-audit:8.4
 python3 tests/run_collection_audit.py maccms-audit:8.4
 python3 tests/run_baidu_urlsend_audit.py maccms-audit:8.4
+python3 tests/run_sdk_redirect_audit.py maccms-audit:8.4
 python3 tests/run_apache_boundary_audit.py maccms-audit:8.4
 python3 -m venv /tmp/maccms-qr-venv
 /tmp/maccms-qr-venv/bin/pip install -r tests/requirements-qr.txt

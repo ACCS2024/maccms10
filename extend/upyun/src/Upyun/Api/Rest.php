@@ -60,6 +60,7 @@ class Rest
     {
         $client = new Client([
             'timeout' => $this->config->timeout,
+            'allow_redirects' => false,
         ]);
 
         $url = $this->endpoint . $this->storagePath;
@@ -84,8 +85,17 @@ class Rest
         $response = $client->send($request, [
             'debug' => $this->config->debug
         ]);
+        self::rejectRedirect($response);
 
         return $response;
+    }
+
+    public static function rejectRedirect(\Psr\Http\Message\ResponseInterface $response): void
+    {
+        // Guzzle's http_errors option accepts 3xx; these are not API successes.
+        if ($response->getStatusCode() >= 300 && $response->getStatusCode() < 400) {
+            throw new \RuntimeException('Unexpected redirect from Upyun API');
+        }
     }
 
     public function withHeader($header, $value)

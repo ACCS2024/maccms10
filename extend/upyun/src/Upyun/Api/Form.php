@@ -21,6 +21,7 @@ class Form extends Rest
         $signature = Signature::getBodySignature($this->config, $method, '/' . $params['service'], null, $policy);
         $client = new Client([
             'timeout' => $this->config->timeout,
+            'allow_redirects' => false,
         ]);
 
         $response = $client->request($method, $this->endpoint, array(

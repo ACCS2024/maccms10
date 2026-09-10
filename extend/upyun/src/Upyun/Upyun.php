@@ -315,12 +315,14 @@ class Upyun
         }
 
         $client = new Client([
-            'timeout' => $this->config->timeout
+            'timeout' => $this->config->timeout,
+            'allow_redirects' => false,
         ]);
         $response = $client->request('POST', Config::ED_PURGE, [
             'headers' =>  Signature::getPurgeSignHeader($this->config, $urlString),
             'form_params' => ['purge' => $urlString]
         ]);
+        Rest::rejectRedirect($response);
         $result = json_decode($response->getBody()->getContents(), true);
         return $result['invalid_domain_of_url'];
     }

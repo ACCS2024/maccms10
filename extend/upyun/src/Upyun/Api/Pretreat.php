@@ -28,6 +28,7 @@ class Pretreat
 
         $client = new Client([
             'timeout' => $this->config->timeout,
+            'allow_redirects' => false,
         ]);
 
         $params = array(
@@ -48,6 +49,7 @@ class Pretreat
             'form_params' => $params
         ]);
 
+        Rest::rejectRedirect($response);
         $body = $response->getBody()->getContents();
         return json_decode($body, true);
     }
@@ -57,6 +59,7 @@ class Pretreat
     {
         $client = new Client([
             'timeout' => $this->config->timeout,
+            'allow_redirects' => false,
         ]);
 
         $params = array(
@@ -71,6 +74,7 @@ class Pretreat
         $response = $client->request($method, $url, [
             'headers' => $signedHeaders
         ]);
+        Rest::rejectRedirect($response);
 
         if ($response->getStatusCode() === 200) {
             $body = $response->getBody()->getContents();
