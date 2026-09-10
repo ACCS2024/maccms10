@@ -38,7 +38,8 @@ class UeditorAiCsrf
     }
 
     /**
-     * 同时接受 JSON 内 _csrf_token 与 Cookie ueditor_ai_csrf（任一与 session 一致即通过），避免 body 陈旧而 Cookie 已刷新。
+     * 仅接受调用方显式提交的令牌。Cookie 可供同源 JS 读取，但浏览器自动携带的
+     * Cookie 不能作为 CSRF 证明，否则缺失或错误的请求令牌也会被放行。
      */
     public static function validate($submitted): bool
     {
@@ -47,19 +48,6 @@ class UeditorAiCsrf
             return false;
         }
         $expected = (string) $expected;
-        $fromBody = is_string($submitted) ? $submitted : '';
-        $fromCookie = (!empty($_COOKIE['ueditor_ai_csrf']) && is_string($_COOKIE['ueditor_ai_csrf']))
-            ? (string) $_COOKIE['ueditor_ai_csrf']
-            : '';
-        foreach ([$fromBody, $fromCookie] as $cand) {
-            if ($cand === '') {
-                continue;
-            }
-            if (strlen($expected) === strlen($cand) && hash_equals($expected, $cand)) {
-                return true;
-            }
-        }
-
-        return false;
+        return is_string($submitted) && $submitted !== '' && hash_equals($expected, $submitted);
     }
 }

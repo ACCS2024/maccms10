@@ -36,10 +36,6 @@ class CsrfGuard
         if ($c === 'upload' && strncmp($a, 'ueditor', 7) === 0) {
             return $next($request);
         }
-        if ($routeKey === 'assistant/chat') {
-            return $next($request);
-        }
-
         $exempt = isset($app['security_csrf_admin_exempt']) ? trim((string)$app['security_csrf_admin_exempt']) : '';
         if ($exempt !== '') {
             foreach (explode(',', $exempt) as $one) {

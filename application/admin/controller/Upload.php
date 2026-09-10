@@ -61,13 +61,7 @@ class Upload extends Base
             $in = is_array($decoded) ? $decoded : [];
         }
 
-        $csrf = isset($in['_csrf_token']) ? (string) $in['_csrf_token'] : '';
-        if ($csrf === '' && method_exists($this->request, 'cookie')) {
-            $ck = $this->request->cookie('ueditor_ai_csrf');
-            if ($ck !== null && $ck !== '') {
-                $csrf = (string) $ck;
-            }
-        }
+        $csrf = $in['_csrf_token'] ?? '';
         if (!UeditorAiCsrf::validate($csrf)) {
             return json(['code' => 1, 'msg' => lang('admin/ueditor_ai/invalid_token'), 'data' => null]);
         }
@@ -76,8 +70,12 @@ class Upload extends Base
             return json(['code' => 1, 'msg' => lang('admin/ueditor_ai/rate_limit'), 'data' => null]);
         }
 
-        $system = isset($in['system_prompt']) ? (string) $in['system_prompt'] : '';
-        $user = isset($in['user_prompt']) ? (string) $in['user_prompt'] : '';
+        if (isset($in['system_prompt']) && !is_string($in['system_prompt'])
+            || isset($in['user_prompt']) && !is_string($in['user_prompt'])) {
+            return json(['code' => 1, 'msg' => lang('param_err'), 'data' => null]);
+        }
+        $system = $in['system_prompt'] ?? '';
+        $user = $in['user_prompt'] ?? '';
 
         $config = config('maccms');
         $ai = isset($config['ai_seo']) && is_array($config['ai_seo']) ? $config['ai_seo'] : [];

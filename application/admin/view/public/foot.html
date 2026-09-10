@@ -94,7 +94,11 @@
         fetch(chatUrl, {
             method: 'POST',
             credentials: 'same-origin',
-            headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-Token': window.__MAC_ADMIN_CSRF__ || (document.querySelector('meta[name="mac-admin-csrf"]') || {}).content || ''
+            },
             body: JSON.stringify({ message: text, history: history.slice(0, -1) })
         }).then(function (r) { return r.json(); }).then(function (data) {
             removeEl(tid);
