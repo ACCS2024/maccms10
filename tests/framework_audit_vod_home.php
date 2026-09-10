@@ -73,6 +73,28 @@ try {
     ]);
     $rows=homeCall('get_banner')['info']['rows'];
     check([$rows[0]['is_fav'],$rows[0]['fav_uid'],$rows[1]['is_fav']]===[1,7,0],'Banner must keep current-user favorites with real query rows');
+    foreach (['get_banner'=>[],'get_hot'=>[],'get_latest_by_type'=>['type_id'=>10],'get_rank'=>[]] as $action=>$defaults) {
+        foreach (['num','start','type_id','level','by'] as $field) {
+            foreach ([[],null,true,1.5] as $value) {
+                check(homeCall($action,[$field=>$value]+$defaults)['code']===1001,$action.' must reject structured/nontext '.$field);
+            }
+        }
+        foreach ([['num'=>0],['num'=>-1],['num'=>'1x'],['start'=>-1],['start'=>100001],['type_id'=>'4294967296'],['level'=>'1,'],['level'=>'10']] as $bad) {
+            check(homeCall($action,$bad+$defaults)['code']===1001,$action.' must reject invalid filter ranges');
+        }
+        check(homeCall($action,['num'=>'999','start'=>'0']+$defaults)['code']===1,$action.' must cap a valid large count');
+        check(homeCall($action,['by'=>'unsupported']+$defaults)['code']===1,$action.' must preserve the safe sorting fallback');
+    }
+    Db::name('Vod')->where('vod_id',2)->update(['vod_level'=>8]);
+    check(array_column(homeCall('get_banner',['level'=>' 8,9,8 '])['info']['rows'],'vod_id')===[1,2],'Banner comma-separated levels must be an IN filter');
+    check(array_column(homeCall('get_hot',['level'=>'8'])['info']['rows'],'vod_id')===[2],'Hot level filter must select the requested level');
+    check(homeCall('get_latest_by_type',[])['code']===1001,'Latest lists require a positive type ID');
+    for ($id=4; $id<=75; $id++) {
+        Db::name('Vod')->insert(['vod_id'=>$id,'vod_status'=>1,'vod_level'=>9,'type_id'=>10]);
+    }
+    foreach (['get_banner'=>[],'get_hot'=>[],'get_latest_by_type'=>['type_id'=>10],'get_rank'=>[]] as $action=>$defaults) {
+        check(homeCall($action,['num'=>999]+$defaults)['info']['total']===60,$action.' must enforce the 60-row cap on a populated result');
+    }
     echo 'framework_audit_vod_home: '.$checks.' checks passed on PHP '.PHP_VERSION.' / '.($mysql?'MySQL':'SQLite').PHP_EOL;
 } finally {
     Db::execute('DROP TABLE IF EXISTS audit_home_ulog');Db::execute('DROP TABLE IF EXISTS audit_home_vod');audit_remove_temp($temp);

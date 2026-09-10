@@ -417,6 +417,37 @@ class Vod extends Base
         ]);
     }
 
+    private function homeListParameters(array $input, int $defaultCount, string $defaultLevel = ''): ?array
+    {
+        $result = [];
+        foreach (['num'=>$defaultCount, 'start'=>0, 'type_id'=>0] as $key=>$default) {
+            $value = array_key_exists($key, $input) ? $input[$key] : $default;
+            if (is_string($value)) { $value = trim($value); }
+            $value = \app\common\util\PointsBalance::amount($value, $key !== 'num');
+            if ($value === null || ($key === 'start' && $value > 100000)) { return null; }
+            $result[$key] = $key === 'num' ? min($value, 60) : $value;
+        }
+        foreach (['level'=>$defaultLevel, 'by'=>'hits_month'] as $key=>$default) {
+            $value = array_key_exists($key, $input) ? $input[$key] : $default;
+            if (!is_string($value) && !is_int($value)) { return null; }
+            $result[$key] = trim((string)$value);
+        }
+        $levels = [];
+        if ($result['level'] !== '') {
+            if (strlen($result['level']) > 64) { return null; }
+            foreach (explode(',', $result['level']) as $level) {
+                $level = trim($level);
+                if (preg_match('/^[0-9]$/D', $level) !== 1) { return null; }
+                $levels[] = (int)$level;
+            }
+        }
+        $result['levels'] = array_values(array_unique($levels));
+        if (!in_array($result['by'], ['hits','hits_day','hits_week','hits_month','score','time'], true)) {
+            $result['by'] = 'hits_month';
+        }
+        return $result;
+    }
+
     /**
      * 获取 Banner 推荐影片
      * 对应首页 Banner 轮播区，取推荐等级高的影片
@@ -431,17 +462,13 @@ class Vod extends Base
      */
     public function get_banner(\think\Request $request)
     {
-        $param = $request->param();
-        $num = isset($param['num']) ? (int)$param['num'] : 5;
-        $start = isset($param['start']) ? (int)$param['start'] : 0;
-        if ($start < 0) {
-            $start = 0;
-        }
-        $level = isset($param['level']) ? trim($param['level']) : '9';
+        $param = $this->homeListParameters($request->param(), 5, '9');
+        if ($param === null) { return json(['code'=>1001, 'msg'=>lang('param_err')]); }
+        $num = $param['num']; $start = $param['start'];
 
         $where = [];
         $where['vod_status'] = 1;
-        $where['vod_level'] = $level;
+        if ($param['levels']) { $where[] = ['vod_level', 'in', $param['levels']]; }
 
         $list = Db::name('Vod')
             ->field('vod_id,vod_name,vod_sub,vod_pic,vod_pic_slide,vod_actor,vod_director,vod_score,vod_content,vod_blurb,vod_remarks,vod_year,vod_area,vod_class,vod_points_play,type_id,type_id_1')
@@ -514,18 +541,9 @@ class Vod extends Base
      */
     public function get_hot(\think\Request $request)
     {
-        $param = $request->param();
-        $num = isset($param['num']) ? (int)$param['num'] : 6;
-        $start = isset($param['start']) ? (int)$param['start'] : 0;
-        $typeId = isset($param['type_id']) ? (int)$param['type_id'] : 0;
-        $level = isset($param['level']) ? trim($param['level']) : '';
-        $by = isset($param['by']) ? trim($param['by']) : 'hits_month';
-
-        // 验证排序字段
-        $allowBy = ['hits', 'hits_day', 'hits_week', 'hits_month', 'score', 'time'];
-        if (!in_array($by, $allowBy)) {
-            $by = 'hits_month';
-        }
+        $param = $this->homeListParameters($request->param(), 6);
+        if ($param === null) { return json(['code'=>1001, 'msg'=>lang('param_err')]); }
+        $num = $param['num']; $start = $param['start']; $typeId = $param['type_id']; $by = $param['by'];
 
         $where = [];
         $where['vod_status'] = 1;
@@ -535,9 +553,7 @@ class Vod extends Base
                 $q->where('type_id', $typeId)->whereOr('type_id_1', $typeId);
             };
         }
-        if (!empty($level)) {
-            $where['vod_level'] = $level;
-        }
+        if ($param['levels']) { $where[] = ['vod_level', 'in', $param['levels']]; }
 
         $list = Db::name('Vod')
             ->field('vod_id,vod_name,vod_sub,vod_pic,vod_actor,vod_director,vod_score,vod_remarks,vod_year,vod_area,vod_class,vod_blurb,vod_time,vod_hits_month,type_id,type_id_1')
@@ -579,14 +595,9 @@ class Vod extends Base
      */
     public function get_latest_by_type(\think\Request $request)
     {
-        $param = $request->param();
-        if (empty($param['type_id'])) {
-            return json(['code' => 1001, 'msg' => '参数错误: type_id 必须']);
-        }
-        $typeId = (int)$param['type_id'];
-        $num = isset($param['num']) ? (int)$param['num'] : 24;
-        $num = max(1, min($num, 60));
-        $start = isset($param['start']) ? max(0, (int)$param['start']) : 0;
+        $param = $this->homeListParameters($request->param(), 24);
+        if ($param === null || $param['type_id'] === 0) { return json(['code'=>1001, 'msg'=>lang('param_err')]); }
+        $typeId = $param['type_id']; $num = $param['num']; $start = $param['start'];
 
         $typeIds = mac_vod_type_filter_ids_for_list($typeId);
         if (empty($typeIds)) {
@@ -672,16 +683,9 @@ class Vod extends Base
      */
     public function get_rank(\think\Request $request)
     {
-        $param = $request->param();
-        $typeId = isset($param['type_id']) ? (int)$param['type_id'] : 0;
-        $num = isset($param['num']) ? (int)$param['num'] : 10;
-        $start = isset($param['start']) ? max(0, (int)$param['start']) : 0;
-        $by = isset($param['by']) ? trim($param['by']) : 'hits_month';
-
-        $allowBy = ['hits', 'hits_day', 'hits_week', 'hits_month', 'score', 'time'];
-        if (!in_array($by, $allowBy)) {
-            $by = 'hits_month';
-        }
+        $param = $this->homeListParameters($request->param(), 10);
+        if ($param === null) { return json(['code'=>1001, 'msg'=>lang('param_err')]); }
+        $typeId = $param['type_id']; $num = $param['num']; $start = $param['start']; $by = $param['by'];
 
         $where = [];
         $where['vod_status'] = 1;
