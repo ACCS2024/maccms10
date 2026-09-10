@@ -105,6 +105,7 @@ class Order extends Base {
      * 充值回调函数接口
      * 任何充值接口，回调接口里直接调用该接口更新订单状态、用户积分
      * pay_type预留值alipay,weixin,bank，可以继续自定义最长10个字符
+     * paid_yuan 必须是外部支付通知的实际金额；null 仅兼容可信内部自定义渠道。
      */
     public function notify($order_code,$pay_type,$paid_yuan=null)
     {
@@ -118,21 +119,23 @@ class Order extends Base {
         if($order['code']>1){
             return $order;
         }
+        // All shipped external adapters supply an amount. Never let a missing
+        // amount on those channels enter the trusted internal compatibility path.
+        $paidMinor = null;
+        if ($paid_yuan === null && is_string($pay_type)
+            && in_array(strtolower($pay_type), ['alipay', 'weixin', 'epay', 'codepay', 'zhapay', 'jeepay'], true)) {
+            return ['code'=>2005,'msg'=>'order amount mismatch'];
+        }
+        if ($paid_yuan !== null) {
+            $paidMinor = self::amountMinorUnits($paid_yuan);
+            $expectedMinor = self::amountMinorUnits($order['info']['order_price']);
+            if ($paidMinor === null || $expectedMinor === null || $paidMinor !== $expectedMinor) {
+                return ['code'=>2005,'msg'=>'order amount mismatch'];
+            }
+        }
+        // Replayed notifications must pass the same amount check as first delivery.
         if($order['info']['order_status'] == 1){
             return ['code'=>1,'msg'=>lang('model/order/pay_over')];
-        }
-
-        // 调用方提供金额时必须是有效正数；null 保留给未提供金额的旧渠道。
-        // 不允许 0、非数字或非有限值绕过已经启用的金额核对。
-        if ($paid_yuan !== null) {
-            if (!is_numeric($paid_yuan) || !is_finite((float)$paid_yuan) || (float)$paid_yuan <= 0) {
-                return ['code'=>2005,'msg'=>'order amount mismatch'];
-            }
-            $paid = round((float)$paid_yuan, 2);
-            $expect = round((float)$order['info']['order_price'], 2);
-            if ($paid > 0 && $expect > 0 && ($paid + 0.01) < $expect) {
-                return ['code'=>2005,'msg'=>'order amount mismatch'];
-            }
         }
 
         $where2=[];
@@ -150,12 +153,19 @@ class Order extends Base {
             $update['order_pay_type'] = $pay_type;
             // 只有 pending -> paid 的唯一成功者可以入账。事务本身不能阻止
             // 两个请求在事务开始前同时读到 pending，必须检查条件更新行数。
-            $res = $this->where('order_id', $order['info']['order_id'])
-                ->where('order_status', 0)->update($update);
+            $query = $this->where('order_id', $order['info']['order_id'])->where('order_status', 0);
+            if ($paidMinor !== null) {
+                // An amount change after the first read must not charge the stale price.
+                $query->where('order_price', $order['info']['order_price']);
+            }
+            $res = $query->update($update);
             if ($res !== 1) {
                 Db::rollback();
                 $current = $this->where('order_id', $order['info']['order_id'])->find();
                 if ($res === 0 && $current && (int)$current['order_status'] === 1) {
+                    if ($paidMinor !== null && self::amountMinorUnits($current['order_price']) !== $paidMinor) {
+                        return ['code'=>2005,'msg'=>'order amount mismatch'];
+                    }
                     return ['code'=>1,'msg'=>lang('model/order/pay_over')];
                 }
                 return ['code'=>2002,'msg'=>lang('model/order/update_status_err')];
@@ -200,6 +210,32 @@ class Order extends Base {
             return ['code'=>2004,'msg'=>lang('save_err')];
         }
 
+    }
+
+    /** Canonical positive minor units for the order_price DECIMAL(12,2) column. */
+    private static function amountMinorUnits($amount): ?string
+    {
+        if (is_float($amount)) {
+            if (!is_finite($amount) || $amount <= 0 || $amount > 9999999999.99) {
+                return null;
+            }
+            // Preserve legacy numeric callers only when two decimal places round-trip
+            // to exactly the supplied float; never round away additional precision.
+            $decimal = number_format($amount, 2, '.', '');
+            if ((float)$decimal !== $amount) {
+                return null;
+            }
+            $amount = $decimal;
+        } elseif (is_int($amount)) {
+            $amount = (string)$amount;
+        } elseif (!is_string($amount)) {
+            return null;
+        }
+        if (!preg_match('/^([0-9]{1,10})(?:\.([0-9]{1,2}))?$/D', $amount, $parts)) {
+            return null;
+        }
+        $minor = ltrim($parts[1] . str_pad($parts[2] ?? '', 2, '0', STR_PAD_RIGHT), '0');
+        return $minor === '' ? null : $minor;
     }
 
 }
