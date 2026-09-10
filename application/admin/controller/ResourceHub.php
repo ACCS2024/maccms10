@@ -23,201 +23,37 @@ class ResourceHub extends Base
         Config::set(['view_path' => APP_PATH . 'admin/view/'], 'view');
     }
 
-    /**
-     * 验证远端 URL 是否安全（防止 SSRF）
-     * 只允许 http/https，禁止内网 IP、回环地址、云元数据地址
-     * @return bool
-     */
+    /** Validate an explicitly selected resource API using the shared outbound policy. */
     private function validateRemoteUrl($url)
     {
-        $parts = parse_url($url);
-        if (empty($parts['scheme']) || !in_array(strtolower($parts['scheme']), ['http', 'https'], true)) {
-            return false;
-        }
-        if (empty($parts['host'])) {
-            return false;
-        }
-
-        $host = $parts['host'];
-
-        // 解析 IP（防止 DNS rebinding 需要在 curl 层面处理，这里做首次校验）
-        $ip = gethostbyname($host);
-
-        // 如果解析失败（返回原始 hostname），拒绝
-        if ($ip === $host && !filter_var($host, FILTER_VALIDATE_IP)) {
-            return false;
-        }
-
-        // 拒绝内网 IP、保留地址、回环地址
-        if (!filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) {
-            return false;
-        }
-
-        // 额外拒绝云元数据地址
-        if (strpos($ip, '169.254.') === 0) {
-            return false;
-        }
-
-        return true;
+        return \app\common\util\PublicHttpClient::resolve($url) !== null;
     }
 
-    /**
-     * 安全的远端请求方法（防止 SSRF）
-     * 复用 validateRemoteUrl 校验后发起请求
-     */
+    /** Collection requests validate DNS and every redirect in the shared transport. */
     private function fetchRemote($url)
     {
-        if (!$this->validateRemoteUrl($url)) {
-            return false;
-        }
         return mac_curl_get($url);
     }
 
-    // ─── 云端资源站目录配置 ─────────────────────────────
-    /** 云端接口地址（返回加密 JSON） */
-    const CLOUD_API_URL = 'https://api.maccms.ai/sites.json';
-    /** 加密密钥（AES-256-CBC），与云端脚本对齐 */
-    const CLOUD_ENCRYPT_KEY = 'maccms_rh_2024_s3cr3t_k3y!@#$%^&';
-    /** 本地缓存时间（秒），预设 3 小时 */
-    const CLOUD_CACHE_TTL = 10800;
-
     /**
-     * 从云端拉取资源站目录（加密传输 + 本地缓存）
-     * 增强：
-     *   1. 缓存未过期时直接返回，不请求远端
-     *   2. 缓存过期后请求远端，通过 hash 比对判断数据是否有更新，无更新则延长缓存不覆盖
-     *   3. 严格验证远端数据格式，格式错误时保留旧缓存数据
-     * @return array 资源站列表，失败返回空数组（若有旧缓存则返回旧缓存）
-     */
-    private function fetchCloudSites()
-    {
-        $cacheKey     = 'resource_hub_cloud_sites';
-        $cacheHashKey = 'resource_hub_cloud_sites_hash';
-
-        $cached = Cache::get($cacheKey);
-
-        // 缓存有效时直接返回
-        if (!empty($cached) && is_array($cached)) {
-            return $cached;
-        }
-
-        // 缓存过期，尝试从远端拉取
-        try {
-            $raw = @file_get_contents(self::CLOUD_API_URL);
-            if (empty($raw)) {
-                // 远端无响应，返回旧缓存（若有）
-                return $this->fallbackCloudCache($cacheKey);
-            }
-
-            $payload = json_decode($raw, true);
-            if (!$payload || empty($payload['data']) || empty($payload['iv'])) {
-                // 远端格式错误（外层 JSON 结构不符），保留旧缓存
-                return $this->fallbackCloudCache($cacheKey);
-            }
-
-            // AES-256-CBC 解密
-            $decrypted = openssl_decrypt(
-                base64_decode($payload['data']),
-                'AES-256-CBC',
-                self::CLOUD_ENCRYPT_KEY,
-                OPENSSL_RAW_DATA,
-                base64_decode($payload['iv'])
-            );
-
-            if ($decrypted === false) {
-                // 解密失败（密钥不匹配或数据损毁），保留旧缓存
-                return $this->fallbackCloudCache($cacheKey);
-            }
-
-            $sites = json_decode($decrypted, true);
-
-            // ── 格式严格验证 ──
-            if (!$this->validateCloudSitesFormat($sites)) {
-                // 远端数据格式错误，不更新，保留旧缓存
-                return $this->fallbackCloudCache($cacheKey);
-            }
-
-            // ── Hash 比对：远端没更新就不覆盖 ──
-            $newHash = md5($decrypted);
-            $oldHash = Cache::get($cacheHashKey);
-            if ($oldHash === $newHash && !empty($cached)) {
-                // 数据未变化，仅延长缓存时间
-                Cache::set($cacheKey, $cached, self::CLOUD_CACHE_TTL);
-                return $cached;
-            }
-
-            // 数据有更新或首次拉取，写入缓存 + 备份缓存
-            Cache::set($cacheKey, $sites, self::CLOUD_CACHE_TTL);
-            Cache::set($cacheKey . '_backup', $sites, self::CLOUD_CACHE_TTL * 10);
-            Cache::set($cacheHashKey, $newHash, self::CLOUD_CACHE_TTL * 3);
-            return $sites;
-
-        } catch (\Exception $e) {
-            return $this->fallbackCloudCache($cacheKey);
-        }
-    }
-
-    /**
-     * 回退：尝试从持久化缓存文件读取旧数据
-     * 若完全无数据则返回空数组
-     */
-    private function fallbackCloudCache($cacheKey)
-    {
-        // 尝试读取过期但仍存在的缓存（部分缓存驱动支持）
-        $old = Cache::get($cacheKey . '_backup');
-        if (!empty($old) && is_array($old)) {
-            // 延长主缓存，避免频繁请求失败的远端
-            Cache::set($cacheKey, $old, self::CLOUD_CACHE_TTL);
-            return $old;
-        }
-        return [];
-    }
-
-    /**
-     * 严格验证云端资源站数据格式
-     * 必须是数组，每个元素都需包含必要字段
-     * @param mixed $sites
-     * @return bool
-     */
-    private function validateCloudSitesFormat($sites)
-    {
-        if (!is_array($sites) || empty($sites)) {
-            return false;
-        }
-
-        // 必要字段（每个资源站至少需要这些字段）
-        $requiredFields = ['name', 'url'];
-
-        foreach ($sites as $site) {
-            if (!is_array($site)) {
-                return false;
-            }
-            foreach ($requiredFields as $field) {
-                if (!isset($site[$field]) || $site[$field] === '') {
-                    return false;
-                }
-            }
-            // url 必须是合法的 http/https 地址
-            if (!preg_match('#^https?://#i', $site['url'])) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    /**
-     * 载入用户自定义资源站（独立文件，与云端隔离）
+     * 载入本地维护的资源站目录；不读取历史云目录缓存
      * @return array
      */
     private function loadCustomSites()
     {
-        $file = APP_PATH . 'extra/resource_sites_custom.php';
-        if (is_file($file)) {
-            $data = include $file;
-            return is_array($data) ? $data : [];
+        $data = \app\common\util\DataConfig::read(APP_PATH . 'extra/resource_sites_custom.php');
+        $sites = [];
+        foreach ($data as $site) {
+            if (!is_array($site)) {
+                continue;
+            }
+            $entry = [];
+            foreach (['name' => '', 'url' => '', 'type' => '2', 'mid' => '1', 'desc' => ''] as $key => $default) {
+                $entry[$key] = isset($site[$key]) && is_scalar($site[$key]) ? (string)$site[$key] : $default;
+            }
+            $sites[] = $entry;
         }
-        return [];
+        return $sites;
     }
 
     /**
@@ -235,76 +71,9 @@ class ResourceHub extends Base
      */
     public function index()
     {
-        // 云端拉取
-        $cloudSites = $this->fetchCloudSites();
-        // 用户自定义
-        $customSites = $this->loadCustomSites();
-
-        // 按分类分组
-        $categoryNames = [
-            'main' => lang('admin/resourcehub/cat_main') ?: '综合资源站（推荐）',
-            'vod' => lang('admin/resourcehub/cat_vod') ?: '影视资源站',
-            'short' => lang('admin/resourcehub/cat_short') ?: '短剧资源站',
-            'anime' => lang('admin/resourcehub/cat_anime') ?: '动漫资源站',
-            'art' => lang('admin/resourcehub/cat_art') ?: '资讯资源站',
-            'midnight' => lang('admin/resourcehub/cat_midnight') ?: '午夜资源站',
-            'custom' => lang('admin/resourcehub/cat_custom') ?: '自定义资源站',
-        ];
-
-        $grouped = [];
-
-        // 整合云端站点
-        foreach ($cloudSites as $site) {
-            $cat = $site['category'] ?? 'vod';
-            if (!isset($grouped[$cat])) {
-                $grouped[$cat] = [
-                    'title' => $categoryNames[$cat] ?? $cat,
-                    'sites' => [],
-                ];
-            }
-            $grouped[$cat]['sites'][] = [
-                'name' => $site['name'] ?? '',
-                'url' => $site['url'] ?? '',
-                'type' => $site['type'] ?? '2',
-                'mid' => '1',
-                'desc' => $site['remark'] ?? '',
-                'recommend' => $site['recommend'] ?? 0,
-                'verified' => $site['verified'] ?? false,
-            ];
-        }
-
-        // 整合自定义站点（独立分类）
-        if (!empty($customSites)) {
-            $grouped['custom'] = [
-                'title' => $categoryNames['custom'],
-                'sites' => [],
-            ];
-            foreach ($customSites as $site) {
-                $grouped['custom']['sites'][] = [
-                    'name' => $site['name'] ?? '',
-                    'url' => $site['url'] ?? '',
-                    'type' => $site['type'] ?? '2',
-                    'mid' => $site['mid'] ?? '1',
-                    'desc' => $site['desc'] ?? '',
-                    'recommend' => 0,
-                    'verified' => false,
-                ];
-            }
-        }
-
-        // 按固定顺序排列
-        $ordered = [];
-        foreach (['main', 'vod', 'short', 'anime', 'art', 'midnight', 'custom'] as $key) {
-            if (isset($grouped[$key]) && !empty($grouped[$key]['sites'])) {
-                $ordered[$key] = $grouped[$key];
-            }
-        }
-
-        // 云端拉取失败提示
-        $cloudError = (empty($cloudSites) && empty($customSites));
-
-        $this->assign('sites', $ordered);
-        $this->assign('cloud_error', $cloudError);
+        // Only administrator-maintained entries are authoritative. Legacy cloud caches
+        // are deliberately never read, including after an empty local directory.
+        $this->assign('sites', array_values($this->loadCustomSites()));
         $this->assign('title', lang('admin/resourcehub/title'));
         return $this->fetch('resourcehub/index');
     }
@@ -630,7 +399,7 @@ class ResourceHub extends Base
 
         // 载入外部同义词配置
         $synonyms_file = APP_PATH . 'extra/type_synonyms.php';
-        $synonyms = is_file($synonyms_file) ? include $synonyms_file : [];
+        $synonyms = \app\common\util\DataConfig::read($synonyms_file);
 
         // === 第一轮：去后缀精确匹配（强规则） ===
         foreach ($local_type_list as $lt) {
@@ -1140,11 +909,16 @@ MacPlayer.Show();
     }
 
     /**
-     * 添加自定义资源站（存到独立文件，与云端列表隔离）
+     * 添加资源站（保存在本地目录文件中）
      */
     public function addCustomSite()
     {
         $param = \think\facade\Request::post();
+        foreach (['name', 'url', 'type', 'mid', 'desc'] as $key) {
+            if (isset($param[$key]) && !is_scalar($param[$key])) {
+                return json(['code' => 0, 'msg' => lang('param_err')]);
+            }
+        }
         $name = trim($param['name'] ?? '');
         $url = trim($param['url'] ?? '');
         $type = $param['type'] ?? '2';
@@ -1153,6 +927,9 @@ MacPlayer.Show();
 
         if (empty($name) || empty($url)) {
             return json(['code' => 0, 'msg' => lang('param_err')]);
+        }
+        if (!$this->validateRemoteUrl($url)) {
+            return json(['code' => 0, 'msg' => lang('admin/resourcehub/check_fail')]);
         }
 
         $sites = $this->loadCustomSites();

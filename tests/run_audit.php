@@ -24,7 +24,7 @@ $groups = [
         ['framework_audit_strict_errors.php', 'strict'], ['framework_audit_strict_errors.php', 'default'],
         ['security_audit_admin.php'], ['security_audit_annex.php'], ['security_audit_api.php'],
         ['security_audit_bulk_forms.php'], ['security_audit_cj.php'], ['security_audit_crypto.php'],
-        ['security_audit_csrf.php'], ['security_audit_data_config.php'], ['security_audit_config_preservation.php'], ['security_audit_dir.php'], ['security_audit_http.php'],
+        ['security_audit_csrf.php'], ['security_audit_data_config.php'], ['security_audit_resourcehub_local.php'], ['security_audit_local_keywords.php'], ['security_audit_config_preservation.php'], ['security_audit_dir.php'], ['security_audit_http.php'],
         ['security_audit_jwt.php'], ['security_audit_logging.php'], ['security_audit_make.php'],
         ['security_audit_oauth.php'], ['security_audit_oauth_profiles.php'], ['security_audit_paths.php'], ['security_audit_safety.php'],
         ['security_audit_sms.php'], ['security_audit_sina.php'], ['security_audit_tls.php'], ['security_audit_urlsend.php'],

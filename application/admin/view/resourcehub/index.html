@@ -22,12 +22,9 @@
 
 <div class="page-container p10">
 
-    {if condition="$cloud_error"}
-    <div class="layui-anim layui-anim-upbit" style="background:#FFF3E0;border:1px solid #FFB74D;border-radius:6px;padding:12px 18px;margin-bottom:15px;color:#E65100;">
-        <i class="layui-icon" style="font-size:18px;">&#xe60b;</i>
-        <span style="margin-left:6px;">{:lang('admin/resourcehub/cloud_fetch_fail')}</span>
+    <div class="layui-elem-quote">
+        {:lang('admin/resourcehub/local_catalog_tip')}
     </div>
-    {/if}
 
     <div class="toolbar-top">
         <div class="layui-btn-group">
@@ -39,41 +36,35 @@
         </div>
     </div>
 
-    {volist name="sites" id="zone" key="zone_key"}
     <div class="resource-zone">
-        <h3>{$zone.title}</h3>
+        <h3>{:lang('admin/resourcehub/cat_custom')}</h3>
         <div class="resource-grid">
-            {volist name="$zone['sites']" id="site" key="site_idx"}
-            <div class="resource-card" data-url="{$site.url}" data-type="{$site.type}" data-mid="{$site.mid}" data-name="{$site.name}">
+            {volist name="sites" id="site" key="site_idx"}
+            <div class="resource-card" data-url="{$site.url|htmlspecialchars}" data-type="{$site.type|htmlspecialchars}" data-mid="{$site.mid|htmlspecialchars}" data-name="{$site.name|htmlspecialchars}">
                 <div class="name">
-                    <span class="status-dot unknown" id="status_{$zone_key}_{$site_idx}"></span>
-                    {$site.name}
+                    <span class="status-dot unknown" id="status_custom_{$site_idx}"></span>
+                    {$site.name|htmlspecialchars}
                 </div>
-                <div class="url">{$site.url}</div>
-                <div class="desc">{$site.desc}</div>
+                <div class="url">{$site.url|htmlspecialchars}</div>
+                <div class="desc">{$site.desc|htmlspecialchars}</div>
                 <div class="actions">
-                    <button class="layui-btn layui-btn-xs layui-btn-normal btn-check" data-url="{$site.url}" data-status-id="status_{$zone_key}_{$site_idx}">{:lang('admin/resourcehub/btn_check')}</button>
-                    <button class="layui-btn layui-btn-xs btn-quick-collect" data-url="{$site.url}" data-type="{$site.type}" data-mid="{$site.mid}" data-name="{$site.name}">{:lang('admin/resourcehub/btn_enter')}</button>
-                    <button class="layui-btn layui-btn-xs layui-btn-warm btn-sync-type" data-url="{$site.url}" data-type="{$site.type}">{:lang('admin/resourcehub/btn_sync_type')}</button>
-                    <button class="layui-btn layui-btn-xs layui-btn-danger btn-auto-bindplayer" data-url="{$site.url}" data-type="{$site.type}" data-name="{$site.name}">{:lang('admin/resourcehub/btn_auto_config')}</button>
-                    <button class="layui-btn layui-btn-xs layui-btn-primary btn-add-collect" data-url="{$site.url}" data-type="{$site.type}" data-mid="{$site.mid}" data-name="{$site.name}">{:lang('admin/resourcehub/btn_add_collect')}</button>
-                    <button class="layui-btn layui-btn-xs layui-btn-primary btn-add-timming" data-url="{$site.url}" data-type="{$site.type}" data-mid="{$site.mid}" data-name="{$site.name}">{:lang('admin/resourcehub/btn_add_timming')}</button>
-                    {if condition="$zone_key eq 'custom'"}
+                    <button class="layui-btn layui-btn-xs layui-btn-normal btn-check" data-url="{$site.url|htmlspecialchars}" data-status-id="status_custom_{$site_idx}">{:lang('admin/resourcehub/btn_check')}</button>
+                    <button class="layui-btn layui-btn-xs btn-quick-collect" data-url="{$site.url|htmlspecialchars}" data-type="{$site.type|htmlspecialchars}" data-mid="{$site.mid|htmlspecialchars}" data-name="{$site.name|htmlspecialchars}">{:lang('admin/resourcehub/btn_enter')}</button>
+                    <button class="layui-btn layui-btn-xs layui-btn-warm btn-sync-type" data-url="{$site.url|htmlspecialchars}" data-type="{$site.type|htmlspecialchars}">{:lang('admin/resourcehub/btn_sync_type')}</button>
+                    <button class="layui-btn layui-btn-xs layui-btn-danger btn-auto-bindplayer" data-url="{$site.url|htmlspecialchars}" data-type="{$site.type|htmlspecialchars}" data-name="{$site.name|htmlspecialchars}">{:lang('admin/resourcehub/btn_auto_config')}</button>
+                    <button class="layui-btn layui-btn-xs layui-btn-primary btn-add-collect" data-url="{$site.url|htmlspecialchars}" data-type="{$site.type|htmlspecialchars}" data-mid="{$site.mid|htmlspecialchars}" data-name="{$site.name|htmlspecialchars}">{:lang('admin/resourcehub/btn_add_collect')}</button>
+                    <button class="layui-btn layui-btn-xs layui-btn-primary btn-add-timming" data-url="{$site.url|htmlspecialchars}" data-type="{$site.type|htmlspecialchars}" data-mid="{$site.mid|htmlspecialchars}" data-name="{$site.name|htmlspecialchars}">{:lang('admin/resourcehub/btn_add_timming')}</button>
                     <button class="layui-btn layui-btn-xs layui-btn-danger btn-del-custom" data-index="{$site_idx-1}">{:lang('admin/resourcehub/confirm_delete')}</button>
-                    {/if}
                 </div>
             </div>
             {/volist}
 
-            {if condition="$zone_key eq 'custom'"}
             <div class="add-site-box" id="addCustomSite">
                 <i class="layui-icon" style="font-size:30px;color:#999;">&#xe654;</i>
                 <p style="color:#999;margin-top:5px;">{:lang('admin/resourcehub/btn_add_custom')}</p>
             </div>
-            {/if}
         </div>
     </div>
-    {/volist}
 </div>
 
 {include file="../../../application/admin/view/public/foot" /}

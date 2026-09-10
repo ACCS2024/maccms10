@@ -1427,33 +1427,46 @@ function mac_page_param($record_total, $page_size, $page_current, $page_url,$pag
 // CurlPOST数据提交-----------------------------------------
 /**
  * 安全加固:识别官方/上游服务器域名(更新/插件市场/资源站/短网址/播放器联盟等)。
- * 用于切断与官方的一切出站通信,防止上游被劫持后向本站下发恶意代码。
+ * 公共 HTTP 客户端和脚本来源配置共用的阻断名单；不代表覆盖任意 SDK 的出站通信。
  */
 function mac_is_official_url($url)
 {
-    $host = @parse_url((string)$url, PHP_URL_HOST);
+    if (!is_string($url)) { return false; }
+    $host = @parse_url($url, PHP_URL_HOST);
     if (!$host) {
         return false;
     }
-    $host = strtolower($host);
+    $host = rtrim(strtolower($host), '.');
     $blocked = [
         // ── 上游官方域：升级/统计/关键词等通道，一律不通信 ──
         // update.maccms.la 是已被证实投毒的升级通道（奇安信 xlab 披露 FUNNULL/RingH23）。
-        // 本站日志实测：注入的远程 JS 曾在 26 次登录后自动驱动
-        // admin/update/step1.html?file=laupd<hash>，靠 step1 的 exit 与本函数双重拦下。
+        // 历史脚本会驱动 admin/update/step1.html；该入口现仅显示本地更新说明。
         'maccms.la', 'maccms.com', 'maccms.cn', 'maccms.ai', 'dplayerstatic.com',
+        // Retired Mycj obfuscated backend loader; no relationship to XLab attribution is assumed.
+        'mycj.top', 'mycj.pro',
+        // Observed loaders in the retired theme's counterfeit lazyload, independently of XLab.
+        'towoo.net', '211.162.103.35',
 
         // ── FUNNULL/RingH23 投毒链的伪 CDN 与分发域（同一披露）──
         // 全部是仿冒知名 CDN 的抢注域名，用来托管 JS 载荷与跳转脚本，例如
         // code.jquecy.com 仿 code.jquery.com（r→c 一字之差）。
         // 老机(已下线待处置)的 template/155zy/js/{jquery-1.12.4.min,layui}.js 尾部
         // 被追加的载荷即指向 code.jquecy.com/jquery.min-3.6.8.js。
-        // 这里挡在【唯一的出站卡口】上：任何现有或将来新增的代码路径想访问它们都会被拒，
-        // 不依赖 /etc/hosts（换机器、重装系统都不会丢）。
+        // 公共 HTTP 客户端在每次请求及重定向前检查；浏览器资源由本地化资产与部署审计约束。
         'jquecy.com', 'jsdclivr.com', 'clondflare.com', 'bytedauce.com',
         'macoms.la', 'bdustatic.com', 'jsdelivr.vip',
         'ailyunoss.com', 'ailyun-oss.com',
-        'aqyaqua.com', 'zhw.sh',
+        'aqyaqua.com', 'zhw.sh', '110.nz',
+        'ntp.asia', 'ntporg.com', 'sbindns.com', 'plusedns.com', 'mirrors163.com',
+        'linuxdistro.net', 'debianhacks.net', 'fedoraforums.net', 'ubuntucommands.com',
+        '3snzh72om4.apifox.cn', 'node.blob.core.windows.net',
+        'gadlkd1.com', 'gfewr.com', 'ztyfv.com', 'joymeet.top',
+        'bobolickp92.cc', 'realfake909.net', 'firelategg.net', 'lucycally.me',
+        'moxymodiy.cc', '9688hopeeasy.cc', 'flysky55.me', 'goyppg06.com',
+        'tutupytua.com', 'zybbzlast.com',
+        // Previously compromised public script services are never runtime dependencies.
+        'bootcdn.net', 'bootcss.com', 'staticfile.org', 'staticfile.net',
+        'polyfill.io', 'polyfill.com', 'polyfill-js.cn',
     ];
     foreach ($blocked as $d) {
         if ($host === $d || substr($host, -(strlen($d) + 1)) === '.' . $d) {
@@ -1774,15 +1787,7 @@ function mac_rep_pse_syn($psearr,$txt)
 }
 
 function mac_get_tag($title,$content){
-    $url = 'http://api.dplayerstatic.com'  /* 原base64已还原 */.'/keyword/index?name='.rawurlencode($title).'&txt='.rawurlencode($title).rawurlencode(mac_substring(strip_tags($content),200));
-    $data = mac_curl_get($url);
-    $json = @json_decode($data,true);
-    if($json){
-        if($json['code']==1){
-            return implode(',',$json['data']);
-        }
-    }
-    return false;
+    return \app\common\util\LocalKeywords::extract($title, $content);
 }
 
 function mac_get_client_ip()
