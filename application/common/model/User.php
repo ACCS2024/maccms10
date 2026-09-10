@@ -973,154 +973,109 @@ class User extends Base
 
     public function upgrade($param)
     {
-        $group_id = intval($param['group_id']);
-        $long = $param['long'];
+        $group_id = self::membershipInteger($param['group_id'] ?? null);
+        $long = $param['long'] ?? null;
         $points_long = ['day'=>86400,'week'=>86400*7,'month'=>86400*30,'year'=>86400*365];
-
-        if (!array_key_exists($long, $points_long)) {
-            return ['code'=>1001,'msg'=>'非法操作'];
+        if (!is_string($long) || !isset($points_long[$long]) || $group_id === null || $group_id < 3) {
+            return ['code'=>1001,'msg'=>lang('model/user/upgrade_param_invalid')];
         }
-
-        if($group_id <3){
-            return ['code'=>1002,'msg'=>lang('model/user/select_diy_group_err')];
-        }
-
         $group_list = (new \app\common\model\Group())->getCache();
-        $group_info = $group_list[$group_id];
-        if(empty($group_info)){
+        $group_info = $group_list[$group_id] ?? [];
+        if (!$group_info || (int)($group_info['group_status'] ?? 0) !== 1) {
             return ['code'=>1003,'msg'=>lang('model/user/group_not_found')];
         }
-
-        if($group_info['group_status'] == 0){
-            return ['code'=>1004,'msg'=>lang('model/user/group_is_close')];
+        // The default upgrade UI explicitly offers configured zero-point plans as free.
+        $point = self::membershipInteger($group_info['group_points_' . $long] ?? null, true);
+        $user_id = self::membershipInteger($GLOBALS['user']['user_id'] ?? null);
+        if ($point === null || $user_id === null) {
+            return ['code'=>1001,'msg'=>lang('model/user/upgrade_param_invalid')];
         }
-
-        $point = $group_info['group_points_'.$long];
-        if($GLOBALS['user']['user_points'] < $point){
-            return ['code'=>1005,'msg'=>lang('model/user/potins_not_enough')];
+        $result = $this->applyMembershipUpgrade($user_id, $group_id, $point, $points_long[$long]);
+        if ($result['code'] !== 1) {
+            return $result;
         }
+        cookie('group_id', $group_id, ['expire'=>2592000]);
+        cookie('group_name', $group_info['group_name'] ?? '', ['expire'=>2592000]);
+        return $result;
+    }
 
-        $sj = $points_long[$long];
-        $end_time = time() + $sj;
-        if($GLOBALS['user']['user_end_time'] > time() ){
-            $end_time = $GLOBALS['user']['user_end_time'] + $sj;
+    /** Internal payment step; Order::notify owns payment-order idempotency. */
+    public function upgradeByPaidOrder($order, $user)
+    {
+        $remarks = json_decode((string)($order['order_remarks'] ?? ''), true);
+        if (!is_array($remarks) || ($remarks['biz'] ?? '') !== 'member_upgrade') {
+            return ['code'=>1001,'msg'=>lang('model/user/order_not_member_upgrade')];
         }
+        $group_id = self::membershipInteger($remarks['group_id'] ?? null);
+        $point = self::membershipInteger($remarks['upgrade_points'] ?? null);
+        $user_id = self::membershipInteger($user['user_id'] ?? null);
+        $long = $remarks['long'] ?? null;
+        $points_long = ['day'=>86400,'week'=>86400*7,'month'=>86400*30,'year'=>86400*365];
+        if ($group_id === null || $group_id < 3 || $point === null || $user_id === null
+            || !is_string($long) || !isset($points_long[$long])
+            || (int)($order['user_id'] ?? 0) !== $user_id) {
+            return ['code'=>1002,'msg'=>lang('model/user/upgrade_param_invalid')];
+        }
+        $group_list = (new \app\common\model\Group())->getCache();
+        $group_info = $group_list[$group_id] ?? [];
+        if (!$group_info || (int)($group_info['group_status'] ?? 0) !== 1) {
+            return ['code'=>1003,'msg'=>lang('model/user/group_not_found')];
+        }
+        $result = $this->applyMembershipUpgrade($user_id, $group_id, $point, $points_long[$long],
+            '支付后自动升级会员：' . ($group_info['group_name'] ?? ''));
+        if ($result['code'] !== 1) {
+            return $result;
+        }
+        cookie('group_id', $group_id, ['expire'=>2592000]);
+        cookie('group_name', $group_info['group_name'] ?? '', ['expire'=>2592000]);
+        return $result;
+    }
 
-        $where = [];
-        $where['user_id'] = $GLOBALS['user']['user_id'];
-        
-        // 使用事务 + 条件原子扣分,防止并发刷分/丢失更新。
-        // 修复:原逻辑读内存快照算绝对值无条件写回(user_points = 快照 - point),
-        // 并发请求会相互覆盖余额,并可重复触发三级分销 reward(),造成积分泄漏。
+    private static function membershipInteger($value, bool $allowZero = false): ?int
+    {
+        if ((!is_int($value) && !is_string($value)) || !preg_match('/^[0-9]{1,10}$/D', (string)$value)
+            || (int)$value < ($allowZero ? 0 : 1) || (int)$value > 4294967295) {
+            return null;
+        }
+        return (int)$value;
+    }
+
+    /** Deduction, membership and every associated ledger entry share one transaction. */
+    private function applyMembershipUpgrade(int $user_id, int $group_id, int $point, int $seconds, string $remark = ''): array
+    {
         Db::startTrans();
         try {
+            $current = $this->where('user_id', $user_id)->lock(true)->find();
+            if (!$current || (int)$current['user_points'] < $point) {
+                Db::rollback();
+                return ['code'=>1005,'msg'=>lang('model/user/potins_not_enough')];
+            }
+            $end_time = max(time(), (int)($current['user_end_time'] ?? 0)) + $seconds;
             if ($point > 0) {
-                $affected = $this->where($where)
-                    ->where('user_points', '>=', $point)
+                $affected = $this->where('user_id', $user_id)->where('user_points', '>=', $point)
                     ->setDec('user_points', $point);
-                if ($affected === 0) {
+                if ($affected !== 1) {
                     Db::rollback();
                     return ['code'=>1005,'msg'=>lang('model/user/potins_not_enough')];
                 }
             }
-
-            // 扣分成功后再更新会员组与到期时间
-            $res = $this->where($where)->update([
-                'user_end_time' => $end_time,
-                'group_id'      => $group_id,
-            ]);
-            if($res===false){
-                Db::rollback();
-                return ['code'=>1009,'msg'=>lang('model/user/update_group_err')];
+            $updated = $this->where('user_id', $user_id)->update(['user_end_time'=>$end_time, 'group_id'=>$group_id]);
+            if ($updated !== 1) {
+                throw new \RuntimeException('membership update failed');
             }
-
-            //积分日志
-            $data = [];
-            $data['user_id'] = $GLOBALS['user']['user_id'];
-            $data['plog_type'] = 7;
-            $data['plog_points'] = $point;
-            (new \app\common\model\Plog())->saveData($data);
-            //分销日志(每次成功扣费仅触发一次)
-            $this->reward($point);
-
+            $log = (new \app\common\model\Plog())->saveData([
+                'user_id'=>$user_id, 'plog_type'=>7, 'plog_points'=>$point, 'plog_remarks'=>$remark,
+            ]);
+            if (($log['code'] ?? null) !== 1) {
+                throw new \RuntimeException('membership ledger failed');
+            }
+            $this->reward($point, $user_id);
             Db::commit();
-        } catch (\Exception $e) {
+            return ['code'=>1,'msg'=>lang('model/user/update_group_ok')];
+        } catch (\Throwable $e) {
             Db::rollback();
             return ['code'=>1009,'msg'=>lang('model/user/update_group_err')];
         }
-
-        cookie('group_id', $group_info['group_id'],['expire'=>2592000] );
-        cookie('group_name', $group_info['group_name'],['expire'=>2592000] );
-
-        return ['code'=>1,'msg'=>lang('model/user/update_group_ok')];
-    }
-
-    public function upgradeByPaidOrder($order, $user)
-    {
-        $remarks = json_decode($order['order_remarks'], true);
-        if (empty($remarks) || !is_array($remarks) || ($remarks['biz'] ?? '') !== 'member_upgrade') {
-            return ['code' => 1001, 'msg' => lang('model/user/order_not_member_upgrade')];
-        }
-
-        $group_id = intval($remarks['group_id'] ?? 0);
-        $long = trim($remarks['long'] ?? '');
-        $point = intval($remarks['upgrade_points'] ?? 0);
-        $points_long = ['day' => 86400, 'week' => 86400 * 7, 'month' => 86400 * 30, 'year' => 86400 * 365];
-        if ($group_id < 3 || !isset($points_long[$long]) || $point < 1) {
-            return ['code' => 1002, 'msg' => lang('model/user/upgrade_param_invalid')];
-        }
-
-        $group_list = (new \app\common\model\Group())->getCache();
-        if (!isset($group_list[$group_id]) || intval($group_list[$group_id]['group_status']) !== 1) {
-            return ['code' => 1003, 'msg' => lang('model/user/group_not_found')];
-        }
-
-        if (intval($user['user_points']) < $point) {
-            return ['code' => 1004, 'msg' => lang('model/user/potins_not_enough')];
-        }
-
-        $sj = $points_long[$long];
-        $end_time = time() + $sj;
-        if (intval($user['user_end_time']) > time()) {
-            $end_time = intval($user['user_end_time']) + $sj;
-        }
-
-        $where = ['user_id' => intval($user['user_id'])];
-        // 原子扣分:仅当余额仍足够时扣减,避免与其它并发请求相互覆盖余额(丢失更新)。
-        // 原逻辑读传入快照算绝对值无条件写回;上方已校验余额,此处为并发兜底。
-        if ($point > 0) {
-            $affected = $this->where($where)
-                ->where('user_points', '>=', $point)
-                ->setDec('user_points', $point);
-            if ($affected === 0) {
-                return ['code' => 1004, 'msg' => lang('model/user/potins_not_enough')];
-            }
-        }
-        $res = $this->where($where)->update([
-            'user_end_time' => $end_time,
-            'group_id'      => $group_id,
-        ]);
-        if ($res < 1) {
-            return ['code' => 1005, 'msg' => lang('model/user/update_group_err')];
-        }
-
-        $plog = [];
-        $plog['user_id'] = intval($user['user_id']);
-        $plog['plog_type'] = 7;
-        $plog['plog_points'] = $point;
-        $plog['plog_remarks'] = '支付后自动升级会员：' . ($group_list[$group_id]['group_name'] ?? '');
-        (new \app\common\model\Plog())->saveData($plog);
-
-        // 为了复用原有分销逻辑，临时填充全局用户上下文
-        $prevUser = $GLOBALS['user'] ?? null;
-        $GLOBALS['user'] = $user;
-        $this->reward($point);
-        $GLOBALS['user'] = $prevUser;
-
-        cookie('group_id', $group_id, ['expire' => 2592000]);
-        cookie('group_name', $group_list[$group_id]['group_name'] ?? '', ['expire' => 2592000]);
-
-        return ['code' => 1, 'msg' => lang('model/user/update_group_ok')];
     }
 
     public function check_msg($param)
@@ -1426,62 +1381,58 @@ class User extends Base
         return ['code'=>1,'msg'=>lang('model/user/visit_ok')];
     }
 
-    public function reward($fee_points=0)
+    /** Failures throw so callers cannot commit a charge with incomplete reward ledgers. */
+    public function reward($fee_points=0, $source_user_id=null)
     {
-        //三级分销
-        if($fee_points>0 && $GLOBALS['config']['user']['reward_status'] == '1'){
-
-            if(!empty($GLOBALS['config']['user']['reward_ratio']) && !empty($GLOBALS['user']['user_pid'])){
-                $points = floor($fee_points / 100 * $GLOBALS['config']['user']['reward_ratio']);
-                if($points>0){
-                    $where=[];
-                    $where['user_id'] = $GLOBALS['user']['user_pid'];
-                    $r = (new \app\common\model\User())->where($where)->setInc('user_points',$points);
-                    if($r){
-                        $data = [];
-                        $data['user_id'] = $GLOBALS['user']['user_pid'];
-                        $data['plog_type'] = 4;
-                        $data['plog_points'] = $points;
-                        $data['plog_remarks'] = lang('model/user/reward_tip',[$GLOBALS['user']['user_id'],$GLOBALS['user']['user_name'],$fee_points,$points]);
-                        (new \app\common\model\Plog())->saveData($data);
-                    }
-                }
-            }
-            if(!empty($GLOBALS['config']['user']['reward_ratio_2']) && !empty($GLOBALS['user']['user_pid_2'])){
-                $points = floor($fee_points / 100 * $GLOBALS['config']['user']['reward_ratio_2']);
-                if($points>0){
-                    $where=[];
-                    $where['user_id'] = $GLOBALS['user']['user_pid_2'];
-                    $r = (new \app\common\model\User())->where($where)->setInc('user_points',$points);
-                    if($r){
-                        $data = [];
-                        $data['user_id'] = $GLOBALS['user']['user_pid_2'];
-                        $data['plog_type'] = 5;
-                        $data['plog_points'] = $points;
-                        $data['plog_remarks'] =lang('model/user/reward_tip',[$GLOBALS['user']['user_id'],$GLOBALS['user']['user_name'],$fee_points,$points]);
-                        (new \app\common\model\Plog())->saveData($data);
-                    }
-                }
-            }
-            if(!empty($GLOBALS['config']['user']['reward_ratio_3']) && !empty($GLOBALS['user']['user_pid_3'])){
-                $points = floor($fee_points / 100 * $GLOBALS['config']['user']['reward_ratio_3']);
-                if($points>0){
-                    $where=[];
-                    $where['user_id'] = $GLOBALS['user']['user_pid_3'];
-                    $r = (new \app\common\model\User())->where($where)->setInc('user_points',$points);
-                    if($r){
-                        $data = [];
-                        $data['user_id'] = $GLOBALS['user']['user_pid_3'];
-                        $data['plog_type'] = 6;
-                        $data['plog_points'] = $points;
-                        $data['plog_remarks'] = lang('model/user/reward_tip',[$GLOBALS['user']['user_id'],$GLOBALS['user']['user_name'],$fee_points,$points]);
-                        (new \app\common\model\Plog())->saveData($data);
-                    }
-                }
-            }
+        $configuration = $GLOBALS['config']['user'] ?? [];
+        if (($configuration['reward_status'] ?? '0') != '1' || $fee_points === 0 || $fee_points === '0') {
+            return ['code'=>1,'msg'=>lang('model/user/reward_ok')];
         }
-
-        return ['code'=>1,'msg'=>lang('model/user/reward_ok')];
+        $fee_points = self::membershipInteger($fee_points);
+        $source_user_id = self::membershipInteger($source_user_id ?? $GLOBALS['user']['user_id'] ?? null);
+        if ($fee_points === null || $source_user_id === null) {
+            throw new \RuntimeException('invalid reward parameters');
+        }
+        Db::startTrans();
+        try {
+            $source = $this->where('user_id', $source_user_id)->find();
+            if (!$source) {
+                throw new \RuntimeException('reward source missing');
+            }
+            $recipients = [];
+            foreach (['' => 4, '_2' => 5, '_3' => 6] as $suffix => $log_type) {
+                $ratio = $configuration['reward_ratio' . $suffix] ?? 0;
+                if (!is_numeric($ratio) || !is_finite((float)$ratio) || (float)$ratio < 0) {
+                    throw new \RuntimeException('invalid reward ratio');
+                }
+                $recipient = self::membershipInteger($source['user_pid' . $suffix] ?? null);
+                $points = floor($fee_points / 100 * (float)$ratio);
+                if ($points <= 0 || $recipient === null) {
+                    continue;
+                }
+                if (!is_finite($points) || $points > 4294967295 || $recipient === $source_user_id || isset($recipients[$recipient])) {
+                    throw new \RuntimeException('invalid reward recipient or amount');
+                }
+                $recipients[$recipient] = true;
+                $points = (int)$points;
+                $affected = $this->where('user_id', $recipient)->setInc('user_points', $points);
+                if ($affected !== 1) {
+                    throw new \RuntimeException('reward recipient missing');
+                }
+                $log = (new \app\common\model\Plog())->saveData([
+                    'user_id'=>$recipient, 'plog_type'=>$log_type, 'plog_points'=>$points,
+                    'plog_remarks'=>lang('model/user/reward_tip', [$source_user_id, $source['user_name'], $fee_points, $points]),
+                ]);
+                if (($log['code'] ?? null) !== 1) {
+                    throw new \RuntimeException('reward ledger failed');
+                }
+            }
+            Db::commit();
+            return ['code'=>1,'msg'=>lang('model/user/reward_ok')];
+        } catch (\Throwable $e) {
+            Db::rollback();
+            throw new \RuntimeException('reward transaction failed', 0, $e);
+        }
     }
 
     /**
