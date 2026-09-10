@@ -145,7 +145,7 @@ class AppInit
         }
 
         // defined() guard: 在 Swoole/RoadRunner 等持久进程中防止重复 define()
-        defined('MAC_URL')               || define('MAC_URL',               'http://www.maccms.la/');
+        defined('MAC_URL')               || define('MAC_URL',               'https://github.com/ACCS2024/maccms10');
         defined('MAC_NAME')              || define('MAC_NAME',              '苹果CMS');
         defined('MAC_PATH')              || define('MAC_PATH',              $config['site']['install_dir'] . '');
         defined('MAC_MOB')               || define('MAC_MOB',               $TMP_ISWAP);

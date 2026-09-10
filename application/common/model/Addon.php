@@ -15,16 +15,6 @@ use think\facade\Db;
  */
 class Addon {
 
-    public function onlineData($page=1)
-    {
-        $html = mac_curl_get( '预留功能'  /* 原base64已还原 */.'store/?page=' . $page);
-        $json = json_decode($html, true);
-        if (!$json) {
-            return ['code' => 1001, 'msg' => lang('obtain_err')];
-        }
-        return $json;
-    }
-
     public function localData()
     {
         $results = glob(ADDON_PATH.'*');

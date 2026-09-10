@@ -11,12 +11,12 @@
     .addon-list .addon-bottom{line-height:22px;width:100%;text-indent:50px}
 </style>
 <div style="padding:20px">
-    <div><a target="_blank" href="http://maccmsbox.com/" class="layui-btn layui-btn-radius"><i class="layui-icon">&#xe857;</i>应用中心</a></div>
+    <div class="layui-elem-quote">本地插件目录：仅安装经本站管理员审查的插件。</div>
     {notempty name="addonList.addonEnable"}<div class="addon-state">已启用的插件</div>{/notempty}
     <url>
         {volist name="addonList.addonEnable" id="vo"}
         <li class="addon-list layui-row">
-            <img src="{$vo.image|mac_default='https://www.maccmsbox.com/uploads/20210906/Icon.png'}" width="40" height="40" align="left">
+            <img src="{$vo.image|mac_default='__STATIC__/images/logo@2x.png'}" width="40" height="40" align="left">
             <div class="addon-bottom">
                 <p class="addon-title">{$vo.title}({$vo.name})<span>{$vo.version}</span></p>
                 <p class="addon-intro">{$vo.intro}</p>
@@ -48,7 +48,7 @@
         {notempty name="addonList.addonClose"}<div class="addon-state">未启用的插件</div>{/notempty}
         {volist name="addonList.addonClose" id="vo"}
         <li class="addon-list layui-row">
-            <img src="{$vo.image|mac_default='https://www.maccmsbox.com/uploads/20210906/Icon.png'}" width="40" height="40" align="left">
+            <img src="{$vo.image|mac_default='__STATIC__/images/logo@2x.png'}" width="40" height="40" align="left">
             <div class="addon-bottom">
                 <p class="addon-title">{$vo.title}({$vo.name})<span>{$vo.version}</span></p>
                 <p class="addon-intro">{$vo.intro}</p>
@@ -80,7 +80,7 @@
         {notempty name="addonList.addonInstall"}<div class="addon-state">未安装的插件</div>{/notempty}
         {volist name="addonList.addonInstall" id="vo"}
         <li class="addon-list layui-row">
-            <img src="{$vo.image|mac_default='https://www.maccmsbox.com/uploads/20210906/Icon.png'}" width="40" height="40" align="left">
+            <img src="{$vo.image|mac_default='__STATIC__/images/logo@2x.png'}" width="40" height="40" align="left">
             <div class="addon-bottom">
                 <p class="addon-title">{$vo.title}({$vo.name})<span>{$vo.version}</span></p>
                 <p class="addon-intro">{$vo.intro}</p>
