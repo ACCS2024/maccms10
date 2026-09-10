@@ -774,23 +774,32 @@ class Vod extends Base {
 
     public function saveData($data)
     {
+        $data = \app\common\util\VodSaveInput::normalize($data);
+        if ($data === null) {
+            return ['code'=>1001, 'msg'=>lang('param_err')];
+        }
         $validate = mac_validate('Vod');
         if(!$validate->check($data)){
             return ['code'=>1001,'msg'=>lang('param_err').'：'.$validate->getError() ];
         }
         if(isset($data['vod_jumpurl'])){ $data['vod_jumpurl'] = mac_safe_jumpurl($data['vod_jumpurl']); }
         // vod_en 是可选字段(表单不填就没有),清缓存时缺键属正常形态
+        $id = $data['vod_id'] ?? 0;
         $__vodEn = $data['vod_en'] ?? '';
-        $key = 'vod_detail_'.$data['vod_id'];
+        $key = 'vod_detail_'.$id;
         Cache::delete($key);
         $key = 'vod_detail_'.$__vodEn;
         Cache::delete($key);
-        $key = 'vod_detail_'.$data['vod_id'].'_'.$__vodEn;
+        $key = 'vod_detail_'.$id.'_'.$__vodEn;
         Cache::delete($key);
 
         $type_list = (new \app\common\model\Type())->getCache('type_list');
-        $type_info = $type_list[$data['type_id']];
-        $data['type_id_1'] = $type_info['type_pid'];
+        $type_info = is_array($type_list) ? ($type_list[$data['type_id']] ?? null) : null;
+        $parent = is_array($type_info) ? \app\common\util\PointsBalance::amount($type_info['type_pid'] ?? null, true) : null;
+        if ($parent === null || $parent > 65535) {
+            return ['code'=>1001, 'msg'=>lang('param_err')];
+        }
+        $data['type_id_1'] = $parent;
 
         if(empty($data['vod_en'])){
             $data['vod_en'] = Pinyin::get($data['vod_name']);
@@ -812,51 +821,18 @@ class Vod extends Base {
             unset($match_src1);
         }
 
-        if(empty($data['vod_blurb'])){
+        if (empty($data['vod_blurb']) && (array_key_exists('vod_content', $data) || $id === 0)) {
             $data['vod_blurb'] = mac_substring( strip_tags($data['vod_content'] ?? '') ,100);
         }
 
-        if(empty($data['vod_play_url'])){
-            $data['vod_play_url'] = '';
-        }
-        if(empty($data['vod_down_url'])){
-            $data['vod_down_url'] = '';
-        }
         if(!empty($data['vod_pic_screenshot'])){
             $data['vod_pic_screenshot'] = str_replace( array(chr(10),chr(13)), array('','#'),$data['vod_pic_screenshot']);
         }
-        if(!empty($data['vod_play_from'])) {
-            $data['vod_play_from'] = join('$$$', $data['vod_play_from']);
-            $data['vod_play_server'] = join('$$$', $data['vod_play_server']);
-            $data['vod_play_note'] = join('$$$', $data['vod_play_note']);
-            $data['vod_play_url'] = join('$$$', $data['vod_play_url']);
-            $data['vod_play_url'] = str_replace( array(chr(10),chr(13)), array('','#'),$data['vod_play_url']);
-        }
-        else{
-            $data['vod_play_from'] = '';
-            $data['vod_play_server'] = '';
-            $data['vod_play_note'] = '';
-            $data['vod_play_url'] = '';
-        }
-
-        if(!empty($data['vod_down_from'])) {
-            $data['vod_down_from'] = join('$$$', $data['vod_down_from']);
-            $data['vod_down_server'] = join('$$$', $data['vod_down_server']);
-            $data['vod_down_note'] = join('$$$', $data['vod_down_note']);
-            $data['vod_down_url'] = join('$$$', $data['vod_down_url']);
-            $data['vod_down_url'] = str_replace(array(chr(10),chr(13)), array('','#'),$data['vod_down_url']);
-        }else{
-            $data['vod_down_from']='';
-            $data['vod_down_server']='';
-            $data['vod_down_note']='';
-            $data['vod_down_url']='';
-        }
-        
         if(($data['uptime'] ?? '')==1){
             $data['vod_time'] = time();
         }
         if(($data['uptag'] ?? '')==1){
-            $data['vod_tag'] = mac_get_tag($data['vod_name'], $data['vod_content']);
+            $data['vod_tag'] = mac_get_tag($data['vod_name'], $data['vod_content'] ?? '');
         }
         unset($data['uptime']);
         unset($data['uptag']);
