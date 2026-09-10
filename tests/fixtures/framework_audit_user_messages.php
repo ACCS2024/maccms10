@@ -27,8 +27,12 @@ function messageFixtureDelivery(string $channel, string $target) {
 $temp = audit_temp_dir('user-messages');
 register_shutdown_function(static function () use ($temp): void { audit_remove_temp($temp); });
 $app = new \think\App($temp);
+$mysql = getenv('FRAMEWORK_AUDIT_MYSQL') === '1';
 $configuration = ['default'=>'audit', 'auto_timestamp'=>false, 'connections'=>['audit'=>[
-    'type'=>'sqlite', 'database'=>':memory:', 'prefix'=>'audit_', 'trigger_sql'=>false, 'fields_cache'=>false,
+    'type'=>$mysql ? 'mysql' : 'sqlite', 'database'=>$mysql ? 'maccms_audit_user_messages' : ':memory:',
+    'prefix'=>'audit_', 'trigger_sql'=>false, 'fields_cache'=>false, 'charset'=>'utf8mb4',
+    'hostname'=>getenv('FRAMEWORK_AUDIT_HOST') ?: '127.0.0.1', 'username'=>'root',
+    'password'=>getenv('FRAMEWORK_AUDIT_PASSWORD') ?: '',
 ]]];
 $app->config->set($configuration, 'database');
 $manager = new \think\DbManager();
@@ -42,11 +46,36 @@ $app->instance('log', new class {
     public function record($message, $type = 'info') { $GLOBALS['message_fixture_logs'][] = $type; }
     public function error($message) { $GLOBALS['message_fixture_logs'][] = 'error'; }
 });
-\think\facade\Db::execute('CREATE TABLE audit_user (user_id INTEGER PRIMARY KEY, user_name TEXT, user_email TEXT,
-    user_phone TEXT, user_question TEXT, user_answer TEXT, user_status INTEGER DEFAULT 1, user_pwd TEXT CHECK(user_pwd != "fixture-reject-write"),
-    user_random TEXT DEFAULT "fixture-session")');
-\think\facade\Db::execute('CREATE TABLE audit_msg (msg_id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER DEFAULT 0,
-    msg_type INTEGER DEFAULT 0, msg_status INTEGER DEFAULT 0, msg_to TEXT, msg_code TEXT, msg_content TEXT, msg_time INTEGER)');
+if ($mysql) {
+    \think\facade\Db::execute("SET SESSION sql_mode=''");
+    $ddl = file_get_contents(dirname(__DIR__, 2).'/application/install/sql/install.sql');
+    foreach (['user', 'msg'] as $table) {
+        if (!preg_match('/CREATE TABLE `mac_'.$table.'` \([\s\S]*?\) ENGINE[^;]*;/', $ddl, $match)) {
+            throw new RuntimeException('Required installation schema missing');
+        }
+        \think\facade\Db::execute('DROP TABLE IF EXISTS audit_'.$table);
+        \think\facade\Db::execute(str_replace('`mac_'.$table.'`', '`audit_'.$table.'`', $match[0]));
+    }
+    \think\facade\Db::execute('ALTER TABLE audit_user ADD CONSTRAINT fixture_password_write CHECK(user_pwd != "fixture-reject-write")');
+} else {
+    \think\facade\Db::execute('CREATE TABLE audit_user (user_id INTEGER PRIMARY KEY, user_name TEXT, user_email TEXT,
+        user_phone TEXT, user_question TEXT, user_answer TEXT, user_status INTEGER DEFAULT 1, user_pwd TEXT CHECK(user_pwd != "fixture-reject-write"),
+        user_random TEXT DEFAULT "fixture-session")');
+    \think\facade\Db::execute('CREATE TABLE audit_msg (msg_id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER DEFAULT 0,
+        msg_type INTEGER DEFAULT 0, msg_status INTEGER DEFAULT 0, msg_to TEXT, msg_code TEXT, msg_content TEXT, msg_time INTEGER)');
+}
+
+function messageFixtureTrigger(string $name, string $table, string $operation): void {
+    global $mysql;
+    if (!in_array($name, ['audit_message_insert_failure', 'audit_message_consume_failure'], true)
+        || $table !== 'audit_msg' || !in_array($operation, ['INSERT', 'UPDATE'], true)) {
+        throw new RuntimeException('Unexpected fault fixture');
+    }
+    $body = $mysql
+        ? "FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Fixture database write failure'"
+        : "BEGIN SELECT RAISE(ABORT, 'Fixture database write failure'); END";
+    \think\facade\Db::execute('CREATE TRIGGER '.$name.' BEFORE '.$operation.' ON '.$table.' '.$body);
+}
 
 function messageFixtureSeed(): void {
     \think\facade\Db::execute('DELETE FROM audit_msg');

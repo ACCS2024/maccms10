@@ -1271,72 +1271,74 @@ class User extends Base
     }
 
 
+    /** Password and verification state must commit together, including on upgraded old installations. */
+    private function messageTransactionsAvailable(): bool
+    {
+        $type = Db::connect()->getConfig('type');
+        if ($type === 'sqlite') { return true; }
+        if ($type !== 'mysql') { return false; }
+        $tables = [$this->getTable(), (new Msg())->getTable()];
+        foreach (Db::query('SHOW TABLE STATUS') as $row) {
+            $index = array_search($row['Name'], $tables, true);
+            if ($index !== false && strtoupper((string)$row['Engine']) === 'INNODB') { unset($tables[$index]); }
+        }
+        return $tables === [];
+    }
+
     public function findpass_reset($param)
     {
-        // 安全加固:密码重置(校验短信/邮件验证码)按 IP 温和限流(默认开启,失败开放),
-        // 防 6 位数字验证码被暴力枚举(10 次/10 分钟/IP,远低于 10^6 空间,结合 5 分钟时效不可枚举)。
-        if (!mac_fe_write_throttle('fe_findpass', 600, 10)) {
-            return ['code' => 2001, 'msg' => lang('index/pwd_frequently')];
+        if (!is_array($param)) { return ['code'=>9001, 'msg'=>lang('param_err')]; }
+        foreach (['user_pwd', 'user_pwd2'] as $key) {
+            if (!is_string($param[$key] ?? null)) { return ['code'=>9001, 'msg'=>lang('param_err')]; }
         }
-        $to = htmlspecialchars(urldecode(trim($param['user_email'])));
-        if(empty($to)){
-            $to = htmlspecialchars(urldecode(trim($param['to'])));
+        if (array_key_exists('user_email', $param)) {
+            if (!is_string($param['user_email'])) { return ['code'=>9001, 'msg'=>lang('param_err')]; }
+            $alias = trim($param['user_email']);
+            if ($alias !== '' && (!is_string($param['to'] ?? null) || trim($param['to']) !== $alias)) {
+                return ['code'=>9001, 'msg'=>lang('param_err')];
+            }
         }
-
-        $password_raw = trim($param['user_pwd']);
-        $param['code'] = htmlspecialchars(urldecode(trim($param['code'])));
-        $param['user_pwd'] = htmlspecialchars(urldecode(trim($param['user_pwd'])));
-        $param['user_pwd2'] = htmlspecialchars(urldecode(trim($param['user_pwd2'])));
-
-
-        if (strlen($param['user_pwd']) < 6) {
-            return ['code' => 2002, 'msg' => lang('model/user/pass_length_err')];
-        }
-        if ($param['user_pwd'] != $param['user_pwd2']) {
-            return ['code' => 2003, 'msg' => lang('model/user/pass_not_same_pass2')];
-        }
-
         $param['type'] = 2;
-        $res = $this->check_msg($param);
-        if($res['code'] >1){
-            return ['code'=>$res['code'],'msg'=>$res['msg']];
+        $param = $this->messageParameters($param, true);
+        if ($param === null) { return ['code'=>9001, 'msg'=>lang('param_err')]; }
+        // Login currently trims passwords; preserve all other original bytes without a second URL decode.
+        $password = trim($param['user_pwd']);
+        if (strlen($password) < 6 || strlen($password) > 72 || str_contains($password, "\0")) {
+            return ['code'=>2002, 'msg'=>lang('model/user/pass_length_err')];
         }
-
-        if($param['ac']=='email') {
-
-            $pattern = '/\w+([-+.]\w+)*@\w+([-.]\w+)*\.\w+([-.]\w+)*/';
-            if(!preg_match( $pattern, $to)){
-                return ['code'=>2005,'msg'=>lang('model/user/email_format_err')];
-            }
-
-            $where = [];
-            $where['user_email'] = $to;
-            $user = $this->where($where)->find();
-            if (!$user) {
-                return ['code' => 2006, 'msg' => lang('model/user/email_err')];
-            }
+        if ($password !== trim($param['user_pwd2'])) {
+            return ['code'=>2003, 'msg'=>lang('model/user/pass_not_same_pass2')];
         }
-        else{
-            $pattern = "/^1{1}\d{10}$/";
-            if(!preg_match($pattern,$to)){
-                return ['code'=>2007,'msg'=>lang('model/user/phone_format_err')];
-            }
-
-            $where = [];
-            $where['user_phone'] = $to;
-            $user = $this->where($where)->find();
-            if (!$user) {
-                return ['code' => 2008, 'msg' =>lang('model/user/phone_err')];
-            }
+        if (!mac_fe_write_throttle('fe_findpass', 600, 10)) {
+            return ['code'=>2001, 'msg'=>lang('index/pwd_frequently')];
         }
-
-        $update = [];
-        $update['user_pwd'] = mac_password_hash($password_raw);
-        $res = $this->where($where)->update($update);
-        if($res===false){
-            return ['code'=>2009,'msg'=>lang('model/user/pass_reset_err')];
+        $started = false;
+        try {
+            if (!$this->messageTransactionsAvailable()) { throw new \RuntimeException('Transactional account tables required'); }
+            $hash = mac_password_hash($password);
+            $random = bin2hex(random_bytes(16));
+            Db::startTrans(); $started = true;
+            $verified = $this->check_msg($param);
+            if ($verified['code'] !== 1) { Db::rollback(); return $verified; }
+            $column = $param['ac'] === 'email' ? 'user_email' : 'user_phone';
+            $users = Db::name('User')->where($column, $param['to'])->lock(true)->limit(2)->select()->toArray();
+            if (count($users) !== 1) {
+                Db::rollback();
+                return ['code'=>$param['ac'] === 'email' ? 2006 : 2008, 'msg'=>lang('model/user/'.($param['ac'] === 'email' ? 'email_err' : 'phone_err'))];
+            }
+            if (Db::name('Msg')->where('msg_id', $verified['msg_id'])->where('msg_status', 0)->update(['msg_status'=>1]) !== 1) {
+                throw new \RuntimeException('Verification already used');
+            }
+            if (Db::name('User')->where('user_id', $users[0]['user_id'])->where($column, $param['to'])
+                ->update(['user_pwd'=>$hash, 'user_random'=>$random]) !== 1) {
+                throw new \RuntimeException('Password update failed');
+            }
+            Db::commit();
+            return ['code'=>1, 'msg'=>lang('model/user/pass_reset_ok')];
+        } catch (\Throwable $error) {
+            if ($started) { Db::rollback(); }
+            return ['code'=>2009, 'msg'=>lang('model/user/pass_reset_err')];
         }
-        return ['code'=>1,'msg'=>lang('model/user/pass_reset_ok')];
     }
 
     public function visit($param)

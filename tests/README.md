@@ -25,7 +25,7 @@ php tests/run_audit.php
 
 | 测试组 | 环境开关 | 固定数据库 |
 | --- | --- | --- |
-| models | `FRAMEWORK_AUDIT_MYSQL=1` | `maccms_audit_models`；部分完整安装模型使用 `maccms_audit_http` 的 audit 表 |
+| models | `FRAMEWORK_AUDIT_MYSQL=1` | `maccms_audit_models`；账号验证码使用 `maccms_audit_user_messages`；部分完整安装模型使用 `maccms_audit_http` 的 audit 表 |
 | financial / payment schema | `MEMBERSHIP_AUDIT_MYSQL=1` | `maccms_audit_membership` |
 | install | `FRAMEWORK_AUDIT_MYSQL=1` | `maccms_audit_install` |
 | HTTP | `MAC_AUDIT_FIXTURE=1` | `maccms_audit_http` 的 mac 表 |

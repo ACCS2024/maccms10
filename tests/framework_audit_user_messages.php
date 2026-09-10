@@ -106,7 +106,7 @@ foreach ([null, [], ['code'=>0, 'msg'=>'Fixture unavailable'], new RuntimeExcept
         'A malformed, failed or throwing delivery service must not produce a successful message record');
 }
 messageFixtureSeed();
-\think\facade\Db::execute("CREATE TRIGGER audit_message_insert_failure BEFORE INSERT ON audit_msg BEGIN SELECT RAISE(ABORT, 'Fixture database write failure'); END");
+messageFixtureTrigger('audit_message_insert_failure', 'audit_msg', 'INSERT');
 try {
     $res = $model->send_msg(messageFixtureParam());
     check(is_array($res) && ($res['code'] ?? 1) > 1 && \think\facade\Db::name('Msg')->count() === 0,
@@ -114,4 +114,4 @@ try {
 } finally {
     \think\facade\Db::execute('DROP TRIGGER audit_message_insert_failure');
 }
-echo 'framework_audit_user_messages: '.$checks.' checks passed on PHP '.PHP_VERSION.PHP_EOL;
+echo 'framework_audit_user_messages: '.$checks.' checks passed on PHP '.PHP_VERSION.' ('.($mysql ? 'MySQL non-strict' : 'SQLite').')'.PHP_EOL;
