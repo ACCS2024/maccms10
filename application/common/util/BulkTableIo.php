@@ -41,29 +41,28 @@ class BulkTableIo
         return $out;
     }
 
+    /** Preserve omitted/empty/already-joined fields for the content model's bounded normalization. */
     public static function prepareGenericForSave(array $data, $prefix)
     {
+        if (!is_string($prefix) || !in_array($prefix, ['art', 'manga', 'vod'], true)
+            || count($data) > self::MAX_IMPORT_COLUMNS) { throw new \InvalidArgumentException('Unsupported content import row'); }
         $idKey = $prefix . '_id';
-        if (isset($data[$idKey])) {
-            $id = (int)$data[$idKey];
-            $data[$idKey] = $id > 0 ? $id : null;
-            if ($id <= 0) unset($data[$idKey]);
+        $id = $data[$idKey] ?? '';
+        $id = $id === '' ? 0 : PointsBalance::amount($id, true);
+        $type = PointsBalance::amount($data['type_id'] ?? null);
+        if ($id === null || $type === null || $type > ($prefix === 'vod' ? 32767 : 65535)) {
+            throw new \InvalidArgumentException('Invalid content import identity');
         }
-        if (isset($data['type_id'])) {
-            $data['type_id'] = (int)$data['type_id'];
+        if ($id === 0) { unset($data[$idKey]); }
+        else { $data[$idKey] = $id; }
+        $data['type_id'] = $type;
+        foreach (['uptime', 'uptag'] as $field) {
+            $value = $data[$field] ?? 0;
+            if (!in_array($value, [0, 1, '0', '1'], true)) { throw new \InvalidArgumentException('Invalid content import flag'); }
+            $data[$field] = (int)$value;
         }
-        $data['uptime'] = isset($data['uptime']) ? (int)$data['uptime'] : 0;
-        $data['uptag'] = isset($data['uptag']) ? (int)$data['uptag'] : 0;
-
-        $multiFields = ($prefix === 'vod') ? ['vod_play_from','vod_play_server','vod_play_note','vod_play_url','vod_down_from','vod_down_server','vod_down_note','vod_down_url']
-        : [$prefix.'_content', $prefix.'_title', $prefix.'_note'];
-
-        foreach ($multiFields as $f) {
-            if (!isset($data[$f]) || is_array($data[$f])) continue;
-            $v = $data[$f];
-            if ($v === '' || $v === null) { unset($data[$f]); continue; }
-            $data[$f] = (strpos($v, '$$$') !== false) ? explode('$$$', $v) : [$v];
-        }
+        // Never explode arbitrary input before each model applies its byte/group/page budget.
+        // An explicit empty column is a clear operation; an omitted column remains omitted.
         return $data;
     }
 

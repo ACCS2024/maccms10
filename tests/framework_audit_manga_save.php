@@ -131,4 +131,33 @@ foreach($modes as $mode){
  }
  $cache->data['manga_save_type_list']=$savedCache;
 }
+// Exercise the actual importer preparation before the existing real model, including rejection without writes.
+foreach($modes as $importMode){
+ if($importMode!=='sqlite'){Db::execute("SET SESSION sql_mode='".$importMode."'");}
+ $importBase=['manga_id'=>'7','manga_name'=>'Imported ordinary row','type_id'=>'1'];
+ foreach(['manga_id'=>['7ordinary','7.5',' 7',true,[],4294967296], 'type_id'=>['1ordinary','1.5',true,[],0],
+     'uptime'=>['1ordinary',true], 'uptag'=>['0ordinary',[]]]as $importField=>$importValues){
+  foreach($importValues as $importValue){
+   mangaSaveSeed();$importBefore=Db::name('Manga')->order('manga_id')->select()->toArray();$importRejected=false;
+   try{$importData=\app\common\util\BulkTableIo::prepareGenericForSave(array_replace($importBase,[$importField=>$importValue]),'manga');
+       $importResult=(new \app\common\model\Manga())->saveData($importData);$importRejected=$importResult['code']!==1;}
+   catch(\InvalidArgumentException $error){$importRejected=true;}
+   check($importRejected && Db::name('Manga')->order('manga_id')->select()->toArray()===$importBefore,'Import preparation cannot hide invalid identity/flags from the actual model: '.$importField);
+  }
+ }
+ foreach(['omitted','',null,'0','Ordinary imported body']as $importBody){
+  $importBefore=mangaSaveSeed();$importData=$importBase;
+  if($importBody!=='omitted'){$importData['manga_content']=$importBody;}
+  $importData=\app\common\util\BulkTableIo::prepareGenericForSave($importData,'manga');
+  $importResult=(new \app\common\model\Manga())->saveData($importData);$importRow=Db::name('Manga')->where('manga_id',7)->find();
+  check($importResult['code']===1 && $importRow['manga_content']===($importBody==='omitted'?$importBefore['manga_content']:($importBody??'')),
+      'Imported omitted/empty/null/zero/body values retain their actual storage meaning');
+ }
+ mangaSaveSeed();$importData=['manga_id'=>'000','manga_name'=>'Imported new row','type_id'=>'1'];
+ $importResult=(new \app\common\model\Manga())->saveData(\app\common\util\BulkTableIo::prepareGenericForSave($importData,'manga'));
+ check($importResult['code']===1 && Db::name('Manga')->where('manga_id','>',7)->count()===1,'Imported zero ID creates a new row rather than updating an existing one');
+ mangaSaveSeed();$importBody=str_repeat('ordinary$$$',1100);
+ $importResult=(new \app\common\model\Manga())->saveData(\app\common\util\BulkTableIo::prepareGenericForSave($importBase+['manga_content'=>$importBody],'manga'));
+ check($importResult['code']===1 && Db::name('Manga')->where('manga_id',7)->value('manga_content')===$importBody,'A bounded manga description is not expanded into thousands of artificial form fragments');
+}
 echo 'framework_audit_manga_save: '.$checks.' checks passed on PHP '.PHP_VERSION.' / '.($mysql?'MySQL (three SQL modes)':'SQLite').PHP_EOL;

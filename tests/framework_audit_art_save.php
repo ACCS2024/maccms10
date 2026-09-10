@@ -149,5 +149,32 @@ foreach($modes as $mode){
  }
  $cache->data['art_save_type_list']=$savedCache;
 }
+// Exercise the actual importer preparation before the existing real model, including rejection without writes.
+foreach($modes as $importMode){
+ if($importMode!=='sqlite'){Db::execute("SET SESSION sql_mode='".$importMode."'");}
+ $importBase=['art_id'=>'7','art_name'=>'Imported ordinary row','type_id'=>'1'];
+ foreach(['art_id'=>['7ordinary','7.5',' 7',true,[],4294967296], 'type_id'=>['1ordinary','1.5',true,[],0],
+     'uptime'=>['1ordinary',true], 'uptag'=>['0ordinary',[]]]as $importField=>$importValues){
+  foreach($importValues as $importValue){
+   artSaveSeed();$importBefore=Db::name('Art')->order('art_id')->select()->toArray();$importRejected=false;
+   try{$importData=\app\common\util\BulkTableIo::prepareGenericForSave(array_replace($importBase,[$importField=>$importValue]),'art');
+       $importResult=(new \app\common\model\Art())->saveData($importData);$importRejected=$importResult['code']!==1;}
+   catch(\InvalidArgumentException $error){$importRejected=true;}
+   check($importRejected && Db::name('Art')->order('art_id')->select()->toArray()===$importBefore,'Import preparation cannot hide invalid identity/flags from the actual model: '.$importField);
+  }
+ }
+ foreach(['omitted','',null,'0','Ordinary imported body']as $importBody){
+  $importBefore=artSaveSeed();$importData=$importBase;
+  if($importBody!=='omitted'){$importData['art_content']=$importBody;}
+  $importData=\app\common\util\BulkTableIo::prepareGenericForSave($importData,'art');
+  $importResult=(new \app\common\model\Art())->saveData($importData);$importRow=Db::name('Art')->where('art_id',7)->find();
+  check($importResult['code']===1 && $importRow['art_content']===($importBody==='omitted'?$importBefore['art_content']:($importBody??'')),
+      'Imported omitted/empty/null/zero/body values retain their actual storage meaning');
+ }
+ artSaveSeed();$importData=['art_id'=>'000','art_name'=>'Imported new row','type_id'=>'1'];
+ $importResult=(new \app\common\model\Art())->saveData(\app\common\util\BulkTableIo::prepareGenericForSave($importData,'art'));
+ check($importResult['code']===1 && Db::name('Art')->where('art_id','>',7)->count()===1,'Imported zero ID creates a new row rather than updating an existing one');
+
+}
 echo 'Art save fixture peak: '.round(memory_get_peak_usage(true)/1048576,2).' MiB; limit '.ini_get('memory_limit').PHP_EOL;
 echo 'framework_audit_art_save: '.$checks.' checks passed on PHP '.PHP_VERSION.' / '.($mysql?'MySQL (three SQL modes)':'SQLite').PHP_EOL;
