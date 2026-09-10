@@ -443,12 +443,12 @@ class Vod extends Base
         $where['vod_status'] = 1;
         $where['vod_level'] = $level;
 
-        $list = Db::table('mac_vod')
+        $list = Db::name('Vod')
             ->field('vod_id,vod_name,vod_sub,vod_pic,vod_pic_slide,vod_actor,vod_director,vod_score,vod_content,vod_blurb,vod_remarks,vod_year,vod_area,vod_class,vod_points_play,type_id,type_id_1')
             ->where($where)
             ->order('vod_time desc')
             ->limit($start, $num)
-            ->select();
+            ->select()->toArray();
 
         $userId = intval($GLOBALS['user']['user_id'] ?? 0);
         $favMap = [];
@@ -539,12 +539,12 @@ class Vod extends Base
             $where['vod_level'] = $level;
         }
 
-        $list = Db::table('mac_vod')
+        $list = Db::name('Vod')
             ->field('vod_id,vod_name,vod_sub,vod_pic,vod_actor,vod_director,vod_score,vod_remarks,vod_year,vod_area,vod_class,vod_blurb,vod_time,vod_hits_month,type_id,type_id_1')
             ->where($where)
             ->order('vod_' . $by . ' desc')
             ->limit($start, $num)
-            ->select();
+            ->select()->toArray();
 
         foreach ($list as &$v) {
             $v['vod_pic'] = mac_url_img($v['vod_pic']);
@@ -612,13 +612,13 @@ class Vod extends Base
         // 仅列表所需字段；去掉 vod_director、vod_trysee 等，减轻行缓冲与 IO
         $fields = 'vod_id,vod_name,vod_sub,vod_pic,vod_actor,vod_score,vod_remarks,vod_year,vod_area,vod_class,vod_blurb,vod_time,vod_isend,vod_points_play,type_id,type_id_1';
 
-        $list = Db::table('mac_vod')
+        $list = Db::name('Vod')
             ->field($fields)
             ->where('vod_status', 1)
             ->where('type_id', 'in', $typeIds)
             ->order('vod_time', 'desc')
             ->limit($start, $num)
-            ->select();
+            ->select()->toArray();
 
         foreach ($list as &$v) {
             $v['vod_pic'] = mac_url_img($v['vod_pic']);
@@ -630,7 +630,7 @@ class Vod extends Base
 
         $dayStart = (int)strtotime('today');
         $dayEnd = (int)strtotime('tomorrow');
-        $todayNewCount = (int)Db::table('mac_vod')
+        $todayNewCount = (int)Db::name('Vod')
             ->where('vod_status', 1)
             ->where('type_id', 'in', $typeIds)
             ->where(function ($query) use ($dayStart, $dayEnd) {
@@ -691,12 +691,12 @@ class Vod extends Base
             };
         }
 
-        $list = Db::table('mac_vod')
+        $list = Db::name('Vod')
             ->field('vod_id,vod_name,vod_pic,vod_score,vod_remarks,vod_hits,vod_hits_day,vod_hits_week,vod_hits_month,vod_year,vod_area,vod_class,vod_isend,vod_points_play,type_id,type_id_1')
             ->where($where)
             ->order('vod_' . $by . ' desc')
             ->limit($start, $num)
-            ->select();
+            ->select()->toArray();
 
         foreach ($list as $k => &$v) {
             $v['vod_pic'] = mac_url_img($v['vod_pic']);
