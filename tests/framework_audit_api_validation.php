@@ -54,7 +54,10 @@ namespace {
         if (!$condition) { throw new RuntimeException($message); }
     }
     function validationCall(string $name, string $action, array $params): array {
-        $request = (new think\Request())->withGet($params)->setController($name)->setAction($action);
+        $request = (new think\Request())->setController($name)->setAction($action);
+        $request = $name === 'Order' && $action === 'create'
+            ? $request->withServer(['REQUEST_METHOD'=>'POST'])->withPost($params)
+            : $request->withServer(['REQUEST_METHOD'=>'GET'])->withGet($params);
         $container = think\Container::getInstance();
         $container->instance('request', $request);
         $controller = (new ReflectionClass('app\\api\\controller\\' . $name))->newInstanceWithoutConstructor();
@@ -113,6 +116,12 @@ namespace {
         }
         validationExpect(think\facade\Db::name('Order')->count() === 0, 'Invalid amounts must never create an order');
         validationExpect(validationCall('Order','create',['price'=>'4.99'])['code'] === 1002, 'The configured minimum must still reject a valid low amount');
+        $getRequest = (new think\Request())->withServer(['REQUEST_METHOD'=>'GET'])->withGet(['price'=>'10.50'])
+            ->setController('Order')->setAction('create');
+        $container->instance('request', $getRequest);
+        $getController = (new ReflectionClass(app\api\controller\Order::class))->newInstanceWithoutConstructor();
+        validationExpect($getController->create($getRequest)->getData()['code'] === 1001
+            && think\facade\Db::name('Order')->count() === 0, 'GET must never create a recharge order');
         $order = validationCall('Order','create',['price'=>'10.25']);
         validationExpect($order['code'] === 1, 'Valid order must succeed: ' . json_encode($order));
         $stored = think\facade\Db::name('Order')->where('user_id', 1)->find();
