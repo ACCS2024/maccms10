@@ -907,96 +907,100 @@
         },
         'Suggest': {
             'Init': function ($obj, $mid, $jumpurl) {
-                try {
-                    $($obj).autocomplete(maccms.base_url + '/index.php/ajax/suggest?mid=' + $mid, {
-                        inputClass: "mac_input",
-                        resultsClass: "mac_results",
-                        loadingClass: "mac_loading",
-                        width: 175, scrollHeight: 300, minChars: 1, matchSubset: 0, selectFirst: false,
-                        cacheLength: 10, multiple: false, matchContains: false, autoFill: false,
-                        dataType: "json",
-                        parse: function (r) {
-                            if (r.code == 1) {
-                                let history = JSON.parse(localStorage.getItem('historyList')) || []
-                                var parsed = [];
-                                // 热门搜索
-                                r.site_keywords.forEach((item, index, arr) => {
-                                    let obj = {}
-                                    obj.name = item
-                                    obj.id = 'hot'
-                                    obj.url = ''
-                                    obj.en = ''
-                                    obj.index = index + 1
-                                    arr[index] = obj
-                                })
-                                let data = {
-                                    en: '',
-                                    id: 'hot',
-                                    name: '热门搜索',
-                                    url: '',
-                                    type: 'tit'
-                                }
-                                r.site_keywords.unshift(data)
-                                // 历史记录
-                                history.forEach((item, index, arr) => {
-                                    if (item) {
-                                        let obj = {}
-                                        obj.name = item
-                                        obj.id = 'his'
-                                        obj.url = ''
-                                        obj.en = '',
-
-                                            arr[index] = obj
-                                    }
-                                })
-                                let historyTxt = {
-                                    en: 'tit',
-                                    id: 'his',
-                                    name: '历史搜索',
-                                    url: '',
-                                    type: 'tit'
-                                }
-                                history.unshift(historyTxt)
-
-                                if (history.length > 1) {
-                                    r.site_keywords = history.concat(r.site_keywords)
-                                }
-
-                                $.each(r['site_keywords'], function (index, row) {
-                                    row.url = r.url || '';
-                                    parsed[index] = {
-                                        data: row
-                                    };
-                                });
-
-                                return parsed;
-                            } else {
-                                return { data: '' };
-                            }
-                        },
-                        formatItem: function (row, i, max) {
-                            if (row.name == '历史搜索') {
-                                let delStr = "<span class='del-list'>清除记录</span>"
-                                return row.name + delStr;
-                            }
-                            if (!row.type && row.id != 'his') {
-                                let str = `<span class='row-index ${row.index < 4 ? 'active-index' : ''}'  >${row.index}</span>`
-                                return str + row.name;
-                            } else {
-                                return row.name;
-                            }
-
-                        },
-                        formatResult: function (row, i, max) {
-                            return row.text;
-                        }
-                    }).result(function (event, data, formatted) {
-                        $($obj).val(data.name);
-                        if (data.name == '热门搜索' || data.name == '历史搜索') return
-                        location.href = data.url.replace('mac_wd', encodeURIComponent(data.name));
+                function escapeText(value) {
+                    return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+                }
+                function destination(value) {
+                    if (typeof value !== 'string' || value.length > 8192 || value.indexOf('mac_wd') < 0
+                        || /[\u0000-\u0020\u007f\\]/.test(value)) { return null; }
+                    try {
+                        var url = new URL(value, location.href);
+                        return (url.protocol === 'http:' || url.protocol === 'https:')
+                            && url.origin === location.origin && !url.username && !url.password ? url.href : null;
+                    } catch (error) { return null; }
+                }
+                function words(value) {
+                    if (!Array.isArray(value)) { return []; }
+                    return value.slice(0, 50).filter(function (word) {
+                        if (typeof word !== 'string' || word === '' || word.length > 4096) { return false; }
+                        try { encodeURIComponent(word); return true; } catch (error) { return false; }
                     });
                 }
-                catch (e) { }
+                try {
+                    $($obj).each(function () {
+                        var input = this, $input = $(input), historyCleared = false, typedValue = $input.val();
+                        $input.off('input.macSuggestHistory').on('input.macSuggestHistory', function () { typedValue = $input.val(); });
+                        // The plugin handles clicks on its UL and stops bubbling: clear must run before that handler.
+                        if (input.macSuggestHistoryClear) {
+                            document.removeEventListener('click', input.macSuggestHistoryClear, true);
+                            document.removeEventListener('keydown', input.macSuggestHistoryClear, true);
+                        }
+                        input.macSuggestHistoryClear = function (event) {
+                            if (event.type === 'keydown' && event.key !== 'Enter' && event.key !== ' ') { return; }
+                            var button = event.target && event.target.closest ? event.target.closest('.del-list') : null;
+                            var li = button && button.closest('li'), selected = li && $.data(li, 'ac_data');
+                            if (!selected || selected.data.historyInput !== input) { return; }
+                            event.preventDefault(); event.stopImmediatePropagation(); historyCleared = true;
+                            try { localStorage.removeItem('historyList'); } catch (error) {}
+                            $input.trigger($.Event('keydown', {keyCode: 27}));
+                            $('.mac_input').each(function () { if (this.macSuggestHistoryClear) { $(this).flushCache(); } });
+                            input.focus();
+                            // A neutral key clears the plugin's pending blur timer; Down reloads its own menu state.
+                            $input.trigger($.Event('keydown', {keyCode: 0})).trigger($.Event('keydown', {keyCode: 40}));
+                        };
+                        document.addEventListener('click', input.macSuggestHistoryClear, true);
+                        document.addEventListener('keydown', input.macSuggestHistoryClear, true);
+                        $input.autocomplete(maccms.base_url + '/index.php/ajax/suggest?mid=' + $mid, {
+                            inputClass: "mac_input", resultsClass: "mac_results", loadingClass: "mac_loading",
+                            width: 175, scrollHeight: 300, minChars: 1, matchSubset: 0, selectFirst: false,
+                            cacheLength: 10, multiple: false, matchContains: false, autoFill: false,
+                            dataType: "json",
+                            parse: function (r) {
+                                if (!r || (r.code !== 1 && r.code !== '1') || !Array.isArray(r.site_keywords)) { return []; }
+                                var url = destination(r.url), history = [], parsed = [];
+                                if (url === null) { return parsed; }
+                                if (!historyCleared) {
+                                    try {
+                                        var saved = localStorage.getItem('historyList');
+                                        if (saved && saved.length <= 65536) { history = words(JSON.parse(saved)); }
+                                    } catch (error) {}
+                                }
+                                function add(name, id, type, index) {
+                                    var row = {name: name, id: id, type: type, index: index, en: '', url: url};
+                                    if (type === 'history-title') { row.historyInput = input; }
+                                    // Custom parse bypasses the plugin's default value/result population.
+                                    parsed.push({data: row, value: name, result: name});
+                                }
+                                if (history.length) {
+                                    add('历史搜索', 'his', 'history-title');
+                                    history.forEach(function (word) { add(word, 'his', ''); });
+                                }
+                                add('热门搜索', 'hot', 'hot-title');
+                                words(r.site_keywords).forEach(function (word, index) { add(word, 'hot', '', index + 1); });
+                                return parsed;
+                            },
+                            formatItem: function (row) {
+                                var text = escapeText(row.name);
+                                if (row.type === 'history-title') {
+                                    return text + "<span class='del-list' role='button' tabindex='0'>清除记录</span>";
+                                }
+                                if (!row.type && row.id === 'hot') {
+                                    return "<span class='row-index " + (row.index < 4 ? 'active-index' : '') + "'>" + row.index + '</span>' + text;
+                                }
+                                return text;
+                            },
+                            formatResult: function (row) { return row.name; }
+                        }).result(function (event, data) {
+                            if (!data || typeof data.name !== 'string') { return; }
+                            if (data.type) { $input.val(typedValue); return; }
+                            var url = destination(data.url);
+                            if (url === null) { return; }
+                            $input.val(data.name);
+                            location.href = url.replace('mac_wd', encodeURIComponent(data.name));
+                        });
+                    });
+                } catch (error) {}
             }
         },
         'History': {
