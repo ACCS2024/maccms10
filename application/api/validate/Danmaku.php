@@ -38,6 +38,8 @@ class Danmaku extends Validate
             'danmaku_id.require' => lang('validate/danmaku_id_require'),
             'danmaku_id.number'  => lang('validate/danmaku_id_number'),
         ];
-        parent::__construct($rules, $message, $field);
+        parent::__construct();
+        // TP8's constructor only initializes services; apply explicit options through its rule API.
+        $this->rule(array_merge($this->rule, $rules), $field, $message);
     }
 }

@@ -20,6 +20,8 @@ class Chatroom extends Validate
             'chat_id.require'      => lang('validate/chatroom_id_require'),
             'chat_id.number'       => lang('validate/chatroom_id_number'),
         ];
-        parent::__construct($rules, $message, $field);
+        parent::__construct();
+        // TP8's constructor only initializes services; apply explicit options through its rule API.
+        $this->rule(array_merge($this->rule, $rules), $field, $message);
     }
 }
