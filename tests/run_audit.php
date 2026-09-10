@@ -11,7 +11,7 @@ $groups = [
         ['extensions_audit_addons.php'], ['extensions_audit_aws.php'], ['extensions_audit_discovery.php'],
         ['extensions_audit_collection.php'],
         ['extensions_audit_lifecycle.php'], ['extensions_audit_oauth_sdk.php'],
-        ['extensions_audit_qiniu_sdk.php'], ['extensions_audit_qiniu_upload.php'], ['extensions_audit_qrcode.php'],
+        ['extensions_audit_qiniu_sdk.php'], ['extensions_audit_qiniu_upload.php'], ['extensions_audit_qiniu_response.php'], ['extensions_audit_qrcode.php'],
         ['extensions_audit_qrcode_http.php'], ['extensions_audit_upyun.php'],
         ['extensions_audit_upyun.php', 'embedded-first'], ['extensions_audit_upload_adapters.php'],
         ['framework_audit_cli_failures.php'], ['framework_audit_collection_paging.php'],

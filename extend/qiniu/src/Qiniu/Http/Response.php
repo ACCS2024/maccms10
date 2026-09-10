@@ -95,9 +95,9 @@ final class Response
             return;
         }
 
-        if ($body === null) {
+        if ($body === null || ($body === '' && $code >= 400)) {
             if ($code >= 400) {
-                $this->error = self::$statusTexts[$code];
+                $this->error = self::$statusTexts[$code] ?? 'HTTP status ' . $code;
             }
             return;
         }
@@ -106,7 +106,8 @@ final class Response
                 $jsonData = self::bodyJson($body);
                 if ($code >= 400) {
                     $this->error = $body;
-                    if ($jsonData['error'] !== null) {
+                    if (is_array($jsonData) && isset($jsonData['error']) &&
+                        is_string($jsonData['error']) && $jsonData['error'] !== '') {
                         $this->error = $jsonData['error'];
                     }
                 }
@@ -130,29 +131,35 @@ final class Response
 
     private static function bodyJson($body)
     {
-        return \Qiniu\json_decode((string)$body, true, 512);
+        // The SDK helper treats both an empty body and the valid JSON value "0"
+        // as null. HTTP JSON must distinguish malformed input from valid scalars.
+        try {
+            return \json_decode((string)$body, true, 512, JSON_THROW_ON_ERROR);
+        } catch (\JsonException $e) {
+            throw new \InvalidArgumentException('Unable to parse JSON data: ' . $e->getMessage(), 0, $e);
+        }
     }
 
     public function xVia()
     {
-        $via = $this->headers['X-Via'];
+        $via = self::headerValue($this->headers, 'X-Via');
         if ($via === null) {
-            $via = $this->headers['X-Px'];
+            $via = self::headerValue($this->headers, 'X-Px');
         }
         if ($via === null) {
-            $via = $this->headers['Fw-Via'];
+            $via = self::headerValue($this->headers, 'Fw-Via');
         }
         return $via;
     }
 
     public function xLog()
     {
-        return $this->headers['X-Log'];
+        return self::headerValue($this->headers, 'X-Log');
     }
 
     public function xReqId()
     {
-        return $this->headers['X-Reqid'];
+        return self::headerValue($this->headers, 'X-Reqid');
     }
 
     public function ok()
@@ -162,15 +169,27 @@ final class Response
 
     public function needRetry()
     {
-        $code = $this->statusCode;
-        if ($code < 0 || ($code / 100 === 5 and $code !== 579) || $code === 996) {
-            return true;
-        }
+        $code = (int)$this->statusCode;
+        return $code < 0 || ($code >= 500 && $code < 600 && $code !== 579) || $code === 996;
     }
 
     private static function isJson($headers)
     {
-        return array_key_exists('Content-Type', $headers) &&
-        strpos($headers['Content-Type'], 'application/json') === 0;
+        $contentType = self::headerValue($headers, 'Content-Type');
+        return is_string($contentType) &&
+            strcasecmp(trim(explode(';', $contentType, 2)[0]), 'application/json') === 0;
+    }
+
+    private static function headerValue(array $headers, $name)
+    {
+        // Preserve the public headers array; the final occurrence wins regardless
+        // of field-name casing, as it did for repeated identically spelled keys.
+        $value = null;
+        foreach ($headers as $key => $candidate) {
+            if (is_string($key) && strcasecmp($key, $name) === 0) {
+                $value = $candidate;
+            }
+        }
+        return $value;
     }
 }

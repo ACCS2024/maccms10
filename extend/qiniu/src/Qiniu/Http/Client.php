@@ -127,8 +127,19 @@ final class Client
         $headerLines = explode("\r\n", $raw);
         foreach ($headerLines as $line) {
             $headerLine = trim($line);
+            // cURL includes interim, proxy CONNECT and followed redirect headers.
+            // Only the final HTTP response may define this response's metadata.
+            if (preg_match('/^HTTP\/\S+\s+\d{3}(?:\s|$)/i', $headerLine)) {
+                $headers = array();
+                continue;
+            }
             $kv = explode(':', $headerLine, 2);
             if (count($kv) > 1) {
+                foreach (array_keys($headers) as $name) {
+                    if (strcasecmp($name, $kv[0]) === 0) {
+                        unset($headers[$name]);
+                    }
+                }
                 $headers[$kv[0]] = trim($kv[1]);
             }
         }
