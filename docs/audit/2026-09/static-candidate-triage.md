@@ -48,3 +48,13 @@
 已读过的 Vod 删除组分支、URL 兜底、Payment 经 parameters 限定的 mid/type 和 LocalAttachment 提交前 manifest 分支都有赋值前提；静态工具未传播全部相关条件。此解释限于这些分支，不代表其它输入类型、SQL 或业务策略已经全面核实。190 条 include 候选仍随更新来源与执行入口一起治理，用户原有迁移文件继续保留，不进行顺手修复。
 
 8 条兼容警告仍为 7 个构造函数 exit 生命周期提示和 1 个配置混合换行提示，均不是原生编译失败。原始两份工具 JSON 的 SHA-256 已保存；没有加入 baseline、ignoreErrors 或人为修改工具结果来归零。
+
+## 52f70b90 重扫
+
+固定源码及工具锁见[阶段记录](phase-verification-52f70b90.md)。相同 level 1 为 421 条文件诊断、0 全局错误；分类与 cdc213f 相比只有 `variable.undefined` 从 219 变成 218。PHPCompatibility 仍为 0 错误、8 警告。
+
+额外 level 5 为 1,166 条文件诊断、0 全局错误，各标识计数和原始报告摘要保存在[JSON 记录](phase-verification-52f70b90.json)。此级别补充参数、返回值和不可达分支候选，没有改变正式 level 1 配置。
+
+新 Search 的 `ConnectionInterface::getPdo/query`、Query 返回父类型等诊断需要结合实际连接类核对；已完成的实际 MySQL 回归能够执行这些路径，不能仅凭接口缺少声明断言运行时必然失败。保留的响应形状检查也不能仅为减少 PHPDoc 冗余提示而删除。
+
+另发现 AiSearch 的 Meili 回表仍对 Collection 使用 `is_array`，使后续映射不可达；它有独立的 SQL 回退、模块空结果和缓存语义，已进入下一组实际验证，不能套用已提交 Search 的修复结论。旧 ORM `=== false` 候选仍区分删除对象、幂等更新和抛出异常，不机械全局替换。

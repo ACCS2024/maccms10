@@ -1,0 +1,185 @@
+{
+  "source_commit": "52f70b9063aac7477ed831e83973867cc9af0e7c",
+  "source_tree": "1f4565887ac0e5466084866febf3bcd4bf37be06",
+  "production_lock_sha256": "17864e7bf115eb91c0742eeb52c3cd4fea60e3a6b1ae7dc4bc146e3a0250e438",
+  "audit_tool_lock_sha256": "ba1aa580779290fd1437b74d0efce6a3c2a25900c8f28469731d0e65ff79bf5c",
+  "scope": "isolated committed source plus clean locked production vendor; unrelated working-tree changes excluded",
+  "status": "audit ongoing; no deployment or completeness claim",
+  "installed_compilation": [
+    {
+      "php": "8.3.33",
+      "checked": 5363,
+      "failed": 0,
+      "skipped": [],
+      "report_sha256": "40538c4325885fec388d184ee3a082097276d3d40c39618f45a533a5381a59da"
+    },
+    {
+      "php": "8.4.25",
+      "checked": 5363,
+      "failed": 0,
+      "skipped": [],
+      "report_sha256": "49c11d2150b458409a380700dc6c130e28bfbd9156896c80f56bf85fefa00188"
+    }
+  ],
+  "default_regressions": [
+    {
+      "php": "8.3.33",
+      "processes": 133,
+      "failures": 0,
+      "suites": [
+        "unit",
+        "models",
+        "financial",
+        "upload",
+        "storage",
+        "remote_upload"
+      ],
+      "log_sha256": "434ac39b01a7cfb49e95a3b455925583f67dcd586b6ed4fcabefbfe6ad7efda3"
+    },
+    {
+      "php": "8.4.25",
+      "processes": 133,
+      "failures": 0,
+      "suites": [
+        "unit",
+        "models",
+        "financial",
+        "upload",
+        "storage",
+        "remote_upload"
+      ],
+      "log_sha256": "4598a0010109ef66c76629bcc77a5a4ea3f3e9603bd331d7b2bbe8d55c5b3d8a"
+    }
+  ],
+  "static_analysis": {
+    "php": "8.4.25",
+    "target": "PHP 8.3–8.4 compatibility; PHPStan PHP 8.4",
+    "default_summary": {
+      "phpstan": {
+        "exit": 1,
+        "totals": {
+          "errors": 0,
+          "file_errors": 421
+        }
+      },
+      "phpcompatibility": {
+        "exit": 2,
+        "totals": {
+          "errors": 0,
+          "warnings": 8,
+          "fixable": 0
+        }
+      }
+    },
+    "tools": {
+      "dealerdirect/phpcodesniffer-composer-installer": "v1.2.1",
+      "phpcompatibility/php-compatibility": "10.0.0-alpha2",
+      "phpcsstandards/phpcsutils": "1.2.3",
+      "phpstan/phpstan": "2.2.13",
+      "squizlabs/php_codesniffer": "4.0.4"
+    },
+    "reports": {
+      "phpstan_level1": {
+        "totals": {
+          "errors": 0,
+          "file_errors": 421
+        },
+        "report_sha256": "d0fb6f2c40291b641ab29ad4e68e1b0e17e22f6bfc99539f5523d39c90557748",
+        "categories": {
+          "staticMethod.notFound": 119,
+          "property.notFound": 8,
+          "constant.notFound": 37,
+          "isset.variable": 1,
+          "empty.variable": 18,
+          "variable.undefined": 218,
+          "unset.variable": 4,
+          "constructor.unusedParameter": 1,
+          "class.notFound": 1,
+          "array.duplicateKey": 14
+        }
+      },
+      "phpstan_level5": {
+        "totals": {
+          "errors": 0,
+          "file_errors": 1166
+        },
+        "report_sha256": "59ffeb0c2c2d8bd529030746aef84478566731d27684c3de9c26a0413f3e3f3f",
+        "categories": {
+          "staticMethod.notFound": 119,
+          "function.alreadyNarrowedType": 39,
+          "property.notFound": 15,
+          "property.protected": 1,
+          "assign.propertyType": 3,
+          "booleanAnd.alwaysFalse": 14,
+          "identical.alwaysFalse": 96,
+          "isset.offset": 24,
+          "method.notFound": 89,
+          "nullCoalesce.offset": 31,
+          "equal.alwaysFalse": 42,
+          "argument.type": 49,
+          "constant.notFound": 37,
+          "argument.byRef": 1,
+          "empty.offset": 3,
+          "binaryOp.invalid": 9,
+          "method.unused": 9,
+          "isset.variable": 1,
+          "greaterOrEqual.alwaysTrue": 2,
+          "empty.variable": 18,
+          "greater.alwaysFalse": 2,
+          "return.type": 65,
+          "greater.alwaysTrue": 12,
+          "deadCode.unreachable": 26,
+          "foreach.nonIterable": 1,
+          "variable.undefined": 218,
+          "throws.notThrowable": 7,
+          "arguments.count": 3,
+          "booleanAnd.rightAlwaysTrue": 14,
+          "if.alwaysTrue": 14,
+          "phpDoc.parseError": 48,
+          "class.notFound": 31,
+          "function.impossibleType": 14,
+          "unset.variable": 4,
+          "notIdentical.alwaysTrue": 19,
+          "offsetAccess.invalidOffset": 3,
+          "parameter.defaultValue": 3,
+          "notIdentical.alwaysFalse": 5,
+          "notEqual.alwaysTrue": 2,
+          "notEqual.alwaysFalse": 3,
+          "empty.expr": 1,
+          "ternary.alwaysTrue": 1,
+          "instanceof.alwaysTrue": 1,
+          "equal.alwaysTrue": 6,
+          "arrayFilter.same": 9,
+          "arrayValues.empty": 1,
+          "booleanNot.alwaysFalse": 3,
+          "return.unusedType": 1,
+          "booleanOr.alwaysTrue": 4,
+          "identical.alwaysTrue": 4,
+          "constructor.unusedParameter": 1,
+          "booleanOr.rightAlwaysFalse": 1,
+          "if.alwaysFalse": 3,
+          "return.void": 7,
+          "return.phpDocType": 1,
+          "smaller.alwaysFalse": 1,
+          "booleanNot.alwaysTrue": 1,
+          "staticMethod.resultUnused": 2,
+          "nullCoalesce.expr": 2,
+          "array.duplicateKey": 14,
+          "booleanAnd.rightAlwaysFalse": 1,
+          "property.defaultValue": 2,
+          "property.phpDocType": 1,
+          "property.onlyWritten": 1,
+          "booleanAnd.leftAlwaysTrue": 1
+        }
+      },
+      "phpcompatibility": {
+        "totals": {
+          "errors": 0,
+          "warnings": 8,
+          "fixable": 0
+        },
+        "report_sha256": "dc61483d9ef98a8d1677030f6c7f3220ca489b0b7df7760a8699cedbec986600"
+      }
+    }
+  }
+}
