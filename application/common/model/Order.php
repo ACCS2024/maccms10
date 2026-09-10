@@ -122,11 +122,12 @@ class Order extends Base {
             return ['code'=>1,'msg'=>lang('model/order/pay_over')];
         }
 
-        // 安全加固:回调金额二次核对(防改价/低付高额到账)。仅当调用方传入可解析的正数金额、
-        // 且明显低于订单应付额(order_price,单位:元;留 0.01 容差)时拒绝入账。无法判定
-        // (null / 0 / 不可解析)一律放行——各渠道金额字段/单位不一,宁可漏挡也不误伤正常支付,
-        // 故调用方只对“元”单位、且确无误的金额传值(微信 fen 已 /100,其余本就为元)。
+        // 调用方提供金额时必须是有效正数；null 保留给未提供金额的旧渠道。
+        // 不允许 0、非数字或非有限值绕过已经启用的金额核对。
         if ($paid_yuan !== null) {
+            if (!is_numeric($paid_yuan) || !is_finite((float)$paid_yuan) || (float)$paid_yuan <= 0) {
+                return ['code'=>2005,'msg'=>'order amount mismatch'];
+            }
             $paid = round((float)$paid_yuan, 2);
             $expect = round((float)$order['info']['order_price'], 2);
             if ($paid > 0 && $expect > 0 && ($paid + 0.01) < $expect) {
@@ -147,16 +148,23 @@ class Order extends Base {
             $update['order_status'] = 1;
             $update['order_pay_time'] = time();
             $update['order_pay_type'] = $pay_type;
-            $res = $this->where($where)->update($update);
-            if($res===false){
+            // 只有 pending -> paid 的唯一成功者可以入账。事务本身不能阻止
+            // 两个请求在事务开始前同时读到 pending，必须检查条件更新行数。
+            $res = $this->where('order_id', $order['info']['order_id'])
+                ->where('order_status', 0)->update($update);
+            if ($res !== 1) {
                 Db::rollback();
+                $current = $this->where('order_id', $order['info']['order_id'])->find();
+                if ($res === 0 && $current && (int)$current['order_status'] === 1) {
+                    return ['code'=>1,'msg'=>lang('model/order/pay_over')];
+                }
                 return ['code'=>2002,'msg'=>lang('model/order/update_status_err')];
             }
 
             $where2 = [];
             $where2['user_id'] = $user['info']['user_id'];
             $res = (new \app\common\model\User())->where($where2)->setInc('user_points',$order['info']['order_points']);
-            if($res===false){
+            if($res !== 1){
                 Db::rollback();
                 return ['code'=>2003,'msg'=>lang('model/order/update_user_points_err')];
             }
@@ -166,9 +174,12 @@ class Order extends Base {
             $data['user_id'] = $user['info']['user_id'];
             $data['plog_type'] = 1;
             $data['plog_points'] = $order['info']['order_points'];
-            (new \app\common\model\Plog())->saveData($data);
+            $log = (new \app\common\model\Plog())->saveData($data);
+            if ((int)($log['code'] ?? 0) !== 1) {
+                throw new \RuntimeException('order points log failed');
+            }
 
-            $remarks = json_decode($order['info']['order_remarks'], true);
+            $remarks = json_decode((string)($order['info']['order_remarks'] ?? ''), true);
             if(!empty($remarks) && is_array($remarks) && ($remarks['biz'] ?? '') === 'member_upgrade'){
                 $user_latest = (new \app\common\model\User())->infoData(['user_id' => $user['info']['user_id']]);
                 if($user_latest['code'] > 1){
@@ -184,9 +195,9 @@ class Order extends Base {
 
             Db::commit();
             return ['code'=>1,'msg'=>lang('model/order/pay_ok')];
-        }catch (\Exception $e){
+        }catch (\Throwable $e){
             Db::rollback();
-            return ['code'=>2004,'msg'=>$e->getMessage()];
+            return ['code'=>2004,'msg'=>lang('save_err')];
         }
 
     }
