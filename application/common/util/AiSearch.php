@@ -87,7 +87,7 @@ class AiSearch
         ],
     ];
 
-    /** @var array<string, array> 单次请求内相同 module+wd 只构建一次，避免 AI 聊天等场景重复 expand / Meili */
+    /** @var array<string, array> 只复用扩词；公开资源每次回查，不能将撤回或删除的行缓存进 payload。 */
     private static $buildForSearchMemo = [];
 
     public static function buildForSearch($module, array $param = [])
@@ -105,11 +105,8 @@ class AiSearch
             return self::emptyPayload($wd);
         }
         $memoKey = $module . "\x1e" . mb_strtolower($wd, 'UTF-8');
-        if (isset(self::$buildForSearchMemo[$memoKey])) {
-            return self::$buildForSearchMemo[$memoKey];
-        }
-
-        $expansion = self::expandTerms($cfg, $module, $wd);
+        $expansion = self::$buildForSearchMemo[$memoKey] ?? self::expandTerms($cfg, $module, $wd);
+        self::$buildForSearchMemo[$memoKey] = $expansion;
         $queryMerged = self::mergeQuery($wd, $expansion);
         $internal = self::buildInternalResources($wd, $module, $queryMerged);
         $external = self::buildExternalResources($cfg, $wd);
@@ -122,8 +119,6 @@ class AiSearch
             'internal_resources' => $internal,
             'external_resources' => $external,
         ];
-        self::$buildForSearchMemo[$memoKey] = $out;
-
         return $out;
     }
 
@@ -311,15 +306,40 @@ class AiSearch
         return [];
     }
 
+    /** Only the selected module is probed, read-only, on the same writer used for its rows. */
+    private static function publishedResourceQuery(string $kind): \think\db\Query
+    {
+        $meta = self::$meiliResourceMeta[$kind] ?? null;
+        if ($meta === null) { throw new \InvalidArgumentException('Unsupported AI resource kind'); }
+        $query = Db::name($meta['table'])->master();
+        $connection = $query->getConnection();
+        if (!$connection->getPdo() instanceof \PDO) { $connection->query('SELECT 1', [], true); }
+        $driver = $connection->getPdo()->getAttribute(\PDO::ATTR_DRIVER_NAME);
+        if ($driver === 'mysql') {
+            $columns = $connection->query('SELECT COLUMN_NAME AS field FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=?', [$query->getTable()], true);
+        } elseif ($driver === 'sqlite') {
+            $columns = $connection->query('SELECT name AS field FROM pragma_table_info(?)', [$query->getTable()], true);
+        } else { throw new \RuntimeException('Unsupported AI resource database driver'); }
+        $fields = array_column($columns, 'field');
+        if (!in_array($meta['pk'], $fields, true) || !in_array($meta['status'], $fields, true)) {
+            throw new \RuntimeException('AI resource publication schema could not be confirmed');
+        }
+        $conditions = [[$meta['status'], '=', 1]];
+        // Legacy absence is accepted only after successful discovery of the actual writer table.
+        if ($meta['recycle'] !== null && in_array($meta['recycle'], $fields, true)) {
+            $conditions[] = [$meta['recycle'], '=', 0];
+        }
+        return $query->where($conditions);
+    }
+
     private static function queryVodResources($kw, $meiliQuery = null)
     {
         $fromMeili = self::queryResourcesByMeilisearch('vod', $meiliQuery !== null && $meiliQuery !== '' ? $meiliQuery : $kw);
         if ($fromMeili !== null) {
             return $fromMeili;
         }
-        $rows = Db::name('Vod')
+        $rows = self::publishedResourceQuery('vod')
             ->field('vod_id,vod_name,vod_pic')
-            ->where('vod_status', 1)
             ->where(function($q) use ($kw) {
                 $q->where('vod_name', 'like', $kw)->whereOr('vod_sub', 'like', $kw)->whereOr('vod_actor', 'like', $kw)->whereOr('vod_tag', 'like', $kw);
             })
@@ -344,9 +364,8 @@ class AiSearch
         if ($fromMeili !== null) {
             return $fromMeili;
         }
-        $rows = Db::name('Art')
+        $rows = self::publishedResourceQuery('art')
             ->field('art_id,art_name,art_pic')
-            ->where('art_status', 1)
             ->where(function($q) use ($kw) {
                 $q->where('art_name', 'like', $kw)->whereOr('art_sub', 'like', $kw)->whereOr('art_tag', 'like', $kw);
             })
@@ -394,10 +413,11 @@ class AiSearch
         if (empty($sr['ok']) || empty($sr['hits']) || !is_array($sr['hits'])) {
             return null;
         }
-        $re = '/^' . preg_quote($k, '/') . '_(\d+)$/';
+        $re = '/^' . preg_quote($k, '/') . '_([1-9][0-9]{0,9})$/D';
         $ids = [];
-        foreach ($sr['hits'] as $hit) {
-            if (!empty($hit['id']) && is_string($hit['id']) && preg_match($re, $hit['id'], $m)) {
+        foreach (array_slice($sr['hits'], 0, min(1000, $limit)) as $hit) {
+            if (is_array($hit) && is_string($hit['id'] ?? null) && preg_match($re, $hit['id'], $m)
+                && (int)$m[1] <= ($k === 'topic' ? 65535 : 4294967295)) {
                 $ids[] = (int)$m[1];
             }
         }
@@ -405,27 +425,9 @@ class AiSearch
         if (empty($ids)) {
             return null;
         }
-        $table = $meta['table'];
         $pk = $meta['pk'];
-        $st = $meta['status'];
-        $rc = isset($meta['recycle']) ? $meta['recycle'] : null;
         $fields = $meta['fields'];
-        try {
-            $q = Db::name($table)->field($fields)->where($st, 1)->whereIn($pk, $ids);
-            if ($rc !== null && $rc !== '') {
-                $q->where($rc, 0);
-            }
-            $rows = $q->select();
-        } catch (\Throwable $e) {
-            if ($rc !== null && $rc !== '') {
-                $rows = Db::name($table)->field($fields)->where($st, 1)->whereIn($pk, $ids)->select();
-            } else {
-                return null;
-            }
-        }
-        if (!is_array($rows)) {
-            return null;
-        }
+        $rows = self::publishedResourceQuery($k)->field($fields)->whereIn($pk, $ids)->select()->toArray();
         $map = [];
         foreach ($rows as $row) {
             $map[(int)$row[$pk]] = $row;
@@ -485,9 +487,8 @@ class AiSearch
         if ($fromMeili !== null) {
             return $fromMeili;
         }
-        $rows = Db::name('Manga')
+        $rows = self::publishedResourceQuery('manga')
             ->field('manga_id,manga_name,manga_en,manga_pic,manga_author')
-            ->where('manga_status', 1)
             ->where(function($q) use ($kw) {
                 $q->where('manga_name', 'like', $kw)->whereOr('manga_sub', 'like', $kw)->whereOr('manga_tag', 'like', $kw)->whereOr('manga_blurb', 'like', $kw)->whereOr('manga_author', 'like', $kw);
             })
@@ -533,9 +534,8 @@ class AiSearch
         if ($fromMeili !== null) {
             return $fromMeili;
         }
-        $rows = Db::name('Topic')
+        $rows = self::publishedResourceQuery('topic')
             ->field('topic_id,topic_name,topic_en,topic_pic')
-            ->where('topic_status', 1)
             ->where(function($q) use ($kw) {
                 $q->where('topic_name', 'like', $kw)->whereOr('topic_sub', 'like', $kw)->whereOr('topic_tag', 'like', $kw)->whereOr('topic_blurb', 'like', $kw);
             })
@@ -560,9 +560,8 @@ class AiSearch
         if ($fromMeili !== null) {
             return $fromMeili;
         }
-        $rows = Db::name('Actor')
+        $rows = self::publishedResourceQuery('actor')
             ->field('actor_id,actor_name,actor_en,actor_pic')
-            ->where('actor_status', 1)
             ->where(function($q) use ($kw) {
                 $q->where('actor_name', 'like', $kw)->whereOr('actor_alias', 'like', $kw)->whereOr('actor_tag', 'like', $kw)->whereOr('actor_works', 'like', $kw);
             })
@@ -587,9 +586,8 @@ class AiSearch
         if ($fromMeili !== null) {
             return $fromMeili;
         }
-        $rows = Db::name('Role')
+        $rows = self::publishedResourceQuery('role')
             ->field('role_id,role_name,role_en,role_pic')
-            ->where('role_status', 1)
             ->where(function($q) use ($kw) {
                 $q->where('role_name', 'like', $kw)->whereOr('role_actor', 'like', $kw)->whereOr('role_remarks', 'like', $kw);
             })
@@ -614,9 +612,8 @@ class AiSearch
         if ($fromMeili !== null) {
             return $fromMeili;
         }
-        $rows = Db::name('Website')
+        $rows = self::publishedResourceQuery('website')
             ->field('website_id,website_name,website_en,website_pic')
-            ->where('website_status', 1)
             ->where(function($q) use ($kw) {
                 $q->where('website_name', 'like', $kw)->whereOr('website_sub', 'like', $kw)->whereOr('website_tag', 'like', $kw)->whereOr('website_blurb', 'like', $kw);
             })
@@ -642,9 +639,8 @@ class AiSearch
         if ($fromMeili !== null) {
             return $fromMeili;
         }
-        $rows = Db::name('Vod')
+        $rows = self::publishedResourceQuery('vod')
             ->field('vod_id,vod_name,vod_pic')
-            ->where('vod_status', 1)
             ->where(function($q) use ($kw) {
                 $q->where('vod_plot_name', 'like', $kw)->whereOr('vod_plot_detail', 'like', $kw);
             })
