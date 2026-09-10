@@ -172,7 +172,7 @@ class Role extends Base
 
         $roleId = intval($param['role_id']);
 
-        $res = Db::table('mac_role')->where(['role_id' => $roleId])->find();
+        $res = Db::name('role')->where(['role_id' => $roleId])->find();
         if (empty($res)) {
             return json(['code' => 1001, 'msg' => '数据不存在']);
         }

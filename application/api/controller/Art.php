@@ -211,9 +211,9 @@ class Art extends Base
         $info['art_prev'] = null;
         $info['art_next'] = null;
         if ($tid > 0 && $aid > 0) {
-            $prev = Db::table('mac_art')->where(['art_status' => 1, 'type_id' => $tid])->where('art_id', '<', $aid)
+            $prev = Db::name('art')->where(['art_status' => 1, 'type_id' => $tid])->where('art_id', '<', $aid)
                 ->order('art_id', 'desc')->field('art_id,art_name,art_en')->find();
-            $next = Db::table('mac_art')->where(['art_status' => 1, 'type_id' => $tid])->where('art_id', '>', $aid)
+            $next = Db::name('art')->where(['art_status' => 1, 'type_id' => $tid])->where('art_id', '>', $aid)
                 ->order('art_id', 'asc')->field('art_id,art_name,art_en')->find();
             if (!empty($prev)) {
                 $prev['art_link'] = mac_url_art_detail($prev);
@@ -421,7 +421,7 @@ class Art extends Base
             };
         }
 
-        $list = Db::table('mac_art')
+        $list = Db::name('art')
             ->field('art_id,art_name,art_sub,art_pic,art_author,art_blurb,art_time,art_hits,art_hits_month,art_points,art_remarks,type_id')
             ->where($where)
             ->order('art_' . $by . ' desc')
@@ -471,7 +471,7 @@ class Art extends Base
             };
         }
 
-        $list = Db::table('mac_art')
+        $list = Db::name('art')
             ->field('art_id,art_name,art_sub,art_pic,art_author,art_blurb,art_remarks,art_points,art_hits,art_time,type_id')
             ->where($where)
             ->order('art_time desc')

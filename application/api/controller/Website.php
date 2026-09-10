@@ -132,7 +132,7 @@ class Website extends Base
         }
 
         $wid = (int)$param['website_id'];
-        $res = Db::table('mac_website')->where(['website_id' => $wid, 'website_status' => 1])->find();
+        $res = Db::name('website')->where(['website_id' => $wid, 'website_status' => 1])->find();
         if (empty($res)) {
             return json(['code' => 1001, 'msg' => '数据不存在']);
         }

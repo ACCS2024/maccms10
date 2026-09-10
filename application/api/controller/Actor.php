@@ -133,7 +133,7 @@ class Actor extends Base
             ]);
         }
 
-        $res = Db::table('mac_actor')
+        $res = Db::name('actor')
             ->where('actor_id', (int) $param['actor_id'])
             ->where('actor_status', 'in', [0, 1])
             ->find();
@@ -186,7 +186,7 @@ class Actor extends Base
             $where['actor_id'] = $idArr;
         }
 
-        $list = Db::table('mac_actor')
+        $list = Db::name('actor')
             ->field('actor_id,actor_name,actor_pic,actor_sex,actor_area,actor_hits,actor_hits_month,actor_time')
             ->where($where)
             ->order('actor_' . $by . ' desc')

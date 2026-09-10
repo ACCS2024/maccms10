@@ -57,6 +57,7 @@ python3 tests/run_database_audit.py maccms-audit:8.4
 python3 tests/run_admin_database_audit.py maccms-audit:8.4
 python3 tests/run_cli_export_audit.py maccms-audit:8.4
 python3 tests/run_cli_import_audit.py maccms-audit:8.4
+python3 tests/run_api_prefix_audit.py maccms-audit:8.4
 python3 tests/run_baidu_urlsend_audit.py maccms-audit:8.4
 python3 tests/run_sdk_redirect_audit.py maccms-audit:8.4
 python3 tests/run_apache_boundary_audit.py maccms-audit:8.4

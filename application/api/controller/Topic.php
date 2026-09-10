@@ -103,7 +103,7 @@ class Topic extends Base
             ]);
         }
 
-        $result = Db::table('mac_topic')->where(['topic_id' => $param['topic_id']])->find();
+        $result = Db::name('topic')->where(['topic_id' => $param['topic_id']])->find();
 
         if ($result)
         {
@@ -117,7 +117,7 @@ class Topic extends Base
             {
                 $topic_rel_vod_arr = explode(',',$result['topic_rel_vod']);
                 foreach ($topic_rel_vod_arr as $index => $item) {
-                    $vod = Db::table('mac_vod')->where(['vod_id' => $item])->field('vod_id,vod_name,vod_en,vod_pic,vod_actor,vod_director,vod_blurb,vod_remarks,vod_score,vod_year,vod_area,vod_class,type_id,type_id_1')->find();
+                    $vod = Db::name('vod')->where(['vod_id' => $item])->field('vod_id,vod_name,vod_en,vod_pic,vod_actor,vod_director,vod_blurb,vod_remarks,vod_score,vod_year,vod_area,vod_class,type_id,type_id_1')->find();
                     if ($vod) {
                         $vod['vod_pic'] = mac_url_img($vod['vod_pic']);
                         $vod['vod_link'] = mac_url_vod_detail($vod);
@@ -132,7 +132,7 @@ class Topic extends Base
             {
                 $topic_rel_art_arr = explode(',',$result['topic_rel_art']);
                 foreach ($topic_rel_art_arr as $index => $item) {
-                    $art = Db::table('mac_art')->where(['art_id' => $item])->field('art_id,type_id,art_name,art_sub,art_en,art_pic,art_blurb,art_remarks,art_time')->find();
+                    $art = Db::name('art')->where(['art_id' => $item])->field('art_id,type_id,art_name,art_sub,art_en,art_pic,art_blurb,art_remarks,art_time')->find();
                     if ($art) {
                         $art['art_pic'] = mac_url_img($art['art_pic'] ?? '');
                         $art['art_link'] = mac_url_art_detail($art);
@@ -198,7 +198,7 @@ class Topic extends Base
 
             $byId = [];
             if (!empty($wantIds)) {
-                $dbList = Db::table('mac_topic')
+                $dbList = Db::name('topic')
                     ->field('topic_id,topic_name,topic_en,topic_sub,topic_pic,topic_pic_slide,topic_blurb,topic_rel_vod,topic_time,topic_hits,topic_status')
                     ->where('topic_id', 'in', $wantIds)
                     ->select();
@@ -264,7 +264,7 @@ class Topic extends Base
         $where = [];
         $where['topic_status'] = 1;
 
-        $list = Db::table('mac_topic')
+        $list = Db::name('topic')
             ->field('topic_id,topic_name,topic_en,topic_sub,topic_pic,topic_pic_slide,topic_blurb,topic_rel_vod,topic_time,topic_hits')
             ->where($where)
             ->order('topic_' . $by . ' desc')

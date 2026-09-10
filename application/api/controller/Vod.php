@@ -172,7 +172,7 @@ class Vod extends Base
             ]);
         }
 
-        $res = Db::table('mac_vod')->where(['vod_id' => $param['vod_id']])->find();
+        $res = Db::name('vod')->where(['vod_id' => $param['vod_id']])->find();
         if (empty($res)) {
             return json(['code' => 1001, 'msg' => '数据不存在']);
         }
@@ -296,7 +296,7 @@ class Vod extends Base
         $cacheKey = 'vod_meta_year_' . $tid1;
         $return = Cache::get($cacheKey);
         if ($return === null) {
-            $result = Db::table('mac_vod')
+            $result = Db::name('vod')
                 ->distinct(true)
                 ->field('vod_year')
                 ->where(['type_id_1' => $tid1, 'vod_status' => 1])
@@ -344,7 +344,7 @@ class Vod extends Base
         $cacheKey = 'vod_meta_class_' . $tid1;
         $return = Cache::get($cacheKey);
         if ($return === null) {
-            $result = Db::table('mac_vod')
+            $result = Db::name('vod')
                 ->distinct(true)
                 ->field('vod_class')
                 ->where(['type_id_1' => $tid1, 'vod_status' => 1])
@@ -392,7 +392,7 @@ class Vod extends Base
         $cacheKey = 'vod_meta_area_' . $tid1;
         $return = Cache::get($cacheKey);
         if ($return === null) {
-            $result = Db::table('mac_vod')
+            $result = Db::name('vod')
                 ->distinct(true)
                 ->field('vod_area')
                 ->where(['type_id_1' => $tid1, 'vod_status' => 1])
