@@ -742,6 +742,8 @@ https://www.baidu.com/123.jpg
     'model/user/visit_ok'=>'推广成功',
     'model/user/reward_tip'=>'用户【%s、%s】消费%s积分，获得奖励%s积分',
     'model/user/reward_ok'=>'分销提成成功',
+    'model/user/reward_err' => '返利操作未完成',
+    'model/financial/outcome_unknown' => '资金操作结果尚未确认，请先核对记录，勿重复提交。诊断编号：%s。',
     'model/user/account_disabled'=>'帐号已被禁用',
     'model/user/user_feature_closed'=>'用户功能未开放',
     'model/user/name_alnum_3_30'=>'用户名只能包含英文和数字，3-30位',

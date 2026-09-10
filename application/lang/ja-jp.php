@@ -685,6 +685,8 @@ https://www.baidu.com/123.jpg
   'model/user/visit_ok' => 'プロモーションに成功しました',
   'model/user/reward_tip' => 'ユーザー【%s、%s】は%sポイントを消費し、%sポイントの報酬を獲得しました',
   'model/user/reward_ok' => '販売手数料に成功しました',
+  'model/user/reward_err' => '紹介報酬の処理に失敗しました',
+  'model/financial/outcome_unknown' => '資金操作の結果を確認できません。再送信せず、先に記録を確認してください。診断番号：%s。',
   'model/user/account_disabled' => 'このアカウントは無効化されています',
   'model/user/user_feature_closed' => 'ユーザー機能は利用できません',
   'model/user/name_alnum_3_30' => 'ユーザー名は英数字のみ、3～30文字で入力してください',

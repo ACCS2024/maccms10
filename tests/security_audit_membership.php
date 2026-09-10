@@ -1,5 +1,7 @@
 <?php
 /** Atomic membership/reward regressions with real models, transactions and ledger validation. */
+require __DIR__ . '/fixtures/financial_before_begin.php';
+define('MEMBERSHIP_AUDIT_CONNECTION_CLASS', getenv('MEMBERSHIP_AUDIT_MYSQL') === '1' ? FinancialBeforeBeginMysql::class : FinancialBeforeBeginSqlite::class);
 require __DIR__ . '/fixtures/security_audit_membership_db.php';
 use think\facade\Db;
 use app\common\model\User;
@@ -50,14 +52,14 @@ check((new User())->upgrade($plan)['code'] !== 1 && membershipState() === $befor
 
 // Force a second request to complete after the first request has captured its global snapshot.
 membershipSeed(20);
-$manager->beforeStart = static function () use ($plan): void {
+$GLOBALS['financial_before_begin'] = static function () use ($plan): void {
     check((new User())->upgrade($plan)['code'] === 1, 'Concurrent winner failed');
 };
 check((new User())->upgrade($plan)['code'] !== 1, 'Two concurrent upgrades spent a balance sufficient for only one');
 check(memberRow()['user_points'] === 0 && Db::name('Plog')->count() === 4 && memberRow(2)['user_points'] === 2,
     'Concurrent losing request duplicated a charge or reward');
 membershipSeed(40);
-$manager->beforeStart = static function () use ($plan): void {
+$GLOBALS['financial_before_begin'] = static function () use ($plan): void {
     check((new User())->upgrade($plan)['code'] === 1, 'First funded renewal failed');
     $GLOBALS['member_first_expiry'] = memberRow()['user_end_time'];
 };

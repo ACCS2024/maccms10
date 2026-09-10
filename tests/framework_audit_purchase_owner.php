@@ -43,9 +43,10 @@ check(ownerBuy()['code']===2003&&$original->inTransaction()&&memberRow(1)['user_
 ownerSeed();$before=ownerState();$original=Db::connect();$result=ContentPurchase::buyVideo(1,function($user)use($manager){$manager->connect(null,true);return ownerQuote($user);});
 check($result['code']===2005&&ownerState()===$before,'Replacement after quote cannot redirect any debit, and original transaction is rolled back');
 check(!$original->getPdo()->inTransaction(),'Replacement preserves cleanup of the saved original owner');
-foreach(['orm_nested_begin_before','orm_nested_begin_after','orm_nested_commit_before','orm_nested_commit_after','orm_nested_rollback_before','orm_nested_rollback_after']as $stage){
+foreach(['orm_nested_begin_before','orm_nested_begin_after','orm_nested_commit_before','orm_nested_commit_after','caller_rollback_before','caller_rollback_after','caller_release_before','caller_release_after']as $stage){
     ownerSeed();$before=ownerState();if(str_contains($stage,'rollback'))$GLOBALS['member_fail_log_types']=[5];PurchaseOwnerFault::reset([$stage=>1]);$result=ownerBuy();
-    check($result['code']===($stage==='orm_nested_commit_after'?2005:2003)&&ownerState()===$before,'Nested referral errors unwind all owner state, and externally ended transactions are uncertain: '.$stage);
+    check($result['code']===2003&&ownerState()===$before,'Containing purchase owner confirms rollback of all effects after an isolated referral fault: '.$stage);
+    check((PurchaseOwnerFault::$calls[$stage]??0)>=1,'The actual referral transaction fault was reached: '.$stage);
     check(!Db::connect()->getPdo()->inTransaction(),'Nested referral fault leaves no owner transaction active: '.$stage);
 }
 ownerSeed();$before=ownerState();$result=ContentPurchase::buyVideo(1,function($user){Db::name('User')->where('user_id',1)->setDec('user_points',1);Db::connect()->getPdo()->commit();return ownerQuote($user);});

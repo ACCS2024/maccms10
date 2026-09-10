@@ -685,6 +685,8 @@ https://www.baidu.com/123.jpg
   'model/user/visit_ok' => '推廣成功',
   'model/user/reward_tip' => '用戶【%s、%s】消費%s積分，獲得獎勵%s積分',
   'model/user/reward_ok' => '分銷提成成功',
+  'model/user/reward_err' => '返利操作未完成',
+  'model/financial/outcome_unknown' => '資金操作結果尚未確認，請先核對紀錄，勿重複提交。診斷編號：%s。',
   'model/user/account_disabled' => '帳號已被停用',
   'model/user/user_feature_closed' => '用戶功能未開放',
   'model/user/name_alnum_3_30' => '用戶名只能包含英文和數字，3-30 位',

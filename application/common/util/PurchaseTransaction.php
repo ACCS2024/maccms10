@@ -9,7 +9,7 @@ final class PurchaseTransaction extends FinancialTransaction
     {
         parent::__construct(['user_id'=>$userId, 'ulog_mid'=>$resourceMid],
             static fn(string $reference): string => lang('index/buy_popedom_outcome_unknown', [$reference]),
-            lang('index/buy_popedom2'), $allowCaller);
+            ['code'=>2003, 'msg'=>lang('index/buy_popedom2')], $allowCaller);
     }
 
     /** Only normalized server-priced coordinates belong in the diagnostic event. */

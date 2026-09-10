@@ -685,6 +685,8 @@ https://www.baidu.com/123.jpg
   'model/user/visit_ok' => '프로모션 성공',
   'model/user/reward_tip' => '사용자【%s、%s】가 %s 포인트를 소비하고 %s 포인트를 보상으로 받았습니다.',
   'model/user/reward_ok' => '배포 수수료 성공',
+  'model/user/reward_err' => '추천 보상 처리를 완료하지 못했습니다',
+  'model/financial/outcome_unknown' => '금전 처리 결과를 확인할 수 없습니다. 다시 제출하기 전에 기록을 확인하세요. 진단 번호: %s.',
   'model/user/account_disabled' => '이 계정은 비활성화되었습니다',
   'model/user/user_feature_closed' => '사용자 기능을 사용할 수 없습니다',
   'model/user/name_alnum_3_30' => '사용자 이름은 영문과 숫자만 사용, 3~30자',

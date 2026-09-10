@@ -83,7 +83,8 @@ foreach(['before','after']as $position){
 foreach(['before','after']as $position){
  [$committed,$before,$pdo]=callerBegin();
  try{
-  $GLOBALS['member_fail_log_types']=[5];PurchaseOwnerFault::reset(['orm_nested_rollback_'.$position=>1]);$result=callerBuy();
+  $GLOBALS['member_fail_log_types']=[5];PurchaseOwnerFault::reset(['caller_rollback_'.$position=>1]);$result=callerBuy();
+  check((PurchaseOwnerFault::$calls['caller_rollback_'.$position]??0)>=1,'The actual inner referral partial rollback fault is exercised');
   check($result['code']===2003 && ownerState()===$before,'Referral rollback fault cannot cause the purchase to end its caller: '.$position);callerUntouched($pdo);
  }finally{callerEnd($pdo);}
 }
@@ -103,7 +104,7 @@ foreach(['caller_rollback_before','caller_rollback_after']as $stage){
 foreach(['before','after']as $position){
  [$committed,$before,$pdo]=callerBegin();
  try{
-  PurchaseOwnerFault::reset(['caller_release_'.$position=>1]);$result=callerBuy();
+  PurchaseOwnerFault::reset(['caller_release_'.$position=>2]);$result=callerBuy();
   check($result['code']===($position==='before'?2003:2005),'Release acknowledgement has a controlled result reflecting whether compensation was confirmed');
   check($pdo->inTransaction() && memberRow(1)['user_name']==='outer-sentinel','Release failure cannot end the outer transaction');
   check(memberRow(1)['user_points']===($position==='before'?100:80),'Release failure does not invent a confirmed financial rollback');

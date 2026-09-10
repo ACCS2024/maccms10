@@ -685,6 +685,8 @@ https://www.baidu.com/123.jpg
   'model/user/visit_ok' => 'Promoção bem-sucedida',
   'model/user/reward_tip' => 'Usuário 【%s、%s】 gastou %s pontos e recebeu %s pontos de recompensa',
   'model/user/reward_ok' => 'Comissão de distribuição bem-sucedida',
+  'model/user/reward_err' => 'Não foi possível concluir a comissão de indicação',
+  'model/financial/outcome_unknown' => 'Não foi possível confirmar a operação financeira. Verifique os registos antes de voltar a enviar. Referência de diagnóstico: %s.',
   'model/user/account_disabled' => 'Esta conta foi desativada',
   'model/user/user_feature_closed' => 'As funções de utilizador não estão disponíveis',
   'model/user/name_alnum_3_30' => 'O nome de utilizador só pode conter letras e números, 3–30 caracteres',

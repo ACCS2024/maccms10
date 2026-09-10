@@ -18,10 +18,27 @@ abstract class FinancialTransaction
     private object $request;
     private string $reference;
     private string $uncertainMessage;
-    private string $failureMessage;
+    private array $failureResult;
     private ?int $callerDepth = null;
     private string $savepoint;
     private bool $savepointConfirmed = false;
+
+    /** Current server-owned table names only; schema checks use the same writer as the operation. */
+    public static function requireTables(array $tables): void
+    {
+        $connection = Db::connect();
+        if (!$connection instanceof \think\db\PDOConnection) { throw new \RuntimeException('Financial storage requires PDO'); }
+        $type = $connection->getConfig('type');
+        if ($type === 'sqlite') { return; }
+        if ($type !== 'mysql' || $tables === []) { throw new \RuntimeException('Unsupported financial storage'); }
+        $rows = $connection->query('SELECT TABLE_NAME AS name, ENGINE AS engine FROM information_schema.TABLES '
+            . 'WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME IN (' . implode(',', array_fill(0, count($tables), '?')) . ')', $tables, true);
+        foreach ($rows as $row) {
+            $index = array_search($row['name'], $tables, true);
+            if ($index !== false && strtoupper((string)$row['engine']) === 'INNODB') { unset($tables[$index]); }
+        }
+        if ($tables !== []) { throw new \RuntimeException('Financial operations require transactional tables'); }
+    }
 
     private static function requestContext(): object
     {
@@ -40,14 +57,14 @@ abstract class FinancialTransaction
         return $previous;
     }
 
-    protected function __construct(array $context, callable $unknownMessage, string $failureMessage, bool $allowCaller)
+    protected function __construct(array $context, callable $unknownMessage, array $failureResult, bool $allowCaller)
     {
         $this->context = $context;
         $this->request = self::requestContext();
         // Prepare the diagnostic identity and translation before any financial transaction begins.
         $this->reference = bin2hex(random_bytes(12));
         $this->uncertainMessage = $unknownMessage($this->reference);
-        $this->failureMessage = $failureMessage;
+        $this->failureResult = $failureResult;
         $this->savepoint = 'mac_financial_' . $this->reference;
         $connection = Db::connect();
         if (!$connection instanceof \think\db\PDOConnection || $connection->getConfig('break_reconnect')) {
@@ -84,6 +101,8 @@ abstract class FinancialTransaction
         $this->beginConfirmed = true;
         $this->assertActive();
     }
+
+    public function ownsTransaction(): bool { return $this->callerDepth === null; }
 
     private function sameConnection(): bool
     {
@@ -210,7 +229,7 @@ abstract class FinancialTransaction
             if (!$this->callerActive()) { throw new \RuntimeException('Caller changed during savepoint release'); }
             return $this->result = $result;
         } catch (\Throwable $error) {
-            return $this->rollbackCaller(['code'=>2003, 'msg'=>$this->failureMessage]);
+            return $this->rollbackCaller($this->failureResult);
         }
     }
 

@@ -12,7 +12,7 @@
 | AI 封面并发与恢复 | 双 PHP 隔离复现：目标 Vod 删除后仍成功、覆盖并发编辑、DB 拒写前源文件已删、未统一解码、还原主图后保留 AI 缩略图 | 生成需校验当前资源并原子绑定引用；还原旧缩略图需要可靠备份，不能凭空恢复。缓存更新失败应与已提交结果区分 |
 | 内容购买 owner 收尾（F1a） | `f15a1285` 的原 PDO 身份、有限清理、未知付款响应和 Request 阻止；真实 SQLite/MySQL BEGIN、ROLLBACK、COMMIT 前后故障均有证据 | 普通 `buy` 的调用方 SAVEPOINT 路径另列 F1b；独立返利及其它金融事务另列 F2；跨请求持久操作编号和核对器尚未实现 |
 | 调用方 SAVEPOINT（F1b） | 私有 SAVEPOINT 隔离兼容 buy，确认局部回滚后才恢复层级；不结束/关闭调用方 PDO；未知结果要求调用方中止并阻止同上下文再次购买；双 PHP SQLite/MySQL 各 127 项，见[报告](purchase-caller-savepoints.md) | 未知状态必须由调用方中止整个原事务，跨请求核对与通用 rollback-only 尚无；独立返利等 F2 仍待处理。三个正式锁内报价入口继续使用 owner 合同 |
-| 共享金融机制 / 独立返利（F2） | 已从购买抽取 FinancialTransaction，原 owner/caller 双数据库检查继续通过；直接 reward 的 BEGIN 遗留、已提交却抛失败、未确认回滚及外层标记丢失均有双版双库证据，见[报告](financial-transaction-core.md) | 返利、会员升级和订单外层尚未接入；需要保持原 PDO 清理与未知结果传播，不可认为有公共组件就已经修复全部调用者 |
+| 共享金融机制 / 返利会员（F2） | `a478462e` 抽取公共机制；返利和会员已接入原 PDO 收尾/私有保存点，补足实际落库验证和提交后 Cookie；双版 SQLite 192 / MySQL 195 项，见[报告](reward-membership-transactions.md) | F2c 订单外层尚未接入；内层未知清理必须传播到原物理事务拥有者，单次 ORM rollback 不足以证明整个事务结束；持久核对另审 |
 | 附件 owner 收尾 | `6330cd84` 修复 BEGIN 标记过晚与回滚不明时删除文件；保留原 PDO、私有清单、已发布文件和同 Request 阻止 | 独立 StorageIntent 事务、主动删除和跨请求恢复仍待验证；关闭 ORM 引用不能当作物理回滚证据 |
 | 旧数据库返回值 | level 5 多处 int 返回值与 false 比较；AI 封面零影响行伪成功已有真实证据 | 分清插入失败、对象删除、合法幂等更新与异常抛出；不全局将 `=== false` 改成 `=== 0` |
 | 网页中的隐式 DDL | 新 Manga 读取不经 infoData/cache/自动加列，并区分实际缺少可选列与查询失败 | 遗留 infoData 和后台初始化仍有自动迁移入口；需要显式升级前置条件、迁移和缺列受控行为 |

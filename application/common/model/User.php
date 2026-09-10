@@ -1060,8 +1060,10 @@ class User extends Base
         if ($result['code'] !== 1) {
             return $result;
         }
-        cookie('group_id', $group_id, ['expire'=>2592000]);
-        cookie('group_name', $group_info['group_name'] ?? '', ['expire'=>2592000]);
+        if (empty($result['info']['transaction_pending'])) {
+            cookie('group_id', $group_id, ['expire'=>2592000]);
+            cookie('group_name', $group_info['group_name'] ?? '', ['expire'=>2592000]);
+        }
         return $result;
     }
 
@@ -1092,8 +1094,10 @@ class User extends Base
         if ($result['code'] !== 1) {
             return $result;
         }
-        cookie('group_id', $group_id, ['expire'=>2592000]);
-        cookie('group_name', $group_info['group_name'] ?? '', ['expire'=>2592000]);
+        if (empty($result['info']['transaction_pending'])) {
+            cookie('group_id', $group_id, ['expire'=>2592000]);
+            cookie('group_name', $group_info['group_name'] ?? '', ['expire'=>2592000]);
+        }
         return $result;
     }
 
@@ -1109,38 +1113,58 @@ class User extends Base
     /** Deduction, membership and every associated ledger entry share one transaction. */
     private function applyMembershipUpgrade(int $user_id, int $group_id, int $point, int $seconds, string $remark = ''): array
     {
-        Db::startTrans();
+        $failure = ['code'=>1009, 'msg'=>lang('model/user/update_group_err')];
+        $insufficient = ['code'=>1005, 'msg'=>lang('model/user/potins_not_enough')];
+        $success = ['code'=>1, 'msg'=>lang('model/user/update_group_ok')];
+        if (($blocked = \app\common\util\MembershipTransaction::blockedResult()) !== null) { return $blocked; }
+        $scope = null;
         try {
-            $current = $this->where('user_id', $user_id)->lock(true)->find();
-            if (!$current || (int)$current['user_points'] < $point) {
-                Db::rollback();
-                return ['code'=>1005,'msg'=>lang('model/user/potins_not_enough')];
+            \app\common\util\FinancialTransaction::requireTables([Db::name('User')->getTable(), Db::name('Plog')->getTable()]);
+            $scope = new \app\common\util\MembershipTransaction($user_id, $group_id, $point);
+            $scope->begin();
+            $current = $this->master()->where('user_id', $user_id)->lock(true)->find();
+            $balance = $current ? \app\common\util\PointsBalance::amount($current['user_points'] ?? null, true) : null;
+            if ($balance === null || $balance < $point) {
+                return $scope->rollback($insufficient);
             }
             $end_time = max(time(), (int)($current['user_end_time'] ?? 0)) + $seconds;
+            if ($end_time > 4294967295) { throw new \RuntimeException('membership expiration exceeds storage'); }
             if ($point > 0) {
-                $affected = $this->where('user_id', $user_id)->where('user_points', '>=', $point)
+                $affected = $this->where('user_id', $user_id)->where('user_points', $balance)
                     ->setDec('user_points', $point);
                 if ($affected !== 1) {
-                    Db::rollback();
-                    return ['code'=>1005,'msg'=>lang('model/user/potins_not_enough')];
+                    return $scope->rollback($insufficient);
                 }
             }
             $updated = $this->where('user_id', $user_id)->update(['user_end_time'=>$end_time, 'group_id'=>$group_id]);
             if ($updated !== 1) {
                 throw new \RuntimeException('membership update failed');
             }
-            $log = (new \app\common\model\Plog())->saveData([
+            $storedUser = $this->master()->where('user_id', $user_id)->find();
+            foreach (['user_points'=>$balance-$point, 'group_id'=>$group_id, 'user_end_time'=>$end_time] as $field=>$value) {
+                if (!$storedUser || (string)$storedUser[$field] !== (string)$value) { throw new \RuntimeException('membership fields were not stored exactly'); }
+            }
+            $scope->assertActive();
+            $expected = [
                 'user_id'=>$user_id, 'plog_type'=>7, 'plog_points'=>$point, 'plog_remarks'=>$remark,
-            ]);
+            ];
+            $ledger = new \app\common\model\Plog();
+            $log = $ledger->saveData($expected);
             if (($log['code'] ?? null) !== 1) {
                 throw new \RuntimeException('membership ledger failed');
             }
+            $stored = Db::name('Plog')->master()->where('plog_id', $ledger->getLastInsID())->find();
+            foreach ($expected as $field=>$value) {
+                if (!$stored || (string)$stored[$field] !== (string)$value) { throw new \RuntimeException('membership ledger was not stored exactly'); }
+            }
+            $scope->assertActive();
             $this->reward($point, $user_id);
-            Db::commit();
-            return ['code'=>1,'msg'=>lang('model/user/update_group_ok')];
+            $scope->assertActive();
+            $result = $scope->commit($success);
+            if ($result['code'] === 1 && !$scope->ownsTransaction()) { $result['info']['transaction_pending'] = true; }
+            return $result;
         } catch (\Throwable $e) {
-            Db::rollback();
-            return ['code'=>1009,'msg'=>lang('model/user/update_group_err')];
+            return $scope !== null ? $scope->rollback($failure) : $failure;
         }
     }
 
@@ -1559,20 +1583,17 @@ class User extends Base
         if ($fee_points === null || $source_user_id === null) {
             throw new \RuntimeException('invalid reward parameters');
         }
-        $type = Db::connect()->getConfig('type');
-        if ($type === 'mysql') {
-            $tables = [Db::name('User')->getTable(), Db::name('Plog')->getTable()];
-            $rows = Db::query('SELECT TABLE_NAME AS name, ENGINE AS engine FROM information_schema.TABLES '
-                .'WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME IN (?,?)', $tables, true);
-            foreach ($rows as $row) {
-                $index = array_search($row['name'], $tables, true);
-                if ($index !== false && strtoupper((string)$row['engine']) === 'INNODB') { unset($tables[$index]); }
-            }
-            if ($tables !== []) { throw new \RuntimeException('reward requires transactional tables'); }
-        } elseif ($type !== 'sqlite') { throw new \RuntimeException('unsupported reward storage'); }
-        Db::startTrans();
+        $failure = ['code'=>2003, 'msg'=>lang('model/user/reward_err')];
+        $success = ['code'=>1, 'msg'=>lang('model/user/reward_ok')];
+        if (($blocked = \app\common\util\RewardTransaction::blockedResult()) !== null) {
+            throw new \app\common\util\FinancialOperationException($blocked);
+        }
+        $scope = null;
         try {
-            $source = $this->where('user_id', $source_user_id)->find();
+            \app\common\util\FinancialTransaction::requireTables([Db::name('User')->getTable(), Db::name('Plog')->getTable()]);
+            $scope = new \app\common\util\RewardTransaction($source_user_id, $fee_points);
+            $scope->begin();
+            $source = $this->master()->where('user_id', $source_user_id)->lock(true)->find();
             if (!$source) {
                 throw new \RuntimeException('reward source missing');
             }
@@ -1614,13 +1635,15 @@ class User extends Base
                         throw new \RuntimeException('reward ledger was not stored exactly');
                     }
                 }
+                $scope->assertActive();
             }
-            Db::commit();
-            return ['code'=>1,'msg'=>lang('model/user/reward_ok')];
+            $result = $scope->commit($success);
         } catch (\Throwable $e) {
-            Db::rollback();
-            throw new \RuntimeException('reward transaction failed', 0, $e);
+            $result = $scope !== null ? $scope->rollback($failure) : $failure;
+            throw new \app\common\util\FinancialOperationException($result, $e);
         }
+        if ($result['code'] !== 1) { throw new \app\common\util\FinancialOperationException($result); }
+        return $result;
     }
 
     /**
