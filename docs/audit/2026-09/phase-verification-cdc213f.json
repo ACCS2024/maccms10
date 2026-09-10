@@ -1,0 +1,90 @@
+{
+  "source_commit": "cdc213fd5d73ef001a4aaf4aa413b7fe557cba19",
+  "source_tree": "dfff3de47a279254a6d6f1551ea70c0a09ad8e42",
+  "production_lock_sha256": "17864e7bf115eb91c0742eeb52c3cd4fea60e3a6b1ae7dc4bc146e3a0250e438",
+  "audit_tool_lock_sha256": "ba1aa580779290fd1437b74d0efce6a3c2a25900c8f28469731d0e65ff79bf5c",
+  "scope": "isolated committed source with clean locked production vendor; excludes unrelated working-tree changes",
+  "installed_compilation": [
+    {
+      "php": "8.3.33",
+      "checked": 5332,
+      "failed": 0,
+      "skipped": [],
+      "scope": "all installed PHP",
+      "report_sha256": "8724c1c595380c724c7c6e428e6529fa31de401ee25eae231c47e399a7bf95ad"
+    },
+    {
+      "php": "8.4.25",
+      "checked": 5332,
+      "failed": 0,
+      "skipped": [],
+      "scope": "all installed PHP",
+      "report_sha256": "33d83318dae113154c34520d0ff6a216a1f4db6d2f3c5f05191eeeb3cb9ddd76"
+    }
+  ],
+  "default_regressions": [
+    {
+      "php": "8.3.33",
+      "processes": 128,
+      "failures": 0,
+      "suites": [
+        "unit",
+        "models",
+        "financial",
+        "upload",
+        "storage"
+      ]
+    },
+    {
+      "php": "8.4.25",
+      "processes": 128,
+      "failures": 0,
+      "suites": [
+        "unit",
+        "models",
+        "financial",
+        "upload",
+        "storage"
+      ]
+    }
+  ],
+  "static_analysis": {
+    "runtime": "8.4.25",
+    "phpstan_target": "8.4",
+    "phpcompatibility_target": "8.3-8.4",
+    "summary": {
+      "phpstan": {
+        "exit": 1,
+        "totals": {
+          "errors": 0,
+          "file_errors": 422
+        }
+      },
+      "phpcompatibility": {
+        "exit": 2,
+        "totals": {
+          "errors": 0,
+          "warnings": 8,
+          "fixable": 0
+        }
+      }
+    },
+    "phpstan_categories": {
+      "staticMethod.notFound": 119,
+      "property.notFound": 8,
+      "constant.notFound": 37,
+      "isset.variable": 1,
+      "empty.variable": 18,
+      "variable.undefined": 219,
+      "unset.variable": 4,
+      "constructor.unusedParameter": 1,
+      "class.notFound": 1,
+      "array.duplicateKey": 14
+    },
+    "source_reports_sha256": {
+      "phpstan.json": "3451a57f1c008f9cca4175d2655b859ba914397037355b5df45e9ffccbd5a692",
+      "phpcompatibility.json": "5c3b78ed60f97372e0552827e724ac21c185c7d472cfae50fc3d91cc3c6f6cf9"
+    }
+  },
+  "status": "ongoing; no production deployment or completeness claim"
+}

@@ -23,4 +23,4 @@
 
 阶段分类入口：[框架与运行边界](framework.md)、[安全与账务](security.md)、[静态候选](static-candidate-triage.md)。后续专项报告分别记录对应提交范围与验证限制；以每个提交的测试快照为准。
 
-最新完整快照记录：[1a36cb4 阶段验证](phase-verification-1a36cb4.md)。已安装依赖也纳入双版本原生编译；后续组的专项回归继续独立记账。
+最新固定快照记录：[cdc213f 阶段验证与后续批次](phase-verification-cdc213f.md)，含双版本 5,332 文件编译、各 128 默认回归进程，以及新一轮静态分类。较早记录保留于 [1a36cb4 阶段验证](phase-verification-1a36cb4.md)；后续组仍独立验证和记账。

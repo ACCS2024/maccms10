@@ -27,3 +27,24 @@
 提交 `d5e4f5d` 的固定快照已使用同一工具重新完成：PHPStan 1038 条文件候选、0 全局错误；PHPCompatibility 仍为 0 错误、8 警告。相对 a6de166，动态静态方法提示由 102 变为 115，empty 提示由 19 变为 18，旧 Dir 参数数目错误已消失，其余类别数量相同。这些增量不能直接解释为新增 11 个漏洞。
 
 643 条语言覆盖已逐个解析分类：627 个键完全同值（629 条后续冗余声明），16 个键有冲突。前者按最终值与键顺序完全不变原则清理，后者保留逐条处置，见 [语言键分类](language-key-triage.md)。此后源码的预期候选减少不等于该快照已重新跑完全部分析器；每次结果都明确对应版本。
+
+## cdc213f 重扫
+
+固定源码与工具锁见 [阶段记录](phase-verification-cdc213f.json)。在相同 level 1、目标 PHP 8.4 下完整运行，422 条文件诊断、0 全局错误；PHPCompatibility 目标 8.3–8.4 仍为 0 错误、8 警告。语言同值冗余清理后诊断大幅减少，不能把减少条数解释为同样数量的漏洞修复。
+
+| 标识 | 数量 | 当前分类 |
+| --- | ---: | --- |
+| variable.undefined | 219 | 190 条旧 include 更新 SQL，15 条 Vod 分支局部变量，10 条 URL 兜底分支，2 条 Payment 参数约束分支，1 条附件提交状态分支，1 条用户原有迁移文件 |
+| staticMethod.notFound | 119 | 本轮全部为 Db 动态门面；锁定 ORM 的转发与真实数据库测试提供执行证据，未加全局忽略 |
+| constant.notFound | 37 | 运行期入口常量；仍按调用入口核对，不能整体标为安全 |
+| empty.variable | 18 | Collection/数组及控制流分别核对；同类扩查继续发现未迁移的 Collection 消费者 |
+| array.duplicateKey | 14 | 剩余语言冲突，保留人工决定最终文案 |
+| property.notFound | 8 | AiTask 的模型映射；已有实际 schema/生命周期回归，不能改为普通动态属性掩盖字段映射 |
+| unset.variable | 4 | 原变量释放候选，未为降低条数机械删除 |
+| isset.variable | 1 | 已定义局部变量的冗余判断 |
+| constructor.unusedParameter | 1 | 保留旧 Database 构造调用合同 |
+| class.notFound | 1 | GeoIp2 遗留 catch；实际 IpLocationQuery 自动加载正常，没有缺包必然致命的路径 |
+
+已读过的 Vod 删除组分支、URL 兜底、Payment 经 parameters 限定的 mid/type 和 LocalAttachment 提交前 manifest 分支都有赋值前提；静态工具未传播全部相关条件。此解释限于这些分支，不代表其它输入类型、SQL 或业务策略已经全面核实。190 条 include 候选仍随更新来源与执行入口一起治理，用户原有迁移文件继续保留，不进行顺手修复。
+
+8 条兼容警告仍为 7 个构造函数 exit 生命周期提示和 1 个配置混合换行提示，均不是原生编译失败。原始两份工具 JSON 的 SHA-256 已保存；没有加入 baseline、ignoreErrors 或人为修改工具结果来归零。
