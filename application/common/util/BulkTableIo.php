@@ -85,7 +85,7 @@ class BulkTableIo
         if ($bom !== "\xEF\xBB\xBF") {
             rewind($handle);
         }
-        $headers = fgetcsv($handle);
+        $headers = fgetcsv($handle, null, ',', '"', '\\');
         if ($headers === false || empty($headers)) {
             fclose($handle);
             return ['headers' => [], 'rows' => []];
@@ -94,7 +94,7 @@ class BulkTableIo
             return trim((string)$h);
         }, $headers);
         $rows = [];
-        while (($line = fgetcsv($handle)) !== false) {
+        while (($line = fgetcsv($handle, null, ',', '"', '\\')) !== false) {
             if ($line === [null] || $line === false) {
                 continue;
             }
@@ -276,13 +276,13 @@ class BulkTableIo
         header('Content-Disposition: attachment; filename="' . $filename . '"');
         echo "\xEF\xBB\xBF";
         $out = fopen('php://output', 'w');
-        fputcsv($out, $headers);
+        fputcsv($out, $headers, ',', '"', '\\');
         foreach ($list as $row) {
             $line = [];
             foreach ($headers as $h) {
                 $line[] = isset($row[$h]) ? $row[$h] : '';
             }
-            fputcsv($out, $line);
+            fputcsv($out, $line, ',', '"', '\\');
         }
         fclose($out);
     }
