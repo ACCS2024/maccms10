@@ -516,7 +516,10 @@ class User extends Base
     public function pay()
     {
         $param = \think\facade\Request::param();
-        $order_code = htmlspecialchars(urldecode(trim($param['order_code'])));
+        $order_code = $param['order_code'] ?? null;
+        if (!is_string($order_code) || !preg_match('/^[A-Za-z0-9_-]{1,30}$/D', $order_code)) {
+            return $this->error(lang('param_err'));
+        }
         $where = [];
         $where['order_code'] = $order_code;
         $where['user_id'] = $GLOBALS['user']['user_id'];
@@ -539,15 +542,26 @@ class User extends Base
     {
         $param = \think\facade\Request::param();
 
-        $order_code = htmlspecialchars(urldecode(trim($param['order_code'])));
-        $order_id = intval((trim($param['order_id'])));
-        $payment = strtolower(htmlspecialchars(urldecode(trim($param['payment']))));
-
-        if (empty($order_code) && empty($order_id) && empty($payment)) {
+        $order_code = $param['order_code'] ?? null;
+        $order_id = $param['order_id'] ?? null;
+        $payment = $param['payment'] ?? null;
+        if (!is_string($order_code) || !preg_match('/^[A-Za-z0-9_-]{1,30}$/D', $order_code)
+            || (!is_int($order_id) && !is_string($order_id))
+            || !preg_match('/^[1-9][0-9]{0,9}$/D', (string)$order_id) || (float)$order_id > 4294967295
+            || !is_string($payment) || !preg_match('/^[A-Za-z][A-Za-z0-9_]{0,9}$/D', $payment)) {
             return $this->error(lang('param_err'));
         }
-
-        if ($GLOBALS['config']['pay'][$payment]['appid'] == '') {
+        $order_id = (int)$order_id;
+        $payment = strtolower($payment);
+        foreach (['paytype', 'type'] as $option) {
+            if (isset($param[$option]) && !is_string($param[$option]) && !is_int($param[$option])) {
+                return $this->error(lang('param_err'));
+            }
+        }
+        $provider = $GLOBALS['config']['pay'][$payment] ?? null;
+        $cp = 'app\\common\\extend\\pay\\' . ucfirst($payment);
+        if (!is_array($provider) || !is_scalar($provider['appid'] ?? null)
+            || trim((string)$provider['appid']) === '' || !class_exists($cp) || !method_exists($cp, 'submit')) {
             return $this->error(lang('index/payment_status'));
         }
 
@@ -567,16 +581,23 @@ class User extends Base
         //跳转到相应页面
         $this->assign('param',$param);
 
-        $cp = 'app\\common\\extend\\pay\\' . ucfirst($payment);
-        if (class_exists($cp)) {
-            $c = new $cp;
-            $payment_res = $c->submit($GLOBALS['user'], $res['info'], $param);
+        try {
+            $payment_res = (new $cp())->submit($GLOBALS['user'], $res['info'], $param);
+        } catch (\Throwable $e) {
+            return $this->error(lang('index/payment_status'));
         }
-        //$payment_res = model('Pay' . $payment)->submit($this->user, $res['info'], $param);
-        if ($payment == 'weixin') {
+        if ($payment === 'weixin') {
+            if (!is_array($payment_res) || !is_string($payment_res['code_url'] ?? null)
+                || !str_starts_with($payment_res['code_url'], 'weixin://')) {
+                return $this->error(lang('index/payment_status'));
+            }
             $this->assign('payment', $payment_res);
             return $this->fetch('user/payment_weixin');
         }
+        if ($payment_res === false) {
+            return $this->error(lang('index/payment_status'));
+        }
+        return $payment_res;
     }
 
     public function qrcode()
