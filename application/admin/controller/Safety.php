@@ -37,7 +37,7 @@ class Safety extends Base
     public function file()
     {
         $param = \think\facade\Request::param();
-        if($param['ck']){
+        if(!empty($param['ck'])){
             $ft = $param['ft'];
             if(empty($ft)){
                 $ft = ['1','2'];
@@ -86,7 +86,7 @@ class Safety extends Base
     public function data()
     {
         $param = \think\facade\Request::param();
-        if ($param['ck']) {
+        if (!empty($param['ck'])) {
             $pre = config('database.connections.mysql.prefix');
             $schema = Db::query('select * from information_schema.columns where table_schema = ?', [Db::connect()->getConfig('database')]);
             $col_list = [];
@@ -95,7 +95,7 @@ class Safety extends Base
                 $col_list[$v['TABLE_NAME']][$v['COLUMN_NAME']] = $v;
             }
             $tables = ['actor', 'art', 'gbook', 'link', 'topic', 'type', 'vod'];
-            $param['tbi'] = intval($param['tbi']);
+            $param['tbi'] = max(0, intval($param['tbi'] ?? 0));
             if ($param['tbi'] >= count($tables)) {
                 mac_echo(lang('admin/safety/data_clear_ok'));
                 die;
@@ -135,9 +135,15 @@ class Safety extends Base
                     }
                 }
                 if (!empty($where)) {
-                    $field = array_keys($where);
+                    $field = array_column($where, 0);
                     $field[] = $tables[$si] . '_id';
-                    $list = Db::name($pre_tb)->field($field)->whereOr($where)->select();
+                    $list = Db::name($pre_tb)->field($field)->where(function ($query) use ($where) {
+                        foreach ($where as [$column, $operator, $patterns]) {
+                            foreach ($patterns as $pattern) {
+                                $query->whereOr($column, $operator, $pattern);
+                            }
+                        }
+                    })->select();
 
                     mac_echo(lang('admin/safety/data_check_tip2',[count($list)]));
                     foreach ($list as $k3 => $v3) {
