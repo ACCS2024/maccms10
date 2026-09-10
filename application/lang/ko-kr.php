@@ -1754,6 +1754,7 @@ https://www.baidu.com/123.jpg
   'admin/batch/io_row' => '%s번째 행',
     'admin/batch/io_unknown' => '%s 행의 저장 결과가 확인되지 않아 가져오기를 중단했습니다. 해당 행과 이미 가져온 기록을 확인하세요. 파일 전체를 다시 가져오지 마세요.',
     'admin/batch/io_pending' => '%s 행을 저장했습니다. 중복 동영상 목록을 갱신해야 합니다.',
+    'admin/batch/io_columns' => '%s 행, %s 열의 매핑이 명확하지 않습니다. 중복, 누락 또는 지원하지 않는 머리글과 누락된 셀을 확인하세요. 필드를 지우려면 빈 셀을 명시하세요.',
 
   'admin/template/title' => '템플릿 관리',
   'admin/template/ads/title' => '광고 공간 관리',

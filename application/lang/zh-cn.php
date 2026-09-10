@@ -2089,6 +2089,7 @@ https://www.baidu.com/123.jpg
     'admin/batch/io_row'=>'第 %s 行',
     'admin/batch/io_unknown' => '第 %s 行保存结果未确认，导入已停止。请核对该行及已导入记录，勿重复导入整份文件。',
     'admin/batch/io_pending' => '%s 行已保存，视频重复目录待更新。',
+    'admin/batch/io_columns' => '文件第 %s 行、第 %s 列映射不明确。请检查重复、缺失或不支持的表头，以及缺少的单元格。清空字段请保留明确的空单元格。',
 
 
     'admin/template/title'=>'模板管理',

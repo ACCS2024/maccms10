@@ -1760,6 +1760,7 @@ Note: Si les listes noires et blanches sont remplies, les stratégies s\'appliqu
   'admin/batch/io_row' => 'Ligne %s',
     'admin/batch/io_unknown' => 'Enregistrement de la ligne %s non confirmé. Import arrêté. Vérifiez cette ligne et les données déjà importées ; ne réimportez pas tout le fichier.',
     'admin/batch/io_pending' => '%s lignes enregistrées ; le catalogue des vidéos en double reste à actualiser.',
+    'admin/batch/io_columns' => 'Correspondance ambiguë à la ligne %s, colonne %s. Vérifiez les en-têtes dupliqués, absents ou non pris en charge et les cellules manquantes. Pour vider un champ, indiquez une cellule explicitement vide.',
 
   'admin/template/title' => 'Gestion des modèles',
   'admin/template/ads/title' => 'Gestion des espaces publicitaires',

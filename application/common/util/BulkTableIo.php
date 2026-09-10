@@ -1,6 +1,8 @@
 <?php
 namespace app\common\util;
 
+require_once __DIR__ . '/ImportColumnException.php';
+
 /**
  * CSV / XLSX 批量导入导出（无第三方依赖，xlsx 依赖 ZipArchive）
  */
@@ -149,6 +151,7 @@ class BulkTableIo
         if (count($line) !== $columns) { throw new \RuntimeException('CSV field boundaries are inconsistent'); }
         if (!$headerRead) {
             $headers = array_map(static fn($header) => trim((string)$header), $line);
+            self::validateHeaders($headers);
             $headerRead = true;
             return;
         }
@@ -157,12 +160,32 @@ class BulkTableIo
             if ($cell !== '' && $cell !== null) { $allEmpty = false; break; }
         }
         if ($allEmpty) { return; }
+        if (count($line) < count($headers)) {
+            throw new ImportColumnException($records, count($line) + 1);
+        }
+        foreach ($line as $index => $cell) {
+            if (($headers[$index] ?? '') === '' && $cell !== '' && $cell !== null) {
+                throw new ImportColumnException($records, $index + 1);
+            }
+        }
         $row = [];
         foreach ($headers as $index => $header) {
             if ($header !== '') { $row[$header] = $line[$index] ?? ''; }
         }
         $rows[] = $row;
         $rowNumbers[] = $records; // CSV logical records include the header and blank records, not embedded cell newlines.
+    }
+
+    /** Blank spacer columns are allowed only when every corresponding data cell is empty. */
+    public static function validateHeaders(array $headers): void
+    {
+        $seen = [];
+        foreach ($headers as $index => $header) {
+            if ($header === '') { continue; }
+            if (isset($seen[$header])) { throw new ImportColumnException(1, $index + 1); }
+            $seen[$header] = true;
+        }
+        if ($seen === []) { throw new ImportColumnException(1, 1); }
     }
 
     public static function parseCellRef($ref)

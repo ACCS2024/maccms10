@@ -76,6 +76,21 @@ namespace {
             check(importCall($module,$files)['code']===0 && is_file($path),'Missing/failed/multiple/unsupported upload returns a controlled error and preserves fixture files');
         }
         check($GLOBALS['import_model_calls']===0,'Ingress rejection never enters a content save');
+        foreach([
+            ["$id,$name,type_id,$body\n7,Must not save,1,new\n7,Short,1\n",3,4],
+            ["$id,$name,type_id,$name\n7,First,1,Second\n",1,4],
+            [ucfirst($id).",$name,type_id\n7,Must not insert,1\n",1,1],
+            ["$id,$name,type_id,unknown_content\n7,Must not save,1,new\n",1,4],
+            ["$id,$name,type_id,\n7,Must not save,1,\n0,Second,1,Ordinary note\n",3,4],
+            ["$id,$name,type_id\n7,Must not save,1\n0,Second,1,Ordinary note\n",3,4],
+            ["$id,$name\n7,Missing type header\n",1,3],
+        ]as [$source,$sourceRow,$sourceColumn]){
+            $seed();$before=Db::name(ucfirst($module))->order($id)->select()->toArray();$beforeCalls=$GLOBALS['import_model_calls'];file_put_contents($path,$source);
+            $result=importCall($module,importFile($path));
+            check($result['code']===0 && $result['data']===['status'=>'invalid_columns','row'=>$sourceRow,'column'=>$sourceColumn],'Whole-file mapping preflight reports the exact source coordinate');
+            check($GLOBALS['import_model_calls']===$beforeCalls && Db::name(ucfirst($module))->order($id)->select()->toArray()===$before,'No valid prefix row is saved before a later mapping failure');
+        }
+        file_put_contents($path,$ordinary);
         foreach(['csv','txt','CSV']as $extension){
             $seed();$result=importCall($module,importFile($path,'ordinary.'.$extension));$row=Db::name(ucfirst($module))->where($id,7)->find();
             check($result['code']===1 && $result['data']['status']==='completed' && $result['data']['saved']===1,'Real CSV/TXT import propagates success and counts');

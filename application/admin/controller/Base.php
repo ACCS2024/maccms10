@@ -307,6 +307,8 @@ class Base extends All
             $upload = \app\common\util\ImportUpload::inspect($this->request->file('file'),
                 ['csv', 'txt', 'xlsx'], BulkTableIo::MAX_IMPORT_BYTES);
             $parsed = BulkTableIo::parseFile($upload['path'], $upload['extension'], true);
+        } catch (\app\common\util\ImportColumnException $error) {
+            return $this->importColumnError($error->row, $error->column);
         } catch (\Throwable $error) {
             return $this->error(lang('import_err'));
         }
@@ -316,6 +318,13 @@ class Base extends All
             $fields = $this->importFields($table);
         } catch (\Throwable $error) {
             return $this->error(lang('save_err'));
+        }
+        // An unknown ID/content header must not silently turn an update into an insert or lose a column.
+        foreach ($parsed['headers'] as $index => $header) {
+            if ($header !== '' && !in_array($header, $fields, true)) { return $this->importColumnError(1, $index + 1); }
+        }
+        if (!in_array($table . '_name', $parsed['headers'], true) || !in_array('type_id', $parsed['headers'], true)) {
+            return $this->importColumnError(1, count($parsed['headers']) + 1);
         }
         $summary = ['total' => count($parsed['rows']), 'saved' => 0, 'failed' => 0,
             'unknown' => 0, 'unprocessed' => 0, 'repeat_index_pending' => 0, 'errors' => []];
@@ -385,6 +394,12 @@ class Base extends All
             return $this->error($msg, null, $summary);
         }
         return $summary['saved'] > 0 ? $this->success($msg, null, $summary) : $this->error($msg, null, $summary);
+    }
+
+    private function importColumnError(int $row, int $column)
+    {
+        return $this->error(lang('admin/batch/io_columns', [$row, $column]), null,
+            ['status' => 'invalid_columns', 'row' => $row, 'column' => $column]);
     }
 
     /** Read current writer metadata; a query's master option does not cover getTableFields(). */

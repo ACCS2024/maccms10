@@ -5,7 +5,7 @@ require dirname(__DIR__).'/application/common/util/BulkTableIo.php';
 require __DIR__.'/fixtures/security_audit_test_helpers.php';
 use app\common\util\BulkTableIo;
 $cases=['empty','bom','standard','rows_limit','rows_over','columns_limit','columns_over',
-    'cells_limit','cells_over','padding_limit','padding_over','record_limit','record_over',
+    'cells_limit','cells_over','short_rows','short_rows_many','record_limit','record_over',
     'bytes_limit','bytes_over','dense_fields','multiline','unclosed','trailing_text'];
 if (($argv[1]??'')!=='--case') {
     foreach ($cases as $case) {
@@ -45,9 +45,9 @@ try {
         case 'cells_limit':case 'cells_over':
             fputcsv($handle,array_map(static fn($i)=>'h'.$i,range(1,100)),',','"','');
             csvBudgetRepeat($handle,str_repeat('ordinary,',99)."ordinary\n",$case==='cells_limit'?999:1000);break;
-        case 'padding_limit':case 'padding_over':
+        case 'short_rows':case 'short_rows_many':
             fputcsv($handle,array_map(static fn($i)=>'h'.$i,range(1,256)),',','"','');
-            csvBudgetRepeat($handle,"ordinary\n",$case==='padding_limit'?390:391);break;
+            csvBudgetRepeat($handle,"ordinary\n",$case==='short_rows'?390:391);break;
         case 'record_limit':case 'record_over':
             fwrite($handle,"note\n");csvBudgetRepeat($handle,str_repeat('a',1024),8192);
             fwrite($handle,$case==='record_over'?"b\n":"\n");break;
@@ -62,7 +62,7 @@ try {
         case 'trailing_text':fwrite($handle,"note\n\"ordinary\"extra\n");break;
     }
     fclose($handle);$handle=null;
-    $reject=str_ends_with($case,'_over')||in_array($case,['dense_fields','unclosed','trailing_text'],true);
+    $reject=str_ends_with($case,'_over')||in_array($case,['short_rows','short_rows_many','dense_fields','unclosed','trailing_text'],true);
     $result=null;$error=null;
     try { $result=BulkTableIo::parseCsv($path); } catch (RuntimeException $caught) { $error=$caught; }
     check(($error!==null)===$reject,'Parser must accept/reject the complete file at its documented boundary: '.$case);
@@ -74,7 +74,6 @@ try {
         if($case==='rows_limit')check(count($result['rows'])===2000,'Import row limit must not truncate a valid last row');
         if($case==='columns_limit')check(count($result['headers'])===256&&count($result['rows'][0])===256,'Column limit preserves all values');
         if($case==='cells_limit')check(count($result['rows'])===999&&count($result['rows'][998])===100,'Input cell budget includes the header');
-        if($case==='padding_limit')check(count($result['rows'])===390&&count($result['rows'][389])===256,'Missing cells are budgeted before padding');
         if($case==='record_limit')check(strlen($result['rows'][0]['note'])===8388608,'A full-size record with a newline is accepted exactly');
         if($case==='bytes_limit')check(filesize($path)===BulkTableIo::MAX_IMPORT_BYTES&&count($result['rows'])===3
             &&array_sum(array_map('strlen',array_column($result['rows'],'note')))===BulkTableIo::MAX_IMPORT_BYTES-8,'Whole-file limit retains every byte of its three records');

@@ -1749,6 +1749,7 @@ Hinweis: Wenn sowohl Blacklist als auch Whitelist ausgefüllt sind, werden beide
   'admin/batch/io_row' => 'Zeile %s',
     'admin/batch/io_unknown' => 'Das Speicherergebnis für Zeile %s ist unbestätigt. Import gestoppt. Prüfen Sie diese Zeile und bereits importierte Datensätze; importieren Sie nicht die gesamte Datei erneut.',
     'admin/batch/io_pending' => '%s Zeilen gespeichert; der Katalog doppelter Videos muss aktualisiert werden.',
+    'admin/batch/io_columns' => 'Unklare Zuordnung in Zeile %s, Spalte %s. Prüfen Sie doppelte, fehlende oder nicht unterstützte Überschriften und fehlende Zellen. Zum Leeren eines Feldes eine ausdrücklich leere Zelle angeben.',
   'admin/template/title' => 'Vorlagen-Verwaltung',
   'admin/template/ads/title' => 'Werbeplatz-Verwaltung',
   'admin/template/wizard/title' => 'Tag-Assistent-Verwaltung',

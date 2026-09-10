@@ -338,8 +338,14 @@ final class XlsxTableReader
         }
         $headers = [];
         for ($col = 0; $col <= $maxCol; $col++) { $headers[] = trim($grid[0][$col] ?? ''); }
+        BulkTableIo::validateHeaders($headers);
         unset($grid[0]); ksort($grid); $rows = []; $rowNumbers = [];
         foreach ($grid as $rowNumber => $columns) {
+            foreach ($columns as $col => $value) {
+                if ($headers[$col] === '' && $value !== '') {
+                    throw new ImportColumnException($rowNumber + 1, $col + 1);
+                }
+            }
             $data = []; $nonempty = false;
             foreach ($headers as $col => $header) {
                 if ($header !== '') { $data[$header] = $columns[$col] ?? ''; $nonempty = $nonempty || $data[$header] !== ''; }

@@ -1906,6 +1906,7 @@ Note: If both black and white lists are filled, both policies will take effect.'
   'admin/batch/io_row' => 'Line %s',
     'admin/batch/io_unknown' => 'The save outcome for row %s is unconfirmed. Import stopped. Check this row and existing imported records before continuing; do not reimport the entire file.',
     'admin/batch/io_pending' => '%s rows were saved; the video duplicate catalog needs updating.',
+    'admin/batch/io_columns' => 'Ambiguous mapping at row %s, column %s. Check duplicate, missing or unsupported headers and missing cells. To clear a field, include an explicit empty cell.',
   
   'admin/template/title' => 'Template Management',
   'admin/template/ads/title' => 'Ad Space Management',
