@@ -36,6 +36,7 @@ class Comment extends Base {
             $where = json_decode($where,true);
         }
         $offset = ($limit * ($page-1) + $start);
+        $total = 0;
         if($totalshow==1) {
             $total = $this->where($where)->count();
         }

@@ -89,7 +89,8 @@ class Base extends Model
         }
         $final = [];
         foreach ($list as $row) {
-            $row_array = $row->getData();
+            // Collection::toArray() 已将模型转换为数组，非空列表不能再调用模型方法。
+            $row_array = $row;
             if ($transform !== false) {
                 $row_array = $this->transformRow($row_array, $transform);
             }
