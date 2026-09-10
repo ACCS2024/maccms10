@@ -31,6 +31,12 @@ class Cj {
         $this->_error = $msg;
     }
 
+    /** 本类不是 Model；按实际目标表过滤表单字段，不实例化不存在的 cj 表。 */
+    private function filterFields(array $data, string $table): array
+    {
+        return array_intersect_key($data, array_flip(Db::name($table)->getTableFields()));
+    }
+
     public function listData($tab,$where,$order,$page,$limit=20)
     {
         $page = $page > 0 ? (int)$page : 1;
