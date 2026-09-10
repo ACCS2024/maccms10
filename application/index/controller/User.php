@@ -11,6 +11,9 @@ class User extends Base
 {
     public function __construct()
     {
+        if (in_array(strtolower(request()->action()), ['write_token', 'ajax_buy_popedom'], true)) {
+            $this->persistExpiredMemberGroup = false;
+        }
         parent::__construct();
 
         if (!defined('THIRD_LOGIN_CALLBACK')) {
@@ -20,7 +23,7 @@ class User extends Base
 
         //判断用户登录状态
         $ac = request()->action();
-        $guestAllowedActions = ['login', 'logout', 'ajax_login', 'reg', 'regcheck', 'findpass', 'findpass_msg', 'findpass_reset', 'reg_msg', 'oauth', 'logincallback', 'visit', 'index', 'ajax_upgrade'];
+        $guestAllowedActions = ['login', 'logout', 'ajax_login', 'reg', 'regcheck', 'findpass', 'findpass_msg', 'findpass_reset', 'reg_msg', 'oauth', 'logincallback', 'visit', 'index', 'ajax_upgrade', 'write_token', 'ajax_buy_popedom'];
         $guestAllowedGetActions = ['buy', 'plays', 'upgrade', 'checkin'];
         if (in_array($ac, $guestAllowedActions) || (in_array($ac, $guestAllowedGetActions) && !Request()->isPost())) {
             // 游客可访问的页面也注入 obj，避免模板判断分支缺少变量
@@ -101,7 +104,9 @@ class User extends Base
 
     public function ajax_buy_popedom()
     {
-        $param = \app\common\util\ContentPurchase::parameters(Request::param());
+        $identity = \app\common\util\MemberWrite::authorize(request());
+        if ($identity['code'] !== 1) { return json($identity); }
+        $param = \app\common\util\ContentPurchase::parameters(Request::post());
         if ($param === null) { return json(['code'=>2001, 'msg'=>lang('param_err')]); }
         $data = [];
         $data['ulog_mid'] = intval($param['mid']) <=0 ? 1: intval($param['mid']);
@@ -113,7 +118,7 @@ class User extends Base
             return json(['code' => 2001, 'msg' => lang('param_err')]);
         }
         $data['ulog_type'] = $param['type'];
-        $data['user_id'] = $GLOBALS['user']['user_id'];
+        $data['user_id'] = $identity['info']['user_id'];
 
         $where = [];
         if($param['mid']=='12'){
@@ -158,7 +163,21 @@ class User extends Base
             $data['ulog_points'] = intval($res['info'][$col]);
         }
 
-        return json(\app\common\util\ContentPurchase::buy($GLOBALS['user']['user_id'], $data));
+        return json(\app\common\util\ContentPurchase::buy($identity['info']['user_id'], $data));
+    }
+
+    /** Same-origin clients fetch this after login; it is never embedded in a cached public page. */
+    public function write_token()
+    {
+        if (request()->method(true) !== 'GET' || request()->method() !== 'GET') {
+            $result = ['code'=>1001, 'msg'=>lang('param_err')];
+        } else {
+            $identity = \app\common\util\MemberWrite::identity();
+            $result = $identity['code'] === 1
+                ? ['code'=>1, 'info'=>['csrf_token'=>\app\common\util\SessionCsrf::issue()]] : $identity;
+        }
+        return json($result)->header(['Cache-Control'=>'private, no-store', 'Pragma'=>'no-cache',
+            'X-Content-Type-Options'=>'nosniff', 'Vary'=>'Cookie, Authorization']);
     }
 
     public function index()

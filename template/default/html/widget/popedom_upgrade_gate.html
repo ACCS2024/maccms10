@@ -77,7 +77,7 @@ $(function(){
 	}
 	function isPointsNotEnough(resp){
 		if(!resp) return false;
-		if(Number(resp.code) === 1005) return true;
+		if(Number(resp.code) === 1005 || Number(resp.code) === 2002) return true;
 		var msg = String(resp.msg || '');
 		return ((msg.indexOf('金币') > -1 || msg.indexOf('积分') > -1) && msg.indexOf('不') > -1) || msg.toLowerCase().indexOf('not enough') > -1;
 	}
@@ -89,42 +89,22 @@ $(function(){
 				return;
 			}
 			var $btn = $(this);
-			var reqUrl = ((typeof maccms !== 'undefined' && maccms.base_url) ? maccms.base_url : '') + '/index.php/user/ajax_buy_popedom.html?id='
-				+ encodeURIComponent($btn.attr('data-id') || '')
-				+ '&mid=' + encodeURIComponent($btn.attr('data-mid') || '')
-				+ '&sid=' + encodeURIComponent($btn.attr('data-sid') || '')
-				+ '&nid=' + encodeURIComponent($btn.attr('data-nid') || '')
-				+ '&type=' + encodeURIComponent($btn.attr('data-type') || '');
-			$btn.addClass('disabled');
-			$.ajax({
-				url: reqUrl,
-				type: 'get',
-				dataType: 'json',
-				success: function(r){
-					if(typeof MAC !== 'undefined' && MAC.Pop && MAC.Pop.Msg){
-						MAC.Pop.Msg(300, 50, r.msg || '', 2000);
-					}else if(r && r.msg){
-						MAC.alert(r.msg);
+			MAC.User.BuyPopedomRequest($btn, function(r){
+				if(typeof MAC !== 'undefined' && MAC.Pop && MAC.Pop.Msg){
+					MAC.Pop.Msg(300, 50, r.msg || '', 2000);
+				}else if(r && r.msg){
+					MAC.alert(r.msg);
+				}
+				if(r && Number(r.code) === 1){
+					top.location.reload();
+					return;
+				}
+				if(isPointsNotEnough(r)){
+					if(typeof window.openRechargeModal === 'function'){
+						setTimeout(function(){ window.openRechargeModal(); }, 500);
+					}else{
+						location.href = $gate.attr('data-user-buy-url') || '/index.php/user/buy';
 					}
-					if(r && Number(r.code) === 1){
-						top.location.reload();
-						return;
-					}
-					if(isPointsNotEnough(r)){
-						if(typeof window.openRechargeModal === 'function'){
-							setTimeout(function(){
-								window.openRechargeModal();
-							}, 500);
-						}else{
-							location.href = $gate.attr('data-user-buy-url') || '/index.php/user/buy';
-						}
-					}
-				},
-				error: function(){
-					MAC.alert('请求失败，请稍后再试');
-				},
-				complete: function(){
-					$btn.removeClass('disabled');
 				}
 			});
 			return;

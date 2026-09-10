@@ -54,10 +54,11 @@ jobs:
           node --check static/js/user-unbind.js
           node tests/security_audit_order_price_js.js
           node tests/framework_audit_auto_registration_frontend.js
+          node tests/framework_audit_purchase_frontend.js
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - name: Browser upload protocols and mandatory CSRF
+      - name: Browser upload and purchase protocols with mandatory CSRF
         run: |
           set -euo pipefail
           npm ci --prefix tests/browser --ignore-scripts --no-audit --no-fund
@@ -68,6 +69,8 @@ jobs:
           test -n "$browser_binary"
           "$browser_binary" --version
           CHROMIUM_BINARY="$browser_binary" PHP_BINARY=php node tests/browser/upload_csrf.cjs
+          CHROMIUM_BINARY="$browser_binary" node tests/browser/purchase_csrf.cjs
+          CHROMIUM_BINARY="$browser_binary" PHP_BINARY=php node tests/browser/purchase_csrf_php.cjs
       - name: Prepare dedicated MySQL fixtures and verify InnoDB schema
         run: |
           set -euo pipefail
@@ -86,6 +89,7 @@ jobs:
           printf 'MAC_MYSQL=mysql --default-character-set=utf8mb4 %s -h127.0.0.1 -uroot -paudit-fixture maccms_audit_http\n' "$tls" >> "$GITHUB_ENV"
       - name: MySQL model regressions
         env:
+          PURCHASE_CSRF_MYSQL: '1'
           FRAMEWORK_AUDIT_MYSQL: '1'
           FRAMEWORK_AUDIT_HOST: 127.0.0.1
           FRAMEWORK_AUDIT_PASSWORD: audit-fixture

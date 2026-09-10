@@ -705,17 +705,62 @@ var MAC = {
                 $(window.frames["player_if"].document).find(".MacPlayer").html(h);
             }, 1000 * 10 * trysee);
         },
+        'BuyPopedomRequest': function (o, onResult) {
+            var $button = $(o);
+            if ($button.data('mac-buy-busy')) { return; }
+            var finished = false;
+            var failure = {code: 1001, msg: '请求失败，请稍后重试'};
+            function finish(response) {
+                if (finished) { return; }
+                finished = true;
+                $button.removeData('mac-buy-busy').removeClass('disabled').removeAttr('aria-disabled');
+                if (!response || typeof response !== 'object' || typeof response.msg !== 'string'
+                    || !/^[0-9]+$/.test(String(response.code))) { response = failure; }
+                onResult(response);
+            }
+            var endpoint;
+            try {
+                var base = (typeof maccms !== 'undefined' && typeof maccms.path === 'string') ? maccms.path : '';
+                endpoint = new URL(base.replace(/\/+$/, '') + '/index.php/user/', window.location.href);
+                if (endpoint.origin !== window.location.origin || endpoint.username || endpoint.password || endpoint.search || endpoint.hash) {
+                    finish(failure);
+                    return;
+                }
+            } catch (error) { finish(failure); return; }
+            var data = {};
+            $.each(['mid', 'id', 'type', 'sid', 'nid'], function (index, field) {
+                data[field] = $button.attr('data-' + field) || ((field === 'sid' || field === 'nid') ? '0' : '');
+            });
+            $button.data('mac-buy-busy', true).addClass('disabled').attr('aria-disabled', 'true');
+            try {
+                $.ajax({
+                    url: endpoint.href + 'write_token', type: 'get', dataType: 'json', cache: false, timeout: 15000,
+                    success: function (response) {
+                        if (!response || Number(response.code) !== 1 || !response.info
+                            || typeof response.info.csrf_token !== 'string' || response.info.csrf_token === '') {
+                            finish(response && Number(response.code) !== 1 ? response : failure);
+                            return;
+                        }
+                        data.csrf_token = response.info.csrf_token;
+                        try {
+                            $.ajax({
+                                url: endpoint.href + 'ajax_buy_popedom.html', type: 'post', dataType: 'json', data: data, timeout: 15000,
+                                success: finish,
+                                error: function () { finish(failure); }
+                            });
+                        } catch (error) { finish(failure); }
+                    },
+                    error: function () { finish(failure); }
+                });
+            } catch (error) { finish(failure); }
+        },
         'BuyPopedom': function (o) {
             var $that = $(o);
-            if ($that.attr("data-id")) {
+            if ($that.attr('data-id') && !$that.data('mac-buy-busy')) {
                 if (confirm('您确认购买此条数据访问权限吗？')) {
-                    MAC.Ajax(maccms.path + '/index.php/user/ajax_buy_popedom.html?id=' + $that.attr("data-id") + '&mid=' + $that.attr("data-mid") + '&sid=' + $that.attr("data-sid") + '&nid=' + $that.attr("data-nid") + '&type=' + $that.attr("data-type"), 'get', 'json', '', function (r) {
-                        $that.addClass('disabled');
-                        MAC.Pop.Msg(300, 50, r.msg, 2000);
-                        if (r.code == 1) {
-                            top.location.reload();
-                        }
-                        $that.removeClass('disabled');
+                    MAC.User.BuyPopedomRequest(o, function (response) {
+                        MAC.Pop.Msg(300, 50, response.msg, 2000);
+                        if (Number(response.code) === 1) { top.location.reload(); }
                     });
                 }
             }

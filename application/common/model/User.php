@@ -833,7 +833,7 @@ class User extends Base
         return ['code' => 1, 'msg' =>lang('model/user/logout_ok')];
     }
 
-    public function checkLogin()
+    public function checkLogin(bool $persistExpiredGroup = true)
     {
         $jwt = JwtService::bearerFromRequest();
         if ($jwt !== '' && JwtService::isEnabled()) {
@@ -856,7 +856,7 @@ class User extends Base
                 return ['code' => 1003, 'msg' => lang('model/user/not_login')];
             }
 
-            return $this->finalizeUserLoginPayload($info, $whereJwt);
+            return $this->finalizeUserLoginPayload($info, $whereJwt, $persistExpiredGroup);
         }
 
         $user_id = cookie('user_id');
@@ -893,7 +893,7 @@ class User extends Base
             return ['code' => 1003, 'msg' => lang('model/user/not_login')];
         }
 
-        return $this->finalizeUserLoginPayload($info, $where);
+        return $this->finalizeUserLoginPayload($info, $where, $persistExpiredGroup);
     }
 
     /**
@@ -904,7 +904,7 @@ class User extends Base
      *
      * @return array
      */
-    private function finalizeUserLoginPayload(array $info, array $whereUpdate)
+    private function finalizeUserLoginPayload(array $info, array $whereUpdate, bool $persistExpiredGroup = true)
     {
         $group_list = (new \app\common\model\Group())->getCache('group_list');
         $group_ids = explode(',', $info['group_id']);
@@ -942,15 +942,19 @@ class User extends Base
             $update = [];
             $update['group_id'] = 2;
 
-            $res = $this->where($whereUpdate)->update($update);
-            if($res < 1){
-                return ['code' => 1004, 'msg' => lang('model/user/update_expire_err')];
+            if ($persistExpiredGroup) {
+                $res = $this->where($whereUpdate)->update($update);
+                if ($res < 1) {
+                    return ['code' => 1004, 'msg' => lang('model/user/update_expire_err')];
+                }
             }
 
             $info['group_id'] = 2;
             $info['groups'] = [$group_list[2]];
-            cookie('group_id', $info['group']['group_id'], ['expire'=>2592000] );
-            cookie('group_name', $info['group']['group_name'],['expire'=>2592000] );
+            if ($persistExpiredGroup) {
+                cookie('group_id', $info['group']['group_id'], ['expire'=>2592000] );
+                cookie('group_name', $info['group']['group_name'],['expire'=>2592000] );
+            }
         }
 
         return ['code' => 1, 'msg' => lang('model/user/haved_login'), 'info' => $info];

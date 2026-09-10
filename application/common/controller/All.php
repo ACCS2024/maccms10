@@ -5,6 +5,7 @@ use think\facade\Request;
 
 class All
 {
+    protected bool $persistExpiredMemberGroup = true;
     var $_ref;
     var $_cl;
     var $_ac;
@@ -201,7 +202,7 @@ class All
         $authorization = request()->header('authorization');
         $res = ['code' => 1001];
         if (($authorization === null || is_string($authorization)) && ($hasLoginCookies || $authorization !== null && $authorization !== '')) {
-            $res = (new \app\common\model\User())->checkLogin();
+            $res = (new \app\common\model\User())->checkLogin($this->persistExpiredMemberGroup);
         }
         if($res['code'] == 1){
             $user = $res['info'];

@@ -18,6 +18,9 @@ class Payment extends Base
 
     public function __construct()
     {
+        if (strtolower(request()->action()) === 'buy_popedom') {
+            $this->persistExpiredMemberGroup = false;
+        }
         parent::__construct();
         // notify 回调不做 API 开关检查，其他方法需要
         $ac = request()->action();
@@ -371,10 +374,10 @@ class Payment extends Base
      */
     public function buy_popedom(\think\Request $request)
     {
-        $auth = $this->_checkLogin();
-        if (!$auth['ok']) return $auth['response'];
+        $identity = \app\common\util\MemberWrite::authorize($request);
+        if ($identity['code'] !== 1) { return json($identity); }
 
-        $param = \app\common\util\ContentPurchase::parameters($request->param());
+        $param = \app\common\util\ContentPurchase::parameters($request->post());
         if ($param === null || $param['mid'] === 12) { return json(['code'=>1001, 'msg'=>lang('param_err')]); }
 
         $data  = [];
@@ -384,7 +387,7 @@ class Payment extends Base
         $data['ulog_nid'] = intval($param['nid'] ?? 0);
 
         $data['ulog_type'] = intval($param['type']);
-        $data['user_id']   = $auth['user_id'];
+        $data['user_id']   = $identity['info']['user_id'];
 
         // 查询资源信息以获取所需积分
         if ($param['type'] == '1') {
@@ -416,7 +419,7 @@ class Payment extends Base
         }
         $data['ulog_points'] = intval($res['info'][$col]);
 
-        $result = \app\common\util\ContentPurchase::buy($auth['user_id'], $data);
+        $result = \app\common\util\ContentPurchase::buy($identity['info']['user_id'], $data);
         $result['code'] = [2001=>1001, 2002=>1005, 2003=>1006][$result['code']] ?? $result['code'];
         return json($result);
     }
