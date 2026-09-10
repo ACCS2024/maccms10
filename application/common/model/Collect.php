@@ -1333,9 +1333,9 @@ class Collect extends Base {
                 $param['page'] = intval($data['page']['page']) + 1;
                 $res = $this->vod($param);
                 if($res['code']>1){
-                    return $this->error($res['msg']);
+                    return $res;
                 }
-                $this->vod_data($param,$res );
+                return $this->vod_data($param,$res );
             }
             $this->collectCacheClear();
             mac_echo(lang('model/collect/is_over'));
@@ -1754,9 +1754,9 @@ class Collect extends Base {
                 $param['page'] = intval($data['page']['page']) + 1;
                 $res = $this->art($param);
                 if($res['code']>1){
-                    return $this->error($res['msg']);
+                    return $res;
                 }
-                $this->art_data($param,$res );
+                return $this->art_data($param,$res );
             }
             $this->collectCacheClear();
             mac_echo(lang('model/collect/is_over'));
@@ -2060,9 +2060,9 @@ class Collect extends Base {
                 $param['page'] = intval($data['page']['page']) + 1;
                 $res = $this->actor($param);
                 if($res['code']>1){
-                    return $this->error($res['msg']);
+                    return $res;
                 }
-                $this->actor_data($param,$res );
+                return $this->actor_data($param,$res );
             }
             $this->collectCacheClear();
             mac_echo(lang('model/collect/is_over'));
@@ -2347,9 +2347,9 @@ class Collect extends Base {
                 $param['page'] = intval($data['page']['page']) + 1;
                 $res = $this->role($param);
                 if($res['code']>1){
-                    return $this->error($res['msg']);
+                    return $res;
                 }
-                $this->role_data($param,$res );
+                return $this->role_data($param,$res );
             }
             $this->collectCacheClear();
             mac_echo(lang('model/collect/is_over'));
@@ -2654,11 +2654,11 @@ class Collect extends Base {
             Cache::delete($key);
             if ($data['page']['page'] < $data['page']['pagecount']) {
                 $param['page'] = intval($data['page']['page']) + 1;
-                $res = $this->actor($param);
+                $res = $this->website($param);
                 if($res['code']>1){
-                    return $this->error($res['msg']);
+                    return $res;
                 }
-                $this->website_data($param,$res );
+                return $this->website_data($param,$res );
             }
             $this->collectCacheClear();
             mac_echo(lang('model/collect/is_over'));
@@ -2833,6 +2833,7 @@ class Collect extends Base {
                 }
 
                 if(empty($v['rel_id'])){
+                    $rel_info = null;
                     if($v['comment_mid']==1){
                         if(!empty($v['douban_id'])){
                             $where2['vod_douban_id'] = $v['douban_id'];
@@ -2864,7 +2865,7 @@ class Collect extends Base {
                         $rel_info = (new \app\common\model\Website())->where($where2)->find();
                     }
 
-                    $rel_id = $rel_info[mac_get_mid_code($v['comment_mid']).'_id'];
+                    $rel_id = $rel_info[mac_get_mid_code($v['comment_mid']).'_id'] ?? 0;
                 }
                 else{
                     $rel_id = $v['rel_id'];
@@ -2933,9 +2934,9 @@ class Collect extends Base {
                 $param['page'] = intval($data['page']['page']) + 1;
                 $res = $this->comment_json($param);
                 if($res['code']>1){
-                    return $this->error($res['msg']);
+                    return $res;
                 }
-                $this->comment_data($param,$res );
+                return $this->comment_data($param,$res );
             }
             $this->collectCacheClear();
             mac_echo(lang('model/collect/is_over'));
@@ -3271,9 +3272,9 @@ class Collect extends Base {
                 $param['page'] = intval($data['page']['page']) + 1;
                 $res = $this->manga($param);
                 if($res['code']>1){
-                    return $this->error($res['msg']);
+                    return $res;
                 }
-                $this->manga_data($param,$res );
+                return $this->manga_data($param,$res );
             }
             $this->collectCacheClear();
             mac_echo(lang('model/collect/is_over'));
