@@ -1,6 +1,6 @@
 <?php
 namespace app\common\util;
-class Dir {
+class Dir implements \IteratorAggregate {
 
     private $_values = array();
     public $error = "";
@@ -42,12 +42,9 @@ class Dir {
      * 取得目录下面的文件信息
      * @param mixed $pathname 路径
      */
-    public static function listFile($pathname, $pattern = '*') {
-        static $_listDirs = array();
-        $guid = md5($pathname . $pattern);
-        if (!isset($_listDirs[$guid])) {
+    public function listFile($pathname, $pattern = '*') {
             $dir = array();
-            $list = glob($pathname . $pattern);
+            $list = glob($pathname . $pattern) ?: [];
             foreach ($list as $i => $file) {
                 //$dir[$i]['filename']    = basename($file);
                 //basename取中文名出问题.改用此方法
@@ -63,12 +60,12 @@ class Dir {
                 $dir[$i]['ctime'] = filectime($file);
                 $dir[$i]['size'] = filesize($file);
                 $dir[$i]['type'] = filetype($file);
-                $dir[$i]['ext'] = is_file($file) ? strtolower(substr(strrchr(basename($file), '.'), 1)) : '';
+                $dir[$i]['ext'] = is_file($file) ? strtolower(pathinfo($file, PATHINFO_EXTENSION)) : '';
                 $dir[$i]['mtime'] = filemtime($file);
                 $dir[$i]['isDir'] = is_dir($file);
                 $dir[$i]['isFile'] = is_file($file);
                 $dir[$i]['isLink'] = is_link($file);
-                //$dir[$i]['isExecutable']= function_exists('is_executable')?is_executable($file):'';
+                $dir[$i]['isExecutable'] = is_executable($file);
                 $dir[$i]['isReadable'] = is_readable($file);
                 $dir[$i]['isWritable'] = is_writable($file);
             }
@@ -81,10 +78,6 @@ class Dir {
                 return $a[$k] > $b[$k] ? -1 : 1;
             });
             $this->_values = $dir;
-            $_listDirs[$guid] = $dir;
-        } else {
-            $this->_values = $_listDirs[$guid];
-        }
     }
 
     /**
@@ -102,27 +95,27 @@ class Dir {
      * 文件上次访问时间
      * @return integer
      */
-    public static function getATime() {
+    public function getATime() {
         $current = $this->current($this->_values);
-        return $current['atime'];
+        return $current['atime'] ?? false;
     }
 
     /**
      * 取得文件的 inode 修改时间
      * @return integer
      */
-    public static function getCTime() {
+    public function getCTime() {
         $current = $this->current($this->_values);
-        return $current['ctime'];
+        return $current['ctime'] ?? false;
     }
 
     /**
      * 遍历子目录文件信息
      * @return DirectoryIterator
      */
-    public static function getChildren() {
+    public function getChildren() {
         $current = $this->current($this->_values);
-        if ($current['isDir']) {
+        if (!empty($current['isDir'])) {
             return new Dir($current['pathname']);
         }
         return false;
@@ -132,36 +125,36 @@ class Dir {
      * 取得文件名
      * @return string
      */
-    public static function getFilename() {
+    public function getFilename() {
         $current = $this->current($this->_values);
-        return $current['filename'];
+        return $current['filename'] ?? false;
     }
 
     /**
      * 取得文件的组
      * @return integer
      */
-    public static function getGroup() {
+    public function getGroup() {
         $current = $this->current($this->_values);
-        return $current['group'];
+        return $current['group'] ?? false;
     }
 
     /**
      * 取得文件的 inode
      * @return integer
      */
-    public static function getInode() {
+    public function getInode() {
         $current = $this->current($this->_values);
-        return $current['inode'];
+        return $current['inode'] ?? false;
     }
 
     /**
      * 取得文件的上次修改时间
      * @return integer
      */
-    public static function getMTime() {
+    public function getMTime() {
         $current = $this->current($this->_values);
-        return $current['mtime'];
+        return $current['mtime'] ?? false;
     }
 
     /**
@@ -170,109 +163,109 @@ class Dir {
      */
     function getOwner() {
         $current = $this->current($this->_values);
-        return $current['owner'];
+        return $current['owner'] ?? false;
     }
 
     /**
      * 取得文件路径，不包括文件名
      * @return string
      */
-    public static function getPath() {
+    public function getPath() {
         $current = $this->current($this->_values);
-        return $current['path'];
+        return $current['path'] ?? false;
     }
 
     /**
      * 取得文件的完整路径，包括文件名
      * @return string
      */
-    public static function getPathname() {
+    public function getPathname() {
         $current = $this->current($this->_values);
-        return $current['pathname'];
+        return $current['pathname'] ?? false;
     }
 
     /**
      * 取得文件的权限
      * @return integer
      */
-    public static function getPerms() {
+    public function getPerms() {
         $current = $this->current($this->_values);
-        return $current['perms'];
+        return $current['perms'] ?? false;
     }
 
     /**
      * 取得文件的大小
      * @return integer
      */
-    public static function getSize() {
+    public function getSize() {
         $current = $this->current($this->_values);
-        return $current['size'];
+        return $current['size'] ?? false;
     }
 
     /**
      * 取得文件类型
      * @return string
      */
-    public static function getType() {
+    public function getType() {
         $current = $this->current($this->_values);
-        return $current['type'];
+        return $current['type'] ?? false;
     }
 
     /**
      * 是否为目录
      * @return boolen
      */
-    public static function isDir() {
+    public function isDir() {
         $current = $this->current($this->_values);
-        return $current['isDir'];
+        return $current['isDir'] ?? false;
     }
 
     /**
      * 是否为文件
      * @return boolen
      */
-    public static function isFile() {
+    public function isFile() {
         $current = $this->current($this->_values);
-        return $current['isFile'];
+        return $current['isFile'] ?? false;
     }
 
     /**
      * 文件是否为一个符号连接
      * @return boolen
      */
-    public static function isLink() {
+    public function isLink() {
         $current = $this->current($this->_values);
-        return $current['isLink'];
+        return $current['isLink'] ?? false;
     }
 
     /**
      * 文件是否可以执行
      * @return boolen
      */
-    public static function isExecutable() {
+    public function isExecutable() {
         $current = $this->current($this->_values);
-        return $current['isExecutable'];
+        return $current['isExecutable'] ?? false;
     }
 
     /**
      * 文件是否可读
      * @return boolen
      */
-    public static function isReadable() {
+    public function isReadable() {
         $current = $this->current($this->_values);
-        return $current['isReadable'];
+        return $current['isReadable'] ?? false;
     }
 
     /**
      * 获取foreach的遍历方式
      * @return string
      */
-    public static function getIterator() {
-        return new ArrayObject($this->_values);
+    public function getIterator(): \Traversable {
+        return new \ArrayIterator($this->_values);
     }
 
     // 返回目录的数组信息
-    public static function toArray() {
+    public function toArray() {
         return $this->_values;
     }
 
@@ -314,21 +307,26 @@ class Dir {
      * @return void
      */
     public static function delDir($directory, $subdir = true) {
-        if (is_dir($directory) == false) {
+        if (is_link($directory)) {
+            return @unlink($directory);
+        }
+        if (!is_dir($directory)) {
             return false;
         }
-        $handle = opendir($directory);
+        $handle = @opendir($directory);
+        if ($handle === false) {
+            return false;
+        }
+        $ok = true;
         while (($file = readdir($handle)) !== false) {
             if ($file != "." && $file != "..") {
-                is_dir("$directory/$file") ?
-                                Dir::delDir("$directory/$file") :
-                                @unlink("$directory/$file");
+                $path = $directory . DIRECTORY_SEPARATOR . $file;
+                $removed = !is_link($path) && is_dir($path) ? self::delDir($path) : @unlink($path);
+                $ok = $removed && $ok;
             }
         }
-        if (readdir($handle) == false) {
-            closedir($handle);
-            rmdir($directory);
-        }
+        closedir($handle);
+        return $ok && @rmdir($directory);
     }
 
     /**
