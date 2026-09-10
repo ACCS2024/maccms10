@@ -14,15 +14,15 @@ final class XlsxTableReader
     private int $xmlRemaining = BulkTableIo::MAX_IMPORT_BYTES;
     private int $textRemaining = BulkTableIo::MAX_IMPORT_BYTES;
 
-    public static function read(string $path): array
+    public static function read(string $path, bool $withRowNumbers = false): array
     {
         if (!class_exists(\ZipArchive::class) || !class_exists(\XMLReader::class)) {
             throw new \RuntimeException('XLSX import requires ZIP and XMLReader');
         }
-        return (new self())->parse($path);
+        return (new self())->parse($path, $withRowNumbers);
     }
 
-    private function parse(string $path): array
+    private function parse(string $path, bool $withRowNumbers): array
     {
         if (str_contains($path, "\0") || str_contains($path, '://') || !is_file($path)) {
             throw new \RuntimeException('XLSX source must be a local regular file');
@@ -68,7 +68,7 @@ final class XlsxTableReader
             $sharedXml = $this->part($zip, 'xl/sharedStrings.xml', false);
             $shared = $sharedXml === null ? [] : $this->sharedStrings($sharedXml);
             unset($sharedXml);
-            return $this->worksheet($this->part($zip, $sheet), $shared);
+            return $this->worksheet($this->part($zip, $sheet), $shared, $withRowNumbers);
         } finally {
             try { if ($opened) { $zip->close(); } }
             finally {
@@ -280,7 +280,7 @@ final class XlsxTableReader
         return $shared;
     }
 
-    private function worksheet(string $xml, array $shared): array
+    private function worksheet(string $xml, array $shared, bool $withRowNumbers): array
     {
         $grid = []; $rowIds = []; $row = null; $nextRow = 0; $cell = null;
         $value = ''; $captureDepth = null; $cells = 0; $maxCol = 0; $valueSeen = false;
@@ -332,21 +332,23 @@ final class XlsxTableReader
                 if ($reader->depth === 2 && $reader->localName === 'row' && $reader->namespaceURI === self::NS) { $row = null; }
             }
         });
-        if ($grid === []) { return ['headers'=>[], 'rows'=>[]]; }
+        if ($grid === []) { return $withRowNumbers ? ['headers'=>[], 'rows'=>[], 'row_numbers'=>[]] : ['headers'=>[], 'rows'=>[]]; }
         if (!isset($grid[0]) || (count($grid) - 1) * ($maxCol + 1) > BulkTableIo::MAX_IMPORT_CELLS) {
             throw new \RuntimeException('Missing XLSX header or oversized output matrix');
         }
         $headers = [];
         for ($col = 0; $col <= $maxCol; $col++) { $headers[] = trim($grid[0][$col] ?? ''); }
-        unset($grid[0]); ksort($grid); $rows = [];
-        foreach ($grid as $columns) {
+        unset($grid[0]); ksort($grid); $rows = []; $rowNumbers = [];
+        foreach ($grid as $rowNumber => $columns) {
             $data = []; $nonempty = false;
             foreach ($headers as $col => $header) {
                 if ($header !== '') { $data[$header] = $columns[$col] ?? ''; $nonempty = $nonempty || $data[$header] !== ''; }
             }
-            if ($nonempty) { $rows[] = $data; }
+            if ($nonempty) { $rows[] = $data; $rowNumbers[] = $rowNumber + 1; }
         }
-        return ['headers'=>$headers, 'rows'=>$rows];
+        $result = ['headers'=>$headers, 'rows'=>$rows];
+        if ($withRowNumbers) { $result['row_numbers'] = $rowNumbers; }
+        return $result;
     }
 
     private function sheetPath(\ZipArchive $zip): string

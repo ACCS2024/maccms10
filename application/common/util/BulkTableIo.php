@@ -66,19 +66,19 @@ class BulkTableIo
         return $data;
     }
 
-    public static function parseFile($path, $ext)
+    public static function parseFile($path, $ext, bool $withRowNumbers = false)
     {
         $ext = strtolower($ext);
         if ($ext === 'csv' || $ext === 'txt') {
-            return self::parseCsv($path);
+            return self::parseCsv($path, $withRowNumbers);
         }
         if (in_array($ext, ['xlsx', 'xlsm'], true)) {
-            return self::parseXlsx($path);
+            return self::parseXlsx($path, $withRowNumbers);
         }
         throw new \InvalidArgumentException('unsupported format');
     }
 
-    public static function parseCsv($path)
+    public static function parseCsv($path, bool $withRowNumbers = false)
     {
         $handle = @fopen($path, 'rb');
         if ($handle === false) { throw new \RuntimeException('Cannot read CSV'); }
@@ -97,7 +97,7 @@ class BulkTableIo
         $start = str_starts_with($source, "\xEF\xBB\xBF") ? 3 : 0;
         $quoted = false; $afterQuote = false; $fieldStart = true;
         $columns = 1; $records = 0; $cells = 0; $headerRead = false;
-        $headers = []; $rows = [];
+        $headers = []; $rows = []; $rowNumbers = [];
         for ($i = $start; $i < $size; $i++) {
             if ($i - $start > self::MAX_CSV_RECORD_BYTES) {
                 throw new \RuntimeException('CSV record exceeds the byte limit');
@@ -116,7 +116,7 @@ class BulkTableIo
                 }
                 $fieldStart = true; $afterQuote = false;
             } elseif ($char === "\r" || $char === "\n") {
-                self::appendCsvRecord($source, $start, $i - $start, $columns, $headers, $rows, $headerRead, $records, $cells);
+                self::appendCsvRecord($source, $start, $i - $start, $columns, $headers, $rows, $headerRead, $records, $cells, $rowNumbers);
                 if ($char === "\r" && $i + 1 < $size && $source[$i + 1] === "\n") { $i++; }
                 $start = $i + 1; $columns = 1; $fieldStart = true; $afterQuote = false;
             } elseif ($fieldStart && $char === '"') {
@@ -128,14 +128,16 @@ class BulkTableIo
         }
         if ($quoted) { throw new \RuntimeException('Unclosed quoted CSV field'); }
         if ($start < $size) {
-            self::appendCsvRecord($source, $start, $size - $start, $columns, $headers, $rows, $headerRead, $records, $cells);
+            self::appendCsvRecord($source, $start, $size - $start, $columns, $headers, $rows, $headerRead, $records, $cells, $rowNumbers);
         }
-        return ['headers'=>$headers, 'rows'=>$rows];
+        $result = ['headers'=>$headers, 'rows'=>$rows];
+        if ($withRowNumbers) { $result['row_numbers'] = $rowNumbers; }
+        return $result;
     }
 
     /** Bound native CSV allocation and the eventual header-to-row matrix before parsing this record. */
     private static function appendCsvRecord(string $source, int $start, int $length, int $columns,
-        array &$headers, array &$rows, bool &$headerRead, int &$records, int &$cells): void
+        array &$headers, array &$rows, bool &$headerRead, int &$records, int &$cells, array &$rowNumbers): void
     {
         $records++; $cells += $columns;
         if ($length > self::MAX_CSV_RECORD_BYTES || $records > self::MAX_IMPORT_ROWS + 1
@@ -160,6 +162,7 @@ class BulkTableIo
             if ($header !== '') { $row[$header] = $line[$index] ?? ''; }
         }
         $rows[] = $row;
+        $rowNumbers[] = $records; // CSV logical records include the header and blank records, not embedded cell newlines.
     }
 
     public static function parseCellRef($ref)
@@ -174,10 +177,10 @@ class BulkTableIo
         return [$column - 1, $row - 1];
     }
 
-    public static function parseXlsx($path)
+    public static function parseXlsx($path, bool $withRowNumbers = false)
     {
         require_once __DIR__ . '/XlsxTableReader.php';
-        return XlsxTableReader::read($path);
+        return XlsxTableReader::read($path, $withRowNumbers);
     }
 
     public static function exportCsvDownload($basename, array $headers, array $list)
