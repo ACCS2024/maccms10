@@ -419,7 +419,7 @@ class User extends Base
     /**
      * 更新用户资料
      * api.php/user/update_info (POST)
-     * 参数: [user_nick_name, user_email, user_phone, user_qq, user_old_pwd, user_new_pwd]
+     * 参数: [user_nick_name, user_qq, user_old_pwd, user_new_pwd]；联系方式使用 bindmsg/bind/unbind。
      */
     public function update_info(\think\Request $request)
     {
@@ -434,8 +434,13 @@ class User extends Base
                 return json(['code'=>1001, 'msg'=>lang('param_err')]);
             }
         }
+        foreach (['user_email', 'user_phone'] as $field) {
+            if (array_key_exists($field, $param) && trim((string)$param[$field]) !== (string)$check['info'][$field]) {
+                return json(['code'=>1001, 'msg'=>'请通过 bindmsg/bind 验证联系方式；解除绑定请使用 unbind']);
+            }
+        }
         $update = [];
-        foreach (['user_nick_name', 'user_email', 'user_phone', 'user_qq'] as $field) {
+        foreach (['user_nick_name', 'user_qq'] as $field) {
             if (!empty($param[$field])) {
                 $value = trim((string)$param[$field]);
                 if (!mb_check_encoding($value, 'UTF-8')) { return json(['code'=>1001, 'msg'=>lang('param_err')]); }
@@ -446,6 +451,27 @@ class User extends Base
         $new = trim((string)($param['user_new_pwd'] ?? ''));
         $changePassword = $old !== '' || $new !== '';
         return json($model->updateAccountProfile($uid, $update, $changePassword ? $old : null, $changePassword ? $new : null));
+    }
+
+    /** POST ac=email|phone,to; the model derives identity from the authenticated session. */
+    public function bindmsg(\think\Request $request)
+    {
+        if (!$request->isPost()) { return json(['code'=>9001, 'msg'=>lang('param_err')]); }
+        return json((new \app\common\model\User())->bindmsg($request->post()));
+    }
+
+    /** POST ac,to,code; a successful contact change requires signing in again. */
+    public function bind(\think\Request $request)
+    {
+        if (!$request->isPost()) { return json(['code'=>9001, 'msg'=>lang('param_err')]); }
+        return json((new \app\common\model\User())->bind($request->post()));
+    }
+
+    /** POST ac,user_pwd; current-password confirmation protects recovery contacts. */
+    public function unbind(\think\Request $request)
+    {
+        if (!$request->isPost()) { return json(['code'=>9001, 'msg'=>lang('param_err')]); }
+        return json((new \app\common\model\User())->unbind($request->post()));
     }
 
     /**

@@ -43,13 +43,13 @@
 					<p><span class="xiang">重复密码：</span><input type="password" name="user_pwd2" class="member-input"></p>
 					<p><span class="xiang">QQ号码：</span><input type="text" name="user_qq" class="member-input" value="{$obj.user_qq}"></p>
 					{if condition="$obj.user_email neq ''"}
-						<p><span class="xiang">邮箱：</span><input type="text" name="user_email" class="member-input" readonly="readonly" value="{$obj.user_email}">[<a class="btn_unbind" ac="email" href="javascript:;">解绑</a>]</p>
+						<p><span class="xiang">邮箱：</span><input type="text" name="user_email" class="member-input" readonly="readonly" value="{$obj.user_email}">[<a ac="email" href="{:url('user/unbind')}?ac=email">解绑</a>]</p>
 					{else/}
 						<p><span class="xiang">邮箱：</span><input type="text" name="user_email" class="member-input" value="">[<a href="{:url('user/bind')}?ac=email">绑定</a>]</p>
 					{/if}
 
 						{if condition="$obj.user_phone neq ''"}
-						<p><span class="xiang">手机：</span><input type="text" name="user_phone" class="member-input" readonly="readonly" value="{$obj.user_phone}">[<a class="btn_unbind" ac="phone" href="javascript:;">解绑</a>]</p>
+						<p><span class="xiang">手机：</span><input type="text" name="user_phone" class="member-input" readonly="readonly" value="{$obj.user_phone}">[<a ac="phone" href="{:url('user/unbind')}?ac=phone">解绑</a>]</p>
 						{else/}
 						<p><span class="xiang">手机：</span><input type="text" name="user_phone" class="member-input" value="">[<a href="{:url('user/bind')}?ac=phone">绑定</a>]</p>
 						{/if}

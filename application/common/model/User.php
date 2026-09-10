@@ -439,8 +439,10 @@ class User extends Base
             || (int)$userId > 4294967295) {
             return ['code'=>1002, 'msg'=>lang('model/user/not_login')];
         }
-        $lengths = ['user_nick_name'=>30, 'user_qq'=>16, 'user_question'=>255, 'user_answer'=>255,
-            'user_email'=>30, 'user_phone'=>16];
+        if (array_key_exists('user_email', $profile) || array_key_exists('user_phone', $profile)) {
+            return ['code'=>1001, 'msg'=>'请通过联系方式绑定页面验证邮箱或手机'];
+        }
+        $lengths = ['user_nick_name'=>30, 'user_qq'=>16, 'user_question'=>255, 'user_answer'=>255];
         $profile = array_intersect_key($profile, $lengths);
         foreach ($profile as $field=>$value) {
             if (!is_string($value) || !mb_check_encoding($value, 'UTF-8') || mb_strlen($value, 'UTF-8') > $lengths[$field]) {
@@ -1160,6 +1162,11 @@ class User extends Base
 
     public function check_msg($param)
     {
+        return $this->checkMessageForUser($param, (int)($GLOBALS['user']['user_id'] ?? 0));
+    }
+
+    private function checkMessageForUser($param, int $userId)
+    {
         $param = $this->messageParameters($param, true);
         if ($param === null) { return ['code'=>9001, 'msg'=>lang('param_err')]; }
         if ($param['ac'] === 'email' && in_array($param['type'], [1, 3], true)) {
@@ -1167,7 +1174,7 @@ class User extends Base
             if ($result['code'] > 1) { return $result; }
         }
         $where = [
-            'user_id'=>(int)($GLOBALS['user']['user_id'] ?? 0),
+            'user_id'=>$userId,
             'msg_to'=>$param['to'], 'msg_code'=>$param['code'],
             'msg_type'=>$param['type'], 'msg_status'=>0,
             ['msg_time', '>', $this->messageCutoff($param['ac'])],
@@ -1183,6 +1190,12 @@ class User extends Base
 
     public function send_msg($param)
     {
+        return $this->sendMessageForUser($param, (int)($GLOBALS['user']['user_id'] ?? 0),
+            (string)($GLOBALS['user']['user_name'] ?? ''));
+    }
+
+    private function sendMessageForUser($param, int $userId, string $userName)
+    {
         $param = $this->messageParameters($param, false);
         if ($param === null) { return ['code'=>9001, 'msg'=>lang('param_err')]; }
         if (!mac_fe_write_throttle('fe_sendmsg', 300, 8)) {
@@ -1195,7 +1208,7 @@ class User extends Base
         $types = [1=>['bind', 'bind'], 2=>['findpass', 'findpass'], 3=>['register', 'reg']];
         [$description, $flag] = $types[$param['type']];
         $description = lang($description);
-        $where = ['user_id'=>(int)($GLOBALS['user']['user_id'] ?? 0),
+        $where = ['user_id'=>$userId,
             'msg_type'=>$param['type'], 'msg_to'=>$param['to'],
             ['msg_time', '>', $this->messageCutoff($param['ac'])]];
         try {
@@ -1217,7 +1230,7 @@ class User extends Base
                 $body = $GLOBALS['config']['sms']['content'] ?? null;
                 if (!is_string($body)) { throw new \RuntimeException('Missing message template'); }
                 $body = str_replace(['[用户]','[类型]','[时长]','[验证码]'],
-                    [(string)($GLOBALS['user']['user_name'] ?? ''), $description, '5', $code], $body);
+                    [$userName, $description, '5', $code], $body);
                 $delivery = mac_send_sms($param['to'], $code, $flag, $description, $body);
             }
             if (!is_array($delivery) || !in_array($delivery['code'] ?? null, [1, '1'], true)) {
@@ -1240,61 +1253,135 @@ class User extends Base
     {
         if (!is_array($param)) { return ['code'=>9001, 'msg'=>lang('param_err')]; }
         $param['type'] = 1;
-        $res = $this->check_msg($param);
-        if($res['code'] >1){
-            return ['code'=>$res['code'],'msg'=>$res['msg']];
+        $param = $this->messageParameters($param, true);
+        if ($param === null) { return ['code'=>9001, 'msg'=>lang('param_err')]; }
+        $started = false;
+        $lock = null;
+        try {
+            $user = $this->authenticatedContactUser($param);
+            if ($user === null) { return ['code'=>1002, 'msg'=>lang('model/user/not_login')]; }
+            if (!mac_fe_write_throttle('fe_bind', 600, 10)) {
+                return ['code'=>2003, 'msg'=>lang('index/pwd_frequently')];
+            }
+            if (!$this->messageTransactionsAvailable()) { throw new \RuntimeException('Transactional account tables required'); }
+            $lock = $this->acquireContactLock($param['ac'], $param['to']);
+            Db::startTrans(); $started = true;
+            $current = Db::name('User')->where('user_id', $user['user_id'])->lock(true)->find();
+            $column = $param['ac'] === 'email' ? 'user_email' : 'user_phone';
+            if (!$current || $current['user_random'] !== $user['user_random'] || (int)$current['user_status'] !== 1) {
+                throw new \RuntimeException('Authentication changed');
+            }
+            if ((string)$current[$column] !== '') { throw new \RuntimeException('Unbind existing contact first'); }
+            if (Db::name('User')->where($column, $param['to'])->where('user_id', '<>', $user['user_id'])->lock(true)->find()) {
+                throw new \RuntimeException('Contact already bound');
+            }
+            $verified = $this->checkMessageForUser($param, (int)$user['user_id']);
+            if ($verified['code'] !== 1) { Db::rollback(); $started = false; return $verified; }
+            if (Db::name('Msg')->where('msg_id', $verified['msg_id'])->where('msg_status', 0)
+                ->update(['msg_status'=>1]) !== 1) { throw new \RuntimeException('Verification already used'); }
+            if (Db::name('User')->where('user_id', $user['user_id'])->where($column, '')
+                ->where('user_random', $user['user_random'])
+                ->update([$column=>$param['to'], 'user_random'=>bin2hex(random_bytes(16))]) !== 1) {
+                throw new \RuntimeException('Contact update failed');
+            }
+            Db::commit(); $started = false;
+            return ['code'=>1, 'msg'=>lang('model/user/update_bind_ok').'，请重新登录', 'reauthenticate'=>1];
+        } catch (\Throwable $error) {
+            if ($started) { Db::rollback(); }
+            return ['code'=>2003, 'msg'=>'绑定失败，请确认联系方式尚未绑定，并重新获取验证码'];
+        } finally {
+            $this->releaseContactLock($lock);
         }
-
-        $param['to'] = $res['to'];
-        $update=[];
-        $update2=[];
-        $where2=[];
-        if($param['ac']=='email') {
-            $update['user_email'] = $param['to'];
-            $update2['user_email'] = '';
-            $where2['user_email'] = $param['to'];
-        }
-        else{
-            $update['user_phone'] = $param['to'];
-            $update2['user_phone'] = '';
-            $where2['user_phone'] = $param['to'];
-        }
-        $this->where($where2)->update($update2);
-
-        $where=[];
-        $where['user_id'] = $GLOBALS['user']['user_id'];
-        $res = $this->where($where)->update($update);
-        if($res===false){
-            return ['code'=>2003,'msg'=>lang('model/user/update_bind_err')];
-        }
-        return ['code'=>1,'msg'=>lang('model/user/update_bind_ok')];
     }
 
     public function unbind($param)
     {
-        if(!in_array($param['ac'],['email','phone']) ){
-            return ['code'=>2001,'msg'=>lang('param_err')];
+        if (!is_array($param) || !in_array($param['ac'] ?? null, ['email', 'phone'], true)
+            || !is_string($param['user_pwd'] ?? null) || trim($param['user_pwd']) === '') {
+            return ['code'=>2001, 'msg'=>lang('param_err')];
         }
-        $col = 'user_email';
-        if($param['ac']=='phone'){
-            $col = 'user_phone';
+        $started = false;
+        try {
+            $user = $this->authenticatedContactUser($param);
+            if ($user === null) { return ['code'=>1002, 'msg'=>lang('model/user/not_login')]; }
+            if (!mac_fe_write_throttle('fe_unbind', 600, 10)) {
+                return ['code'=>2002, 'msg'=>lang('index/pwd_frequently')];
+            }
+            if (!$this->messageTransactionsAvailable()) { throw new \RuntimeException('Transactional account tables required'); }
+            Db::startTrans(); $started = true;
+            $current = Db::name('User')->where('user_id', $user['user_id'])->lock(true)->find();
+            if (!$current || $current['user_random'] !== $user['user_random'] || (int)$current['user_status'] !== 1
+                || !$this->passwordMatches(trim($param['user_pwd']), $current['user_pwd'])) {
+                Db::rollback(); $started = false;
+                return ['code'=>2002, 'msg'=>lang('model/user/old_pass_err')];
+            }
+            $column = $param['ac'] === 'email' ? 'user_email' : 'user_phone';
+            if ((string)$current[$column] === '') {
+                Db::commit(); $started = false;
+                return ['code'=>1, 'msg'=>lang('model/user/update_unbind_ok'), 'reauthenticate'=>0];
+            }
+            if (Db::name('User')->where('user_id', $user['user_id'])->where($column, $current[$column])
+                ->where('user_random', $user['user_random'])
+                ->update([$column=>'', 'user_random'=>bin2hex(random_bytes(16))]) !== 1) {
+                throw new \RuntimeException('Contact update failed');
+            }
+            Db::commit(); $started = false;
+            return ['code'=>1, 'msg'=>lang('model/user/update_unbind_ok').'，请重新登录', 'reauthenticate'=>1];
+        } catch (\Throwable $error) {
+            if ($started) { Db::rollback(); }
+            return ['code'=>2002, 'msg'=>lang('model/user/update_bind_err')];
         }
-        $update=[];
-        $update[$col] = '';
-        $where=[];
-        $where['user_id'] = $GLOBALS['user']['user_id'];
-        $res = $this->where($where)->update($update);
-        if($res===false){
-            return ['code'=>2002,'msg'=>lang('model/user/update_bind_err')];
-        }
-        return ['code'=>1,'msg'=>lang('model/user/update_unbind_ok')];
     }
 
     public function bindmsg($param)
     {
         if (!is_array($param)) { return ['code'=>9001, 'msg'=>lang('param_err')]; }
         $param['type'] = 1;
-        return $this->send_msg($param);
+        $param = $this->messageParameters($param, false);
+        if ($param === null) { return ['code'=>9001, 'msg'=>lang('param_err')]; }
+        try {
+            $user = $this->authenticatedContactUser($param);
+            if ($user === null) { return ['code'=>1002, 'msg'=>lang('model/user/not_login')]; }
+            $column = $param['ac'] === 'email' ? 'user_email' : 'user_phone';
+            if (!$this->messageTransactionsAvailable() || (string)$user[$column] !== ''
+                || Db::name('User')->where($column, $param['to'])->where('user_id', '<>', $user['user_id'])->find()) {
+                return ['code'=>2003, 'msg'=>'请先解除原绑定，并使用尚未绑定的联系方式'];
+            }
+            return $this->sendMessageForUser($param, (int)$user['user_id'], (string)$user['user_name']);
+        } catch (\Throwable $error) {
+            return ['code'=>9009, 'msg'=>lang('model/user/msg_send_err')];
+        }
+    }
+
+    private function authenticatedContactUser(array $param): ?array
+    {
+        $authenticated = $this->checkLogin();
+        if (($authenticated['code'] ?? null) !== 1 || empty($authenticated['info']['user_id'])) { return null; }
+        // Browser cookies are sent automatically; explicit, verified Bearer credentials are not.
+        if (JwtService::bearerFromRequest() === '' || !JwtService::isEnabled()) {
+            $expected = \think\facade\Session::get('__csrf_token__');
+            $provided = $param['csrf_token'] ?? request()->header('X-CSRF-Token');
+            if (!is_string($expected) || $expected === '' || !is_string($provided)
+                || !hash_equals($expected, $provided)) { return null; }
+        }
+        return $authenticated['info'];
+    }
+
+    /** Serialize this binding flow on legacy schemas until contact uniqueness is migrated. */
+    private function acquireContactLock(string $channel, string $recipient): ?string
+    {
+        if (Db::connect()->getConfig('type') !== 'mysql') { return null; }
+        $name = hash('sha256', (string)Db::connect()->getConfig('database').'|'.$this->getTable().'|'.$channel.'|'.strtolower($recipient));
+        $result = Db::query('SELECT GET_LOCK(?, 5) AS acquired', [$name], true);
+        if ((int)($result[0]['acquired'] ?? 0) !== 1) { throw new \RuntimeException('Contact is busy'); }
+        return $name;
+    }
+
+    private function releaseContactLock(?string $name): void
+    {
+        if ($name === null) { return; }
+        try { Db::query('SELECT RELEASE_LOCK(?) AS released', [$name], true); }
+        catch (\Throwable $error) { /* Disconnecting also releases connection-owned locks. */ }
     }
 
     public function findpass_msg($param)

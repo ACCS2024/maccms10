@@ -59,7 +59,7 @@
 										<span class="user-info-row__label xiang" data-lang="user_email">邮箱</span>
 										<span class="user-info-row__control user-info-row__control--bind">
 											<span class="member-field-text user-info-row__bind-text">{$obj.user_email}</span>
-											<a class="bind-a btn_unbind user-info-row__bind-action" data-lang="user_unbound" ac="email" href="javascript:;">解绑</a>
+											<a class="bind-a user-info-row__bind-action" data-lang="user_unbound" ac="email" href="{:url('user/unbind')}?ac=email">解绑</a>
 											<i class="iconfont user-info-row__chev" aria-hidden="true">&#xe625;</i>
 										</span>
 									</p>
@@ -78,7 +78,7 @@
 										<span class="user-info-row__label xiang" data-lang="user_phone">手机</span>
 										<span class="user-info-row__control user-info-row__control--bind">
 											<span class="member-field-text user-info-row__bind-text">{$obj.user_phone}</span>
-											<a class="bind-a btn_unbind user-info-row__bind-action" ac="phone" href="javascript:;" data-lang="user_unbound">解绑</a>
+											<a class="bind-a user-info-row__bind-action" ac="phone" href="{:url('user/unbind')}?ac=phone" data-lang="user_unbound">解绑</a>
 											<i class="iconfont user-info-row__chev" aria-hidden="true">&#xe625;</i>
 										</span>
 									</p>

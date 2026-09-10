@@ -321,39 +321,41 @@ class User extends Base
 
     public function bindmsg()
     {
-        $param = \think\facade\Request::param();
+        if (!Request()->isPost()) { return json(['code'=>9001, 'msg'=>lang('param_err')]); }
+        $param = \think\facade\Request::post();
         $res = (new \app\common\model\User())->bindmsg($param);
         return json($res);
     }
 
     public function bind()
     {
-        $param = \think\facade\Request::param();
         if (Request()->isPost()) {
+            $param = \think\facade\Request::post();
             $res = (new \app\common\model\User())->bind($param);
             return json($res);
         }
-
-        if (empty($param['ac'])) {
-            $param['ac'] = 'email';
-        }
-        $ac = $param['ac'] === 'phone' ? 'phone' : 'email';
+        $param = \think\facade\Request::get();
+        $ac = $param['ac'] ?? 'email';
+        if (!in_array($ac, ['email', 'phone'], true)) { return $this->error(lang('param_err')); }
         $bind_readonly = ($ac === 'email' && !empty($GLOBALS['user']['user_email']))
             || ($ac === 'phone' && !empty($GLOBALS['user']['user_phone']));
         $this->assign('ac', $ac);
         $this->assign('bind_readonly', $bind_readonly ? 1 : 0);
-        $this->assign('param', $param);
         return $this->fetch('user/bind');
     }
 
     public function unbind()
     {
-        $param = \think\facade\Request::param();
         if (Request()->isPost()) {
+            $param = \think\facade\Request::post();
             $res = (new \app\common\model\User())->unbind($param);
             return json($res);
         }
-        $this->assign('param',$param);
+        $param = \think\facade\Request::get();
+        $ac = $param['ac'] ?? 'email';
+        if (!in_array($ac, ['email', 'phone'], true)) { return $this->error(lang('param_err')); }
+        $this->assign('ac', $ac);
+        $this->assign('contact', (string)($GLOBALS['user']['user_'.$ac] ?? ''));
         return $this->fetch('user/unbind');
     }
 

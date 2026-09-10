@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>解除绑定 - 会员中心 - {$maccms.site_name}</title>
+    {include file="user/include" /}
+
+</head>
+<body>
+{include file="user/head" /}
+<div class="member-wrap member-wrap-bg">
+<div id="member" class="fn-clear">
+    <div id="left"><p><a href="{:url('user/info')}">返回我的资料</a></p></div>
+    <div id="right"><div class="co-right co-right-bg"><div class="bind-page-card">
+
+    <h2>解除{if condition="$ac eq 'phone'"}手机{else/}邮箱{/if}绑定</h2>
+    <p>请输入当前登录密码确认。解除后需要重新登录，您可以再绑定新的联系方式。</p>
+    {if condition="$contact neq ''"}
+    <form id="userUnbindForm" method="post" action="{:url('user/unbind')}" data-url-login="{:url('user/login')}">
+        <input type="hidden" name="ac" value="{$ac}">
+        <input type="hidden" name="csrf_token" value="{:mac_csrf_token()}">
+        <p><label>当前联系方式 <input type="text" class="member-input" value="{$contact|htmlspecialchars}" readonly="readonly"></label></p>
+        <p><label>当前密码 <input type="password" class="member-input" name="user_pwd" autocomplete="current-password" required="required"></label></p>
+        <p><button type="submit" class="search-button">确认解除绑定</button> <a href="{:url('user/info')}">取消</a></p>
+        <p id="userUnbindResult" role="status" aria-live="polite"></p>
+        <p><a href="{:url('user/findpass_msg')}?ac={$ac}">忘记密码，先验证联系方式重设密码</a></p>
+    </form>
+    {else/}
+    <p>当前账号尚未绑定该联系方式。</p>
+    <p><a href="{:url('user/bind')}?ac={$ac}">前往绑定</a> <a href="{:url('user/info')}">返回我的资料</a></p>
+    {/if}
+
+    </div></div></div>
+</div>
+</div>
+<script src="{$maccms.path}static/js/user-unbind.js"></script>
+{include file="user/foot" /}
+</body>
+</html>

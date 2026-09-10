@@ -64,6 +64,7 @@
 					<p class="bind-page-desc"><span data-lang="user_bind_intro">请填写需要绑定的账号并完成验证</span></p>
 					<form id="fm" name="fm" method="post" action="">
 						<input type="hidden" name="ac" value="{$ac}">
+		<input type="hidden" name="csrf_token" value="{:mac_csrf_token()}">
 						<div class="bind-row bind-row--to">
 							<span class="xiang">{if condition="$ac eq 'phone'"}<span data-lang="user_phone">手机</span>{else/}<span data-lang="user_email">邮箱</span>{/if}</span>
 							<div class="bind-row-main">
