@@ -360,13 +360,38 @@ class Auth extends Base
      */
     public function jwt(\think\Request $request)
     {
-        if (!JwtService::isEnabled()) {
-            return json(['code' => 1004, 'msg' => 'JWT disabled']);
+        if (!$request->isPost()) { return json(['code'=>1001, 'msg'=>'POST required']); }
+        // Validate signing inputs before login rotates the account session or upgrades its password.
+        $configuration = $GLOBALS['config']['app'] ?? [];
+        if (!is_array($configuration)) { return json(['code'=>1004, 'msg'=>'JWT configuration invalid']); }
+        $enabled = array_key_exists('api_jwt_enabled', $configuration) ? $configuration['api_jwt_enabled'] : 0;
+        if (!in_array($enabled, [0,1,'0','1'], true)) { return json(['code'=>1004, 'msg'=>'JWT configuration invalid']); }
+        foreach (['api_jwt_secret','api_jwt_iss'] as $field) {
+            if (array_key_exists($field, $configuration) && !is_string($configuration[$field])) {
+                return json(['code'=>1004, 'msg'=>'JWT configuration invalid']);
+            }
         }
-        if (!$request->isPost()) {
-            return json(['code' => 1001, 'msg' => 'POST required']);
+        if (isset($configuration['api_jwt_iss']) && !mb_check_encoding($configuration['api_jwt_iss'], 'UTF-8')) {
+            return json(['code'=>1004, 'msg'=>'JWT configuration invalid']);
         }
-        $param = $request->param();
+        if (array_key_exists('api_jwt_ttl', $configuration)
+            && ((!is_int($configuration['api_jwt_ttl']) && !is_string($configuration['api_jwt_ttl']))
+                || !preg_match('/^-?[0-9]{1,10}$/D', (string)$configuration['api_jwt_ttl']))) {
+            return json(['code'=>1004, 'msg'=>'JWT configuration invalid']);
+        }
+        if (!JwtService::isEnabled()) { return json(['code'=>1004, 'msg'=>'JWT disabled']); }
+        // Preflight the real encoder/verifier with the largest DDL user id and new-session length.
+        // This includes JSON escaping and the service's token size limit before any login write.
+        $preview = JwtService::encode(4294967295, str_repeat('0', 32));
+        if ($preview === '' || JwtService::decodeAndVerify($preview) === null) {
+            return json(['code'=>1004, 'msg'=>'JWT configuration invalid']);
+        }
+        $param = $request->post();
+        foreach (['user_name','user_pwd','verify'] as $field) {
+            if (array_key_exists($field, $param) && !is_string($param[$field])) {
+                return json(['code'=>1001, 'msg'=>lang('param_err')]);
+            }
+        }
         $res = (new \app\common\model\User())->login(
             [
                 'user_name' => isset($param['user_name']) ? $param['user_name'] : '',
