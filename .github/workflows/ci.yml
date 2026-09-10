@@ -183,6 +183,7 @@ jobs:
           python3 tests/run_cli_import_audit.py maccms-ci:${{ matrix.php }}
           python3 tests/run_api_prefix_audit.py maccms-ci:${{ matrix.php }}
           python3 tests/run_api_content_view_audit.py maccms-ci:${{ matrix.php }}
+          python3 tests/run_content_identity_cache_audit.py maccms-ci:${{ matrix.php }}
           python3 tests/run_baidu_urlsend_audit.py maccms-ci:${{ matrix.php }}
           python3 tests/run_sdk_redirect_audit.py maccms-ci:${{ matrix.php }}
           python3 tests/run_apache_boundary_audit.py maccms-ci:${{ matrix.php }}

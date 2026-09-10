@@ -81,3 +81,5 @@ PHPStan / PHPCompatibility 的锁文件、范围、命令及诊断解释见 [审
 上传身份与编辑器：`php tests/run_audit.php --suite=upload` 同时执行前后台返回格式；`UPLOAD_AUDIT_MYSQL=1`、`UPLOAD_AUDIT_HOST/PASSWORD` 指向独立 `maccms_audit_upload` 测试库，其他模型库不复用。CI 包含 SQLite 和 MySQL。
 
 AI 插件任务表生命周期已纳入 models：默认/自定义前缀各执行 `framework_audit_ai_task.php`，真实安装、状态写回、历史和卸载均检查其他前缀表未被改动；MySQL使用独立models测试库。
+
+内容身份与缓存：`python3 tests/run_content_identity_cache_audit.py <PHP镜像>...` 使用一次性MySQL，验证前台/API的Cookie与Bearer、真实会话和最终响应缓存头，包含本地HTTP直接缓存命中路径。

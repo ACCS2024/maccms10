@@ -65,6 +65,52 @@ API Art::get_read_page 和 Manga::get_chapter 已提供可用模式：`code=1` �
 
 隔离 MySQL 验收至少涵盖：游客、普通会员、有效/过期 VIP、多组、禁用账户、纯 Bearer；分类允许/拒绝、关闭会员系统；零积分/整条/单页或单集购买、他人购买、价格变化；未输入/错误/正确密码、三种视频 scope 互不解锁；当前与其他章节、缺省/不存在/非法页；所有拒绝响应递归检索无密码/完整正文/原始URL，完整成功响应只返回获授权资源；实际默认主题消费目录无回退。购买属于显式写操作，资源 GET 不应暗中扣费。真实媒体服务的源地址防盗用能力应另行验证，不把应用内 DTO 收口等同于外部源站权限控制。
 
+## A1 之后的扩查与实施边界（2026-09-10，仍是待完成计划）
+
+A1 的公开 DTO 与六个模板明文出口修复见 `api-public-content-dto.md`；该组不包含资源授权闭环。以下发现由当前代码只读核查确认，必须进入后续验收，不能因为四个 API 加了检查就宣称完成。
+
+| 当前路径 | 正常功能触发与实际缺口 | 后续边界 |
+| --- | --- | --- |
+| `All.php:188-235`、`User.php:900-960` | `label_user()` 只有三项 Cookie 齐全才调用真正的 `checkLogin()`；有效纯 Bearer 因而仍是游客。模型已支持有效 Bearer 优先、无效已启用 Bearer 不回退 Cookie；`is_member` Cookie 还可自行点亮展示徽标 | A2a：复用模型验证结果，统一可信用户和展示组，不改认证模型 |
+| `common.php:1110-1128`、`SecurityHeaders.php:38-40` | 整页缓存资格只看 `user_id` Cookie。无该 Cookie 的 Bearer 用户、通过密码的游客会话仍可被标为匿名；旧 `_mac_page_cacheable` 又会覆盖响应缓存头 | A2a：保守允许确定匿名的公开目录页；认证、密码、正文/资源入口明确 `private, no-store`，不得命中或写入共享整页缓存 |
+| `All.php:763-803` | 当前集获准时还生成 `player_info.url_next`；该下一集可能没有购买记录。其余来源/章节的原址也留在传给模板的完整内容行中 | A2b：先解析真实资源坐标再授权；未逐项授权的相邻/其他资源只留站内链接和目录 |
+| `template/default/html/vod/down.html:62-82` | 下载页遍历所有来源/集的 `vo2.url` 并输出到复选框和文本框。只检查 URL 中一个 sid/nid 不能授权整个下载表 | A2b：完整目录保留，每个下载资源必须单独获准才有原址；未获准项提供获取/购买入口，不能用一个授权结果覆盖全表 |
+| `All.php:665-688,812-824`、两个主题 `vod/player.html` | 试看模式可能把完整源地址交给播放器，再用浏览器计时器限制播放；直接请求 player 路径使用另一权限编号 | A2b：缺少服务器可验证的预览资源时，不向仅试看用户下发完整源地址，也不能用 iframe/player 旁路；保留试看提示，不谎称客户端计时是资源限制 |
+| `api/Art.php:272-290`、`template/default/html/art/read.html:11-24` | API 与前台模板在权限检查之后将过大 page 收敛到最后一页，授权/购买键和最终正文可能不同；伪静态名称/编码 ID 也不能直接用作 Ulog rid | A2b/A3：先依据服务端解析行确定实际数值 rid、page/sid/nid，再查相同购买键，之后投影当前正文 |
+| `index/Art.php:57-90`、`template/m1938pc3_v2/html9/art/detail.html:6`、该主题 `art/rss.html` | 免费详情入口可被旧主题当作正文入口；RSS 也输出 art_content 摘要/分页内容。只拦 read/get_read_page 不覆盖这些出口 | A2b/A3：保留免费标题/简介/目录；实际正文使用同一阅读授权，RSS 公共描述改用公开简介；需真实旧主题渲染验收 |
+| `index/Art.php:87-90`、`index/Manga.php:29-38`、`api/Manga.php:170-210`、`index/Ajax.php:525-582` | 文章阅读和漫画正文只组合积分权限；漫画密码没有 mid=12 验证入口。现有密码会话值仅为字符串 1，还不能随内容密码变更自动失效 | A2b/A3：资源授权必须合并对应密码；共享验证器支持文章/漫画，保留视频三种独立作用域；验证成功不替代积分购买 |
+| `template/default/asset/js/vod-detail-ajax-render.js:1` | 当前 JS 按压缩后的数组 index+1 构造播放链接，原始来源/集有空段时可能指向另一集。A1 DTO 已给出实际 sid/nid/play_link | A2b：使用服务端生成链接/实际坐标；用空段、非连续键及多来源夹具验收，禁止按重编号目录查询购买记录 |
+
+### A2a：可信身份与缓存（独立提交）
+
+本组实现及验证现见 `content-identity-cache.md`，等待独立提交验收；A2b/A3 仍未完成。生产文件为 `application/common/controller/All.php` 的 label_user/共享缓存键/直接命中出口、`application/common.php::mac_page_cache_eligible()`、`application/middleware/SecurityHeaders.php`、`application/middleware.php` 及新增 `application/common/util/ContentCachePolicy.php`。不修改 `common/model/User.php`、`JwtService.php` 或资源动作。
+
+统一调用既有 `User::checkLogin()`，游客初始化包含实际权限代码使用的 `user_points`；既有成功用户信息、Cookie 编码兼容、过期组处理及模板秘密字段剥离都保留。无凭据游客不能每次触发清 Cookie/Set-Cookie。有效纯 Bearer、错误 Bearer 加有效 Cookie、数组 Cookie、过期/撤销令牌、失效账户、伪造 `is_member`/group_id 均经过真实 Request、User/JWT 和隔离 MySQL 验证。模板徽标只依赖验证后的组，不能拿徽标决定权限。
+
+整页缓存保守排除资源/正文/密码/用户入口和携带身份的请求；只允许确定匿名的公开目录动作。私有响应头必须在安全头中间件中优先于历史公共缓存标记，包括拒绝响应。用两个独立 Request/会话模拟先授权用户、后游客，检查缓存读写、响应头及串行请求状态残留；无身份公开首页/分类页仍应可缓存。缓存资格修复不意味着 CDN 已有缓存会自动失效，上线需清除此前相关内容 URL 的缓存。
+
+运输层补充：SecurityHeaders 已移到 SessionInit 外层以看见最终 Cookie 队列；任何 Set-Cookie 都不允许 public 响应。原生 SessionInit 对空会话也排队 Cookie，因此 PHP 页面保守 private/no-store，内部匿名目录缓存仍保留。旧缓存命中 echo/exit 绕过中间件，已单独发出同样的私有头，且共享缓存使用新版本键避开旧污染副本。未改 vendor 或会话初始化逻辑。
+
+### A2b/A3：资源定位、组合授权与所有当前出口（有依赖的闭合批次）
+
+建议新增 `ContentResource` 负责类型化参数与实际资源选择，新增 `ContentPassword` 负责服务端密码作用域/验证记录；All 提供组合授权入口并复用现有 `check_user_popedom()` 的业务规则。候选文件为 All、API Vod/Art/Manga 的四个资源动作及密码动作、index Vod/Art/Manga/Ajax、上述两个主题的正文/下载/密码模板与默认 Vod 详情 JS。A1 的 PublicContentView 继续负责安全目录，不能承担权限判定。
+
+执行顺序固定为：检查标量边界 → 按已发布且未回收行读取 → 解析现存章节及实际数值 ID → 归一/校验 sid/nid/page → 对同一坐标计算服务器价格/购买范围 → 检查用户组与对应密码 → 只构建获准资源响应。不存在的资源在授权和任何扣费前受控返回；正常缺省为首个合法坐标，已有文章超末页行为如保留，必须先收敛再授权。所有 GET 只读，不隐式购买或扣积分。
+
+现有组与积分合同须逐分支保持：关闭会员系统只关闭组/积分检查，不取消密码；多组按实际分类权限合并；普通会员按服务端价格查询本人 Ulog；整条 sid/nid=0，按页/集记录使用真实坐标；价格仍参与记录匹配。**文章/漫画当前代码在组阅读权限不满足但有付费记录时也可放行**（All:915-939），与视频的严格组限制存在差别；不可借机械统一服务将其悄悄改变。是否调整这条业务规则须独立说明。
+
+视频访问、播放、下载密码依然独立：访问密码不能解锁播放或下载，播放密码不能解锁下载；会员/VIP/购买均不能跳过对应密码。文章使用 `2-1-{id}`，漫画使用新的明确 `12-1-{id}` 作用域，并覆盖前台和 API 正文。建议验证记录绑定当前密码指纹，旧值 1 在安全迁移后要求重新验证，避免改密码后旧授权永久有效。沿用真实 PHP 会话持有内容密码验证状态；纯 Bearer 只代表账户身份，客户端仍需保留密码验证会话 Cookie，不能把内容密码写进 JWT 或响应。
+
+API 拒绝继续提供目录和 `can_read/can_play/can_down`、`deny_code/deny_msg`、`points_hint`、`password_required` 等引导；拒绝时 `current` 不含资源 URL，正文为空，图片为空数组。成功仅给获准当前资源和必要播放来源标识，目录/相邻项只有站内链接。试看未提供专门预览源时明确不可提供预览资源，不用 base64/转义或客户端计时隐藏完整地址。
+
+必须运行真实 MySQL/Request/User/JWT/Ulog 的游客、会员、VIP、多组、禁用账户、Cookie/Bearer矩阵；覆盖跨用户/跨类型/跨视频/跨集购买记录、整条与单项、调价、缺省/空洞/越界坐标，检查读取不写入余额或日志。密码验证采用真实 Session 的跨请求保存与恢复，覆盖错误、正确、字符串 0、数组、三种视频 scope、文章/漫画 scope、改密码使既有授权失效。拒绝和成功响应递归检查所有原始/转义/编码资源哨兵；真实当前/旧主题 HTML 与默认 JS 不能输出其他未授权集、完整付费文章或隐藏资源。
+
+### 购买写入的独立依赖（交根代理与 User 组，尚未修复）
+
+`application/index/controller/User.php::ajax_buy_popedom()`（102-199）按请求 sid/nid 构造购买键，未先验证实际页面/章节，mid/type 组合也未映射成固定的三个业务组合；资源读方的坐标修复不会自动让购买写入正确。`application/common/model/Ulog.php::saveData()`（151-179）又以未经验证的 `cookie('user_id')` 覆盖调用方传入的已验证 user_id。于是有效纯 Bearer 购买可能在用户扣费后写入失败或写向不同 Cookie 指定的用户；当前事务并未对所有嵌套返回码统一回滚。`api/User.php::add_ulog()`（503-528）也会经过此覆盖。以上是代码路径发现，尚未在该组运行扣费复现；须用专用 MySQL 独立验证，不能报告为已修复或已实际扣错。
+
+这两个文件需由相应所有者另组衔接：以真正验证用户写入，服务端统一资源坐标/价格，拒绝不合法业务组合，验证每一步失败时余额、Plog、Ulog 原子回滚及重试幂等。读取授权的小组不得擅改现有购买存储合同，也不能因为 API 读取已认出 Bearer 就宣称购买链已兼容 Bearer。
+
 ## 19 处查询的完整原始只读记录
 
 下面保留先前只读发现，作为可持续审阅证据。其“前缀组待修”描述反映发现时状态，现已由 `54c41f5` 解决；Collection 项跟随独立兼容报告，权限与其他子组仍按本文件顶部状态执行。临时运行日志仅是补充，最终问题说明保留在本文件中。

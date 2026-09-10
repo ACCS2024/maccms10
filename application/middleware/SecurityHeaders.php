@@ -5,6 +5,10 @@ class SecurityHeaders
 {
     public function handle($request, \Closure $next)
     {
+        // Cache markers belong to this request, including under a reused application container.
+        unset($GLOBALS['_mac_page_cacheable']);
+        $contentEntrance = defined('ENTRANCE') && in_array(ENTRANCE, ['index', 'api'], true);
+        $privateContext = $contentEntrance && \app\common\util\ContentCachePolicy::hasPrivateContext($request);
         $response = $next($request);
 
         // 采集进度页用 mac_echo() 边跑边 flush(见 common.php),响应头此刻早已发出。
@@ -35,7 +39,14 @@ class SecurityHeaders
             $response->header($base);
         }
 
-        if (!empty($GLOBALS['_mac_page_cacheable'])) {
+        // This middleware wraps SessionInit, whose outgoing Session Cookie is queued after the controller.
+        $cookieEffects = $contentEntrance && (\think\facade\Cookie::getCookie() !== [] || $response->getHeader('Set-Cookie'));
+        $cacheControl = strtolower((string)$response->getHeader('Cache-Control'));
+        if ($contentEntrance && ($privateContext || $cookieEffects || \app\common\util\ContentCachePolicy::requiresPrivateResponse($request))) {
+            unset($GLOBALS['_mac_page_cacheable']);
+            $response->header(['Cache-Control' => 'private, no-store']);
+        } elseif (!empty($GLOBALS['_mac_page_cacheable']) && mac_page_cache_eligible()
+            && !str_contains($cacheControl, 'private') && !str_contains($cacheControl, 'no-store')) {
             $response->header(['Cache-Control' => 'public, max-age=' . (int)$GLOBALS['_mac_page_cacheable']]);
         }
 

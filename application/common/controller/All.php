@@ -38,8 +38,8 @@ class All
         }
 
         if (mac_page_cache_eligible()) {
-            // 标记本页可被边缘缓存(已过 tpl 级跳过检查):供 app_end 的 SecurityHeaders 发 Cache-Control;
-            // 命中直出在下方就地发头(此处 die 不经 app_end)。仅匿名可缓存页置位,登录/动态页不置。
+            // Only an anonymous public catalog reaches the shared internal page cache.
+            // SecurityHeaders separately checks outgoing Session/Cookie effects before transport caching.
             $GLOBALS['_mac_page_cacheable'] = (int)$GLOBALS['config']['app']['cache_time_page'];
             $cach_name = $this->page_cache_key($tpl);
             $res = Cache::get($cach_name);
@@ -54,11 +54,13 @@ class All
             if (!empty($res)) {
                 // 修复后台开启页面缓存时，模板json请求解析问题
                 // https://github.com/magicblack/maccms10/issues/965
-                if($type=='json' || str_contains(request()->header('accept'), 'application/json')){
+                $accept = request()->header('accept');
+                if($type=='json' || (is_string($accept) && str_contains($accept, 'application/json'))){
                     $res = json_encode($res);
                 }
                 if (!headers_sent()) {
-                    header('Cache-Control: public, max-age=' . (int)$GLOBALS['config']['app']['cache_time_page']);
+                    // This direct response bypasses the outer Session/security middleware.
+                    header('Cache-Control: private, no-store');
                 }
                 echo $res;
                 die;
@@ -72,7 +74,7 @@ class All
      */
     protected function page_cache_key($tpl)
     {
-        return ($_SERVER['HTTP_HOST'] ?? '') . '_'. MAC_MOB . '_'. $GLOBALS['config']['app']['cache_flag']. '_' .$tpl .'_'. http_build_query(mac_param_url());
+        return 'public-v2_' . ($_SERVER['HTTP_HOST'] ?? '') . '_'. MAC_MOB . '_'. $GLOBALS['config']['app']['cache_flag']. '_' .$tpl .'_'. http_build_query(mac_param_url());
     }
 
     protected function label_fetch($tpl,$loadcache=1,$type='html')
@@ -191,26 +193,25 @@ class All
         if (ENTRANCE != 'index' && ENTRANCE != 'api') {
             return;
         }
-        $user_id = intval(cookie('user_id'));
-        $user_name = cookie('user_name');
-        $user_check = cookie('user_check');
-
-        $user = ['user_id'=>0,'user_name'=>lang('controller/visitor'),'user_portrait'=>'static_new/images/touxiang.png','group_id'=>1,'points'=>0];
+        $hasLoginCookies = cookie('user_id') !== null || cookie('user_name') !== null || cookie('user_check') !== null;
+        $user = ['user_id'=>0,'user_name'=>lang('controller/visitor'),'user_portrait'=>'static_new/images/touxiang.png','group_id'=>1,'points'=>0,'user_points'=>0];
         $group_list = (new \app\common\model\Group())->getCache();
-
-        if(!empty($user_id) && !empty($user_name) && !empty($user_check)){
+        // checkLogin owns Cookie/Bearer precedence, validation and account/group expiry.
+        // A valid Bearer does not require a parallel set of login Cookies.
+        $authorization = request()->header('authorization');
+        $res = ['code' => 1001];
+        if (($authorization === null || is_string($authorization)) && ($hasLoginCookies || $authorization !== null && $authorization !== '')) {
             $res = (new \app\common\model\User())->checkLogin();
-            if($res['code'] == 1){
-                $user = $res['info'];
-            }
-            else{
+        }
+        if($res['code'] == 1){
+            $user = $res['info'];
+        }
+        else{
+            if($hasLoginCookies){
                 cookie('user_id','0');
                 cookie('user_name',lang('controller/visitor'));
                 cookie('user_check','');
-                $user['group'] = $group_list[1];
             }
-        }
-        else{
             $user['group'] = $group_list[1];
         }
         // 顶栏 VIP 徽标等：与会员组逻辑一致（付费组 max(group_id)>=3），不依赖未使用的 is_member cookie
@@ -221,9 +222,6 @@ class All
             if (!empty($gids) && max($gids) >= 3) {
                 $user['vip_nav'] = 1;
             }
-        }
-        if (!empty(cookie('is_member'))) {
-            $user['vip_nav'] = 1;
         }
         $GLOBALS['user'] = $user;
         // 安全加固:模板变量 user 会渲染进每个登录页的 HTML。剥离会话伪造相关字段后再下发——

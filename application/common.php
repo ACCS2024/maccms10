@@ -1116,16 +1116,9 @@ function mac_page_cache_eligible()
     if (empty($app['cache_page']) || (string)$app['cache_page'] !== '1' || empty($app['cache_time_page'])) {
         return false;
     }
-    if (strtoupper(isset($_SERVER['REQUEST_METHOD']) ? $_SERVER['REQUEST_METHOD'] : 'GET') !== 'GET') {
-        return false;
-    }
-    $uid = 0;
-    try {
-        $uid = intval(cookie('user_id'));
-    } catch (\Throwable $e) {
-        $uid = isset($_COOKIE['user_id']) ? intval($_COOKIE['user_id']) : 0;
-    }
-    return $uid <= 0;
+    $request = request();
+    return \app\common\util\ContentCachePolicy::isPublicCatalog($request)
+        && !\app\common\util\ContentCachePolicy::hasPrivateContext($request);
 }
 
 /**
