@@ -8,7 +8,7 @@ if (PHP_VERSION_ID < 80300 || PHP_VERSION_ID >= 80500) {
 $groups = [
     'unit' => [
         ['security_audit_image_processing.php'], ['security_audit_image_upload.php'], ['security_audit_tinymce.php'],
-        ['core_audit_helpers.php'],
+        ['core_audit_helpers.php'], ['core_audit_substring.php'],
         ['extensions_audit_addons.php'], ['extensions_audit_aws.php'], ['extensions_audit_discovery.php'],
         ['extensions_audit_collection.php'],
         ['extensions_audit_lifecycle.php'], ['extensions_audit_oauth_sdk.php'],

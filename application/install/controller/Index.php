@@ -94,8 +94,10 @@ class Index extends \app\common\controller\All
      */
     private function step3()
     {
-        $install_dir = $_SERVER["SCRIPT_NAME"];
-        $install_dir = mac_substring($install_dir, strripos($install_dir, "/")+1);
+        $script = $_SERVER['SCRIPT_NAME'] ?? '';
+        $slash = is_string($script) ? strrpos($script, '/') : false;
+        // SCRIPT_NAME positions are byte offsets; keep UTF-8 directory names intact.
+        $install_dir = $slash === false ? '/' : substr($script, 0, $slash + 1);
         $this->assign('install_dir',$install_dir);
         return $this->fetch('install@index/step3');
     }

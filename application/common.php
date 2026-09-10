@@ -1480,45 +1480,21 @@ function mac_curl_get($url,$heads=array(),$cookie='',$timeout=10)
 function mac_substring($str, $lenth, $start=0)
 {
     $str = mac_scalar_string($str);
-    $len = strlen($str);
-    $r = array();
-    $n = 0;
-    $m = 0;
-
-    for($i=0;$i<$len;$i++){
-        $x = substr($str, $i, 1);
-        $a = base_convert(ord($x), 10, 2);
-        $a = substr( '00000000 '.$a, -8);
-
-        if ($n < $start){
-            if (substr($a, 0, 1) == 0) {
-            }
-            else if (substr($a, 0, 3) == 110) {
-                $i += 1;
-            }
-            else if (substr($a, 0, 4) == 1110) {
-                $i += 2;
-            }
-            $n++;
+    $coordinates = [];
+    foreach ([$lenth, $start] as $value) {
+        if ((!is_int($value) && !is_string($value)) || !preg_match('/^[0-9]+$/D', (string)$value)) {
+            return '';
         }
-        else{
-            if (substr($a, 0, 1) == 0) {
-                $r[] = substr($str, $i, 1);
-            }else if (substr($a, 0, 3) == 110) {
-                $r[] = substr($str, $i, 2);
-                $i += 1;
-            }else if (substr($a, 0, 4) == 1110) {
-                $r[] = substr($str, $i, 3);
-                $i += 2;
-            }else{
-                $r[] = ' ';
-            }
-            if (++$m >= $lenth){
-                break;
-            }
+        $digits = ltrim((string)$value, '0');
+        $maximum = (string)PHP_INT_MAX;
+        if (strlen($digits) > strlen($maximum) || strlen($digits) === strlen($maximum) && strcmp($digits, $maximum) > 0) {
+            return '';
         }
+        $coordinates[] = (int)$value;
     }
-    return  join('',$r);
+    if ($str === '' || $coordinates[0] === 0) { return ''; }
+    // Use explicit UTF-8 code points, including four-byte characters, independently of mb_internal_encoding.
+    return mb_substr(mb_scrub($str, 'UTF-8'), $coordinates[1], $coordinates[0], 'UTF-8');
 }
 
 
