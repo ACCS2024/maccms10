@@ -1,0 +1,196 @@
+{
+  "source_commit": "914860402b7c136a486f3f3245a7f513b6058ef8",
+  "source_tree": "6a455dda6f540d2aec718af8fd4471944ae8bed0",
+  "production_lock_sha256": "17864e7bf115eb91c0742eeb52c3cd4fea60e3a6b1ae7dc4bc146e3a0250e438",
+  "audit_tool_lock_sha256": "ba1aa580779290fd1437b74d0efce6a3c2a25900c8f28469731d0e65ff79bf5c",
+  "scope": "isolated committed source plus clean locked production vendor; unrelated working-tree changes excluded",
+  "status": "audit ongoing; no deployment or completeness claim",
+  "installed_compilation": [
+    {
+      "php": "8.3.33",
+      "checked": 5387,
+      "failed": 0,
+      "skipped": [],
+      "report_sha256": "fcf2ff29ec2c6e290c9fcae4509b97ced21f1a238e017e93086fb718945daa86"
+    },
+    {
+      "php": "8.4.25",
+      "checked": 5387,
+      "failed": 0,
+      "skipped": [],
+      "report_sha256": "f7d427f4de5f9cd911870bed8aad075e423374073d97ccd9f68eb8107f265cdf"
+    }
+  ],
+  "default_regressions": [
+    {
+      "php": "8.3.33",
+      "processes": 139,
+      "failures": 0,
+      "suites": [
+        "unit",
+        "models",
+        "financial",
+        "upload",
+        "storage",
+        "remote_upload"
+      ],
+      "log_sha256": "e8cf678c7f00aa15832702edbe00f261dd7391dc7d38a970c20790372c4be71d"
+    },
+    {
+      "php": "8.4.25",
+      "processes": 139,
+      "failures": 0,
+      "suites": [
+        "unit",
+        "models",
+        "financial",
+        "upload",
+        "storage",
+        "remote_upload"
+      ],
+      "log_sha256": "d97f5e6ef4daed438af8bd21b0c37c4b17e35281d33500ecb8ab78c119aea921"
+    }
+  ],
+  "static_analysis": {
+    "php": "8.4.25",
+    "target": "PHP 8.3–8.4 compatibility; PHPStan PHP 8.4",
+    "default_summary": {
+      "phpstan": {
+        "exit": 1,
+        "totals": {
+          "errors": 0,
+          "file_errors": 423
+        }
+      },
+      "phpcompatibility": {
+        "exit": 2,
+        "totals": {
+          "errors": 0,
+          "warnings": 8,
+          "fixable": 0
+        }
+      }
+    },
+    "tools": {
+      "dealerdirect/phpcodesniffer-composer-installer": "v1.2.1",
+      "phpcompatibility/php-compatibility": "10.0.0-alpha2",
+      "phpcsstandards/phpcsutils": "1.2.3",
+      "phpstan/phpstan": "2.2.13",
+      "squizlabs/php_codesniffer": "4.0.4"
+    },
+    "reports": {
+      "phpstan_level1": {
+        "totals": {
+          "errors": 0,
+          "file_errors": 423
+        },
+        "report_sha256": "577e8f228a43a0adc8b049c36e12b9aed225218fa55cea44052cb55a4ea87e9c",
+        "categories": {
+          "staticMethod.notFound": 120,
+          "property.notFound": 8,
+          "constant.notFound": 38,
+          "isset.variable": 1,
+          "empty.variable": 17,
+          "variable.undefined": 219,
+          "unset.variable": 4,
+          "constructor.unusedParameter": 1,
+          "class.notFound": 1,
+          "array.duplicateKey": 14
+        }
+      },
+      "phpstan_level5": {
+        "totals": {
+          "errors": 0,
+          "file_errors": 1178
+        },
+        "report_sha256": "ec906434ebdd6d3f638a47621a8e2ab98b4d080df5541ae225785e47426d34b7",
+        "categories": {
+          "staticMethod.notFound": 120,
+          "function.alreadyNarrowedType": 40,
+          "property.notFound": 15,
+          "property.protected": 1,
+          "assign.propertyType": 3,
+          "booleanAnd.alwaysFalse": 15,
+          "identical.alwaysFalse": 95,
+          "isset.offset": 24,
+          "method.notFound": 98,
+          "nullCoalesce.offset": 31,
+          "equal.alwaysFalse": 42,
+          "argument.type": 49,
+          "constant.notFound": 38,
+          "argument.byRef": 1,
+          "empty.offset": 3,
+          "binaryOp.invalid": 9,
+          "method.unused": 8,
+          "isset.variable": 1,
+          "greaterOrEqual.alwaysTrue": 2,
+          "empty.variable": 17,
+          "greater.alwaysFalse": 3,
+          "return.type": 66,
+          "greater.alwaysTrue": 12,
+          "deadCode.unreachable": 25,
+          "foreach.nonIterable": 1,
+          "variable.undefined": 219,
+          "throws.notThrowable": 7,
+          "arguments.count": 3,
+          "booleanAnd.rightAlwaysTrue": 14,
+          "if.alwaysTrue": 14,
+          "phpDoc.parseError": 48,
+          "class.notFound": 31,
+          "function.impossibleType": 13,
+          "unset.variable": 4,
+          "notIdentical.alwaysTrue": 19,
+          "offsetAccess.invalidOffset": 3,
+          "parameter.defaultValue": 3,
+          "notIdentical.alwaysFalse": 5,
+          "notEqual.alwaysTrue": 2,
+          "notEqual.alwaysFalse": 3,
+          "empty.expr": 1,
+          "ternary.alwaysTrue": 1,
+          "instanceof.alwaysTrue": 1,
+          "equal.alwaysTrue": 6,
+          "arrayFilter.same": 9,
+          "arrayValues.empty": 1,
+          "booleanNot.alwaysFalse": 5,
+          "booleanOr.alwaysTrue": 4,
+          "identical.alwaysTrue": 4,
+          "constructor.unusedParameter": 1,
+          "booleanOr.rightAlwaysFalse": 1,
+          "if.alwaysFalse": 3,
+          "return.void": 7,
+          "return.phpDocType": 1,
+          "smaller.alwaysFalse": 1,
+          "booleanNot.alwaysTrue": 1,
+          "staticMethod.resultUnused": 2,
+          "nullCoalesce.expr": 2,
+          "array.duplicateKey": 14,
+          "booleanAnd.rightAlwaysFalse": 1,
+          "property.defaultValue": 2,
+          "property.phpDocType": 1,
+          "property.onlyWritten": 1,
+          "booleanAnd.leftAlwaysTrue": 1
+        }
+      },
+      "phpcompatibility": {
+        "totals": {
+          "errors": 0,
+          "warnings": 8,
+          "fixable": 0
+        },
+        "report_sha256": "213e72a01bb54b43d9b37f8c5b2735b248796f136dfa80b6895ba56cf69a8308"
+      }
+    }
+  },
+  "preceding_failed_snapshot": {
+    "source_commit": "6330cd849661c3999e9a77e492ff3cccbc3673b7",
+    "default_processes_per_php": 138,
+    "failures_per_php": 1,
+    "failed_test": "framework_audit_purchase_views.php",
+    "reason": "obsolete Manga view fixture omitted the current reader access DTO",
+    "repair_commit": "756ac6a8a173e1f372926825bbf04f6df61a43b8",
+    "logs_sha256": {
+      "83": "39662cb2887f8030ac50f3a6e842191291d459efbf8f5ab9b4ec4c197e9d0eba",
+      "84": "dfa709f08e2c21505a631c1d9e1de5896ebac9e7b2e537b6ba6c8ef53c2a47ab"
+    }
+  }
+}

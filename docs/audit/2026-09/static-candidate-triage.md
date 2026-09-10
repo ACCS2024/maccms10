@@ -58,3 +58,11 @@
 新 Search 的 `ConnectionInterface::getPdo/query`、Query 返回父类型等诊断需要结合实际连接类核对；已完成的实际 MySQL 回归能够执行这些路径，不能仅凭接口缺少声明断言运行时必然失败。保留的响应形状检查也不能仅为减少 PHPDoc 冗余提示而删除。
 
 另发现 AiSearch 的 Meili 回表仍对 Collection 使用 `is_array`，使后续映射不可达；它有独立的 SQL 回退、模块空结果和缓存语义，已进入下一组实际验证，不能套用已提交 Search 的修复结论。旧 ORM `=== false` 候选仍区分删除对象、幂等更新和抛出异常，不机械全局替换。
+
+## 91486040 重扫
+
+固定版本和完整证据见[阶段记录](phase-verification-91486040.md)。level 1 为 423 条文件诊断、level 5 为 1,178 条，均无全局分析错误；PHPCompatibility 为 0 错误、8 警告。所有分类计数及原始报告摘要保留在 JSON，没有隐藏静态候选。
+
+相对 52f70b90 的 level 1，新增 ContentResource 的入口常量 MAC_PATH 提示、MangaResourceReader 的动态 Db::query 提示、LocalAttachment 的一处 manifest 控制流提示；CSV 改写后减少一处 empty($headers) 冗余提示。附件清单赋值早于 BEGIN/远端尝试；未知结果分支与标记具有关联前提，不能只凭局部未定义提示宣布已经存在未初始化读取。仍保留该诊断供跨路径核对，不以填充默认值掩盖事务状态。
+
+AiSearch 的 Collection 问题已经在 c84bc161 通过实际 MySQL 修复；不再把上一轮的“进入验证”当作当前状态。较严格级别新出现的连接接口方法提示继续结合实际 PDOConnection 与故障夹具核实。Import 的旧上传对象 API、XLSX 坐标范围及实际共享字符串警告均已有独立证据，按各自合同分批处理。
