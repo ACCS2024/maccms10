@@ -320,7 +320,7 @@ class SelfCheck extends Command
     //
     // 本 fork 靠 config/<name>.php 去 include application/extra/<name>.php。
     // 少一个桩,那份配置就永远不会被加载 —— 同样零报错。
-    // 另外 middleware/Begin.php 有一份白名单,会删掉不在名单内的 extra 文件。
+    // 另外 middleware/Begin.php 有一份白名单,会记录不在名单内的 extra 文件供检查。
     // ------------------------------------------------------------------
     private function checkExtraStubs(): void
     {
@@ -342,7 +342,7 @@ class SelfCheck extends Command
             }
         }
 
-        // Begin.php 的白名单:不在名单里的 extra 文件会被逐请求删除
+        // Begin.php 的已知文件清单:未知文件保留并告警，不能仅凭文件名认定恶意。
         $begin = $this->appPath() . 'middleware/Begin.php';
         if (is_file($begin)) {
             $src = (string)file_get_contents($begin);
@@ -351,11 +351,11 @@ class SelfCheck extends Command
                 $allowed = array_map(fn($s) => basename($s, '.php'), $mm[1] ?? []);
                 foreach ($extras as $name) {
                     if ($allowed && !in_array($name, $allowed, true)) {
-                        $this->add('FAIL', 'extra', sprintf(
-                            'application/extra/%s.php 不在 Begin.php 的 allowedExtraFiles 白名单里,'
-                            . '该中间件会在每次请求时把它删掉。',
+                        $this->add('WARN', 'extra', sprintf(
+                            'application/extra/%s.php 不在 Begin.php 的已知配置清单里,'
+                            . '文件已保留，需要核实来源及加载方式。',
                             $name
-                        ), "把 {$name}.php 加进 Begin.php 的白名单");
+                        ), "先审查 {$name}.php 的来源和内容，再决定是否纳入已知配置清单");
                     }
                 }
             }

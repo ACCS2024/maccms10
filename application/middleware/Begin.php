@@ -13,20 +13,21 @@ class Begin
 
     public function handle($request, \Closure $next)
     {
+        // Runtime configuration has already loaded before this middleware runs.
+        // These are review signals only: never delete evidence or overwrite valid plugin configuration.
         $extraDir = APP_PATH . 'extra' . DIRECTORY_SEPARATOR;
         if (is_dir($extraDir)) {
             $files = scandir($extraDir);
-            foreach ($files as $f) {
+            foreach ($files ?: [] as $f) {
                 if ($f === '.' || $f === '..') {
                     continue;
                 }
-                if (!in_array($f, self::$allowedExtraFiles)) {
+                if (!in_array($f, self::$allowedExtraFiles, true)) {
                     @file_put_contents(
                         RUNTIME_PATH . 'security_alert.log',
-                        date('Y-m-d H:i:s') . " [ALERT] Suspicious file in extra/: {$f} from " . ($_SERVER['REMOTE_ADDR'] ?? 'CLI') . "\n",
+                        date('Y-m-d H:i:s') . " [REVIEW] Unrecognized extra/ entry: " . json_encode($f) . "\n",
                         FILE_APPEND | LOCK_EX
                     );
-                    @unlink($extraDir . $f);
                 }
             }
 
@@ -36,11 +37,10 @@ class Begin
                 if (strlen($c) > 2048 || preg_match('/eval|assert|\bsystem\b|\bexec\b|passthru|shell_exec|popen|proc_open|base64_decode|gzinflate|gzuncompress|str_rot13|create_function|call_user_func|file_put_contents|fwrite|fopen|curl_exec|\$_(GET|POST|REQUEST|COOKIE|SERVER)/i', $c)) {
                     @file_put_contents(
                         RUNTIME_PATH . 'security_alert.log',
-                        date('Y-m-d H:i:s') . " [ALERT] addons.php tampered (size=" . strlen($c) . ") from " . ($_SERVER['REMOTE_ADDR'] ?? 'CLI') . "\n",
+                        date('Y-m-d H:i:s') . " [REVIEW] addons.php requires inspection (size=" . strlen($c) . "). File preserved.\n",
                         FILE_APPEND | LOCK_EX
                     );
-                    @rename($addonsFile, $addonsFile . '.quarantine.' . date('YmdHis'));
-                    @file_put_contents($addonsFile, "<?php\n\nreturn array (\n  'autoload' => false,\n  'hooks' => \n  array (\n  ),\n  'route' => \n  array (\n  ),\n);\n");
+
                 }
             }
         }
