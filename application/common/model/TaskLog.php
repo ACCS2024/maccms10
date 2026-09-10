@@ -157,14 +157,19 @@ class TaskLog extends Base {
             'log_date' => $date,
         ];
         $log = Db::name('TaskLog')->where($where)->find();
-        if (!$log) {
+        $commentTask = $task['task_action'] === 'post_comment';
+        if ($log && (int)$log['log_status'] === 2) {
+            return ['code' => 1004, 'msg' => lang('task/already_claimed')];
+        }
+        $capability = $this->rewardCapability($task);
+        if (!$capability['reward_available']) {
+            return ['code'=>1006, 'msg'=>'该任务暂不支持领取奖励', 'info'=>$capability];
+        }
+        if (!$log && !$commentTask) {
             return ['code' => 1002, 'msg' => lang('task/not_completed')];
         }
-        if ($log['log_status'] == 0) {
+        if (!$commentTask && $log['log_status'] == 0) {
             return ['code' => 1003, 'msg' => lang('task/not_completed')];
-        }
-        if ($log['log_status'] == 2) {
-            return ['code' => 1004, 'msg' => lang('task/already_claimed')];
         }
         // SignLog owns the sign reward and its ledger. Never pay it a second time here.
         if ($task['task_action'] === 'daily_sign') {
@@ -181,6 +186,21 @@ class TaskLog extends Base {
         try {
             if (!Db::name('User')->where('user_id', $user_id)->lock(true)->find()) {
                 throw new \RuntimeException('task recipient missing');
+            }
+            if ($commentTask) {
+                $log = $log ?: $this->getOrCreateDaily($user_id, $task_id, 'post_comment', $date);
+                $log = Db::name('TaskLog')->where('log_id', $log['log_id'])->lock(true)->find();
+                if (!$log || (int)$log['log_status'] === 2) {
+                    Db::rollback();
+                    return ['code'=>1004, 'msg'=>lang('task/already_claimed')];
+                }
+                // Historical ready flags and client reports are not evidence of a real approved comment.
+                $progress = $this->verifiedCommentCount($user_id, $date, true);
+                if ($progress < (int)$task['task_target']) {
+                    Db::rollback();
+                    return ['code'=>1003, 'msg'=>lang('task/not_completed')];
+                }
+                $log = $this->writeCommentProgress($log, min($progress, (int)$task['task_target']), 1);
             }
             // 原子认领:仅当 log_status 仍为 1(已完成未领取)时置 2;受影响行数==1 才算抢到本次领取。
             // 修复 TOCTOU:此处是对已存在行的 UPDATE,不受唯一索引保护(不同于 SignLog/SignMilestone 的 INSERT),
@@ -221,6 +241,89 @@ class TaskLog extends Base {
         return ['code' => 1, 'msg' => lang('task/claim_ok'), 'info' => ['points' => $points]];
     }
 
+    /** Advertise what the server can actually verify; a client timer/share click is insufficient. */
+    public function rewardCapability(array $task): array
+    {
+        if (in_array($task['task_action'], ['watch_vod','share_vod'], true)) {
+            return ['reward_available'=>false, 'progress_source'=>'unavailable',
+                'reward_unavailable_reason'=>'trusted_server_event_unavailable'];
+        }
+        if ($task['task_action'] === 'post_comment') {
+            if ((int)$task['task_type'] !== 1 || \app\common\util\PointsBalance::amount($task['task_target']) === null) {
+                return ['reward_available'=>false, 'progress_source'=>'approved_comment',
+                    'reward_unavailable_reason'=>'invalid_comment_task_configuration'];
+            }
+            try {
+                if (!(new Comment())->supportsRewardVerification()) {
+                    return ['reward_available'=>false, 'progress_source'=>'approved_comment',
+                        'reward_unavailable_reason'=>'comment_provenance_migration_required'];
+                }
+            } catch (\Throwable $error) {
+                return ['reward_available'=>false, 'progress_source'=>'approved_comment',
+                    'reward_unavailable_reason'=>'comment_verification_unavailable'];
+            }
+            return ['reward_available'=>true, 'progress_source'=>'approved_comment', 'reward_unavailable_reason'=>''];
+        }
+        return ['reward_available'=>true, 'progress_source'=>'server', 'reward_unavailable_reason'=>''];
+    }
+
+    private function verifiedCommentCount(int $userId, string $date, bool $lock = false): int
+    {
+        $now = time();
+        $start = strtotime($date);
+        $end = strtotime('+1 day', $start);
+        $query = Db::name('Comment')->where('user_id', $userId)->where('comment_reward_verified', 1)
+            ->where('comment_status', 1)->where('comment_time', '>=', $start)->where('comment_time', '<', $end)
+            ->where('comment_time', '<=', $now);
+        if ($lock) { $query->lock(true); }
+        return (int)$query->count();
+    }
+
+    /** Caller locks the task row and owns a transaction. Never reopen a completed payment. */
+    private function writeCommentProgress(array $log, int $progress, int $status): array
+    {
+        if ((int)$log['log_status'] === 2) { return $log; }
+        $update = ['log_progress'=>$progress, 'log_status'=>$status];
+        if ((int)$log['log_progress'] !== $progress || (int)$log['log_status'] !== $status) {
+            if (Db::name('TaskLog')->where('log_id', $log['log_id'])->whereIn('log_status', [0,1])->update($update) !== 1) {
+                throw new \RuntimeException('verified comment progress update failed');
+            }
+        }
+        return array_merge($log, $update);
+    }
+
+    /** Optional legacy refresh endpoint; progress is always recomputed from persisted server evidence. */
+    public function refreshCommentProgress($userId, array $task = []): array
+    {
+        $userId = \app\common\util\PointsBalance::amount($userId);
+        if ($userId === null) { return ['code'=>1001, 'msg'=>lang('param_err')]; }
+        $task = $task ?: Db::name('Task')->where(['task_action'=>'post_comment','task_status'=>1])->find();
+        if (!$task || $task['task_action'] !== 'post_comment') { return ['code'=>1001, 'msg'=>lang('task/not_found')]; }
+        $capability = $this->rewardCapability($task);
+        if (!$capability['reward_available']) {
+            return ['code'=>1006, 'msg'=>'评论奖励暂不可用', 'info'=>$capability];
+        }
+        $date = date('Y-m-d');
+        Db::startTrans();
+        try {
+            if (!Db::name('User')->where('user_id', $userId)->lock(true)->find()) {
+                throw new \RuntimeException('comment task owner missing');
+            }
+            $log = $this->getOrCreateDaily($userId, $task['task_id'], 'post_comment', $date);
+            $log = Db::name('TaskLog')->where('log_id', $log['log_id'])->lock(true)->find();
+            if (!$log) { throw new \RuntimeException('comment task missing'); }
+            if ((int)$log['log_status'] !== 2) {
+                $progress = min($this->verifiedCommentCount($userId, $date, true), (int)$task['task_target']);
+                $log = $this->writeCommentProgress($log, $progress, $progress >= (int)$task['task_target'] ? 1 : 0);
+            }
+            Db::commit();
+            return ['code'=>1, 'msg'=>'ok', 'info'=>array_merge($log, $capability)];
+        } catch (\Throwable $error) {
+            Db::rollback();
+            return ['code'=>1002, 'msg'=>lang('save_err')];
+        }
+    }
+
     /**
      * 获取用户今日所有任务状态
      */
@@ -253,14 +356,26 @@ class TaskLog extends Base {
         $daily_result = [];
         foreach ($tasks['daily'] as $t) {
             $log = isset($daily_map[$t['task_id']]) ? $daily_map[$t['task_id']] : null;
+            $t = array_merge($t, $this->rewardCapability($t));
+            if ($t['task_action'] === 'post_comment' && (!$log || (int)$log['log_status'] !== 2) && $t['reward_available']) {
+                $refreshed = $this->refreshCommentProgress($user_id, $t);
+                if (($refreshed['code'] ?? null) === 1) {
+                    $log = $refreshed['info'];
+                } else {
+                    $t['reward_available'] = false;
+                    $t['reward_unavailable_reason'] = 'comment_verification_unavailable';
+                }
+            }
             $t['progress'] = $log ? (int)$log['log_progress'] : 0;
             $t['status'] = $log ? (int)$log['log_status'] : 0;
+            if (!$t['reward_available'] && $t['status'] !== 2) { $t['progress'] = 0; $t['status'] = 0; }
             $daily_result[] = $t;
         }
 
         // 组装新手任务（检测型策略A）
         $newbie_result = [];
         foreach ($tasks['newbie'] as $t) {
+            $t = array_merge($t, $this->rewardCapability($t));
             $log = isset($newbie_map[$t['task_id']]) ? $newbie_map[$t['task_id']] : null;
             $detected = $this->detectNewbieCompletion($t['task_action'], $user_info);
 
@@ -278,6 +393,7 @@ class TaskLog extends Base {
                 $t['progress'] = $log ? (int)$log['log_progress'] : 0;
                 $t['status'] = $log ? (int)$log['log_status'] : 0;
             }
+            if (!$t['reward_available'] && $t['status'] !== 2) { $t['progress'] = 0; $t['status'] = 0; }
             $newbie_result[] = $t;
         }
 

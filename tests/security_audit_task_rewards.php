@@ -168,6 +168,7 @@ check((int)$existing['log_status'] === 1 && Db::name('TaskLog')->count() === 1,
 taskRewardSeed('task');
 Db::name('TaskLog')->where('log_id', 1)->update(['log_status'=>0, 'log_progress'=>0]);
 Db::name('Task')->where('task_id', 1)->update(['task_target'=>3]);
+taskRewardComment(); taskRewardComment();
 check((new TaskLog())->addProgress(1, 'post_comment', 1)['info']['log_progress'] === 1, 'First progress increment failed');
 check((new TaskLog())->addProgress(1, 'post_comment', PointsBalance::MAX)['info']['log_progress'] === 3,
     'Progress exceeded its target or overflowed');

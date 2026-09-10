@@ -47,6 +47,7 @@ class Task extends Base
      */
     public function daily_sign(\think\Request $request)
     {
+        if (!$request->isPost()) { return json(['code'=>1001, 'msg'=>lang('param_err')]); }
         $check = (new \app\common\model\User())->checkLogin();
         if ($check['code'] > 1) {
             return json(['code' => 1401, 'msg' => lang('task/login_required')]);
@@ -83,15 +84,16 @@ class Task extends Base
      */
     public function claim_sign_milestone(\think\Request $request)
     {
+        if (!$request->isPost()) { return json(['code'=>1001, 'msg'=>lang('param_err')]); }
         $check = (new \app\common\model\User())->checkLogin();
         if ($check['code'] > 1) {
             return json(['code' => 1401, 'msg' => lang('task/login_required')]);
         }
         $user_id = intval($check['info']['user_id']);
-        $param = $request->param();
+        $param = $request->post();
 
-        $milestone_id = intval($param['milestone_id']);
-        if ($milestone_id <= 0) {
+        $milestone_id = \app\common\util\PointsBalance::amount($param['milestone_id'] ?? null);
+        if ($milestone_id === null) {
             return json(['code' => 1001, 'msg' => lang('param_err')]);
         }
 
@@ -110,15 +112,16 @@ class Task extends Base
      */
     public function claim_reward(\think\Request $request)
     {
+        if (!$request->isPost()) { return json(['code'=>1001, 'msg'=>lang('param_err')]); }
         $check = (new \app\common\model\User())->checkLogin();
         if ($check['code'] > 1) {
             return json(['code' => 1401, 'msg' => lang('task/login_required')]);
         }
         $user_id = intval($check['info']['user_id']);
-        $param = $request->param();
+        $param = $request->post();
 
-        $task_id = intval($param['task_id']);
-        if ($task_id <= 0) {
+        $task_id = \app\common\util\PointsBalance::amount($param['task_id'] ?? null);
+        if ($task_id === null) {
             return json(['code' => 1001, 'msg' => lang('param_err')]);
         }
 
@@ -127,26 +130,32 @@ class Task extends Base
     }
 
     /**
-     * 上报每日任务进度
+     * 兼容旧客户端的任务刷新入口；不接受客户端自报的完成次数
      * POST /api.php/Task/report_progress
      * @param task_action 任务动作标识 (watch_vod/share_vod/post_comment)
      */
     public function report_progress(\think\Request $request)
     {
+        if (!$request->isPost()) { return json(['code'=>1001, 'msg'=>lang('param_err')]); }
         $check = (new \app\common\model\User())->checkLogin();
         if ($check['code'] > 1) {
             return json(['code' => 1401, 'msg' => lang('task/login_required')]);
         }
         $user_id = intval($check['info']['user_id']);
-        $param = $request->param();
+        $param = $request->post();
 
-        $task_action = trim($param['task_action']);
+        $task_action = $param['task_action'] ?? null;
         $allowed = ['watch_vod', 'share_vod', 'post_comment'];
-        if (!in_array($task_action, $allowed)) {
+        if (!is_string($task_action) || !in_array($task_action, $allowed, true)) {
             return json(['code' => 1001, 'msg' => lang('param_err')]);
         }
-
-        $res = (new \app\common\model\TaskLog())->addProgress($user_id, $task_action, 1);
+        if ($task_action !== 'post_comment') {
+            return json(['code'=>1006, 'msg'=>'该任务尚无可验证的服务端完成事件', 'info'=>[
+                'reward_available'=>false, 'progress_source'=>'unavailable',
+                'reward_unavailable_reason'=>'trusted_server_event_unavailable',
+            ]]);
+        }
+        $res = (new \app\common\model\TaskLog())->refreshCommentProgress($user_id);
         return json($res);
     }
 }
