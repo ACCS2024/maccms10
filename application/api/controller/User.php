@@ -506,31 +506,28 @@ class User extends Base
      */
     public function del_ulog(\think\Request $request)
     {
+        if (!$request->isPost()) { return json(['code'=>1001, 'msg'=>lang('param_err')]); }
         $check = (new \app\common\model\User())->checkLogin();
-        if ($check['code'] > 1) return json(['code' => 1401, 'msg' => lang('api/please_login_first')]);
-        $uid = intval($check['info']['user_id']);
-        $param = $request->param();
-        // 清空某类日志：all=1 且 type=1..5（与 index user/ulog_del 一致）
-        if (!empty($param['all']) && (string)$param['all'] === '1') {
-            $type = isset($param['type']) ? (string)$param['type'] : '';
-            if (!in_array($type, ['1', '2', '3', '4', '5'], true)) {
-                return json(['code' => 1001, 'msg' => lang('api/param_type_required')]);
+        if ($check['code'] > 1) { return json(['code'=>1401, 'msg'=>lang('api/please_login_first')]); }
+        $uid = \app\common\util\PointsBalance::amount($check['info']['user_id'] ?? null);
+        $param = $request->post();
+        if (!array_key_exists('ids', $param) || $param['ids'] === '') { $param['ids'] = $param['ulog_id'] ?? ''; }
+        $ids = \app\common\util\LogSelection::ids($param);
+        if ($uid === null || $ids === null) { return json(['code'=>1001, 'msg'=>lang('api/param_ids_required')]); }
+        $where = ['user_id'=>$uid];
+        $type = $param['type'] ?? null;
+        if ($ids === [] || $type !== null) {
+            if ((!is_string($type) && !is_int($type)) || !in_array((string)$type, ['1','2','3','4','5'], true)) {
+                return json(['code'=>1001, 'msg'=>lang('api/param_type_required')]);
             }
-            $where = ['user_id' => $uid, 'ulog_type' => intval($type)];
-            $return = (new \app\common\model\Ulog())->delData($where);
-            return json($return);
+            $where['ulog_type'] = (int)$type;
         }
-        $ids = [];
-        if (!empty($param['ids'])) {
-            $ids = array_filter(array_map('intval', explode(',', $param['ids'])));
-        } elseif (!empty($param['ulog_id'])) {
-            $ids = [intval($param['ulog_id'])];
+        if ($ids !== []) { $where[] = ['ulog_id', 'in', $ids]; }
+        try {
+            return json((new \app\common\model\Ulog())->delData($where));
+        } catch (\Throwable $error) {
+            return json(['code'=>1001, 'msg'=>lang('del_err')]);
         }
-        if (empty($ids)) {
-            return json(['code' => 1001, 'msg' => lang('api/param_ids_required')]);
-        }
-        Db::name('ulog')->where(['user_id' => $uid, 'ulog_id' => $ids])->delete();
-        return json(['code' => 1, 'msg' => lang('del_ok')]);
     }
 
     /**

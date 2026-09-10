@@ -1,6 +1,8 @@
 <?php
 /** Real frontend deletion actions, Request and ORM; authentication/rendering are isolated. */
 namespace app\index\controller { class Base {} }
+namespace app\api\controller { class Base {} }
+namespace app\common\model { class User { public function checkLogin() { return empty($GLOBALS['delete_guest']) ? ['code'=>1,'info'=>$GLOBALS['user']] : ['code'=>1401]; } } }
 namespace {
     require dirname(__DIR__) . '/vendor/autoload.php';
     error_reporting(E_ALL);
@@ -35,11 +37,13 @@ namespace {
     function deletion($model, array $params, string $method = 'POST'): array {
         $request = (new \think\Request())->withServer(['REQUEST_METHOD'=>$method])->withPost($params)->withGet($params);
         \think\Container::getInstance()->instance('request',$request);
-        $controller = (new \ReflectionClass(\app\index\controller\User::class))->newInstanceWithoutConstructor();
-        return $controller->{strtolower($model).'_del'}()->getData();
+        $api = ($GLOBALS['delete_entry'] ?? 'index') === 'api';
+        $controller = (new \ReflectionClass($api ? \app\api\controller\User::class : \app\index\controller\User::class))->newInstanceWithoutConstructor();
+        return ($api ? $controller->del_ulog($request) : $controller->{strtolower($model).'_del'}())->getData();
     }
     try {
-        foreach (['Ulog','Plog'] as $model) {
+        foreach ([['index','Ulog'],['index','Plog'],['api','Ulog']] as [$entry,$model]) {
+            $GLOBALS['delete_entry'] = $entry;
             $prefix = strtolower($model);
             \think\facade\Db::execute('DROP TABLE IF EXISTS audit_log_delete_'.$prefix);
             \think\facade\Db::execute('CREATE TABLE audit_log_delete_'.$prefix.' ('.$prefix.'_id INTEGER PRIMARY KEY,user_id INTEGER,'.$prefix.'_type INTEGER'.($model === 'Plog' ? ',plog_user_hidden INTEGER NOT NULL DEFAULT 0' : '').')');
@@ -60,10 +64,24 @@ namespace {
             seedLogs($model);
             verify(deletion($model,['ids'=>' 1, 1, 4 ','type'=>'2'])['code'] === 1 && array_column(state($model),$prefix.'_id') === [2,3], 'Whitespace/duplicate valid IDs changed selection');
         }
-        foreach ([[], '0', '6', '2x', true] as $type) {
-            seedLogs('Ulog'); $before = state('Ulog');
-            verify(deletion('Ulog',['ids'=>'1','type'=>$type])['code'] !== 1 && state('Ulog') === $before, 'Invalid Ulog type deleted rows');
+        foreach (['index','api'] as $entry) {
+            $GLOBALS['delete_entry'] = $entry;
+            foreach ([[], '0', '6', '2x', true] as $type) {
+                seedLogs('Ulog'); $before = state('Ulog');
+                verify(deletion('Ulog',['ids'=>'1','type'=>$type])['code'] !== 1 && state('Ulog') === $before, 'Invalid Ulog type deleted rows');
+            }
         }
+        foreach ([['ids'=>'1,2'],['ulog_id'=>'1'],['ids'=>'','ulog_id'=>1]] as $input) {
+            seedLogs('Ulog');
+            verify(deletion('Ulog',$input)['code'] === 1 && array_column(state('Ulog'),'ulog_id') === (isset($input['ids']) && $input['ids']==='1,2' ? [3,4] : [2,3,4]),'API legacy selected-ID deletion failed');
+        }
+        foreach ([['all'=>'1'],['all'=>'1','type'=>[]],['ulog_id'=>[]],['ids'=>'1','all'=>true]] as $input) {
+            seedLogs('Ulog');$before=state('Ulog');
+            verify(deletion('Ulog',$input)['code'] !== 1 && state('Ulog') === $before,'Malformed API selection widened deletion');
+        }
+        seedLogs('Ulog');$before=state('Ulog');$GLOBALS['delete_guest']=true;
+        verify(deletion('Ulog',['all'=>'1','type'=>'2'])['code']===1401 && state('Ulog')===$before,'Unauthenticated API deleted records');
+        $GLOBALS['delete_guest']=false;
         echo "User log deletion: $checks checks passed on PHP " . PHP_VERSION . ' / ' . ($mysql ? 'MySQL':'SQLite') . "\n";
     } finally {
         foreach (['ulog','plog'] as $table) { \think\facade\Db::execute('DROP TABLE IF EXISTS audit_log_delete_'.$table); }
