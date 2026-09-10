@@ -3,196 +3,177 @@ namespace app\api\controller;
 
 class Receive extends Base
 {
-    var $_param;
+    public array $_param = [];
 
     public function __construct()
     {
         parent::__construct();
         $this->_param = \think\facade\Request::param();
-
-
-        if($GLOBALS['config']['interface']['status'] != 1){
-            echo json_encode(['code'=>3001,'msg'=>lang('api/close_err')],JSON_UNESCAPED_UNICODE);
-            exit;
+        $interface = $GLOBALS['config']['interface'] ?? [];
+        if (!is_array($interface) || ($interface['status'] ?? 0) != 1) {
+            $this->reject(3001, 'api/close_err');
         }
-        // 安全加固(V13):常量时间比较,防时序侧信道泄露口令
-        if(!hash_equals((string)$GLOBALS['config']['interface']['pass'], (string)$this->_param['pass'])){
-            echo json_encode(['code'=>3002,'msg'=>lang('api/pass_err')],JSON_UNESCAPED_UNICODE);
-            exit;
+        $configuredPass = $interface['pass'] ?? null;
+        $providedPass = $this->_param['pass'] ?? null;
+        // Reject structured input before comparing; casting pass[] raises a PHP 8 warning.
+        if (!is_string($configuredPass) || !is_string($providedPass) || !hash_equals($configuredPass, $providedPass)) {
+            $this->reject(3002, 'api/pass_err');
         }
-        if( strlen($GLOBALS['config']['interface']['pass']) <16){
-            echo json_encode(['code'=>3003,'msg'=>lang('api/pass_safe_err')],JSON_UNESCAPED_UNICODE);
-            exit;
+        if (strlen($configuredPass) < 16) {
+            $this->reject(3003, 'api/pass_safe_err');
         }
-
     }
 
     public function index()
     {
+    }
 
+    private function reject(int $code, string $message): never
+    {
+        echo json_encode(['code'=>$code, 'msg'=>lang($message)], JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
+        exit;
+    }
+
+    private function requireText(array $info, string $field, int $code, string $message): void
+    {
+        $value = $info[$field] ?? null;
+        if ((!is_string($value) && !is_int($value) && !is_float($value)) || empty($value)) {
+            $this->reject($code, $message);
+        }
+    }
+
+    private function positiveId($value): ?int
+    {
+        if ((!is_string($value) && !is_int($value)) || !ctype_digit((string)$value)) {
+            return null;
+        }
+        $digits = ltrim((string)$value, '0');
+        $max = (string)PHP_INT_MAX;
+        if ($digits === '' || strlen($digits) > strlen($max) || (strlen($digits) === strlen($max) && strcmp($digits, $max) > 0)) {
+            return null;
+        }
+        return (int)$digits;
+    }
+
+    private function requireCategory(array &$info, string $kind, int $mid, int $code): void
+    {
+        foreach (['type_id','type_name'] as $field) {
+            if (isset($info[$field]) && !is_string($info[$field]) && !is_int($info[$field])) {
+                $this->reject($code, 'api/require_type');
+            }
+        }
+        if (!empty($info['type_id'])) {
+            $id = $this->positiveId($info['type_id']);
+        } elseif (!empty($info['type_name'])) {
+            // Explicit IDs do not depend on the optional name mapping configuration.
+            $mapping = mac_interface_type();
+            $id = $this->positiveId($mapping[$kind . 'type'][$info['type_name']] ?? null);
+        } else {
+            $id = null;
+        }
+        $types = (new \app\common\model\Type())->getCache('type_list');
+        $type = $id === null ? null : ($types[$id] ?? null);
+        if (!is_array($type) || (int)($type['type_mid'] ?? 0) !== $mid) {
+            $this->reject($code, 'api/require_type');
+        }
+        $info['type_id'] = $id;
+    }
+
+    private function requireRelation(array $info, string $name, int $code, string $message): void
+    {
+        foreach ([$name,'douban_id'] as $field) {
+            if (isset($info[$field]) && !is_string($info[$field]) && !is_int($info[$field])) {
+                $this->reject($code, $message);
+            }
+        }
+        if (empty($info[$name]) && empty($info['douban_id'])) {
+            $this->reject($code, $message);
+        }
+    }
+
+    private function collect(string $kind, array $info): void
+    {
+        // The receiving protocol contains flat form fields. Nested optional fields
+        // otherwise reach strip_tags/trim or the SQL builder as arrays.
+        unset($info['pass']);
+        if ($kind !== 'vod') {
+            // Only the video collector consumes the source category as class metadata.
+            unset($info['type_name']);
+        }
+        foreach ($info as $field => $value) {
+            if (!is_string($field) || (!is_scalar($value) && $value !== null)) {
+                $this->reject(1001, 'param_err');
+            }
+            if ($value === null) {
+                $info[$field] = '';
+            }
+        }
+        $method = $kind . '_data';
+        $result = (new \app\common\model\Collect())->$method([], ['data'=>[$info]], 0);
+        echo json_encode($result, JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
     }
 
     public function vod()
     {
         $info = $this->_param;
-
-        if(empty($info['vod_name'])){
-            echo json_encode(['code'=>2001,'msg'=>lang('api/require_name')],JSON_UNESCAPED_UNICODE);
-            exit;
-        }
-        if(empty($info['type_id']) && empty($info['type_name'])){
-            echo json_encode(['code'=>2002,'msg'=>lang('api/require_type')],JSON_UNESCAPED_UNICODE);
-            exit;
-        }
-
-        $inter = mac_interface_type();
-        if(empty($info['type_id'])) {
-            $info['type_id'] = $inter['vodtype'][$info['type_name']];
-        }
-
-        $data['data'][] = $info;
-        $res = (new \app\common\model\Collect())->vod_data([],$data,0);
-        echo json_encode($res,JSON_UNESCAPED_UNICODE);
+        $this->requireText($info, 'vod_name', 2001, 'api/require_name');
+        $this->requireCategory($info, 'vod', 1, 2002);
+        $this->collect('vod', $info);
     }
 
     public function art()
     {
         $info = $this->_param;
-
-        if(empty($info['art_name'])){
-            echo json_encode(['code'=>2001,'msg'=>lang('api/require_name')],JSON_UNESCAPED_UNICODE);
-            exit;
-        }
-        if(empty($info['type_id']) && empty($info['type_name'])){
-            echo json_encode(['code'=>2002,'msg'=>lang('api/require_type')],JSON_UNESCAPED_UNICODE);
-            exit;
-        }
-
-        $inter = mac_interface_type();
-        if(empty($info['type_id'])) {
-            $info['type_id'] = $inter['arttype'][$info['type_name']];
-        }
-        $data['data'][] = $info;
-        $res = (new \app\common\model\Collect())->art_data([],$data,0);
-        echo json_encode($res,JSON_UNESCAPED_UNICODE);
+        $this->requireText($info, 'art_name', 2001, 'api/require_name');
+        $this->requireCategory($info, 'art', 2, 2002);
+        $this->collect('art', $info);
     }
 
     public function actor()
     {
         $info = $this->_param;
-
-        if(empty($info['actor_name'])){
-            echo json_encode(['code'=>2001,'msg'=>lang('api/require_actor_name')],JSON_UNESCAPED_UNICODE);
-            exit;
-        }
-        if(empty($info['actor_sex'])){
-            echo json_encode(['code'=>2002,'msg'=>lang('api/require_sex')],JSON_UNESCAPED_UNICODE);
-            exit;
-        }
-        if(empty($info['type_id']) && empty($info['type_name'])){
-            echo json_encode(['code'=>2003,'msg'=>lang('api/require_type')],JSON_UNESCAPED_UNICODE);
-            exit;
-        }
-
-        $inter = mac_interface_type();
-        if(empty($info['type_id'])) {
-            $info['type_id'] = $inter['actortype'][$info['type_name']];
-        }
-        $data['data'][] = $info;
-        $res = (new \app\common\model\Collect())->actor_data([],$data,0);
-        echo json_encode($res,JSON_UNESCAPED_UNICODE);
+        $this->requireText($info, 'actor_name', 2001, 'api/require_actor_name');
+        $this->requireText($info, 'actor_sex', 2002, 'api/require_sex');
+        $this->requireCategory($info, 'actor', 8, 2003);
+        $this->collect('actor', $info);
     }
 
     public function role()
     {
         $info = $this->_param;
-
-        if(empty($info['role_name'])){
-            echo json_encode(['code'=>2001,'msg'=>lang('api/require_role_name')],JSON_UNESCAPED_UNICODE);
-            exit;
-        }
-        if(empty($info['role_actor'])){
-            echo json_encode(['code'=>2002,'msg'=>lang('api/require_actor_name')],JSON_UNESCAPED_UNICODE);
-            exit;
-        }
-        if(empty($info['vod_name']) && empty($info['douban_id'])){
-            echo json_encode(['code'=>2003,'msg'=>lang('api/require_rel_vod')],JSON_UNESCAPED_UNICODE);
-            exit;
-        }
-
-        $data['data'][] = $info;
-        $res = (new \app\common\model\Collect())->role_data([],$data,0);
-        echo json_encode($res,JSON_UNESCAPED_UNICODE);
+        $this->requireText($info, 'role_name', 2001, 'api/require_role_name');
+        $this->requireText($info, 'role_actor', 2002, 'api/require_actor_name');
+        $this->requireRelation($info, 'vod_name', 2003, 'api/require_rel_vod');
+        $this->collect('role', $info);
     }
 
     public function website()
     {
         $info = $this->_param;
-
-        if(empty($info['website_name'])){
-            echo json_encode(['code'=>2001,'msg'=>lang('api/require_name')],JSON_UNESCAPED_UNICODE);
-            exit;
-        }
-        if(empty($info['type_id']) && empty($info['type_name'])){
-            echo json_encode(['code'=>2002,'msg'=>lang('api/require_type')],JSON_UNESCAPED_UNICODE);
-            exit;
-        }
-
-        $inter = mac_interface_type();
-        if(empty($info['type_id'])) {
-            $info['type_id'] = $inter['websitetype'][$info['type_name']];
-        }
-        $data['data'][] = $info;
-        $res = (new \app\common\model\Collect())->website_data([],$data,0);
-        echo json_encode($res,JSON_UNESCAPED_UNICODE);
+        $this->requireText($info, 'website_name', 2001, 'api/require_name');
+        $this->requireCategory($info, 'website', 11, 2002);
+        $this->collect('website', $info);
     }
 
     public function manga()
     {
         $info = $this->_param;
-
-        if(empty($info['manga_name'])){
-            echo json_encode(['code'=>2001,'msg'=>lang('api/require_name')],JSON_UNESCAPED_UNICODE);
-            exit;
-        }
-        if(empty($info['type_id']) && empty($info['type_name'])){
-            echo json_encode(['code'=>2002,'msg'=>lang('api/require_type')],JSON_UNESCAPED_UNICODE);
-            exit;
-        }
-
-        $inter = mac_interface_type();
-        if(empty($info['type_id'])) {
-            $info['type_id'] = $inter['mangatype'][$info['type_name']];
-        }
-        $data['data'][] = $info;
-        $res = (new \app\common\model\Collect())->manga_data([],$data,0);
-        echo json_encode($res,JSON_UNESCAPED_UNICODE);
+        $this->requireText($info, 'manga_name', 2001, 'api/require_name');
+        $this->requireCategory($info, 'manga', 12, 2002);
+        $this->collect('manga', $info);
     }
 
     public function comment()
     {
         $info = $this->_param;
-
-        if(empty($info['comment_name'])){
-            echo json_encode(['code'=>2001,'msg'=>lang('api/require_comment_name')],JSON_UNESCAPED_UNICODE);
-            exit;
+        $this->requireText($info, 'comment_name', 2001, 'api/require_comment_name');
+        $this->requireText($info, 'comment_content', 2002, 'api/require_comment_name');
+        $mid = $this->positiveId($info['comment_mid'] ?? null);
+        if ($mid === null) {
+            $this->reject(2004, 'api/require_mid');
         }
-        if(empty($info['comment_content'])){
-            echo json_encode(['code'=>2002,'msg'=>lang('api/require_comment_name')],JSON_UNESCAPED_UNICODE);
-            exit;
-        }
-        if(empty($info['comment_mid'])){
-            echo json_encode(['code'=>2004,'msg'=>lang('api/require_mid')],JSON_UNESCAPED_UNICODE);
-            exit;
-        }
-        if(empty($info['rel_name']) && empty($info['douban_id'])){
-            echo json_encode(['code'=>2003,'msg'=>lang('api/require_rel_name')],JSON_UNESCAPED_UNICODE);
-            exit;
-        }
-
-
-        $data['data'][] = $info;
-        $res = (new \app\common\model\Collect())->comment_data([],$data,0);
-        echo json_encode($res,JSON_UNESCAPED_UNICODE);
+        $info['comment_mid'] = $mid;
+        $this->requireRelation($info, 'rel_name', 2003, 'api/require_rel_name');
+        $this->collect('comment', $info);
     }
 }

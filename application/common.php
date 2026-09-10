@@ -1676,80 +1676,53 @@ function mac_parse_sql($sql='',$limit=0,$prefix=[])
 function mac_interface_type()
 {
     $key = $GLOBALS['config']['app']['cache_flag']. '_'. 'interface_type';
+    $kinds = ['vodtype', 'arttype', 'actortype', 'websitetype', 'mangatype'];
     $data = think\facade\Cache::get($key);
-    if(empty($data)){
+    if (!is_array($data) || $data === []) {
         $config = config('maccms.interface');
-        $vodtype = str_replace([chr(10),chr(13)],['','#'],$config['vodtype']);
-        $arttype = str_replace([chr(10),chr(13)],['','#'],$config['arttype']);
-        $actortype = str_replace([chr(10),chr(13)],['','#'],$config['actortype']);
-        $websitetype = str_replace([chr(10),chr(13)],['','#'],$config['websitetype']);
-        $mangatype = str_replace([chr(10),chr(13)],['','#'],isset($config['mangatype']) ? $config['mangatype'] : '');
-
-        $data =[];
-        $type_arr = explode('#',$vodtype);
-        foreach($type_arr as $k=>$v){
-            list($from, $to) = explode('=', $v);
-            $data['vodtype'][$to] = $from;
-        }
-
-        $type_arr = explode('#',$arttype);
-        foreach($type_arr as $k=>$v){
-            list($from, $to) = explode('=', $v);
-            $data['arttype'][$to] = $from;
-        }
-
-        $type_arr = explode('#',$actortype);
-        foreach($type_arr as $k=>$v){
-            list($from, $to) = explode('=', $v);
-            $data['actortype'][$to] = $from;
-        }
-
-        $type_arr = explode('#',$websitetype);
-        foreach($type_arr as $k=>$v){
-            list($from, $to) = explode('=', $v);
-            $data['websitetype'][$to] = $from;
-        }
-
-        if(!empty($mangatype)){
-            $type_arr = explode('#',$mangatype);
-            foreach($type_arr as $k=>$v){
-                if(strpos($v,'=')!==false){
-                    list($from, $to) = explode('=', $v);
-                    $data['mangatype'][$to] = $from;
+        $config = is_array($config) ? $config : [];
+        $data = array_fill_keys($kinds, []);
+        foreach ($kinds as $kind) {
+            if (!is_string($config[$kind] ?? null)) {
+                continue;
+            }
+            // Configuration uses local-name=source-name, one mapping per line.
+            // Accept Unix/Windows line endings and the legacy # separator.
+            foreach (preg_split('/\r\n|\r|\n|#/', $config[$kind]) as $line) {
+                $parts = explode('=', $line, 2);
+                if (count($parts) !== 2) {
+                    continue;
+                }
+                [$local, $source] = array_map('trim', $parts);
+                if ($local !== '' && $source !== '') {
+                    // Preserve the existing last-entry-wins rule for duplicate sources.
+                    $data[$kind][$source] = $local;
                 }
             }
         }
-        if(empty($data['mangatype'])){
-            $data['mangatype'] = [];
-        }
-
-        think\facade\Cache::set($key,$data);
+        // Cache names, not IDs: deleted/renamed local categories must stop resolving.
+        think\facade\Cache::set($key, $data);
     }
 
     $type_list = (new \app\common\model\Type())->getCache('type_list');
     $type_names = [];
-    foreach($type_list as $k=>$v){
-        $type_names[$v['type_name']] = $v['type_id'];
-    }
-
-    foreach($data['vodtype'] as $k=>$v){
-        $data['vodtype'][$k] = (int)$type_names[$v];
-    }
-    foreach($data['arttype'] as $k=>$v){
-        $data['arttype'][$k] = (int)$type_names[$v];
-    }
-    foreach($data['actortype'] as $k=>$v){
-        $data['actortype'][$k] = (int)$type_names[$v];
-    }
-    foreach($data['websitetype'] as $k=>$v){
-        $data['websitetype'][$k] = (int)$type_names[$v];
-    }
-    if(!empty($data['mangatype'])){
-        foreach($data['mangatype'] as $k=>$v){
-            $data['mangatype'][$k] = (int)$type_names[$v];
+    foreach ($type_list as $type) {
+        if (is_array($type) && is_string($type['type_name'] ?? null) && (int)($type['type_id'] ?? 0) > 0) {
+            $type_names[$type['type_name']] = (int)$type['type_id'];
         }
     }
-    return $data;
+    $result = array_fill_keys($kinds, []);
+    foreach ($kinds as $kind) {
+        if (!is_array($data[$kind] ?? null)) {
+            continue;
+        }
+        foreach ($data[$kind] as $source => $local) {
+            if (is_string($local) && isset($type_names[$local])) {
+                $result[$kind][$source] = $type_names[$local];
+            }
+        }
+    }
+    return $result;
 }
 
 function mac_rep_pse_rnd($psearr,$txt,$id=0)
