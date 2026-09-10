@@ -4,4 +4,5 @@
 // config/app.php 的 exception_handle 键在 TP8 中无效（TP5 遗留），勿混淆。
 return [
     'think\exception\Handle' => \app\ExceptionHandle::class,
+    'think\Request' => \app\Request::class,
 ];
