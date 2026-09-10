@@ -47,6 +47,10 @@ class Annex extends Base
     public function file()
     {
         $path = \think\facade\Request::param("path");
+        if ($path !== null && !is_string($path)) {
+            return $this->error(lang('param_err'));
+        }
+        $path = $path ?? '';
         $path = str_replace('\\','',$path);
         $path = str_replace('/','',$path);
 
@@ -78,12 +82,18 @@ class Annex extends Base
         $files = [];
 
         $pp = str_replace('@','/',$path);
+        if (self::resolveManagedPath('.' . $pp, 'upload') === null) {
+            return $this->error(lang('param_err'));
+        }
 
         if(is_dir('.'.$pp)){
 
             $farr = glob('.'.$pp.'/*');
             if($farr){
                 foreach($farr as $f){
+                    if (self::resolveManagedPath($f, 'upload') === null) {
+                        continue;
+                    }
 
                     if ( is_dir($f) ){
 

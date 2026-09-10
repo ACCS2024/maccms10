@@ -161,6 +161,43 @@ class Base extends All
         return $c . '/' . $a;
     }
 
+    /** Resolve a managed file or directory without allowing sibling roots or symlink escapes. */
+    protected static function resolveManagedPath($path, string $root, bool $allowNew = false): ?string
+    {
+        if (!is_string($path) || $path === '' || preg_match('/[\x00-\x1f\x7f]/', $path)) {
+            return null;
+        }
+        $path = str_replace('\\', '/', $path);
+        $relative = str_starts_with($path, './') ? substr($path, 2) : $path;
+        if ($relative !== $root && !str_starts_with($relative, $root . '/')) {
+            return null;
+        }
+        if (in_array('..', explode('/', $relative), true)) {
+            return null;
+        }
+        $rootPath = realpath(ROOT_PATH . $root);
+        if ($rootPath === false) {
+            return null;
+        }
+        $candidate = ROOT_PATH . $relative;
+        // Unlinking a canonicalized file symlink would delete its target, not the link.
+        if (is_link($candidate) && !is_dir($candidate)) {
+            return null;
+        }
+        $resolved = realpath($candidate);
+        if ($resolved === false && $allowNew && !file_exists($candidate) && !is_link($candidate)) {
+            $parent = realpath(dirname($candidate));
+            if ($parent !== false) {
+                $resolved = $parent . DIRECTORY_SEPARATOR . basename($candidate);
+            }
+        }
+        if ($resolved === false || ($resolved !== $rootPath
+            && !str_starts_with($resolved, $rootPath . DIRECTORY_SEPARATOR))) {
+            return null;
+        }
+        return $resolved;
+    }
+
     public function _cache_clear()
     {
         if(ENTRANCE=='admin') {

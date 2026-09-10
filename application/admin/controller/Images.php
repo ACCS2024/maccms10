@@ -26,17 +26,16 @@ class Images extends Base
     public function del()
     {
         $param = \think\facade\Request::param();
-        $fname = $param['ids'];
+        $fname = $param['ids'] ?? [];
         if(!empty($fname)){
+            $fname = is_array($fname) ? $fname : [$fname];
             foreach($fname as $a){
-                $a = str_replace('\\','/',$a);
-
-                if( (substr($a,0,8) != "./upload") || count( explode("./",$a) ) > 2) {
-
+                $resolved = self::resolveManagedPath($a, 'upload');
+                if ($resolved === null || !is_file($resolved)) {
+                    return $this->error(lang('param_err'));
                 }
-                else{
-                    $a = mac_convert_encoding($a,"UTF-8","GB2312");
-                    if(file_exists($a)){ @unlink($a); }
+                if (!@unlink($resolved)) {
+                    return $this->error(lang('del_err'));
                 }
             }
         }

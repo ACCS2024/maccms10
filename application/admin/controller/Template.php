@@ -13,6 +13,9 @@ class Template extends Base
     {
         $param = \think\facade\Request::param();
         $path = $param['path'] ?? '';
+        if (!is_string($path)) {
+            return $this->error(lang('param_err'));
+        }
         $path = str_replace('\\','',$path);
         $path = str_replace('/','',$path);
 
@@ -56,6 +59,9 @@ class Template extends Base
             $filters = $pp.'/*';
         }
 
+        if (self::resolveManagedPath($pp, 'template') === null) {
+            return $this->error(lang('param_err'));
+        }
         $this->assign('curpath',$path);
         $this->assign('uppath',$uppath);
         $this->assign('ischild',$ischild);
@@ -69,6 +75,9 @@ class Template extends Base
             $farr = glob($filters);
             if ($farr) {
                 foreach ($farr as $f) {
+                    if (self::resolveManagedPath($f, 'template') === null) {
+                        continue;
+                    }
 
                     if(is_dir($f)) {
                             $num_path++;
@@ -112,6 +121,9 @@ class Template extends Base
             $adsdir='ads';
         }
         $path = './template/'.$GLOBALS['config']['site']['template_dir'].'/'.$adsdir ;
+        if (self::resolveManagedPath($path, 'template', true) === null) {
+            return $this->error(lang('param_err'));
+        }
         if(!file_exists($path)){
             mac_mkdirss($path);
         }
@@ -119,9 +131,13 @@ class Template extends Base
         $filters = $path.'/*.js';
         $num_file=0;
         $sum_size=0;
+        $files = [];
         $farr = glob($filters);
         if ($farr) {
             foreach ($farr as $f) {
+                if (self::resolveManagedPath($f, 'template') === null) {
+                    continue;
+                }
                 if(is_file($f)) {
                     $num_file++;
                     $fsize = filesize($f);
@@ -153,24 +169,22 @@ class Template extends Base
         $fname = ($param['fname'] ?? '');
         $fpath = ($param['fpath'] ?? '');
 
-        if( empty($fpath)){
-            $this->error(lang('param_err').'1');
-            return;
+        if (!is_string($fname) || !is_string($fpath) || $fname === '' || $fpath === '') {
+            return $this->error(lang('param_err').'1');
         }
         $fpath = str_replace('@','/',$fpath);
         $fullname = $fpath .'/' .$fname;
         $fullname = str_replace('\\','/',$fullname);
 
-        if( (substr($fullname,0,10) != "./template") || count( explode("./",$fullname) ) > 2) {
-            $this->error(lang('param_err').'2');
-            return;
+        $fullname = self::resolveManagedPath($fullname, 'template', Request()->isPost());
+        if ($fullname === null) {
+            return $this->error(lang('param_err').'2');
         }
         $path = pathinfo($fullname);
         if(!empty($fname)) {
             $extarr = array('html', 'htm', 'js', 'xml');
-            if (!in_array($path['extension'], $extarr)) {
-                $this->error(lang('admin/template/ext_safe_tip'));
-                return;
+            if (!in_array(strtolower($path['extension'] ?? ''), $extarr, true)) {
+                return $this->error(lang('admin/template/ext_safe_tip'));
             }
         }
 
@@ -189,12 +203,14 @@ class Template extends Base
             }
 
             $fcontent = ($param['fcontent'] ?? '');
+            if (!is_string($fcontent)) {
+                return $this->error(lang('param_err'));
+            }
             $r = mac_reg_replace($fcontent,$filter,"*");
             if($fcontent !== $r){
-                $this->error(lang('admin/template/php_safe_tip'));
-                return;
+                return $this->error(lang('admin/template/php_safe_tip'));
             }
-            $res = @fwrite(fopen($fullname,'wb'),$fcontent);
+            $res = @file_put_contents($fullname, $fcontent, LOCK_EX);
 
             if($res===false){
                 return $this->error(lang('save_err'));
@@ -203,6 +219,9 @@ class Template extends Base
         }
 
         $fcontent = @file_get_contents($fullname);
+        if ($fcontent === false) {
+            return $this->error(lang('param_err'));
+        }
         $fcontent = str_replace('</textarea>','<&#47textarea>',$fcontent);
         $this->assign('fname',$fname);
         $this->assign('fpath',$fpath);
@@ -220,14 +239,12 @@ class Template extends Base
                 $fname = [$fname];
             }
             foreach($fname as $a){
-                $a = str_replace('\\','/',$a);
-
-                if( (substr($a,0,10) != "./template") || count( explode("./",$a) ) > 2) {
-
+                $resolved = self::resolveManagedPath($a, 'template');
+                if ($resolved === null || !is_file($resolved)) {
+                    return $this->error(lang('param_err'));
                 }
-                else{
-                    $a = mac_convert_encoding($a,"UTF-8","GB2312");
-                    if(file_exists($a)){ @unlink($a); }
+                if (!@unlink($resolved)) {
+                    return $this->error(lang('del_err'));
                 }
             }
         }
