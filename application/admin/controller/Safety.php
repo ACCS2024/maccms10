@@ -5,81 +5,15 @@ use think\facade\Db;
 class Safety extends Base
 {
 
-    var $_files;
-    public function __construct()
-    {
-        parent::__construct();
-    }
-
     public function index()
     {
-
-    }
-
-    protected function listDir($dir){
-        if(is_dir($dir)){
-            if ($dh = opendir($dir)) {
-                while (($file= readdir($dh)) !== false){
-                    $tmp = str_replace('//','/',mac_convert_encoding($dir.$file, "UTF-8", "GB2312"));
-                    if((is_dir($dir."/".$file)) && $file!="." && $file!=".."){
-                        $this->listDir($dir."/".$file."/");
-                    } else{
-                        if($file!="." && $file!=".."){
-                            $this->_files[$tmp] = ['md5'=>md5_file($dir.$file)];
-                        }
-                    }
-                }
-                closedir($dh);
-            }
-        }
+        return $this->file();
     }
 
     public function file()
     {
-        $param = \think\facade\Request::param();
-        if(!empty($param['ck'])){
-            $ft = $param['ft'];
-            if(empty($ft)){
-                $ft = ['1','2'];
-            }
-            mac_echo('<style type="text/css">body{font-size:12px;color: #333333;line-height:21px;}span{font-weight:bold;color:#FF0000}</style>');
-            // 「文件校验」原本从 update.maccms.la 拉一份官方文件指纹清单来比对本地文件。
-            // 该域名是已被证实投毒的升级通道（奇安信 xlab 披露 FUNNULL/RingH23），
-            // 而这个功能的语义恰恰是「拿远程给的清单来判断本地文件是否可信」——
-            // 一旦上游被控，它会反过来把被篡改的文件判成正常、把加固过的文件判成异常，
-            // 是最不该保留远程依赖的地方。
-            //
-            // 何况本 fork 与上游差异极大（TP5→TP8 重写、权限/会话/路由/视图大量改动），
-            // 官方指纹清单对本站本来就不适用，比对结果只会是满屏误报。
-            //
-            // 本地完整性请用：php think mac:selfcheck（配置基线/菜单/权限/模板）
-            // 与 php security_check.php（安全体检），二者都不依赖任何外部源。
-            return $this->error('文件校验已停用：该功能依赖官方指纹源 update.maccms.la，'
-                . '该升级通道已被证实投毒。请改用 php think mac:selfcheck 与 php security_check.php。');
-
-            $this->listDir('./');
-            if(!is_array($this->_files)){
-                return $this->error(lang('admin/safety/file_msg2'));
-            }
-
-            foreach($this->_files as $k=>$v){
-                $color = '';
-                $msg = 'ok';
-                if(empty($json[$k]) && in_array('1',$ft)){
-                    $color = 'BlueViolet';
-                    $msg = lang('admin/safety/file_msg3');
-                }
-                elseif(!empty($json[$k]) && $v['md5'] != $json[$k]['md5'] && in_array('2',$ft)){
-                    $color = 'red';
-                    $msg = lang('admin/safety/file_msg4');
-                }
-                if($color!='') {
-                    //$this->_files[$k]['jc'] = $color;
-                    mac_echo($k . '---' . "<font color=$color>" . $msg . '</font>');
-                }
-            }
-            exit;
-        }
+        // Integrity checks use the maintained local repository and local audit tools.
+        // Do not trust a fingerprint manifest fetched from the former update service.
         return $this->fetch('admin@safety/file');
     }
 

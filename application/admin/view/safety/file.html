@@ -1,38 +1,20 @@
 {include file="../../../application/admin/view/public/head" /}
 
 <div class="page-container">
-    <form class="layui-form layui-form-pane" method="get" action="">
-        <input name="ck" value="1" type="hidden">
-        <div class="layui-tab">
-            <ul class="layui-tab-title">
-                <li class="layui-this">{:lang('admin/safety/file_inspect')}</li>
-            </ul>
-            <div class="layui-tab-content">
-                <div class="layui-tab-item layui-show" id="movementTable">
-                        <blockquote class="layui-elem-quote layui-quote-nm">
-                            {:lang('admin/safety/file_inspect_tip')}
-                        </blockquote>
-                </div>
-            </div>
+    <div class="layui-card">
+        <div class="layui-card-header">{:lang('admin/safety/file_inspect')}</div>
+        <div class="layui-card-body layui-text" style="line-height:2;">
+            <p>文件完整性以本分支已审查的 Git 版本为基准。请在服务器站点目录执行：</p>
+            <pre>git status --short
+git diff --name-status HEAD
+php think mac:selfcheck
+php security_check.php</pre>
+            <p>Git 检查用于发现代码变更；本地自检用于检查配置、权限和已知安全问题。请核对新增文件与差异，再从可信部署副本恢复异常文件。</p>
+            <p>运行时缓存、上传内容和数据库需要单独检查。仅凭代码无差异不能判断站点未被入侵。</p>
         </div>
-        <div class="layui-form-item center">
-            <div class="layui-input-block">
-                <input type="checkbox" lay-skin="primary" name="ft[]" value="1" title="{:lang('admin/safety/file_msg3')}" checked>
-                <input type="checkbox" lay-skin="primary" name="ft[]" value="2" title="{:lang('admin/safety/file_msg4')}" checked>
-                <button type="submit" class="layui-btn" >{:lang('admin/safety/exec')}</button>
-            </div>
-        </div>
-    </form>
+    </div>
 </div>
 
 {include file="../../../application/admin/view/public/foot" /}
-<script type="text/javascript">
-    $(function(){
-       $('.layui-btn').click(function(){
-           layer.msg("{:lang('wait_submit')}");
-       });
-    });
-</script>
-
 </body>
 </html>
