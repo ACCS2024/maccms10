@@ -8,6 +8,10 @@ class BulkTableIo
 {
     const MAX_IMPORT_ROWS = 2000;
     const MAX_EXPORT_ROWS = 10000;
+    const MAX_IMPORT_BYTES = 20971520;
+    const MAX_CSV_RECORD_BYTES = 8388608;
+    const MAX_IMPORT_COLUMNS = 256;
+    const MAX_IMPORT_CELLS = 100000;
 
     public static function colName($index)
     {
@@ -77,48 +81,86 @@ class BulkTableIo
 
     public static function parseCsv($path)
     {
-        $handle = fopen($path, 'rb');
-        if (!$handle) {
-            throw new \RuntimeException('read fail');
-        }
-        $bom = fread($handle, 3);
-        if ($bom !== "\xEF\xBB\xBF") {
-            rewind($handle);
-        }
-        $headers = fgetcsv($handle, null, ',', '"', '');
-        if ($headers === false || empty($headers)) {
-            fclose($handle);
-            return ['headers' => [], 'rows' => []];
-        }
-        $headers = array_map(function ($h) {
-            return trim((string)$h);
-        }, $headers);
-        $rows = [];
-        while (($line = fgetcsv($handle, null, ',', '"', '')) !== false) {
-            if ($line === [null] || $line === false) {
+        $handle = @fopen($path, 'rb');
+        if ($handle === false) { throw new \RuntimeException('Cannot read CSV'); }
+        try {
+            $stat = fstat($handle);
+            if ($stat !== false && $stat['size'] > self::MAX_IMPORT_BYTES) {
+                throw new \RuntimeException('CSV exceeds the import byte limit');
+            }
+            // Parse these same bounded bytes, never reread a file that may have changed after inspection.
+            $source = stream_get_contents($handle, self::MAX_IMPORT_BYTES + 1);
+            if ($source === false || strlen($source) > self::MAX_IMPORT_BYTES) {
+                throw new \RuntimeException('CSV exceeds the import byte limit');
+            }
+        } finally { fclose($handle); }
+        $size = strlen($source);
+        $start = str_starts_with($source, "\xEF\xBB\xBF") ? 3 : 0;
+        $quoted = false; $afterQuote = false; $fieldStart = true;
+        $columns = 1; $records = 0; $cells = 0; $headerRead = false;
+        $headers = []; $rows = [];
+        for ($i = $start; $i < $size; $i++) {
+            if ($i - $start > self::MAX_CSV_RECORD_BYTES) {
+                throw new \RuntimeException('CSV record exceeds the byte limit');
+            }
+            $char = $source[$i];
+            if ($quoted) {
+                if ($char === '"') {
+                    if ($i + 1 < $size && $source[$i + 1] === '"') { $i++; }
+                    else { $quoted = false; $afterQuote = true; }
+                }
                 continue;
             }
-            $allEmpty = true;
-            foreach ($line as $cell) {
-                if ($cell !== '' && $cell !== null) {
-                    $allEmpty = false;
-                    break;
+            if ($char === ',') {
+                if (++$columns > self::MAX_IMPORT_COLUMNS) {
+                    throw new \RuntimeException('CSV exceeds the column limit');
                 }
+                $fieldStart = true; $afterQuote = false;
+            } elseif ($char === "\r" || $char === "\n") {
+                self::appendCsvRecord($source, $start, $i - $start, $columns, $headers, $rows, $headerRead, $records, $cells);
+                if ($char === "\r" && $i + 1 < $size && $source[$i + 1] === "\n") { $i++; }
+                $start = $i + 1; $columns = 1; $fieldStart = true; $afterQuote = false;
+            } elseif ($fieldStart && $char === '"') {
+                $quoted = true; $fieldStart = false;
+            } elseif ($char !== ' ' && $char !== "\t") {
+                if ($afterQuote) { throw new \RuntimeException('Unexpected data after a quoted CSV field'); }
+                $fieldStart = false;
             }
-            if ($allEmpty) {
-                continue;
-            }
-            $assoc = [];
-            foreach ($headers as $i => $h) {
-                if ($h === '') {
-                    continue;
-                }
-                $assoc[$h] = isset($line[$i]) ? $line[$i] : '';
-            }
-            $rows[] = $assoc;
         }
-        fclose($handle);
-        return ['headers' => $headers, 'rows' => $rows];
+        if ($quoted) { throw new \RuntimeException('Unclosed quoted CSV field'); }
+        if ($start < $size) {
+            self::appendCsvRecord($source, $start, $size - $start, $columns, $headers, $rows, $headerRead, $records, $cells);
+        }
+        return ['headers'=>$headers, 'rows'=>$rows];
+    }
+
+    /** Bound native CSV allocation and the eventual header-to-row matrix before parsing this record. */
+    private static function appendCsvRecord(string $source, int $start, int $length, int $columns,
+        array &$headers, array &$rows, bool &$headerRead, int &$records, int &$cells): void
+    {
+        $records++; $cells += $columns;
+        if ($length > self::MAX_CSV_RECORD_BYTES || $records > self::MAX_IMPORT_ROWS + 1
+            || $cells > self::MAX_IMPORT_CELLS
+            || ($headerRead && ($records - 1) * count($headers) > self::MAX_IMPORT_CELLS)) {
+            throw new \RuntimeException('CSV exceeds the record or cell budget');
+        }
+        $line = str_getcsv(substr($source, $start, $length), ',', '"', '');
+        if (count($line) !== $columns) { throw new \RuntimeException('CSV field boundaries are inconsistent'); }
+        if (!$headerRead) {
+            $headers = array_map(static fn($header) => trim((string)$header), $line);
+            $headerRead = true;
+            return;
+        }
+        $allEmpty = true;
+        foreach ($line as $cell) {
+            if ($cell !== '' && $cell !== null) { $allEmpty = false; break; }
+        }
+        if ($allEmpty) { return; }
+        $row = [];
+        foreach ($headers as $index => $header) {
+            if ($header !== '') { $row[$header] = $line[$index] ?? ''; }
+        }
+        $rows[] = $row;
     }
 
     public static function parseCellRef($ref)
