@@ -47,6 +47,7 @@ class Visit extends Base
 
         $param['page'] = '{page}';
         $param['limit'] = '{limit}';
+        $param += ['mid'=>'', 'time'=>'', 'wd'=>''];
         $this->assign('param',$param);
 
         $this->assign('title',lang('admin/visit/title'));
@@ -55,22 +56,7 @@ class Visit extends Base
 
     public function del()
     {
-        $param = \think\facade\Request::param();
-        $ids = $param['ids'];
-        $all = $param['all'];
-        if(!empty($ids)){
-            $where=[];
-            $where['visit_id'] = $ids;
-            if($all==1){
-                $where[] = ['visit_id', '>', 0];
-            }
-            $res = (new \app\common\model\Visit())->delData($where);
-            if($res['code']>1){
-                return $this->error($res['msg']);
-            }
-            return $this->success($res['msg']);
-        }
-        return $this->error(lang('param_err'));
+        return $this->error('访问凭证（含网站引荐）仅供查阅，不支持删除或清空');
     }
 
 }

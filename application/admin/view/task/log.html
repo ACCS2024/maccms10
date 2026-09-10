@@ -12,24 +12,20 @@
                     </select>
                 </div>
                 <div class="layui-input-inline w100">
-                    <input type="text" autocomplete="off" placeholder="{:lang('task/user_id')}" class="layui-input" name="uid" value="{$param['uid']|default=''}">
+                    <input type="text" autocomplete="off" placeholder="{:lang('task/user_id')}" class="layui-input" name="uid" value="{$param['uid']|default=''|htmlspecialchars}">
                 </div>
                 <div class="layui-input-inline w100">
-                    <input type="text" autocomplete="off" placeholder="{:lang('task/task_id_label')}" class="layui-input" name="task_id" value="{$param['task_id']|default=''}">
+                    <input type="text" autocomplete="off" placeholder="{:lang('task/task_id_label')}" class="layui-input" name="task_id" value="{$param['task_id']|default=''|htmlspecialchars}">
                 </div>
                 <button class="layui-btn mgl-20 j-search">{:lang('btn_search')}</button>
             </form>
         </div>
-        <div class="flex gap-5">
-            <a data-href="{:url('log_del')}" class="layui-btn layui-btn-primary j-page-btns confirm"><i class="layui-icon">&#xe640;</i>{:lang('del')}</a>
-            <a data-href="{:url('log_del')}?all=1" class="layui-btn layui-btn-primary j-ajax" confirm="{:lang('task/clear_log_confirm')}"><i class="layui-icon">&#xe640;</i>{:lang('clear')}</a>
-        </div>
+        <p class="layui-word-aux">任务奖励凭证保留，用于核对领奖状态；本页仅供查阅，不支持删除或清空。</p>
     </div>
-    <form class="layui-form" method="post" id="pageListForm">
+    <div class="layui-form">
         <table class="layui-table" lay-size="sm">
             <thead>
             <tr>
-                <th width="25"><input type="checkbox" lay-skin="primary" lay-filter="allChoose"></th>
                 <th width="50">{:lang('id')}</th>
                 <th width="80">{:lang('task/user_id')}</th>
                 <th width="80">{:lang('task/task_id_label')}</th>
@@ -43,14 +39,13 @@
             <tbody>
             {volist name="list" id="vo"}
             <tr>
-                <td><input type="checkbox" name="ids[]" value="{$vo.log_id}" class="layui-checkbox checkbox-ids" lay-skin="primary"></td>
                 <td>{$vo.log_id}</td>
                 <td>{$vo.user_id}</td>
                 <td>{$vo.task_id}</td>
-                <td>{$vo.task_action}</td>
+                <td>{$vo.task_action|htmlspecialchars}</td>
                 <td>{$vo.log_progress}</td>
                 <td>{$vo.log_points}</td>
-                <td>{$vo.log_date}</td>
+                <td>{$vo.log_date|htmlspecialchars}</td>
                 <td>
                     {if condition="$vo.log_status eq 0"}<span class="layui-badge layui-bg-gray">{:lang('task/status_doing')}</span>
                     {elseif condition="$vo.log_status eq 1"}<span class="layui-badge layui-bg-orange">{:lang('task/status_done')}</span>
@@ -61,7 +56,7 @@
             </tbody>
         </table>
         <div id="pages" class="center"></div>
-    </form>
+    </div>
 </div>
 {include file="../../../application/admin/view/public/foot" /}
 <script type="text/javascript">

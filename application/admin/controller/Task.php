@@ -135,6 +135,7 @@ class Task extends Base
         $this->assign('limit', $res['limit']);
         $param['page'] = '{page}';
         $param['limit'] = '{limit}';
+        $param += ['status'=>'', 'uid'=>'', 'task_id'=>''];
         $this->assign('param', $param);
         $this->assign('title', lang('task/admin_log_title'));
         return $this->fetch('admin@task/log');
@@ -143,21 +144,6 @@ class Task extends Base
     // 删除任务记录
     public function log_del()
     {
-        $param = \think\facade\Request::param();
-        $ids = $param['ids'];
-        $all = $param['all'];
-        if (!empty($ids) || !empty($all)) {
-            $where = [];
-            $where['log_id'] = $ids;
-            if ($all == 1) {
-                $where[] = ['log_id', '>', 0];
-            }
-            $res = (new \app\common\model\TaskLog())->delData($where);
-            if ($res['code'] > 1) {
-                return $this->error($res['msg']);
-            }
-            return $this->success($res['msg']);
-        }
-        return $this->error(lang('param_err'));
+        return $this->error('任务奖励凭证仅供查阅，不支持删除或清空');
     }
 }

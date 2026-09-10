@@ -35,12 +35,12 @@ class Visit extends Base {
             $total = $this->where($where)->count();
         }
         $list = Db::name('Visit')->field($field)->where($where)->order($order)->limit($offset, $limit)->select()->toArray();
+        $userIds = array_values(array_unique(array_filter(array_column($list, 'user_id'))));
+        $userNames = $userIds ? Db::name('User')->whereIn('user_id', $userIds)->column('user_name', 'user_id') : [];
         foreach($list as $k=>$v){
-            $visit_mid = 6;
-            if($v['user_id']==0){
-                $visit_mid = 11;
-            }
-            $list[$k]['visit_mid'] = $visit_mid;
+            $userId = $v['user_id'] ?? 0;
+            $list[$k]['visit_mid'] = $userId == 0 ? 11 : 6;
+            $list[$k]['user_name'] = $userNames[$userId] ?? '';
         }
         return ['code'=>1,'msg'=>lang('data_list'),'page'=>$page,'pagecount'=>ceil($total/$limit),'limit'=>$limit,'total'=>$total,'list'=>$list];
     }
@@ -62,50 +62,44 @@ class Visit extends Base {
 
     public function saveData($data)
     {
+        if (!is_array($data)) {
+            return ['code'=>1001, 'msg'=>lang('param_err')];
+        }
+        foreach (array_keys($data) as $key) {
+            if (is_string($key) && strcasecmp($key, 'visit_id') === 0) {
+                return self::immutableResult();
+            }
+        }
+        // Website referrals (user_id=0) remain appendable; existing evidence never changes.
+        $data = array_intersect_key($data, array_flip(['user_id', 'visit_ip', 'visit_ly']));
+        $data['visit_time'] = time();
         $validate = mac_validate('Visit');
         if(!$validate->check($data)){
             return ['code'=>1001,'msg'=>lang('param_err').'：'.$validate->getError() ];
         }
 
-        if(!empty($data['visit_id'])){
-            $where=[];
-            $where['visit_id'] = $data['visit_id'];
-            $data = $this->filterFields($data);
-            $res = $this->where($where)->update($data);
-        }
-        else{
-            $data['visit_time'] = time();
-            $data = $this->filterFields($data);
-            $res = $this->insert($data);
-        }
-        if(false === $res){
-            return ['code'=>1002,'msg'=>lang('save_err').'：'.$this->getError() ];
+        try {
+            if ($this->insert($data) !== 1) {
+                return ['code'=>1002, 'msg'=>lang('save_err')];
+            }
+        } catch (\Throwable $error) {
+            return ['code'=>1002, 'msg'=>lang('save_err')];
         }
         return ['code'=>1,'msg'=>lang('save_ok')];
     }
 
     public function delData($where)
     {
-        $res = $this->where($where)->delete();
-        if($res===false){
-            return ['code'=>1001,'msg'=>lang('del_err').'：'.$this->getError() ];
-        }
-        return ['code'=>1,'msg'=>lang('del_ok')];
+        return self::immutableResult();
     }
 
     public function fieldData($where,$col,$val)
     {
-        if(!isset($col) || !isset($val)){
-            return ['code'=>1001,'msg'=>lang('param_err')];
-        }
-
-        $data = [];
-        $data[$col] = $val;
-        $res = $this->where($where)->update($data);
-        if($res===false){
-            return ['code'=>1001,'msg'=>lang('set_err').'：'.$this->getError() ];
-        }
-        return ['code'=>1,'msg'=>lang('set_ok')];
+        return self::immutableResult();
     }
 
+    private static function immutableResult(): array
+    {
+        return ['code'=>1005, 'msg'=>'访问凭证（含网站引荐）仅供查阅，不支持修改、删除或清空'];
+    }
 }

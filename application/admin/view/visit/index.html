@@ -26,37 +26,29 @@
             </form>
         </div>
 
-        <div class="flex gap-5 overflow-x-auto overflow-y-hidden">
-            <a data-href="{:url('del')}" class="layui-btn layui-btn-primary j-page-btns confirm"><i class="layui-icon">&#xe640;</i>{:lang('del')}</a>
-            <a data-href="{:url('del')}?ids=1&all=1" class="layui-btn layui-btn-primary j-ajax" confirm="{:lang('clear_confirm')}"><i class="layui-icon">&#xe640;</i>{:lang('clear')}</a>
-        </div>
+        <p class="layui-word-aux">访问凭证（含网站引荐）保留，用于核对每日访问及奖励；本页仅供查阅，不支持修改、删除或清空。</p>
     </div>
 
-     <form class="layui-form " method="post" id="pageListForm">
+     <div class="layui-form">
          <table class="layui-table" lay-size="sm">
             <thead>
             <tr>
-                <th width="25"><input type="checkbox" lay-skin="primary" lay-filter="allChoose"></th>
                 <th width="80">{:lang('id')}</th>
                 <th width="100">{:lang('user')}</th>
                 <th width="50">{:lang('model')}</th>
                 <th >{:lang('from')}</th>
                 <th width="130">{:lang('time')}</th>
-                <th width="50">{:lang('opt')}</th>
             </tr>
             </thead>
 
+            <tbody>
             {volist name="list" id="vo"}
             <tr>
-                <td><input type="checkbox" name="ids[]" value="{$vo.ulog_id}" class="layui-checkbox checkbox-ids" lay-skin="primary"></td>
                 <td>{$vo.visit_id}</td>
-                <td>[{$vo.user_id}]{$vo.user_name}</td>
+                <td>[{$vo.user_id}]{$vo.user_name|htmlspecialchars}</td>
                 <td>{$vo.visit_mid|mac_get_mid_text}</td>
-                <td>{$vo.visit_ly}</td>
+                <td>{$vo.visit_ly|htmlspecialchars=ENT_QUOTES,'UTF-8',false}</td>
                 <td>{$vo.visit_time|mac_day='color'}</td>
-                <td>
-                    <a class="layui-badge-rim j-tr-del" data-href="{:url('del?ids='.$vo['visit_id'])}" href="javascript:;" title="{:lang('del')}">{:lang('del')}</a>
-                </td>
             </tr>
             {/volist}
             </tbody>
@@ -64,7 +56,7 @@
 
         <div id="pages" class="center"></div>
 
-    </form>
+    </div>
 </div>
 
 {include file="../../../application/admin/view/public/foot" /}

@@ -187,10 +187,7 @@ class SignLog extends Base {
 
     public function delData($where)
     {
-        $res = $this->where($where)->delete();
-        if ($res < 1) {
-            return ['code' => 1001, 'msg' => lang('del_err')];
-        }
-        return ['code' => 1, 'msg' => lang('del_ok')];
+        // Keep daily uniqueness and the evidence used for streak rewards.
+        return ['code' => 1005, 'msg' => '签到奖励凭证仅供查阅，不支持删除或清空'];
     }
 }
