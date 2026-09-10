@@ -122,10 +122,10 @@ class JwtService
      */
     public static function decodeAndVerify($jwt)
     {
-        if (!self::hasStrongSecret()) {
+        if (!self::isEnabled()) {
             return null;
         }
-        if (!is_string($jwt) || $jwt === '') {
+        if (!is_string($jwt) || $jwt === '' || strlen($jwt) > 8192) {
             return null;
         }
         $parts = explode('.', $jwt);
@@ -133,12 +133,22 @@ class JwtService
             return null;
         }
         list($h, $p, $s) = $parts;
+        foreach ($parts as $part) {
+            if ($part === '' || !preg_match('/\A[A-Za-z0-9_-]+\z/D', $part)) {
+                return null;
+            }
+        }
         $secret = self::getSecret();
         if ($secret === '') {
             return null;
         }
         $expect = self::b64url(hash_hmac('sha256', $h . '.' . $p, $secret, true));
         if (!hash_equals($expect, $s)) {
+            return null;
+        }
+        $header = json_decode(self::b64urlDecode($h), true);
+        if (!is_array($header) || ($header['alg'] ?? null) !== 'HS256'
+            || ($header['typ'] ?? null) !== 'JWT' || isset($header['crit'])) {
             return null;
         }
         $json = self::b64urlDecode($p);
@@ -149,10 +159,19 @@ class JwtService
         if (!is_array($payload)) {
             return null;
         }
-        if (empty($payload['exp']) || (int)$payload['exp'] < time()) {
+        $now = time();
+        if (($payload['iss'] ?? null) !== self::getIss()
+            || !is_int($payload['exp'] ?? null) || $payload['exp'] <= $now
+            || !is_int($payload['iat'] ?? null) || $payload['iat'] > $now
+            || $payload['iat'] >= $payload['exp']) {
             return null;
         }
-        if (empty($payload['sub']) || empty($payload['rnd'])) {
+        if (isset($payload['nbf']) && (!is_int($payload['nbf']) || $payload['nbf'] > $now)) {
+            return null;
+        }
+        if (!is_string($payload['sub'] ?? null) || !ctype_digit($payload['sub'])
+            || filter_var($payload['sub'], FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) === false
+            || !is_string($payload['rnd'] ?? null) || $payload['rnd'] === '') {
             return null;
         }
 
