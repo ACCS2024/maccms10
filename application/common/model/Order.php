@@ -113,114 +113,101 @@ class Order extends Base {
      * pay_type预留值alipay,weixin,bank，可以继续自定义最长10个字符
      * paid_yuan 必须是外部支付通知的实际金额；null 仅兼容可信内部自定义渠道。
      */
-    public function notify($order_code,$pay_type,$paid_yuan=null)
+    public function notify($order_code, $pay_type, $paid_yuan = null)
     {
-        if(empty($order_code) || empty($pay_type)){
-            return ['code'=>1001,'msg'=>lang('param_err')];
+        if (!self::notificationText($order_code, 30) || !self::notificationText($pay_type, 10)) {
+            return ['code'=>1001, 'msg'=>lang('param_err')];
         }
-
         $failure = ['code'=>2004, 'msg'=>lang('save_err')];
         $success = ['code'=>1, 'msg'=>lang('model/order/pay_ok')];
+        $mismatch = ['code'=>2005, 'msg'=>'order amount mismatch'];
         if (($blocked = \app\common\util\OrderTransaction::blockedResult()) !== null) { return $blocked; }
+        // Only trusted custom/internal callers retain the historical omitted-amount contract.
+        $paidMinor = $paid_yuan === null ? null : self::amountMinorUnits($paid_yuan);
+        if (($paid_yuan !== null && $paidMinor === null) || ($paid_yuan === null
+            && in_array(strtolower($pay_type), ['alipay', 'weixin', 'epay', 'codepay', 'zhapay', 'jeepay'], true))) {
+            return $mismatch;
+        }
         $scope = null;
         try {
             \app\common\util\FinancialTransaction::requireTables([Db::name('Order')->getTable(), Db::name('User')->getTable(), Db::name('Plog')->getTable()]);
-            // External callbacks acknowledge durable settlement, so they must own the physical transaction.
             $scope = new \app\common\util\OrderTransaction();
-            $where = [];
-            $where['order_code'] = $order_code;
-            $order = (new \app\common\model\Order())->infoData($where);
-            if($order['code']>1){
-                return $order;
-            }
-            $scope->record((int)$order['info']['order_id'], (int)$order['info']['user_id']);
-            // All shipped external adapters supply an amount. Never let a missing
-            // amount on those channels enter the trusted internal compatibility path.
-            $paidMinor = null;
-            if ($paid_yuan === null && is_string($pay_type)
-                && in_array(strtolower($pay_type), ['alipay', 'weixin', 'epay', 'codepay', 'zhapay', 'jeepay'], true)) {
-                return ['code'=>2005,'msg'=>'order amount mismatch'];
-            }
-            if ($paid_yuan !== null) {
-                $paidMinor = self::amountMinorUnits($paid_yuan);
-                $expectedMinor = self::amountMinorUnits($order['info']['order_price']);
-                if ($paidMinor === null || $expectedMinor === null || $paidMinor !== $expectedMinor) {
-                    return ['code'=>2005,'msg'=>'order amount mismatch'];
-                }
-            }
-            // Replayed notifications must pass the same amount check as first delivery.
-            if($order['info']['order_status'] == 1){
-                return ['code'=>1,'msg'=>lang('model/order/pay_over')];
-            }
-
-            $where2=[];
-            $where2['user_id'] = $order['info']['user_id'];
-            $user = (new \app\common\model\User())->infoData($where2);
-            if($user['code']>1){
-                return $user;
-            }
-
             $scope->begin();
-            $update = [];
-            $update['order_status'] = 1;
-            $update['order_pay_time'] = time();
-            $update['order_pay_type'] = $pay_type;
-            // 只有 pending -> paid 的唯一成功者可以入账。事务本身不能阻止
-            // 两个请求在事务开始前同时读到 pending，必须检查条件更新行数。
-            $query = $this->where('order_id', $order['info']['order_id'])->where('order_status', 0);
-            if ($paidMinor !== null) {
-                // An amount change after the first read must not charge the stale price.
-                $query->where('order_price', $order['info']['order_price']);
+            // Lock the current writer row before selecting its beneficiary, points or membership intent.
+            // Legacy databases without the required unique index must not settle ambiguous order codes.
+            $orders = Db::name('Order')->master()->where('order_code', $order_code)->lock(true)->limit(2)->select()->toArray();
+            if (count($orders) !== 1) { return $scope->rollback(['code'=>1002, 'msg'=>lang('obtain_err')]); }
+            $order = $orders[0];
+            $orderId = \app\common\util\PointsBalance::amount($order['order_id'] ?? null);
+            $userId = \app\common\util\PointsBalance::amount($order['user_id'] ?? null);
+            if ($orderId === null || $userId === null) { throw new \RuntimeException('Invalid stored payment identity'); }
+            $scope->record($orderId, $userId);
+            if ($paidMinor !== null && self::amountMinorUnits($order['order_price']) !== $paidMinor) {
+                return $scope->rollback($mismatch);
             }
-            $res = $query->update($update);
-            if ($res !== 1) {
-                $current = $this->master()->where('order_id', $order['info']['order_id'])->find();
-                if ($res === 0 && $current && (int)$current['order_status'] === 1) {
-                    if ($paidMinor !== null && self::amountMinorUnits($current['order_price']) !== $paidMinor) {
-                        return $scope->rollback(['code'=>2005,'msg'=>'order amount mismatch']);
-                    }
-                    return $scope->rollback(['code'=>1,'msg'=>lang('model/order/pay_over')]);
-                }
-                return $scope->rollback(['code'=>2002,'msg'=>lang('model/order/update_status_err')]);
+            if (in_array($order['order_status'], [1, '1'], true)) {
+                return $scope->rollback(['code'=>1, 'msg'=>lang('model/order/pay_over')]);
             }
-
-            $res = \app\common\util\PointsBalance::credit($user['info']['user_id'], $order['info']['order_points']);
-            if (!$res) {
-                return $scope->rollback(['code'=>2003,'msg'=>lang('model/order/update_user_points_err')]);
+            if (!in_array($order['order_status'], [0, '0'], true)) { throw new \RuntimeException('Order is not pending'); }
+            $points = \app\common\util\PointsBalance::amount($order['order_points'] ?? null);
+            $user = Db::name('User')->master()->where('user_id', $userId)->lock(true)->find();
+            $balance = $user ? \app\common\util\PointsBalance::amount($user['user_points'] ?? null, true) : null;
+            if ($points === null || $points > 16777215 || $balance === null || $balance > \app\common\util\PointsBalance::MAX - $points) {
+                return $scope->rollback(['code'=>2003, 'msg'=>lang('model/order/update_user_points_err')]);
             }
-
+            $update = ['order_status'=>1, 'order_pay_time'=>time(), 'order_pay_type'=>$pay_type];
+            if (Db::name('Order')->where('order_id', $orderId)->where('order_status', 0)->update($update) !== 1) {
+                return $scope->rollback(['code'=>2002, 'msg'=>lang('model/order/update_status_err')]);
+            }
             $scope->assertActive();
-
-            //积分日志
-            $data = [];
-            $data['user_id'] = $user['info']['user_id'];
-            $data['plog_type'] = 1;
-            $data['plog_points'] = $order['info']['order_points'];
-            $log = (new \app\common\model\Plog())->saveData($data);
-            if ((int)($log['code'] ?? 0) !== 1) {
-                throw new \RuntimeException('order points log failed');
+            if (!\app\common\util\PointsBalance::credit($userId, $points)) {
+                return $scope->rollback(['code'=>2003, 'msg'=>lang('model/order/update_user_points_err')]);
             }
-
+            $expectedBalance = $balance + $points;
+            if ((string)Db::name('User')->master()->where('user_id', $userId)->value('user_points') !== (string)$expectedBalance) {
+                throw new \RuntimeException('Payment balance was not stored exactly');
+            }
             $scope->assertActive();
-            $remarks = json_decode((string)($order['info']['order_remarks'] ?? ''), true);
-            if(!empty($remarks) && is_array($remarks) && ($remarks['biz'] ?? '') === 'member_upgrade'){
-                $user_latest = (new \app\common\model\User())->infoData(['user_id' => $user['info']['user_id']]);
-                if($user_latest['code'] > 1){
-                    return $scope->rollback($user_latest);
+            $data = ['user_id'=>$userId, 'plog_type'=>1, 'plog_points'=>$points, 'plog_remarks'=>''];
+            $ledger = new \app\common\model\Plog();
+            if (($ledger->saveData($data)['code'] ?? null) !== 1) { throw new \RuntimeException('Order points log failed'); }
+            $ledgerId = $ledger->getLastInsID();
+            $scope->assertActive();
+            $remarks = json_decode((string)($order['order_remarks'] ?? ''), true);
+            if (is_array($remarks) && ($remarks['biz'] ?? '') === 'member_upgrade') {
+                $upgrade = (new \app\common\model\User())->upgradeByPaidOrder($order, $user);
+                if ($upgrade['code'] !== 1) {
+                    return $scope->rollback(isset($upgrade['info']['outcome']) ? $failure : $upgrade);
                 }
-                $upgrade_res = (new \app\common\model\User())->upgradeByPaidOrder($order['info'], $user_latest['info']);
-                if($upgrade_res['code'] > 1){
-                    // This owner must end the whole original transaction when inner cleanup is unknown.
-                    return $scope->rollback(isset($upgrade_res['info']['outcome']) ? $failure : $upgrade_res);
-                }
+                $upgradePoints = \app\common\util\PointsBalance::amount($remarks['upgrade_points'] ?? null);
+                if ($upgradePoints === null) { throw new \RuntimeException('Invalid membership charge'); }
+                $expectedBalance -= $upgradePoints;
             }
-
+            // Driver acknowledgements and affected-row counts do not prove exact storage in non-strict SQL.
+            $storedOrder = Db::name('Order')->master()->where('order_id', $orderId)->find();
+            foreach (array_merge(array_intersect_key($order, array_flip(['order_id','user_id','order_code','order_price','order_points','order_remarks'])), $update) as $field=>$expected) {
+                if (!$storedOrder || (string)$storedOrder[$field] !== (string)$expected) { throw new \RuntimeException('Payment order was not stored exactly'); }
+            }
+            $storedLedger = Db::name('Plog')->master()->where('plog_id', $ledgerId)->find();
+            foreach ($data as $field=>$expected) {
+                if (!$storedLedger || (string)$storedLedger[$field] !== (string)$expected) { throw new \RuntimeException('Payment ledger was not stored exactly'); }
+            }
+            if ((string)Db::name('User')->master()->where('user_id', $userId)->value('user_points') !== (string)$expectedBalance) {
+                throw new \RuntimeException('Final payment balance differs from its ledgers');
+            }
             $scope->assertActive();
             return $scope->commit($success);
-        }catch (\Throwable $e){
+        } catch (\Throwable $error) {
             return $scope !== null ? $scope->rollback($failure) : $failure;
         }
+    }
 
+    /** Bound callback text to the installation columns before any query or implicit conversion. */
+    private static function notificationText($value, int $characters): bool
+    {
+        return is_string($value) && $value !== '' && strlen($value) <= $characters * 4
+            && mb_check_encoding($value, 'UTF-8') && mb_strlen($value, 'UTF-8') <= $characters
+            && trim($value) !== '' && !preg_match('/[\x00-\x1f\x7f]/', $value);
     }
 
     /** Canonical positive minor units for the order_price DECIMAL(12,2) column. */
