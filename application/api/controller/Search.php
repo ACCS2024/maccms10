@@ -139,7 +139,7 @@ class Search extends Base
     /**
      * 统一搜索入口
      */
-    public function index(Request $request)
+    public function index(\think\Request $request)
     {
         $param = $request->param();
 
@@ -465,7 +465,7 @@ class Search extends Base
      *
      * 数据来源：直接复用 ApiMeilisearchSuggest::suggestListDataRes（与单模块 suggest 同一条路径）。
      */
-    public function suggest(Request $request)
+    public function suggest(\think\Request $request)
     {
         $param = $request->param();
 

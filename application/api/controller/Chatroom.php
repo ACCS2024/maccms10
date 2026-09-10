@@ -27,10 +27,10 @@ class Chatroom extends Base
      *   after_id - 可选，上次获取的最后一条chat_id（增量拉取）
      *   limit    - 可选，数量，默认50，最大100
      *
-     * @param Request $request
+     * @param \think\Request $request
      * @return \think\response\Json
      */
-    public function get_list(Request $request)
+    public function get_list(\think\Request $request)
     {
         $param = $request->param();
         $validate = new \app\api\validate\Chatroom();
@@ -66,10 +66,10 @@ class Chatroom extends Base
      *   vod_id  - 必须，影片ID
      *   content - 必须，聊天内容（最长500字）
      *
-     * @param Request $request
+     * @param \think\Request $request
      * @return \think\response\Json
      */
-    public function send(Request $request)
+    public function send(\think\Request $request)
     {
         // 检查登录
         $user = $this->_checkLoginForApi();
@@ -125,10 +125,10 @@ class Chatroom extends Base
      * 参数:
      *   chat_id - 必须，聊天消息ID
      *
-     * @param Request $request
+     * @param \think\Request $request
      * @return \think\response\Json
      */
-    public function report(Request $request)
+    public function report(\think\Request $request)
     {
         // 检查登录
         $user = $this->_checkLoginForApi();

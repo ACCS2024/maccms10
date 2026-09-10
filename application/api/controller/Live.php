@@ -23,7 +23,7 @@ class Live extends Base
     /**
      * 获取直播分类列表
      */
-    public function get_category(Request $request)
+    public function get_category(\think\Request $request)
     {
         $cate_list = (new \app\common\model\Live())->categoryList(['cate_status' => 1]);
 
@@ -38,7 +38,7 @@ class Live extends Base
      * 获取直播频道列表
      * 支持按分类筛选、分页
      */
-    public function get_list(Request $request)
+    public function get_list(\think\Request $request)
     {
         $param = $request->param();
         $validate = validate($request->controller());
@@ -110,7 +110,7 @@ class Live extends Base
     /**
      * 获取直播频道详情
      */
-    public function get_detail(Request $request)
+    public function get_detail(\think\Request $request)
     {
         $param = $request->param();
         $validate = validate($request->controller());

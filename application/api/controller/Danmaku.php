@@ -28,10 +28,10 @@ class Danmaku extends Base
      *   nid    - 必须，集数ID
      *   limit  - 可选，数量，默认1000
      *
-     * @param Request $request
+     * @param \think\Request $request
      * @return \think\response\Json
      */
-    public function get_list(Request $request)
+    public function get_list(\think\Request $request)
     {
         $param = $request->param();
         $validate = new \app\api\validate\Danmaku();
@@ -58,10 +58,10 @@ class Danmaku extends Base
      * GET  /api.php/danmaku/dplayer?id={vod_id}-{sid}-{nid}  获取弹幕
      * POST /api.php/danmaku/dplayer  发送弹幕（DPlayer标准POST格式）
      *
-     * @param Request $request
+     * @param \think\Request $request
      * @return \think\response\Json
      */
-    public function dplayer(Request $request)
+    public function dplayer(\think\Request $request)
     {
         if ($request->isGet()) {
             // 获取弹幕 - DPlayer标准格式
@@ -146,10 +146,10 @@ class Danmaku extends Base
      *   type   - 可选，0=滚动 1=顶部 2=底部，默认0
      *   color  - 可选，弹幕颜色，默认#FFFFFF
      *
-     * @param Request $request
+     * @param \think\Request $request
      * @return \think\response\Json
      */
-    public function send(Request $request)
+    public function send(\think\Request $request)
     {
         // 检查登录
         $user = $this->_checkLoginForApi();
@@ -210,10 +210,10 @@ class Danmaku extends Base
      * 参数:
      *   danmaku_id - 必须，弹幕ID
      *
-     * @param Request $request
+     * @param \think\Request $request
      * @return \think\response\Json
      */
-    public function report(Request $request)
+    public function report(\think\Request $request)
     {
         // 检查登录
         $user = $this->_checkLoginForApi();

@@ -23,10 +23,10 @@ class Art extends Base
     /**
      *  获取列表
      *
-     * @param Request $request
+     * @param \think\Request $request
      * @return \think\response\Json
      */
-    public function get_list(Request $request)
+    public function get_list(\think\Request $request)
     {
         // 参数校验
         $param = $request->param();
@@ -156,13 +156,13 @@ class Art extends Base
     /**
      * 视频文章详情
      *
-     * @param Request $request
+     * @param \think\Request $request
      * @return \think\response\Json
      * @throws \think\db\exception\DataNotFoundException
      * @throws \think\db\exception\ModelNotFoundException
      * @throws \think\exception\DbException
      */
-    public function get_detail(Request $request)
+    public function get_detail(\think\Request $request)
     {
         $param = $request->param();
         $validate = validate($request->controller());
@@ -242,7 +242,7 @@ class Art extends Base
      * 单页正文（供 uni-app / SPA 原生渲染小说阅读页）
      * GET api.php/art/get_read_page 参数：art_id，page 可选默认 1
      */
-    public function get_read_page(Request $request)
+    public function get_read_page(\think\Request $request)
     {
         $param = $request->param();
         $validate = validate($request->controller());
@@ -312,7 +312,7 @@ class Art extends Base
      * 获取热门文章/小说
      * 对应首页热门小说区块
      *
-     * @param Request $request
+     * @param \think\Request $request
      * @return \think\response\Json
      *
      * 参数说明:
@@ -324,7 +324,7 @@ class Art extends Base
     /**
      * 文章顶/踩
      */
-    public function digg(Request $request)
+    public function digg(\think\Request $request)
     {
         $param = $request->param();
         $id = intval($param['id'] ?? 0);
@@ -346,7 +346,7 @@ class Art extends Base
     /**
      * 更新/获取文章点击数
      */
-    public function update_hits(Request $request)
+    public function update_hits(\think\Request $request)
     {
         $param = $request->param();
         $id = intval($param['id'] ?? 0);
@@ -376,7 +376,7 @@ class Art extends Base
     /**
      * 文章评分
      */
-    public function update_score(Request $request)
+    public function update_score(\think\Request $request)
     {
         $param = $request->param();
         $id = intval($param['id'] ?? 0);
@@ -399,7 +399,7 @@ class Art extends Base
         return json(['code'=>1,'msg'=>'ok','data'=>['score'=>$info['art_score']??0,'score_num'=>$info['art_score_num']??0,'score_all'=>$info['art_score_all']??0]]);
     }
 
-    public function get_hot(Request $request)
+    public function get_hot(\think\Request $request)
     {
         $param = $request->param();
         $num = isset($param['num']) ? (int)$param['num'] : 6;
@@ -448,14 +448,14 @@ class Art extends Base
      * 获取最新文章/资讯
      * 对应首页最新小说 + 最新影视资讯区块
      *
-     * @param Request $request
+     * @param \think\Request $request
      * @return \think\response\Json
      *
      * 参数说明:
      *   num     - 可选，数量，默认24
      *   type_id - 可选，分类ID
      */
-    public function get_latest(Request $request)
+    public function get_latest(\think\Request $request)
     {
         $param = $request->param();
         $num = isset($param['num']) ? (int)$param['num'] : 24;
@@ -499,7 +499,7 @@ class Art extends Base
      * 搜索建议/自动完成（与列表同一套 Meili + 已发布/回收过滤）
      * api.php/art/suggest?wd=关键词&limit=10
      */
-    public function suggest(Request $request)
+    public function suggest(\think\Request $request)
     {
         return $this->jsonSuggestByKind($request, 'art');
     }

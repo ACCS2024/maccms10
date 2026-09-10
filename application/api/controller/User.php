@@ -25,10 +25,10 @@ class User extends Base
      * 获取当前登录用户的邀请码及邀请信息
      * 需要用户已登录（通过Cookie）
      *
-     * @param Request $request
+     * @param \think\Request $request
      * @return \think\response\Json
      */
-    public function get_my_invite(Request $request)
+    public function get_my_invite(\think\Request $request)
     {
         $check = (new \app\common\model\User())->checkLogin();
         if ($check['code'] > 1) {
@@ -64,10 +64,10 @@ class User extends Base
      * - 必须已登录；数据以会话用户为准
      * - 可选传入 user_id，须与会话用户一致（用于与 URL ?uid= 对齐）
      *
-     * @param Request $request
+     * @param \think\Request $request
      * @return \think\response\Json
      */
-    public function get_invite_list(Request $request)
+    public function get_invite_list(\think\Request $request)
     {
         $param = $request->param();
 
@@ -160,10 +160,10 @@ class User extends Base
     /**
      *  获取用户列表
      *
-     * @param Request $request
+     * @param \think\Request $request
      * @return \think\response\Json
      */
-    public function get_list(Request $request)
+    public function get_list(\think\Request $request)
     {
         // 参数校验
         $param = $request->param();
@@ -246,13 +246,13 @@ class User extends Base
     /**
      * 用户详细信息
      *
-     * @param Request $request
+     * @param \think\Request $request
      * @return \think\response\Json
      * @throws \think\db\exception\DataNotFoundException
      * @throws \think\db\exception\ModelNotFoundException
      * @throws \think\exception\DbException
      */
-    public function get_detail(Request $request)
+    public function get_detail(\think\Request $request)
     {
         // 参数校验
         $param = $request->param();
@@ -296,7 +296,7 @@ class User extends Base
      * - 帐号不存在 → 自动创建帐号 → 登录
      * - 返回 action 字段标识本次操作是 "login" 还是 "register"
      */
-    public function login_or_register(Request $request)
+    public function login_or_register(\think\Request $request)
     {
         // IP 速率限制：防止暴力破解
         $rlCheck = $this->_checkLoginRateLimit();
@@ -341,7 +341,7 @@ class User extends Base
      * api.php/user/login (POST)
      * 参数: user_name, user_pwd, [type=name|email|phone]
      */
-    public function login(Request $request)
+    public function login(\think\Request $request)
     {
         // IP 速率限制：防止暴力破解
         $rlCheck = $this->_checkLoginRateLimit();
@@ -375,7 +375,7 @@ class User extends Base
      * api.php/user/register (POST)
      * 参数: user_name, user_pwd, [user_email, user_phone, invite_code]
      */
-    public function register(Request $request)
+    public function register(\think\Request $request)
     {
         $param = $request->param();
         if (empty($param['user_name']) || empty($param['user_pwd'])) {
@@ -389,7 +389,7 @@ class User extends Base
      * 用户登出
      * api.php/user/logout
      */
-    public function logout(Request $request)
+    public function logout(\think\Request $request)
     {
         cookie('user_id', null);
         cookie('user_name', null);
@@ -403,7 +403,7 @@ class User extends Base
      * 获取当前登录用户信息
      * api.php/user/get_info
      */
-    public function get_info(Request $request)
+    public function get_info(\think\Request $request)
     {
         $check = (new \app\common\model\User())->checkLogin();
         if ($check['code'] > 1) return json(['code' => 1401, 'msg' => lang('api/please_login_first')]);
@@ -421,7 +421,7 @@ class User extends Base
      * api.php/user/update_info (POST)
      * 参数: [user_nick_name, user_email, user_phone, user_qq, user_old_pwd, user_new_pwd]
      */
-    public function update_info(Request $request)
+    public function update_info(\think\Request $request)
     {
         $check = (new \app\common\model\User())->checkLogin();
         if ($check['code'] > 1) return json(['code' => 1401, 'msg' => lang('api/please_login_first')]);
@@ -450,7 +450,7 @@ class User extends Base
      * api.php/user/get_ulog?type=2&page=1&limit=20
      * type: 1=浏览 2=收藏 3=想看 4=播放 5=下载
      */
-    public function get_ulog(Request $request)
+    public function get_ulog(\think\Request $request)
     {
         $check = (new \app\common\model\User())->checkLogin();
         if ($check['code'] > 1) return json(['code' => 1401, 'msg' => lang('api/please_login_first')]);
@@ -471,7 +471,7 @@ class User extends Base
      * api.php/user/add_ulog (POST)
      * 参数: mid, rid, type, [sid=0, nid=0]
      */
-    public function add_ulog(Request $request)
+    public function add_ulog(\think\Request $request)
     {
         $check = (new \app\common\model\User())->checkLogin();
         if ($check['code'] > 1) return json(['code' => 1401, 'msg' => lang('api/please_login_first')]);
@@ -504,7 +504,7 @@ class User extends Base
      * api.php/user/del_ulog (POST)
      * 参数: ids=1,2,3 或 ulog_id=1
      */
-    public function del_ulog(Request $request)
+    public function del_ulog(\think\Request $request)
     {
         $check = (new \app\common\model\User())->checkLogin();
         if ($check['code'] > 1) return json(['code' => 1401, 'msg' => lang('api/please_login_first')]);
@@ -537,7 +537,7 @@ class User extends Base
      * 获取积分日志
      * api.php/user/get_plog?page=1&limit=20&filter=income|expense（可选，与 index user/plog 一致）
      */
-    public function get_plog(Request $request)
+    public function get_plog(\think\Request $request)
     {
         $check = (new \app\common\model\User())->checkLogin();
         if ($check['code'] > 1) return json(['code' => 1401, 'msg' => lang('api/please_login_first')]);
@@ -579,7 +579,7 @@ class User extends Base
      * 删除积分日志
      * api.php/user/del_plog (POST) 参数同 index user/plog_del：ids、all=1 清空
      */
-    public function del_plog(Request $request)
+    public function del_plog(\think\Request $request)
     {
         $check = (new \app\common\model\User())->checkLogin();
         if ($check['code'] > 1) return json(['code' => 1401, 'msg' => lang('api/please_login_first')]);
@@ -612,7 +612,7 @@ class User extends Base
      * 当前用户充值订单列表（与 index user/orders 数据源一致）
      * api.php/user/get_orders?page=1&limit=20
      */
-    public function get_orders(Request $request)
+    public function get_orders(\think\Request $request)
     {
         $check = (new \app\common\model\User())->checkLogin();
         if ($check['code'] > 1) return json(['code' => 1401, 'msg' => lang('api/please_login_first')]);
@@ -631,7 +631,7 @@ class User extends Base
      * api.php/user/find_password (POST)
      * 参数: user_email 或 user_phone
      */
-    public function find_password(Request $request)
+    public function find_password(\think\Request $request)
     {
         $param = $request->param();
         if (empty($param['user_email']) && empty($param['user_phone'])) {
@@ -645,7 +645,7 @@ class User extends Base
      * 批量检查用户收藏状态
      * 对应首页 Banner 区的收藏按钮，判断用户是否已收藏某些影片
      *
-     * @param Request $request
+     * @param \think\Request $request
      * @return \think\response\Json
      *
      * 参数说明:
@@ -653,7 +653,7 @@ class User extends Base
      *   mid      - 可选，模型ID，默认1(视频)，2=文章，3=专题，8=明星
      *   ulog_type - 可选，日志类型，默认2(收藏)
      */
-    public function get_favorites_status(Request $request)
+    public function get_favorites_status(\think\Request $request)
     {
         // 需要用户登录
         $check = (new \app\common\model\User())->checkLogin();
@@ -723,7 +723,7 @@ class User extends Base
      * @param  limit  int  可选，每页条数，默认20，最大100
      * @return JSON   {code:1, msg:'获取成功', info:{page, pagecount, limit, total, list:[...]}}
      */
-    public function get_reward_list(Request $request)
+    public function get_reward_list(\think\Request $request)
     {
         $check = (new \app\common\model\User())->checkLogin();
         if ($check['code'] > 1) {
@@ -768,7 +768,7 @@ class User extends Base
      * 充值/升级合并页：升级区数据 JSON（会员信息 + 可购套餐）
      * GET api.php/user/ajax_upgrade_data
      */
-    public function ajax_upgrade_data(Request $request)
+    public function ajax_upgrade_data(\think\Request $request)
     {
         if ($request->isPost()) {
             return json(['code' => 1001, 'msg' => lang('param_err')]);
@@ -845,7 +845,7 @@ class User extends Base
      * 会员现金升级：创建 UPG 订单
      * POST api.php/user/upgrade_order_create  参数 group_id, long
      */
-    public function upgrade_order_create(Request $request)
+    public function upgrade_order_create(\think\Request $request)
     {
         if (!$request->isPost()) {
             return json(['code' => 1001, 'msg' => lang('param_err')]);

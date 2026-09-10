@@ -23,10 +23,10 @@ class Actor extends Base
     /**
      *  获取列表
      *
-     * @param Request $request
+     * @param \think\Request $request
      * @return \think\response\Json
      */
-    public function get_list(Request $request)
+    public function get_list(\think\Request $request)
     {
         // 参数校验
         $param = $request->param();
@@ -116,13 +116,13 @@ class Actor extends Base
     /**
      * 视频演员详情
      *
-     * @param Request $request
+     * @param \think\Request $request
      * @return \think\response\Json
      * @throws \think\db\exception\DataNotFoundException
      * @throws \think\db\exception\ModelNotFoundException
      * @throws \think\exception\DbException
      */
-    public function get_detail(Request $request)
+    public function get_detail(\think\Request $request)
     {
         $param = $request->param();
         $validate = validate($request->controller());
@@ -158,7 +158,7 @@ class Actor extends Base
      * 获取推荐明星
      * 对应首页推荐明星区块
      *
-     * @param Request $request
+     * @param \think\Request $request
      * @return \think\response\Json
      *
      * 参数说明:
@@ -166,7 +166,7 @@ class Actor extends Base
      *   num - 可选，数量，默认8
      *   by  - 可选，排序字段，默认 time，可选: hits,hits_day,hits_week,hits_month,time
      */
-    public function get_recommend(Request $request)
+    public function get_recommend(\think\Request $request)
     {
         $param = $request->param();
         $ids = isset($param['ids']) ? trim($param['ids']) : '';
@@ -213,7 +213,7 @@ class Actor extends Base
      * 搜索建议/自动完成（与列表同一套 Meili + 已发布过滤）
      * api.php/actor/suggest?wd=关键词&limit=10
      */
-    public function suggest(Request $request)
+    public function suggest(\think\Request $request)
     {
         return $this->jsonSuggestByKind($request, 'actor');
     }

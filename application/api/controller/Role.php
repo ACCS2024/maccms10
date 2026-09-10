@@ -41,10 +41,10 @@ class Role extends Base
      *   orderby - 可选，排序字段，默认 time
      *             可选: id,time,time_add,hits,hits_day,hits_week,hits_month,score,up,down,level
      *
-     * @param Request $request
+     * @param \think\Request $request
      * @return \think\response\Json
      */
-    public function get_list(Request $request)
+    public function get_list(\think\Request $request)
     {
         $param = $request->param();
 
@@ -154,10 +154,10 @@ class Role extends Base
      * 参数说明:
      *   role_id - 必须，角色ID
      *
-     * @param Request $request
+     * @param \think\Request $request
      * @return \think\response\Json
      */
-    public function get_detail(Request $request)
+    public function get_detail(\think\Request $request)
     {
         $param = $request->param();
 
@@ -217,10 +217,10 @@ class Role extends Base
      *   by    - 可选，排序字段，默认 time
      *   level - 可选，推荐等级
      *
-     * @param Request $request
+     * @param \think\Request $request
      * @return \think\response\Json
      */
-    public function get_recommend(Request $request)
+    public function get_recommend(\think\Request $request)
     {
         $param = $request->param();
         $num   = isset($param['num']) ? (int)$param['num'] : 8;
@@ -271,7 +271,7 @@ class Role extends Base
      * 搜索建议/自动完成（与列表同一套 Meili + 已发布过滤）
      * api.php/role/suggest?wd=关键词&limit=10
      */
-    public function suggest(Request $request)
+    public function suggest(\think\Request $request)
     {
         return $this->jsonSuggestByKind($request, 'role');
     }

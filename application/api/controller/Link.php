@@ -23,10 +23,10 @@ class Link extends Base
     /**
      *  获取列表
      *
-     * @param Request $request
+     * @param \think\Request $request
      * @return \think\response\Json
      */
-    public function get_list(Request $request)
+    public function get_list(\think\Request $request)
     {
         // 参数校验
         $param = $request->param();

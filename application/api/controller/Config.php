@@ -27,7 +27,7 @@ class Config extends Base
         return $dir !== '' ? $dir : 'default';
     }
 
-    public function get_config(Request $request)
+    public function get_config(\think\Request $request)
     {
         $config = config('maccms');
 
@@ -59,13 +59,13 @@ class Config extends Base
      *
      * 逗号分隔的字段会自动转为数组
      *
-     * @param Request $request
+     * @param \think\Request $request
      * @return \think\response\Json
      *
      * 示例：
      *   GET /api/config/get_extra_var          => 返回预留参数分页的所有配置
      */
-    public function get_extra_var(Request $request)
+    public function get_extra_var(\think\Request $request)
     {
         $config = config('maccms');
         $app = isset($config['app']) ? $config['app'] : [];
@@ -125,10 +125,10 @@ class Config extends Base
      * 前端首页初始化时调用一次即可拿到所有配置信息，
      * 包括各区块的显示/隐藏开关、标题、数量、导航ID等。
      *
-     * @param Request $request
+     * @param \think\Request $request
      * @return \think\response\Json
      */
-    public function get_tpl_config(Request $request)
+    public function get_tpl_config(\think\Request $request)
     {
         $config      = config('maccms');
         $templateDir = $this->resolveTemplateDir();
@@ -188,7 +188,7 @@ class Config extends Base
      * 对应前台 assign 的 $tplconfig 数据源：config('mctheme')（application/extra/mctheme.php + 后台主题落盘）。
      * 含 theme.ad_slots、theme.ads 等，供 SPA 渲染广告位、首页模块开关。
      */
-    public function get_mctheme(Request $request)
+    public function get_mctheme(\think\Request $request)
     {
         $mctheme = config('mctheme');
         if (!is_array($mctheme)) {
@@ -210,7 +210,7 @@ class Config extends Base
      *
      * 目录：template/{模板目录}/{ads_dir}/ ，ads_dir 来自站点配置（默认 ads），与 MAC_PATH_ADS 一致。
      */
-    public function get_ads_files(Request $request)
+    public function get_ads_files(\think\Request $request)
     {
         $config      = config('maccms');
         $templateDir = $this->resolveTemplateDir();

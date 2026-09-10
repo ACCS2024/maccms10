@@ -47,7 +47,7 @@ class Order extends Base
      * @param  price  float  必填，充值金额（单位：元）
      * @return JSON   {code:1, msg:'订单创建成功', info:{order_code, order_price, order_points, order_time}}
      */
-    public function create(Request $request)
+    public function create(\think\Request $request)
     {
         $auth = $this->_checkLogin();
         if (!$auth['ok']) return $auth['response'];
@@ -99,7 +99,7 @@ class Order extends Base
      * @param  status  int     可选，订单状态筛选（0=未支付，1=已支付）
      * @return JSON    {code:1, msg:'获取成功', info:{page, pagecount, limit, total, list:[...]}}
      */
-    public function get_list(Request $request)
+    public function get_list(\think\Request $request)
     {
         $auth = $this->_checkLogin();
         if (!$auth['ok']) return $auth['response'];
@@ -139,7 +139,7 @@ class Order extends Base
      * @param  order_code  string  可选，订单号
      * @return JSON        {code:1, msg:'获取成功', info:{...}}
      */
-    public function get_detail(Request $request)
+    public function get_detail(\think\Request $request)
     {
         $auth = $this->_checkLogin();
         if (!$auth['ok']) return $auth['response'];
@@ -173,7 +173,7 @@ class Order extends Base
      * @param  order_code  string  必填，订单号
      * @return JSON        {code:1, msg:'...', info:{order_code, order_status, order_status_text, order_pay_type, order_pay_time}}
      */
-    public function check_status(Request $request)
+    public function check_status(\think\Request $request)
     {
         $auth = $this->_checkLogin();
         if (!$auth['ok']) return $auth['response'];

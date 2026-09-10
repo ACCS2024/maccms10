@@ -23,10 +23,10 @@ class Website extends Base
     /**
      *  获取列表
      *
-     * @param Request $request
+     * @param \think\Request $request
      * @return \think\response\Json
      */
-    public function get_list(Request $request)
+    public function get_list(\think\Request $request)
     {
         // 参数校验
         $param = $request->param();
@@ -120,7 +120,7 @@ class Website extends Base
      *
      * @return \think\response\Json
      */
-    public function get_detail(Request $request)
+    public function get_detail(\think\Request $request)
     {
         $param = $request->param();
         $validate = validate($request->controller());
@@ -166,7 +166,7 @@ class Website extends Base
      * 搜索建议/自动完成（与列表同一套 Meili + 已发布过滤）
      * api.php/website/suggest?wd=关键词&limit=10
      */
-    public function suggest(Request $request)
+    public function suggest(\think\Request $request)
     {
         return $this->jsonSuggestByKind($request, 'website');
     }

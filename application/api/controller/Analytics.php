@@ -8,7 +8,7 @@ use think\facade\Request;
 
 class Analytics extends Base
 {
-    public function session(Request $request)
+    public function session(\think\Request $request)
     {
         $payload = $this->payload($request);
         $guard = $this->guardAnalyticsWrite('session', $payload);
@@ -55,7 +55,7 @@ class Analytics extends Base
         return json(['code' => 1, 'msg' => 'ok', 'data' => ['session_id' => intval($id)]]);
     }
 
-    public function pageview(Request $request)
+    public function pageview(\think\Request $request)
     {
         $payload = $this->payload($request);
         $guard = $this->guardAnalyticsWrite('pageview', $payload);
@@ -112,7 +112,7 @@ class Analytics extends Base
         return json(['code' => 1, 'msg' => 'ok', 'data' => ['pageview_id' => intval($id)]]);
     }
 
-    public function event(Request $request)
+    public function event(\think\Request $request)
     {
         $payload = $this->payload($request);
         $guard = $this->guardAnalyticsWrite('event', $payload);
@@ -159,7 +159,7 @@ class Analytics extends Base
         return json(['code' => 1, 'msg' => 'ok', 'data' => ['event_id' => intval($id)]]);
     }
 
-    public function aggregate(Request $request)
+    public function aggregate(\think\Request $request)
     {
         $mode = strtolower($this->strVal($request->param(), 'mode', 16));
         if ($mode !== 'day') {
@@ -172,7 +172,7 @@ class Analytics extends Base
         return json($res);
     }
 
-    private function payload(Request $request)
+    private function payload(\think\Request $request)
     {
         $param = $request->param();
         if (!empty($param)) {

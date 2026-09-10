@@ -27,10 +27,10 @@ class Auth extends Base
      * 前端调用时机：页面首屏初始化时调用一次；登录成功、退出登录后各再调一次。
      * 未登录也返回 code=1，但 info.is_login=0（不返回 HTML 错页）。
      *
-     * @param Request $request
+     * @param \think\Request $request
      * @return \think\response\Json
      */
-    public function me(Request $request)
+    public function me(\think\Request $request)
     {
         $check = (new \app\common\model\User())->checkLogin();
 
@@ -91,10 +91,10 @@ class Auth extends Base
      *   id     - 资源 id（vod_id / art_id / manga_id）
      *   action - 可选，play|read|download|comment|favorite（不传则返回全部权限位）
      *
-     * @param Request $request
+     * @param \think\Request $request
      * @return \think\response\Json
      */
-    public function permission(Request $request)
+    public function permission(\think\Request $request)
     {
         $param = $request->param();
         $mid = intval($param['mid'] ?? 0);
@@ -355,10 +355,10 @@ class Auth extends Base
      * 参数：user_name, user_pwd，若站点开启登录验证码则需 verify
      * 请求头：Authorization: Bearer 加上 access_token
      *
-     * @param Request $request
+     * @param \think\Request $request
      * @return \think\response\Json
      */
-    public function jwt(Request $request)
+    public function jwt(\think\Request $request)
     {
         if (!JwtService::isEnabled()) {
             return json(['code' => 1004, 'msg' => 'JWT disabled']);

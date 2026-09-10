@@ -152,7 +152,7 @@ class Payment extends Base
      *
      * @return JSON  {code:1, msg:'获取成功', info:{min, scale, methods, card_config, is_login, user_points}}
      */
-    public function get_config(Request $request)
+    public function get_config(\think\Request $request)
     {
         $pay_config = config('maccms.pay');
 
@@ -195,7 +195,7 @@ class Payment extends Base
      * - 支付宝等返回 pay_url（构造好的跳转链接）或 html（表单HTML）
      * - 前端根据 payment 类型决定展示方式
      */
-    public function gopay(Request $request)
+    public function gopay(\think\Request $request)
     {
         $auth = $this->_checkLogin();
         if (!$auth['ok']) return $auth['response'];
@@ -334,7 +334,7 @@ class Payment extends Base
      * @param  card_pwd  string  必填，充值卡密码
      * @return JSON      {code:1, msg:'充值成功，增加积分【xxx】'}
      */
-    public function use_card(Request $request)
+    public function use_card(\think\Request $request)
     {
         $auth = $this->_checkLogin();
         if (!$auth['ok']) return $auth['response'];
@@ -364,7 +364,7 @@ class Payment extends Base
      * @param  nid   int  可选，集编号
      * @return JSON  {code:1, msg:'购买成功'}
      */
-    public function buy_popedom(Request $request)
+    public function buy_popedom(\think\Request $request)
     {
         $auth = $this->_checkLogin();
         if (!$auth['ok']) return $auth['response'];
@@ -481,7 +481,7 @@ class Payment extends Base
      * - 用户必须拥有足够积分
      * - 升级后 user_end_time 自动延长
      */
-    public function upgrade(Request $request)
+    public function upgrade(\think\Request $request)
     {
         $auth = $this->_checkLogin();
         if (!$auth['ok']) return $auth['response'];
@@ -503,7 +503,7 @@ class Payment extends Base
      *
      * @return JSON  {code:1, msg:'获取成功', info:[{group_id, group_name, group_points_day, ...}]}
      */
-    public function get_groups(Request $request)
+    public function get_groups(\think\Request $request)
     {
         $group_list = (new \app\common\model\Group())->getCache();
 
@@ -539,7 +539,7 @@ class Payment extends Base
      * @param  limit  int  可选，每页条数，默认20，最大100
      * @return JSON   {code:1, msg:'获取成功', info:{page, pagecount, limit, total, list:[...]}}
      */
-    public function get_cards(Request $request)
+    public function get_cards(\think\Request $request)
     {
         $auth = $this->_checkLogin();
         if (!$auth['ok']) return $auth['response'];

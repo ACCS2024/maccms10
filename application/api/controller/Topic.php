@@ -25,10 +25,10 @@ class Topic extends Base
     /**
      *  获取列表
      *
-     * @param Request $request
+     * @param \think\Request $request
      * @return \think\response\Json
      */
-    public function get_list(Request $request)
+    public function get_list(\think\Request $request)
     {
         // 参数校验
         $param = $request->param();
@@ -88,10 +88,10 @@ class Topic extends Base
     /**
      *  获取列表与推荐信息视频文章
      *
-     * @param Request $request
+     * @param \think\Request $request
      * @return \think\response\Json
      */
-    public function get_detail(Request $request)
+    public function get_detail(\think\Request $request)
     {
         // 参数校验
         $param = $request->param();
@@ -163,7 +163,7 @@ class Topic extends Base
      * 获取推荐/精选专题
      * 对应首页精选专题区块
      *
-     * @param Request $request
+     * @param \think\Request $request
      * @return \think\response\Json
      *
      * 参数说明:
@@ -171,7 +171,7 @@ class Topic extends Base
      *   num - 可选，数量，默认5；传 ids 时表示期望返回行数（与首页七巧板一致）
      *   by  - 可选，排序字段，默认 time，可选: time,hits（仅未传 ids 时生效）
      */
-    public function get_recommend(Request $request)
+    public function get_recommend(\think\Request $request)
     {
         $param = $request->param();
         $num = isset($param['num']) ? (int)$param['num'] : 5;
@@ -293,7 +293,7 @@ class Topic extends Base
      * 搜索建议/自动完成（与列表同一套 Meili + 已发布过滤）
      * api.php/topic/suggest?wd=关键词&limit=10
      */
-    public function suggest(Request $request)
+    public function suggest(\think\Request $request)
     {
         return $this->jsonSuggestByKind($request, 'topic');
     }

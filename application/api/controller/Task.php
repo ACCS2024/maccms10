@@ -16,7 +16,7 @@ class Task extends Base
      * 获取任务列表及用户完成状态
      * GET /api.php/Task/get_task_list
      */
-    public function get_task_list(Request $request)
+    public function get_task_list(\think\Request $request)
     {
         $check = (new \app\common\model\User())->checkLogin();
         if ($check['code'] > 1) {
@@ -45,7 +45,7 @@ class Task extends Base
      * 每日签到
      * POST /api.php/Task/daily_sign
      */
-    public function daily_sign(Request $request)
+    public function daily_sign(\think\Request $request)
     {
         $check = (new \app\common\model\User())->checkLogin();
         if ($check['code'] > 1) {
@@ -60,7 +60,7 @@ class Task extends Base
      * 获取签到信息（含里程碑）
      * GET /api.php/Task/get_sign_info
      */
-    public function get_sign_info(Request $request)
+    public function get_sign_info(\think\Request $request)
     {
         $check = (new \app\common\model\User())->checkLogin();
         if ($check['code'] > 1) {
@@ -81,7 +81,7 @@ class Task extends Base
      * POST /api.php/Task/claim_sign_milestone
      * @param milestone_id 里程碑ID
      */
-    public function claim_sign_milestone(Request $request)
+    public function claim_sign_milestone(\think\Request $request)
     {
         $check = (new \app\common\model\User())->checkLogin();
         if ($check['code'] > 1) {
@@ -108,7 +108,7 @@ class Task extends Base
      * POST /api.php/Task/claim_reward
      * @param task_id 任务ID
      */
-    public function claim_reward(Request $request)
+    public function claim_reward(\think\Request $request)
     {
         $check = (new \app\common\model\User())->checkLogin();
         if ($check['code'] > 1) {
@@ -131,7 +131,7 @@ class Task extends Base
      * POST /api.php/Task/report_progress
      * @param task_action 任务动作标识 (watch_vod/share_vod/post_comment)
      */
-    public function report_progress(Request $request)
+    public function report_progress(\think\Request $request)
     {
         $check = (new \app\common\model\User())->checkLogin();
         if ($check['code'] > 1) {

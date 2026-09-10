@@ -24,10 +24,10 @@ class Vod extends Base
     /**
      *  获取视频列表
      *
-     * @param Request $request
+     * @param \think\Request $request
      * @return \think\response\Json
      */
-    public function get_list(Request $request)
+    public function get_list(\think\Request $request)
     {
         // 参数校验
         $param = $request->param();
@@ -154,13 +154,13 @@ class Vod extends Base
     /**
      * 视频详细信息
      *
-     * @param Request $request
+     * @param \think\Request $request
      * @return \think\response\Json
      * @throws \think\db\exception\DataNotFoundException
      * @throws \think\db\exception\ModelNotFoundException
      * @throws \think\exception\DbException
      */
-    public function get_detail(Request $request)
+    public function get_detail(\think\Request $request)
     {
         $param = $request->param();
         $validate = validate($request->controller());
@@ -280,7 +280,7 @@ class Vod extends Base
      * @throws \think\db\exception\ModelNotFoundException
      * @throws \think\exception\DbException
      */
-    public function get_year(Request $request)
+    public function get_year(\think\Request $request)
     {
         $param = $request->param();
         $validate = validate($request->controller());
@@ -328,7 +328,7 @@ class Vod extends Base
      * @throws \think\db\exception\ModelNotFoundException
      * @throws \think\exception\DbException
      */
-    public function get_class(Request $request)
+    public function get_class(\think\Request $request)
     {
         $param = $request->param();
         $validate = validate($request->controller());
@@ -376,7 +376,7 @@ class Vod extends Base
      * @throws \think\db\exception\ModelNotFoundException
      * @throws \think\exception\DbException
      */
-    public function get_area(Request $request)
+    public function get_area(\think\Request $request)
     {
         $param = $request->param();
         $validate = validate($request->controller());
@@ -420,7 +420,7 @@ class Vod extends Base
      * 获取 Banner 推荐影片
      * 对应首页 Banner 轮播区，取推荐等级高的影片
      *
-     * @param Request $request
+     * @param \think\Request $request
      * @return \think\response\Json
      *
      * 参数说明:
@@ -428,7 +428,7 @@ class Vod extends Base
      *   start - 可选，偏移量，默认0（换一换分页）
      *   level - 可选，推荐等级，默认9，多个用逗号分隔
      */
-    public function get_banner(Request $request)
+    public function get_banner(\think\Request $request)
     {
         $param = $request->param();
         $num = isset($param['num']) ? (int)$param['num'] : 5;
@@ -501,7 +501,7 @@ class Vod extends Base
      * 获取热门推荐影片
      * 对应首页热门推荐 Tab 区块，按月度点击量排序
      *
-     * @param Request $request
+     * @param \think\Request $request
      * @return \think\response\Json
      *
      * 参数说明:
@@ -511,7 +511,7 @@ class Vod extends Base
      *   level   - 可选，推荐等级筛选，多个用逗号分隔，如 "1,2,3,4,5,6,7,8,9"
      *   by      - 可选，排序字段，默认 hits_month，可选: hits,hits_day,hits_week,hits_month,score,time
      */
-    public function get_hot(Request $request)
+    public function get_hot(\think\Request $request)
     {
         $param = $request->param();
         $num = isset($param['num']) ? (int)$param['num'] : 6;
@@ -567,7 +567,7 @@ class Vod extends Base
      * 按分类获取最新影片
      * 对应首页各分类区块的最新影片列表
      *
-     * @param Request $request
+     * @param \think\Request $request
      * @return \think\response\Json
      *
      * 参数说明:
@@ -576,7 +576,7 @@ class Vod extends Base
      *
      * info.today_new_count：当前分类（含子类）下，vod_time_add 或 vod_time 任一落在服务器当天自然日内的条数（去重按行，每条视频计 1）
      */
-    public function get_latest_by_type(Request $request)
+    public function get_latest_by_type(\think\Request $request)
     {
         $param = $request->param();
         if (empty($param['type_id'])) {
@@ -661,7 +661,7 @@ class Vod extends Base
      * 获取排行榜数据
      * 对应首页热播排行榜区块
      *
-     * @param Request $request
+     * @param \think\Request $request
      * @return \think\response\Json
      *
      * 参数说明:
@@ -669,7 +669,7 @@ class Vod extends Base
      *   num     - 可选，数量，默认10
      *   by      - 可选，排序字段，默认 hits_month
      */
-    public function get_rank(Request $request)
+    public function get_rank(\think\Request $request)
     {
         $param = $request->param();
         $typeId = isset($param['type_id']) ? (int)$param['type_id'] : 0;
@@ -720,7 +720,7 @@ class Vod extends Base
      * api.php/vod/update_hits?id=1&type=update
      * type: update=更新并返回; 默认=只获取
      */
-    public function update_hits(Request $request)
+    public function update_hits(\think\Request $request)
     {
         $param = $request->param();
         $id = intval($param['id'] ?? 0);
@@ -756,7 +756,7 @@ class Vod extends Base
      * api.php/vod/digg?id=1&type=up
      * type: up=顶; down=踩; 仅查询不传type
      */
-    public function digg(Request $request)
+    public function digg(\think\Request $request)
     {
         $param = $request->param();
         $id = intval($param['id'] ?? 0);
@@ -780,7 +780,7 @@ class Vod extends Base
      * api.php/vod/update_score?id=1&score=8
      * score: 1-10 评分值；不传只获取当前评分
      */
-    public function update_score(Request $request)
+    public function update_score(\think\Request $request)
     {
         $param = $request->param();
         $id = intval($param['id'] ?? 0);
@@ -807,7 +807,7 @@ class Vod extends Base
      * 搜索建议/自动完成
      * api.php/vod/suggest?wd=战狼&limit=10
      */
-    public function suggest(Request $request)
+    public function suggest(\think\Request $request)
     {
         return $this->jsonSuggestByKind($request, 'vod');
     }
@@ -817,7 +817,7 @@ class Vod extends Base
      * api.php/vod/verify_pwd?id=1&pwd=123&type=4
      * type: 1=访问密码 4=播放密码 5=下载密码
      */
-    public function verify_pwd(Request $request)
+    public function verify_pwd(\think\Request $request)
     {
         $param = $request->param();
         $id = intval($param['id'] ?? 0);
@@ -839,7 +839,7 @@ class Vod extends Base
      * 获取播放页信息（含源列表、权限检查）
      * api.php/vod/get_play_info?id=1&sid=1&nid=1
      */
-    public function get_play_info(Request $request)
+    public function get_play_info(\think\Request $request)
     {
         $param = $request->param();
         $id  = intval($param['id'] ?? 0);
@@ -879,7 +879,7 @@ class Vod extends Base
      * 获取下载页信息
      * api.php/vod/get_down_info?id=1&sid=1&nid=1
      */
-    public function get_down_info(Request $request)
+    public function get_down_info(\think\Request $request)
     {
         $param = $request->param();
         $id  = intval($param['id'] ?? 0);

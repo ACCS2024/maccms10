@@ -46,7 +46,7 @@ class Base extends All
      *
      * @return \think\response\Json
      */
-    protected function jsonSuggestByKind(Request $request, $kind, $urlFlag = null)
+    protected function jsonSuggestByKind(\think\Request $request, $kind, $urlFlag = null)
     {
         if ($GLOBALS['config']['app']['search'] != '1') {
             return json(['code' => 999, 'msg' => lang('suggest_close')]);

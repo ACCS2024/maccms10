@@ -13,7 +13,7 @@ class Manga extends Base
         $this->check_config();
     }
 
-    public function get_list(Request $request)
+    public function get_list(\think\Request $request)
     {
         $param = $request->param();
         $validate = validate($request->controller());
@@ -76,7 +76,7 @@ class Manga extends Base
         return json($data);
     }
 
-    public function get_detail(Request $request)
+    public function get_detail(\think\Request $request)
     {
         $param = $request->param();
         $validate = validate($request->controller());
@@ -137,7 +137,7 @@ class Manga extends Base
      * 单话阅读数据（供 uni-app / SPA 原生渲染，非 web-view）
      * GET api.php/manga/get_chapter 参数：id manga_id，sid nid 与前台 play 一致
      */
-    public function get_chapter(Request $request)
+    public function get_chapter(\think\Request $request)
     {
         $param = $request->param();
         $validate = validate($request->controller());
@@ -217,7 +217,7 @@ class Manga extends Base
      * 获取热门漫画
      * 对应首页热门漫画区块，按月度点击量排序
      *
-     * @param Request $request
+     * @param \think\Request $request
      * @return \think\response\Json
      *
      * 参数说明:
@@ -225,7 +225,7 @@ class Manga extends Base
      *   start - 可选，偏移量，默认0
      *   by    - 可选，排序字段，默认 hits_month，可选: hits,hits_day,hits_week,hits_month,time
      */
-    public function get_hot(Request $request)
+    public function get_hot(\think\Request $request)
     {
         $param = $request->param();
         $num = isset($param['num']) ? (int)$param['num'] : 6;
@@ -268,13 +268,13 @@ class Manga extends Base
      * 获取最新漫画
      * 对应首页最新漫画区块
      *
-     * @param Request $request
+     * @param \think\Request $request
      * @return \think\response\Json
      *
      * 参数说明:
      *   num - 可选，数量，默认24
      */
-    public function get_latest(Request $request)
+    public function get_latest(\think\Request $request)
     {
         $param = $request->param();
         $num = isset($param['num']) ? (int)$param['num'] : 24;
@@ -312,7 +312,7 @@ class Manga extends Base
      * 搜索建议/自动完成（与列表同一套 Meili + 已发布/回收过滤）
      * api.php/manga/suggest?wd=关键词&limit=10
      */
-    public function suggest(Request $request)
+    public function suggest(\think\Request $request)
     {
         return $this->jsonSuggestByKind($request, 'manga');
     }

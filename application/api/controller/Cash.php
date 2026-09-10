@@ -49,7 +49,7 @@ class Cash extends Base
      * @param  status  int  可选，提现状态筛选（0=待审核，1=已审核）
      * @return JSON    {code:1, msg:'获取成功', info:{page, pagecount, limit, total, list:[...]}}
      */
-    public function get_list(Request $request)
+    public function get_list(\think\Request $request)
     {
         $auth = $this->_checkLogin();
         if (!$auth['ok']) return $auth['response'];
@@ -87,7 +87,7 @@ class Cash extends Base
      * @param  cash_id  int  必填，提现记录ID
      * @return JSON     {code:1, msg:'获取成功', info:{...}}
      */
-    public function get_detail(Request $request)
+    public function get_detail(\think\Request $request)
     {
         $auth = $this->_checkLogin();
         if (!$auth['ok']) return $auth['response'];
@@ -126,7 +126,7 @@ class Cash extends Base
      * - 提现所需积分 = 提现金额 × 提现兑换比例（cash_ratio）
      * - 提现后对应积分会冻结，待管理员审核后正式扣除
      */
-    public function create(Request $request)
+    public function create(\think\Request $request)
     {
         // 安全加固:按 IP 温和限流(默认开启),防刷提现请求垃圾/CPU 打满
         if (!mac_fe_write_throttle('fe_cash', 120, 10)) {
@@ -159,7 +159,7 @@ class Cash extends Base
      * - 仅能删除当前登录用户的提现记录
      * - 未审核的提现记录删除后，冻结积分会自动恢复
      */
-    public function del(Request $request)
+    public function del(\think\Request $request)
     {
         $auth = $this->_checkLogin();
         if (!$auth['ok']) return $auth['response'];
@@ -203,7 +203,7 @@ class Cash extends Base
      * - cash_min: 最小提现金额（单位：元）
      * - cash_ratio: 兑换比例（1元 = 多少积分）
      */
-    public function get_config(Request $request)
+    public function get_config(\think\Request $request)
     {
         $user_config = $GLOBALS['config']['user'] ?? [];
 

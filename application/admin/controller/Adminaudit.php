@@ -47,7 +47,7 @@ class Adminaudit extends Base
         return $this->fetch('admin@adminaudit/index');
     }
 
-    public function info(Request $request)
+    public function info(\think\Request $request)
     {
         $id = (int)$request->param('id', 0);
         if ($id < 1) {

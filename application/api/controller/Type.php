@@ -23,10 +23,10 @@ class Type extends Base
     /**
      *  获取分类树
      *
-     * @param Request $request
+     * @param \think\Request $request
      * @return \think\response\Json
      */
-    public function get_list(Request $request)
+    public function get_list(\think\Request $request)
     {
         // 参数校验
         $param = $request->param();
@@ -107,7 +107,7 @@ class Type extends Base
      * 获取导航栏分类（含子分类 + 扩展信息：地区/年代）
      * 首页 Banner 分类导航 + 顶部导航栏使用
      *
-     * @param Request $request
+     * @param \think\Request $request
      * @return \think\response\Json
      *
      * 参数说明:
@@ -117,7 +117,7 @@ class Type extends Base
      *   parent - 可选，传1则只返回父级分类(type_pid=0)
      *   link_flag - 可选，type_link 使用的 mac_url_type 第三参：type（默认）| show（列表页）
      */
-    public function get_nav_types(Request $request)
+    public function get_nav_types(\think\Request $request)
     {
         $param = $request->param();
         $ids = isset($param['ids']) ? trim($param['ids']) : '';
@@ -193,14 +193,14 @@ class Type extends Base
      * 获取指定分类及其子分类
      * 用于各区块的子分类标签显示
      *
-     * @param Request $request
+     * @param \think\Request $request
      * @return \think\response\Json
      *
      * 参数说明:
      *   type_id - 必须，父分类ID
      *   num     - 可选，子分类数量限制，默认不限制
      */
-    public function get_type_with_children(Request $request)
+    public function get_type_with_children(\think\Request $request)
     {
         $param = $request->param();
         if (empty($param['type_id'])) {

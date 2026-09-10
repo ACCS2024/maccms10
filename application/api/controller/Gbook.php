@@ -22,10 +22,10 @@ class Gbook extends Base
     /**
      *  获取列表
      *
-     * @param Request $request
+     * @param \think\Request $request
      * @return \think\response\Json
      */
-    public function get_list(Request $request)
+    public function get_list(\think\Request $request)
     {
         // 参数校验
         $param = $request->param();
@@ -104,7 +104,7 @@ class Gbook extends Base
      * api.php/gbook/submit (POST)
      * 参数: gbook_content, [gbook_name]
      */
-    public function submit(Request $request)
+    public function submit(\think\Request $request)
     {
         // 安全加固:按 IP 温和限流(默认开启),防刷留言垃圾/CPU 打满;cookie 节流可被绕过,此为服务端兜底
         if (!mac_fe_write_throttle('fe_gbook', 60, 30)) {
@@ -142,7 +142,7 @@ class Gbook extends Base
      * 举报留言
      * api.php/gbook/report?id=1
      */
-    public function report(Request $request)
+    public function report(\think\Request $request)
     {
         $id = intval($request->param('id', 0));
         if ($id < 1) return json(['code' => 1001, 'msg' => '参数错误']);
