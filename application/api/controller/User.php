@@ -373,15 +373,12 @@ class User extends Base
     /**
      * 用户注册
      * api.php/user/register (POST)
-     * 参数: user_name, user_pwd, [user_email, user_phone, invite_code]
+     * 参数: user_name, user_pwd, user_pwd2, [verify, ac, to, code, invite_code, uid]
      */
     public function register(\think\Request $request)
     {
-        $param = $request->param();
-        if (empty($param['user_name']) || empty($param['user_pwd'])) {
-            return json(['code' => 1001, 'msg' => lang('api/user_name_pwd_empty')]);
-        }
-        $res = (new \app\common\model\User())->register($param);
+        if (!$request->isPost()) { return json(['code'=>1001, 'msg'=>lang('param_err')]); }
+        $res = (new \app\common\model\User())->register($request->post());
         return json($res);
     }
 

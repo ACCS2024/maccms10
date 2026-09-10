@@ -411,34 +411,43 @@ class User extends Base
 
     public function reg()
     {
-        $param = \think\facade\Request::param();
-        if (Request()->isPost()) {
-            if (!empty(cookie('uid'))) {
-                $param['uid'] = intval(cookie('uid'));
+        if (request()->isPost()) {
+            $param = Request::post();
+            if (!array_key_exists('uid', $param)) {
+                $referral = cookie('uid');
+                if ($referral !== null && $referral !== '') {
+                    $referral = \app\common\util\PointsBalance::amount($referral);
+                    if ($referral === null) { return json(['code'=>1001, 'msg'=>lang('param_err')]); }
+                    $param['uid'] = $referral;
+                }
             }
             $res = (new \app\common\model\User())->register($param);
-            if ($res['code'] > 1) {
-                return json($res);
+            if ($res['code'] > 1) { return json($res); }
+            if ((int)$GLOBALS['config']['user']['reg_status'] !== 1) {
+                return json(['code'=>1, 'msg'=>lang('index/reg_ok'), 'pending_approval'=>1]);
             }
-
             $GLOBALS['config']['user']['login_verify'] = '0';
             $res = (new \app\common\model\User())->login($param);
             $res['msg'] = lang('index/reg_ok').'，' . $res['msg'];
             return json($res);
         }
-        if (!empty($param['uid'])) {
-            cookie('uid', $param['uid']);
+        if (!request()->isGet()) { return json(['code'=>1001, 'msg'=>lang('param_err')]); }
+        $query = Request::get();
+        $code = $query['invite_code'] ?? '';
+        $uid = array_key_exists('uid', $query) ? \app\common\util\PointsBalance::amount($query['uid']) : null;
+        if (!is_string($code) || !preg_match('/^[A-Za-z0-9]{0,20}$/D', $code)
+            || (array_key_exists('uid', $query) && $uid === null)) {
+            return json(['code'=>1001, 'msg'=>lang('param_err')]);
         }
-
-        $user_config = $GLOBALS['config']['user'];
-        $this->assign('user_config', $user_config);
-        $this->assign('param', $param);
+        if ($uid !== null) { cookie('uid', (string)$uid); }
+        $this->assign('user_config', $GLOBALS['config']['user']);
+        $this->assign('param', ['wd'=>'', 'sid'=>0, 'nid'=>0, 'invite_code'=>$code, 'uid'=>$uid ?? 0]);
         return $this->fetch('user/reg');
     }
 
     public function reg_msg()
     {
-        $param = $this->userFormParameters(Request::param(), ['ac', 'to', 'code', 'verify']);
+        $param = $this->userFormParameters(Request::post(), ['ac', 'to', 'code', 'verify']);
         if (!request()->isPost() || $param === null
             || !$this->userMessageTargetIsValid($param)) {
             return json(['code' => 9001, 'msg' => lang('param_err')]);

@@ -23,6 +23,10 @@ class User extends Base
     public $_guest_group = 1;
     public $_def_group = 2;
 
+    // Only a successful INSERT in this model instance can authorize one invitation event.
+    private ?int $pendingRegistrationSourceId = null;
+    private ?int $pendingInvitationRewardUserId = null;
+
     /** 禁止通过前台 / 公开 API 输出的用户字段（含会话伪造所需 user_random） */
     private static $sensitiveFields = [
         'user_pwd',
@@ -285,7 +289,8 @@ class User extends Base
             return ['code'=>1007, 'msg'=>lang('model/user/pass_length_err')];
         }
         if (strlen($data['user_name']) > 30) { return ['code'=>1006, 'msg'=>lang('model/user/name_contain')]; }
-        $row = $this->where('user_name', $data['user_name'])->find();
+        try { $row = $this->where('user_name', $data['user_name'])->find(); }
+        catch (\think\db\exception\DbException | \PDOException $error) { return ['code'=>1010, 'msg'=>lang('model/user/reg_err')]; }
         if (!empty($row)) {
             return ['code' => 1005, 'msg' => lang('model/user/haved_reg')];
         }
@@ -310,7 +315,7 @@ class User extends Base
         }
         $group = \app\common\util\PointsBalance::amount($this->_def_group, true);
         $filter = array_key_exists('filter_words', $config['user']) ? $config['user']['filter_words'] : '';
-        if ($group === null || $group < 1 || $group > 65535 || !is_string($filter) || !mb_check_encoding($filter, 'UTF-8')) {
+        if ($group === null || $group < 1 || $group > 32767 || !is_string($filter) || !mb_check_encoding($filter, 'UTF-8')) {
             return ['code'=>1001, 'msg'=>lang('param_err')];
         }
         if(!empty($filter)) {
@@ -328,118 +333,169 @@ class User extends Base
             $where2=[];
             $where2['user_reg_ip'] = $ip;
             $where2[] = ['user_reg_time', '>', strtotime('today')];
-            $cc = $this->where($where2)->count();
+            try { $cc = $this->where($where2)->count(); }
+            catch (\think\db\exception\DbException | \PDOException $error) { return ['code'=>1010, 'msg'=>lang('model/user/reg_err')]; }
             if($cc >= $config['user']['reg_num']){
                 return ['code' => 1009, 'msg' => lang('model/user/ip_limit',[$config['user']['reg_num']])];
             }
         }
 
-        $fields = [];
-        $fields['user_name'] = $data['user_name'];
+        $fields = ['user_name'=>$data['user_name'], 'group_id'=>(string)$group,
+            'user_points'=>0, 'user_status'=>(int)$config['user']['reg_status'],
+            'user_reg_time'=>$registeredAt, 'user_reg_ip'=>$ip,
+            'user_openid_qq'=>$param['user_openid_qq'], 'user_openid_weixin'=>$param['user_openid_weixin']];
+        $locks = [];
+        $started = false;
         try {
+            $tiers = \app\common\util\InvitationRewardPlan::tiers($config['user']);
+            if (!$this->registrationTransactionsAvailable()) { throw new \RuntimeException('Registration requires transactional tables'); }
+            $this->registrationGroups($tiers, $group);
             $fields['user_pwd'] = mac_password_hash($password_raw);
             $fields['user_random'] = bin2hex(random_bytes(16));
+            $message = null;
+            if (!$is_from_3rdparty && ($config['user']['reg_phone_sms'] || $config['user']['reg_email_sms'])) {
+                $channel = $config['user']['reg_phone_sms'] ? 'phone' : 'email';
+                $param['type'] = 3;
+                $message = $this->messageParameters($param, true);
+                if ($message === null || $message['ac'] !== $channel) { return ['code'=>9001, 'msg'=>lang('param_err')]; }
+                $fields['user_'.$channel] = $message['to'];
+            }
+            // Every advisory lock precedes row locks. The pool serializes code allocation on legacy schemas.
+            $locks[] = $this->acquireContactLock('registration-pool', 'codes');
+            $locks[] = $this->acquireContactLock('registration-name', $fields['user_name']);
+            if ($config['user']['reg_num'] > 0) { $locks[] = $this->acquireContactLock('registration-ip', (string)$ip); }
+            foreach (['qq','weixin'] as $provider) {
+                if ($fields['user_openid_'.$provider] !== '') {
+                    $locks[] = $this->acquireContactLock('registration-'.$provider, $fields['user_openid_'.$provider]);
+                }
+            }
+            if ($message !== null) { $locks[] = $this->acquireContactLock($message['ac'], $message['to']); }
+            Db::startTrans();
+            $started = true;
+            $registeredAt = time();
+            $fields['user_reg_time'] = $registeredAt;
+            $unique = ['user_name'];
+            if ($message !== null) { $unique[] = 'user_'.$message['ac']; }
+            foreach (['user_openid_qq','user_openid_weixin'] as $field) { if ($fields[$field] !== '') { $unique[] = $field; } }
+            foreach ($unique as $field) {
+                if (Db::name('User')->master()->where($field, $fields[$field])->count() > 0) {
+                    throw new \RuntimeException('Registration identity is already used');
+                }
+            }
+            if ($config['user']['reg_num'] > 0 && Db::name('User')->master()->where('user_reg_ip', $ip)
+                ->where('user_reg_time', '>=', strtotime('today'))->where('user_reg_time', '<', strtotime('tomorrow'))
+                ->count() >= $config['user']['reg_num']) { throw new \RuntimeException('Registration address quota exceeded'); }
+            if ($invite_code_param !== '') {
+                $inviters = Db::name('User')->master()->where('user_invite_code', $invite_code_param)->limit(2)->column('user_id');
+                if (count($inviters) !== 1) { throw new \RuntimeException('Invitation code is unavailable or ambiguous'); }
+                $uid = (int)$inviters[0];
+            }
+            if ($uid > 0) {
+                $inviter = Db::name('User')->where('user_id', $uid)->lock(true)->find();
+                if (!$inviter || (int)$inviter['user_status'] !== 1) { throw new \RuntimeException('Inviter is unavailable'); }
+                $ancestry = [$uid];
+                foreach (['user_pid','user_pid_2'] as $field) {
+                    $ancestor = \app\common\util\PointsBalance::amount($inviter[$field], true);
+                    if ($ancestor === null || ($ancestor > 0 && (in_array($ancestor, $ancestry, true)
+                        || !Db::name('User')->master()->where('user_id', $ancestor)->find()))) {
+                        throw new \RuntimeException('Invalid referral ancestry');
+                    }
+                    if ($ancestor > 0) { $ancestry[] = $ancestor; }
+                }
+                $fields += ['user_pid'=>$uid, 'user_pid_2'=>(int)$inviter['user_pid'], 'user_pid_3'=>(int)$inviter['user_pid_2']];
+            }
+            if ($message !== null) {
+                // Registration codes belong to a guest even if the request carries an existing login cookie.
+                $verified = $this->checkMessageForUser($message, 0);
+                if (($verified['code'] ?? null) !== 1 || Db::name('Msg')->where('msg_id', $verified['msg_id'])
+                    ->where('msg_status', 0)->update(['msg_status'=>1]) !== 1) { throw new \RuntimeException('Registration code is unavailable'); }
+                if ((int)Db::name('Msg')->master()->where('msg_id', $verified['msg_id'])->value('msg_status') !== 1) {
+                    throw new \RuntimeException('Registration code was not consumed');
+                }
+            }
+            // Bounded allocation fails closed rather than returning an unchecked fallback collision.
+            $fields['user_invite_code'] = '';
+            for ($attempt = 0; $attempt < 20; ++$attempt) {
+                $candidate = strtoupper(bin2hex(random_bytes(5)));
+                if (!Db::name('User')->master()->where('user_invite_code', $candidate)->count()) {
+                    $fields['user_invite_code'] = $candidate; break;
+                }
+            }
+            if ($fields['user_invite_code'] === '' || $this->insert($fields) !== 1) { throw new \RuntimeException('Registration insert failed'); }
+            $nid = \app\common\util\PointsBalance::amount($this->getLastInsID());
+            if ($nid === null) { throw new \RuntimeException('Registration id is invalid'); }
+            $this->assertRegistrationFields($nid, $fields);
+            $this->registrationCredit($nid, $config['user']['reg_points'], '注册赠分');
+            if ($uid > 0) {
+                $this->pendingRegistrationSourceId = $nid;
+                $invitation = $this->addInviteCount($uid, $nid);
+                if (($invitation['code'] ?? null) !== 1) { throw new \RuntimeException('Invitation registration failed'); }
+            }
+            Db::commit();
+            $started = false;
+            return ['code'=>1, 'msg'=>lang('model/user/reg_ok')];
         } catch (\Throwable $error) {
+            if ($started) { Db::rollback(); }
             return ['code'=>1010, 'msg'=>lang('model/user/reg_err')];
+        } finally {
+            $this->pendingRegistrationSourceId = null;
+            foreach (array_reverse($locks) as $lock) { $this->releaseContactLock($lock); }
         }
-        $fields['group_id'] = (string)$group;
-        $fields['user_points'] = $config['user']['reg_points'];
-        $fields['user_status'] = intval($config['user']['reg_status']);
-        $fields['user_reg_time'] = $registeredAt;
-        $fields['user_reg_ip'] = $ip;
-        $fields['user_openid_qq'] = (string)$param['user_openid_qq'];
-        $fields['user_openid_weixin'] = (string)$param['user_openid_weixin'];
+    }
 
-        if (!$is_from_3rdparty) {
-            // https://github.com/magicblack/maccms10/issues/418
-            if($config['user']['reg_phone_sms'] == '1'){
-                if (($param['ac'] ?? null) !== 'phone') { return ['code'=>9001, 'msg'=>lang('param_err')]; }
-                $param['type'] = 3;
-                $res = $this->check_msg($param);
-                if($res['code'] >1){
-                    return $res;
-                }
-                $param['to'] = $res['to'];
-                $fields['user_phone'] = $param['to'];
-
-                $update=[];
-                $update['user_phone'] = '';
-                $where2=[];
-                $where2['user_phone'] = $param['to'];
-
-                $row = $this->where($where2)->find();
-                if (!empty($row)) {
-                    return ['code' => 1011, 'msg' =>lang('model/user/phone_haved')];
-                }
-                //$this->where($where2)->update($update);
-            }
-            elseif($config['user']['reg_email_sms'] == '1'){
-                if (($param['ac'] ?? null) !== 'email') { return ['code'=>9001, 'msg'=>lang('param_err')]; }
-                $param['type'] = 3;
-                $res = $this->check_msg($param);
-                if($res['code'] >1){
-                    return $res;
-                }
-                $param['to'] = $res['to'];
-                $fields['user_email'] = $param['to'];
-
-                $update=[];
-                $update['user_email'] = '';
-                $where2=[];
-                $where2['user_email'] = $param['to'];
-
-                $row = $this->where($where2)->find();
-                if (!empty($row)) {
-                    return ['code' => 1012, 'msg' => lang('model/user/email_haved')];
-                }
-                //$this->where($where2)->update($update);
-            }
+    private function registrationTransactionsAvailable(): bool
+    {
+        $type = Db::connect()->getConfig('type');
+        if ($type === 'sqlite') { return true; }
+        if ($type !== 'mysql') { return false; }
+        $tables = [$this->getTable(), (new Msg())->getTable(), (new Plog())->getTable(), Db::name('Group')->getTable()];
+        $rows = Db::query('SELECT TABLE_NAME AS name, ENGINE AS engine FROM information_schema.TABLES '
+            .'WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME IN (?,?,?,?)', $tables, true);
+        foreach ($rows as $row) {
+            $index = array_search($row['name'], $tables, true);
+            if ($index !== false && strtoupper((string)$row['engine']) === 'INNODB') { unset($tables[$index]); }
         }
+        return $tables === [];
+    }
 
-        $res = $this->insert($fields);
-        if ($res < 1) {
-            return ['code' => 1010, 'msg' => lang('model/user/reg_err')];
+    private function registrationGroups(array $tiers, ?int $defaultGroup = null): array
+    {
+        $ids = $defaultGroup === null ? [] : [$defaultGroup];
+        foreach ($tiers as $tier) { if ($tier['group_id'] >= 2) { $ids[] = $tier['group_id']; } }
+        $groups = [];
+        foreach (array_unique($ids) as $id) {
+            $row = Db::name('Group')->master()->where('group_id', $id)->find();
+            if (!$row || (int)$row['group_status'] !== 1) { throw new \RuntimeException('Registration group is unavailable'); }
+            $groups[$id] = $row;
         }
-        $nid = $this->getLastInsID();
-        
-        $invite_code = $this->generateUniqueInviteCode($nid);
-        $this->where('user_id', $nid)->update(['user_invite_code' => $invite_code]);
-        
-        if (!empty($invite_code_param)) {
-            $uid = $this->getUserIdByInviteCode($invite_code_param);
-        }
-        
-        if($uid > 0) {
-            $where2 = [];
-            $where2['user_id'] = $uid;
-            $invite = $this->where($where2)->find();
-            if ($invite) {
-                $where=[];
-                $where['user_id'] = $nid;
-                $update=[];
-                $update['user_pid'] = $invite['user_id'];
-                $update['user_pid_2'] = $invite['user_pid'];
-                $update['user_pid_3'] = $invite['user_pid_2'];
-                $r1 = $this->where($where)->update($update);
-                $r2 = false;
-                $config['user']['invite_reg_num'] = intval($config['user']['invite_reg_num']);
+        return $groups;
+    }
 
-                if($config['user']['invite_reg_points']>0){
-                    $r2 = $this->where($where2)->setInc('user_points', $config['user']['invite_reg_points']);
-                }
-
-                if($r2!==false) {
-                    //积分日志
-                    $data = [];
-                    $data['user_id'] = $uid;
-                    $data['plog_type'] = 2;
-                    $data['plog_points'] = $config['user']['invite_reg_points'];
-                    (new \app\common\model\Plog())->saveData($data);
-                }
-                $this->addInviteCount($uid);
-            }
+    /** Read back exact business values: non-strict legacy columns may silently clip successful writes. */
+    private function assertRegistrationFields(int $userId, array $expected): void
+    {
+        $actual = Db::name('User')->master()->where('user_id', $userId)->find();
+        foreach ($expected as $field=>$value) {
+            if (!$actual || (string)$actual[$field] !== (string)$value) { throw new \RuntimeException('Registration state was not stored exactly'); }
         }
-        return ['code' => 1, 'msg' => lang('model/user/reg_ok')];
+    }
+
+    private function registrationCredit(int $userId, int $points, string $remarks): void
+    {
+        $balance = \app\common\util\PointsBalance::amount(Db::name('User')->master()->where('user_id', $userId)->value('user_points'), true);
+        if ($balance === null || $points > \app\common\util\PointsBalance::MAX - $balance
+            || ($points > 0 && !\app\common\util\PointsBalance::credit($userId, $points))) {
+            throw new \RuntimeException('Registration credit failed');
+        }
+        $this->assertRegistrationFields($userId, ['user_points'=>$balance + $points]);
+        $ledger = new Plog();
+        $expected = ['user_id'=>$userId, 'plog_type'=>2, 'plog_points'=>$points, 'plog_remarks'=>$remarks];
+        $result = $ledger->saveData($expected);
+        if (($result['code'] ?? null) !== 1) { throw new \RuntimeException('Registration ledger failed'); }
+        $stored = Db::name('Plog')->master()->where('plog_id', $ledger->getLastInsID())->find();
+        foreach ($expected as $field=>$value) {
+            if (!$stored || (string)$stored[$field] !== (string)$value) { throw new \RuntimeException('Registration ledger was not stored exactly'); }
+        }
     }
 
     public function regcheck($t, $str)
@@ -696,15 +752,9 @@ class User extends Base
                     $upd['user_pid_3'] = $invite['user_pid_2'];
                     $this->where('user_id', $nid)->update($upd);
 
-                    if (!empty($config['user']['invite_reg_points']) && $config['user']['invite_reg_points'] > 0) {
-                        $this->where('user_id', $uid)->setInc('user_points', $config['user']['invite_reg_points']);
-                        $pdata = [];
-                        $pdata['user_id'] = $uid;
-                        $pdata['plog_type'] = 2;
-                        $pdata['plog_points'] = $config['user']['invite_reg_points'];
-                        (new \app\common\model\Plog())->saveData($pdata);
-                    }
-                    $this->addInviteCount($uid);
+                    $this->pendingRegistrationSourceId = (int)$nid;
+                    $invitation = $this->addInviteCount($uid, $nid);
+                    if (($invitation['code'] ?? null) !== 1) { return $invitation; }
                 }
             }
         }
@@ -1447,7 +1497,7 @@ class User extends Base
     {
         if (!is_array($param)) { return ['code'=>9001, 'msg'=>lang('param_err')]; }
         $param['type'] = 3;
-        return $this->send_msg($param);
+        return $this->sendMessageForUser($param, 0, '');
     }
 
 
@@ -1699,127 +1749,73 @@ class User extends Base
         return $info ? $info['user_id'] : 0;
     }
 
-    /**
-     * 处理邀请奖励
-     * 当被邀请人注册时，自动为邀请人发放奖励
-     * @param int $user_id 邀请人用户ID
-     */
+    /** Internal continuation; ordinary calls cannot replay rewards for an existing account. */
     public function processInviteReward($user_id)
     {
-        $maccms_config = config('maccms');
-        $config = $maccms_config['user'];
-        
-        if (empty($config['invite_reward_status'])) {
-            return;
+        $userId = \app\common\util\PointsBalance::amount($user_id);
+        if ($userId === null || $this->pendingInvitationRewardUserId !== $userId) {
+            return ['code'=>1010, 'msg'=>lang('model/user/reg_err')];
         }
-        
-        $invite_reward = $config['invite_reward'];
-        if (empty($invite_reward) || !is_array($invite_reward)) {
-            return;
+        $this->pendingInvitationRewardUserId = null;
+        $configuration = config('maccms')['user'] ?? null;
+        if (!is_array($configuration)) { throw new \RuntimeException('Invalid invitation configuration'); }
+        $tiers = \app\common\util\InvitationRewardPlan::tiers($configuration);
+        if ($tiers === []) { return ['code'=>1, 'msg'=>'ok']; }
+        $groups = $this->registrationGroups($tiers);
+        $user = Db::name('User')->where('user_id', $userId)->lock(true)->find();
+        $now = time();
+        $plan = \app\common\util\InvitationRewardPlan::calculate($user ?: [], $tiers, $groups, $now);
+        foreach ($plan['events'] as $event) {
+            $this->registrationCredit($userId, $event['points'], '邀请阶梯：'.$event['threshold']);
         }
-        
-        $sorted_reward = [];
-        foreach ($invite_reward as $count => $reward) {
-            $count = intval($count);
-            if ($count > 0) {
-                $sorted_reward[$count] = $reward;
-            }
+        if ($plan['events'] !== []) {
+            $fields = ['group_id'=>$plan['group_id'], 'user_end_time'=>$plan['user_end_time'],
+                'user_invite_reward_level'=>$plan['user_invite_reward_level'], 'user_invite_reward_time'=>$now];
+            if (Db::name('User')->where('user_id', $userId)->update($fields) !== 1) { throw new \RuntimeException('Invitation membership update failed'); }
+            $this->assertRegistrationFields($userId, $fields);
         }
-        ksort($sorted_reward);
-        
-        // 使用事务 + SELECT FOR UPDATE 行锁，防止并发重复发放奖励
-        Db::startTrans();
-        try {
-            $where = [];
-            $where['user_id'] = $user_id;
-            // lock(true) = SELECT ... FOR UPDATE，锁定该行直到事务结束
-            $user_info = $this->where($where)->lock(true)->find();
-            
-            if (!$user_info) {
-                Db::rollback();
-                return;
-            }
-            
-            $invite_count = intval($user_info['user_invite_count']);
-            $current_reward_level = intval($user_info['user_invite_reward_level']);
-            
-            $update = [];
-            $updated = false;
-            
-            $current_end_time = ($user_info['user_end_time'] > time())
-                ? $user_info['user_end_time'] : time();
-            
-            foreach ($sorted_reward as $count => $reward) {
-                if ($count > $current_reward_level && $invite_count >= $count) {
-                    $group_id = intval($reward['group_id']);
-                    $long = $reward['long'];
-                    $points = intval($reward['points']);
-                    
-                    if ($group_id >= 2) {
-                        $points_long = ['day'=>86400,'week'=>86400*7,'month'=>86400*30,'year'=>86400*365];
-                        
-                        if (isset($points_long[$long])) {
-                            $current_groups = explode(',', $user_info['group_id']);
-                            $current_max_group = max(array_map('intval', $current_groups));
-                            
-                            if ($group_id > $current_max_group) {
-                                $new_groups = array_unique(array_merge($current_groups, [$group_id]));
-                                $new_groups = array_filter($new_groups, function($v) { return intval($v) > 0; });
-                                sort($new_groups, SORT_NUMERIC);
-                                $update['group_id'] = implode(',', $new_groups);
-                            }
-                            
-                            $sj = $points_long[$long];
-                            $current_end_time += $sj;
-                            
-                            $update['user_end_time'] = intval($current_end_time);
-                            $updated = true;
-                            
-                            $data = [];
-                            $data['user_id'] = $user_id;
-                            $data['plog_type'] = 8;
-                            $data['plog_points'] = 0;
-                            $data['plog_remarks'] = '邀请奖：邀请' . $invite_count . '人，获得VIP ' . ($long == 'day' ? '1天' : ($long == 'week' ? '1周' : ($long == 'month' ? '1个月' : '1年')));
-                            (new \app\common\model\Plog())->saveData($data);
-                        }
-                    }
-                    
-                    if ($points > 0) {
-                        $this->where($where)->setInc('user_points', $points);
-                        
-                        $data = [];
-                        $data['user_id'] = $user_id;
-                        $data['plog_type'] = 8;
-                        $data['plog_points'] = $points;
-                        $data['plog_remarks'] = '邀请奖励：邀请' . $invite_count . '人，获得' . $points . '积分';
-                        (new \app\common\model\Plog())->saveData($data);
-                    }
-                    
-                    $update['user_invite_reward_level'] = $count;
-                    $update['user_invite_reward_time'] = time();
-                    $updated = true;
-                }
-            }
-            
-            if ($updated) {
-                $this->where($where)->update($update);
-            }
-            
-            Db::commit();
-        } catch (\Exception $e) {
-            Db::rollback();
-        }
+        return ['code'=>1, 'msg'=>'ok'];
     }
 
-    /**
-     * 增加邀请计数并处理奖励
-     * @param int $user_id
-     */
-    public function addInviteCount($user_id)
+    /** A newly inserted child authorizes exactly one count, receipt, direct credit and tier transition. */
+    public function addInviteCount($user_id, $source_user_id = null)
     {
-        $this->where('user_id', $user_id)->setInc('user_invite_count', 1);
-        
-        $this->processInviteReward($user_id);
+        $userId = \app\common\util\PointsBalance::amount($user_id);
+        $sourceId = \app\common\util\PointsBalance::amount($source_user_id);
+        $authorized = $sourceId !== null && $sourceId === $this->pendingRegistrationSourceId;
+        $this->pendingRegistrationSourceId = null;
+        if (!$authorized || $userId === null || $userId === $sourceId) { return ['code'=>1010, 'msg'=>lang('model/user/reg_err')]; }
+        $started = false;
+        try {
+            if (!$this->registrationTransactionsAvailable()) { throw new \RuntimeException('Invitation requires transactional tables'); }
+            $configuration = config('maccms')['user'] ?? null;
+            $points = is_array($configuration) ? \app\common\util\PointsBalance::amount($configuration['invite_reg_points'] ?? 0, true) : null;
+            if ($points === null) { throw new \RuntimeException('Invalid direct invitation amount'); }
+            $this->registrationGroups(\app\common\util\InvitationRewardPlan::tiers($configuration));
+            Db::startTrans(); $started = true;
+            $rows = Db::name('User')->whereIn('user_id', [$userId, $sourceId])->order('user_id')->lock(true)->select()->toArray();
+            $users = array_column($rows, null, 'user_id');
+            if (!isset($users[$userId], $users[$sourceId]) || (int)$users[$sourceId]['user_pid'] !== $userId
+                || (int)$users[$userId]['user_status'] !== 1) { throw new \RuntimeException('Registration source does not match the inviter'); }
+            $receipt = '注册推荐确认：'.$userId;
+            if (Db::name('Plog')->master()->where('user_id', $sourceId)->where('plog_type', 2)
+                ->where('plog_remarks', 'like', '注册推荐确认：%')->count() > 0) { throw new \RuntimeException('Invitation was already confirmed'); }
+            $this->registrationCredit($sourceId, 0, $receipt);
+            $count = \app\common\util\PointsBalance::amount($users[$userId]['user_invite_count'], true);
+            if ($count === null || $count === \app\common\util\PointsBalance::MAX
+                || Db::name('User')->where('user_id', $userId)->where('user_invite_count', $count)
+                ->update(['user_invite_count'=>$count + 1]) !== 1) { throw new \RuntimeException('Invitation count failed'); }
+            $this->assertRegistrationFields($userId, ['user_invite_count'=>$count + 1]);
+            $this->registrationCredit($userId, $points, '注册推荐积分：'.$sourceId);
+            $this->pendingInvitationRewardUserId = $userId;
+            $result = $this->processInviteReward($userId);
+            if (($result['code'] ?? null) !== 1) { throw new \RuntimeException('Invitation tier failed'); }
+            Db::commit(); $started = false;
+            return ['code'=>1, 'msg'=>'ok'];
+        } catch (\Throwable $error) {
+            if ($started) { Db::rollback(); }
+            return ['code'=>1010, 'msg'=>lang('model/user/reg_err')];
+        } finally { $this->pendingInvitationRewardUserId = null; }
     }
 
 }

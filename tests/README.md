@@ -83,3 +83,5 @@ PHPStan / PHPCompatibility 的锁文件、范围、命令及诊断解释见 [审
 AI 插件任务表生命周期已纳入 models：默认/自定义前缀各执行 `framework_audit_ai_task.php`，真实安装、状态写回、历史和卸载均检查其他前缀表未被改动；MySQL使用独立models测试库。
 
 内容身份与缓存：`python3 tests/run_content_identity_cache_audit.py <PHP镜像>...` 使用一次性MySQL，验证前台/API的Cookie与Bearer、真实会话和最终响应缓存头，包含本地HTTP直接缓存命中路径。
+
+注册事务与邀请凭证回归：`php tests/framework_audit_registration_transactions.php`。默认 SQLite，`FRAMEWORK_AUDIT_MYSQL=1` 使用独立注册测试库；已纳入 `models`，覆盖代码消费、完整回滚、非严格存储和并发竞争。

@@ -17,8 +17,15 @@ function mac_password_verify($password, $hash) {
     return strlen($hash) === 32 && ctype_xdigit($hash) ? hash_equals(strtolower($hash),md5($password)) : password_verify($password,$hash);
 }
 function mac_password_need_rehash($hash) { return password_needs_rehash($hash,PASSWORD_BCRYPT,['cost'=>4]); }
-function mac_send_mail(...$args) { throw new RuntimeException('Registration input audit must never send messages'); }
-function mac_send_sms(...$args) { throw new RuntimeException('Registration input audit must never send messages'); }
+function mac_send_mail($target, ...$args) { return registrationFixtureDelivery('email', $target); }
+function mac_send_sms($target, ...$args) { return registrationFixtureDelivery('phone', $target); }
+function registrationFixtureDelivery(string $channel, string $target): array {
+    if (empty($GLOBALS['registration_fixture_allow_delivery']) || !in_array($target, ['fixture@example.invalid','13000000000'], true)) {
+        throw new RuntimeException('Unexpected registration delivery fixture');
+    }
+    $GLOBALS['registration_fixture_deliveries'][] = [$channel, $target];
+    return ['code'=>1];
+}
 $temp = audit_temp_dir('user-registration');
 register_shutdown_function(static function() use ($temp): void { audit_remove_temp($temp); });
 $app = new \think\App($temp);
@@ -33,8 +40,9 @@ $app->config->set($configuration,'database');
 $manager = new \think\DbManager(); $manager->setConfig($configuration); $app->instance('think\\DbManager',$manager);
 $app->instance('log', new class { public function record(...$args) {} public function error(...$args) {} });
 if ($mysql) { \think\facade\Db::execute("SET SESSION sql_mode=''"); }
+if (!defined('REGISTRATION_FIXTURE_EXISTING_DB')) {
 $ddl = file_get_contents(dirname(__DIR__,2).'/application/install/sql/install.sql');
-foreach (['user','msg','plog'] as $table) {
+foreach (['user','msg','plog','group'] as $table) {
     if (!preg_match('/CREATE TABLE `mac_'.$table.'` \(([\s\S]*?)\) ENGINE[^;]*;/', $ddl, $match)) { throw new RuntimeException('Required install DDL missing'); }
     if ($mysql) {
         \think\facade\Db::execute('DROP TABLE IF EXISTS audit_'.$table);
@@ -56,6 +64,7 @@ foreach (['user','msg','plog'] as $table) {
         \think\facade\Db::execute('CREATE TABLE audit_'.$table.' ('.implode(',',$columns).')');
     }
 }
+}
 function registrationFixtureConfig(array $overrides = []): void {
     global $app;
     $base = ['user'=>[
@@ -70,12 +79,15 @@ function registrationFixtureConfig(array $overrides = []): void {
 }
 function registrationFixtureSeed(array $configuration = []): void {
     global $app;
-    foreach (['msg','plog','user'] as $table) { \think\facade\Db::execute('DELETE FROM audit_'.$table); }
+    foreach (['msg','plog','user','group'] as $table) { \think\facade\Db::execute('DELETE FROM audit_'.$table); }
+    foreach ([1,2,3,4,5] as $group) { \think\facade\Db::name('Group')->insert(['group_id'=>$group,'group_name'=>'Fixture '.$group,'group_status'=>1,'group_type'=>'','group_popedom'=>'']); }
     registrationFixtureConfig($configuration);
     $GLOBALS['user'] = ['user_id'=>0,'user_name'=>''];
     $GLOBALS['registration_fixture_ip'] = '2130706433';
     $GLOBALS['registration_fixture_throttle'] = true;
     $GLOBALS['registration_fixture_hash_failure'] = false;
+    $GLOBALS['registration_fixture_allow_delivery'] = false;
+    $GLOBALS['registration_fixture_deliveries'] = [];
     $GLOBALS['registration_fixture_captchas'] = [];
     $app->instance('request',(new \think\Request())->withHeader([]));
 }
