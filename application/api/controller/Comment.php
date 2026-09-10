@@ -133,47 +133,7 @@ class Comment extends Base
      */
     public function submit(\think\Request $request)
     {
-        // 安全加固:按 IP 温和限流(默认开启),防刷评论垃圾/CPU 打满;cookie 节流可被绕过,此为服务端兜底
-        if (!mac_fe_write_throttle('fe_comment', 60, 30)) {
-            return json(['code' => 1005, 'msg' => lang('frequently')]);
-        }
-        $param = $request->param();
-        $cmid = isset($param['comment_mid']) ? (string) $param['comment_mid'] : '';
-        if (!in_array($cmid, ['1', '2', '3', '8', '9', '11', '12'], true)) {
-            return json(['code' => 1006, 'msg' => lang('index/mid_err')]);
-        }
-        $content = trim($param['comment_content'] ?? '');
-        if (empty($content)) return json(['code' => 1004, 'msg' => lang('index/require_content')]);
-
-        $cookie = 'comment_timespan';
-        if (!empty(cookie($cookie))) return json(['code' => 1005, 'msg' => lang('frequently')]);
-
-        if ($GLOBALS['config']['comment']['login'] == 1) {
-            $check = (new \app\common\model\User())->checkLogin();
-            if ($check['code'] > 1) return json(['code' => 1003, 'msg' => lang('index/require_login')]);
-        }
-
-        $data = [];
-        $data['comment_mid'] = intval($param['comment_mid']);
-        $data['comment_rid'] = intval($param['comment_rid'] ?? 0);
-        $data['comment_pid'] = intval($param['comment_pid'] ?? 0);
-        $data['comment_content'] = htmlentities(mac_filter_words($content));
-        $data['comment_ip'] = mac_get_client_ip();
-        $data['comment_time'] = time();
-
-        if (!empty(cookie('user_id'))) {
-            $uinfo = (new \app\common\model\User())->field('user_nick_name,user_name')->where(['user_id' => intval(cookie('user_id'))])->find();
-            $data['user_id'] = intval(cookie('user_id'));
-            $data['comment_name'] = htmlentities($uinfo['user_nick_name'] ?: $uinfo['user_name']);
-        } else {
-            $data['user_id'] = 0;
-            $data['comment_name'] = htmlentities(trim($param['comment_name'] ?? lang('controller/visitor')));
-        }
-
-        $data['comment_status'] = ($GLOBALS['config']['comment']['audit'] == 1) ? 0 : 1;
-        $res = (new \app\common\model\Comment())->saveData($data);
-        cookie($cookie, 't', 30);
-        return json($res);
+        return json(\app\common\util\CommentSubmission::submit($request));
     }
 
     /**
