@@ -10,22 +10,26 @@ class Weibo
     private $config = [];
 
     public function __construct($config = []) {
-        $this->config = $config;
+        $this->config = is_array($config) ? $config : [];
     }
 
     public function submit($file_path)
     {
-        $weibo =  new suOper();
+        try {
+            $weibo =  new suOper();
 
-        $weibo->config($GLOBALS['config']['upload']['api']['weibo']);
-        $res = $weibo->check();
+            $weibo->config($GLOBALS['config']['upload']['api']['weibo'] ?? []);
+            $res = $weibo->check();
 
-        if($res['code']>1){
-            return $file_path;
-        }
-        $res = $weibo->upload(ROOT_PATH . $file_path, false, $weibo->_config['cookie']);
-        if(!empty($res['url'])){
-            return StorageResult::complete($file_path, $res['url'], $this->config);
+            if($res['code']>1){
+                return $file_path;
+            }
+            $res = $weibo->upload(ROOT_PATH . $file_path, false, $weibo->_config['cookie']);
+            if(!empty($res['url'])){
+                return StorageResult::complete($file_path, $res['url'], $this->config);
+            }
+        } catch (\Throwable $error) {
+            // A provider/configuration failure preserves the source and the adapter's local fallback.
         }
         return $file_path;
     }

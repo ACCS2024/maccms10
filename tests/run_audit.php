@@ -27,7 +27,7 @@ $groups = [
         ['security_audit_csrf.php'], ['security_audit_config_preservation.php'], ['security_audit_dir.php'], ['security_audit_http.php'],
         ['security_audit_jwt.php'], ['security_audit_logging.php'], ['security_audit_make.php'],
         ['security_audit_oauth.php'], ['security_audit_oauth_profiles.php'], ['security_audit_paths.php'], ['security_audit_safety.php'],
-        ['security_audit_sms.php'], ['security_audit_tls.php'], ['security_audit_urlsend.php'],
+        ['security_audit_sms.php'], ['security_audit_sina.php'], ['security_audit_tls.php'], ['security_audit_urlsend.php'],
         ['security_audit_wechat.php'], ['security_audit_xml.php'],
         ['security_audit_pay_weixin.php'], ['security_audit_pay_alipay.php'],
         ['security_audit_pay_epay.php'], ['security_audit_pay_codepay.php'],
