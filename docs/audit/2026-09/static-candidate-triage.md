@@ -1,0 +1,23 @@
+# 静态候选分类与扩查规则
+
+数据基准固定为提交 `a6de166`，使用仓库 tools/audit 锁定工具，未加载本地站点配置。PHPStan level1：1027条文件候选、0条全局错误；PHPCompatibility：0错误、8警告；原生维护范围696文件在8.3.33/8.4.25均无诊断。后续修复会改变计数，本报告不是最终零缺陷结论。
+
+| PHPStan标识 | 数量 | 分类与处置 |
+| --- | ---: | --- |
+| array.duplicateKey | 643 | 语言包覆盖，PHP取最后值；逐文案维护，避免机械删除改变最终翻译 |
+| variable.undefined | 216 | 190条来自include迁移的pre/sql，另有分支定义与真实候选，不能整体忽略 |
+| staticMethod.notFound | 102 | 主要Db动态门面；核对锁定ORM转发与真实执行 |
+| constant.notFound | 31 | 运行期入口常量，需核对具体入口初始化 |
+| property.notFound | 8 | AiTask模型属性映射，不能据动态字段假定库里存在同名列 |
+| arguments.count | 1 | 后台Database旧Dir::create参数，已随备份生命周期组替换 |
+| constructor.unusedParameter | 1 | Database兼容构造参数；保留调用契约 |
+| class.notFound | 1 | 可选GeoIP异常类；核对依赖缺失时真实调用路径 |
+| empty.variable | 19 | 部分Collection永远非empty；区分冗余分支和实际数组/行结果错误 |
+| unset.variable | 4 | 独立核对引用释放与原变量定义，暂不做批量删除 |
+| isset.variable | 1 | 已定义局部变量冗余判断 |
+
+兼容工具8条警告：7个构造函数exit，1个配置文件混合换行。构造终止请求会影响可组合性和错误响应，但不是PHP8解析失败；需按路由行为收口。维护范围外的真实依赖仍通过全工作区扫描单独检查，不能因默认排除vendor漏掉延迟加载问题。
+
+闭环按根因而不是工具条数：定位调用入口→建立正常数据与边界→使用真实框架/ORM或明确服务fixture复现→修复→从暂存快照回归→独立提交。由一个empty(Collection)候选扩查出同类数组引用helper，是有效的启发；仅观察循环中的empty而忽略末尾count退出，则会产生误判。
+
+状态分为已修复并回归、已解释且保留、已确认待修、待核实、受工具限制未完成；任何类别都不通过全局baseline消失。原始工具JSON保留在执行环境 phase-reports-a6de166，仓库保存配置、版本与复验入口，不提交可能含本地路径的整份诊断输出。
