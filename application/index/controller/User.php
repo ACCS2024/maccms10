@@ -20,7 +20,7 @@ class User extends Base
 
         //判断用户登录状态
         $ac = request()->action();
-        $guestAllowedActions = ['login', 'logout', 'ajax_login', 'reg', 'findpass', 'findpass_msg', 'findpass_reset', 'reg_msg', 'oauth', 'logincallback', 'visit', 'index', 'ajax_upgrade'];
+        $guestAllowedActions = ['login', 'logout', 'ajax_login', 'reg', 'regcheck', 'findpass', 'findpass_msg', 'findpass_reset', 'reg_msg', 'oauth', 'logincallback', 'visit', 'index', 'ajax_upgrade'];
         $guestAllowedGetActions = ['buy', 'plays', 'upgrade', 'checkin'];
         if (in_array($ac, $guestAllowedActions) || (in_array($ac, $guestAllowedGetActions) && !Request()->isPost())) {
             // 游客可访问的页面也注入 obj，避免模板判断分支缺少变量
@@ -373,16 +373,38 @@ class User extends Base
         return $this->fetch('user/info');
     }
 
+    /** HTTP form fields are text; reject structured values before legacy string operations. */
+    private function userFormParameters(array $param, array $fields): ?array
+    {
+        $data = [];
+        foreach ($fields as $field) {
+            $value = array_key_exists($field, $param) ? $param[$field] : '';
+            if (!is_string($value) && !is_int($value)) {
+                return null;
+            }
+            $data[$field] = (string)$value;
+        }
+        return $data;
+    }
+
+    private function userMessageTargetIsValid(array $param): bool
+    {
+        if ($param['ac'] === 'email') {
+            return filter_var(trim($param['to']), FILTER_VALIDATE_EMAIL) !== false;
+        }
+        return $param['ac'] === 'phone' && preg_match('/^1[0-9]{10}$/D', trim($param['to'])) === 1;
+    }
+
     public function regcheck()
     {
-        $param = \think\facade\Request::param();
-        $t = htmlspecialchars(urldecode(trim($param['t'])));
-        $str = htmlspecialchars(urldecode(trim($param['str'])));
-        $res = (new \app\common\model\User())->regcheck($t, $str);
-        if ($res['code'] > 1) {
-            return $str;
+        $param = $this->userFormParameters(Request::param(), ['t', 'str']);
+        if ($param === null || !in_array($param['t'], ['user_name', 'user_email', 'verify'], true)
+            || trim($param['str']) === '') {
+            return json(['code' => 1001, 'msg' => lang('param_err')]);
         }
-        return json($res);
+        $t = $param['t'];
+        $str = htmlspecialchars(urldecode(trim($param['str'])));
+        return json((new \app\common\model\User())->regcheck($t, $str));
     }
 
     public function reg()
@@ -414,7 +436,11 @@ class User extends Base
 
     public function reg_msg()
     {
-        $param = \think\facade\Request::param();
+        $param = $this->userFormParameters(Request::param(), ['ac', 'to', 'code', 'verify']);
+        if (!request()->isPost() || $param === null
+            || !$this->userMessageTargetIsValid($param)) {
+            return json(['code' => 9001, 'msg' => lang('param_err')]);
+        }
         $res = (new \app\common\model\User())->reg_msg($param);
         return json($res);
     }
@@ -438,34 +464,56 @@ class User extends Base
 
     public function findpass()
     {
-        $param = \think\facade\Request::param();
-        if (Request()->isPost()) {
+        $param = $this->userFormParameters(Request::param(), [
+            'user_name', 'user_question', 'user_answer', 'user_pwd', 'user_pwd2', 'verify',
+        ]);
+        if ($param === null) {
+            return json(['code' => 1001, 'msg' => lang('param_err')]);
+        }
+        if (request()->isPost()) {
             $res = (new \app\common\model\User())->findpass($param);
             return json($res);
         }
-        $this->assign('param',$param);
+        $this->assign('param', $param);
         return $this->fetch('user/findpass');
     }
 
     public function findpass_msg()
     {
-        $param = \think\facade\Request::param();
-        if (Request()->isPost()) {
+        $raw = Request::param();
+        $param = $this->userFormParameters($raw, ['ac', 'to', 'code', 'verify']);
+        if ($param === null) {
+            return json(['code' => 9001, 'msg' => lang('param_err')]);
+        }
+        if (!request()->isPost() && !array_key_exists('ac', $raw)) {
+            // Templates use the selected channel in links and form fields.
+            return redirect(url('user/findpass_msg', ['ac' => 'email']));
+        }
+        if (!in_array($param['ac'], ['email', 'phone'], true)
+            || (request()->isPost() && !$this->userMessageTargetIsValid($param))) {
+            return json(['code' => 9001, 'msg' => lang('param_err')]);
+        }
+        if (request()->isPost()) {
             $res = (new \app\common\model\User())->findpass_msg($param);
             return json($res);
         }
-        $param['ac_text'] = $param['ac'] == 'phone' ? lang('mobile') : lang('email');
+        $param['ac_text'] = $param['ac'] === 'phone' ? lang('mobile') : lang('email');
         $this->assign('param', $param);
         return $this->fetch('user/findpass_msg');
     }
 
     public function findpass_reset()
     {
-        if (Request()->isPost()) {
-            $param = \think\facade\Request::param();
-            $res = (new \app\common\model\User())->findpass_reset($param);
-            return json($res);
+        $param = $this->userFormParameters(Request::param(), [
+            'ac', 'to', 'user_email', 'code', 'user_pwd', 'user_pwd2',
+        ]);
+        if (!request()->isPost() || $param === null
+            || !in_array($param['ac'], ['email', 'phone'], true)
+            || !$this->userMessageTargetIsValid($param) || trim($param['code']) === '') {
+            return json(['code' => 9001, 'msg' => lang('param_err')]);
         }
+        $res = (new \app\common\model\User())->findpass_reset($param);
+        return json($res);
     }
 
     public function buy()
