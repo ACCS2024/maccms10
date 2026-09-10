@@ -44,13 +44,16 @@ class Urlsend extends Base
         mac_echo('<style type="text/css">body{font-size:12px;color: #333333;line-height:21px;}span{font-weight:bold;color:#FF0000}</style>');
 
         $list = [];
-        $mid = $this->_param['mid'];
-        $this->_param['page'] = intval($this->_param['page']) <1 ? 1 : $this->_param['page'];
-        $this->_param['limit'] = intval($this->_param['limit']) <1 ? 50 : $this->_param['limit'];
-        $ids = $this->_param['ids'];
-        $ac2 = $this->_param['ac2'];
+        $mid = intval($this->_param['mid'] ?? 0);
+        if (!in_array($mid, [1, 2, 3, 8, 9, 11, 12], true)) {
+            return;
+        }
+        $this->_param['page'] = max(1, intval($this->_param['page'] ?? 1));
+        $this->_param['limit'] = max(1, min(1000, intval($this->_param['limit'] ?? 50)));
+        $ids = $this->_param['ids'] ?? [];
+        $ac2 = $this->_param['ac2'] ?? '';
         $col_time = 'time';
-        if($this->_param['range'] == '1'){
+        if(($this->_param['range'] ?? '') == '1'){
             $col_time = 'time_add';
         }
         $today = strtotime(date('Y-m-d'));
@@ -66,9 +69,6 @@ class Urlsend extends Base
                 }
                 if(!empty($ids)){
                     $where['vod_id'] = $ids;
-                }
-                elseif(!empty($data)){
-                    $where[] = ['vod_id', '>', $data];
                 }
 
                 $col = 'vod';
@@ -86,9 +86,6 @@ class Urlsend extends Base
                 if(!empty($ids)){
                     $where['art_id'] = $ids;
                 }
-                elseif(!empty($data)){
-                    $where[] = ['art_id', '>', $data];
-                }
 
                 $col = 'art';
                 $order = 'art_id asc';
@@ -104,9 +101,6 @@ class Urlsend extends Base
                 }
                 if(!empty($ids)){
                     $where['topic_id'] = $ids;
-                }
-                elseif(!empty($data)){
-                    $where[] = ['topic_id', '>', $data];
                 }
 
                 $col = 'topic';
@@ -124,9 +118,6 @@ class Urlsend extends Base
                 if(!empty($ids)){
                     $where['actor_id'] = $ids;
                 }
-                elseif(!empty($data)){
-                    $where[] = ['actor_id', '>', $data];
-                }
                 $col = 'actor';
                 $order = 'actor_id asc';
                 $fun = 'mac_url_actor_detail';
@@ -141,9 +132,6 @@ class Urlsend extends Base
                 }
                 if(!empty($ids)){
                     $where['role_id'] = $ids;
-                }
-                elseif(!empty($data)){
-                    $where[] = ['role_id', '>', $data];
                 }
                 $col = 'role';
                 $order = 'role_id asc';
@@ -160,9 +148,6 @@ class Urlsend extends Base
                 if(!empty($ids)){
                     $where['website_id'] = $ids;
                 }
-                elseif(!empty($data)){
-                    $where[] = ['website_id', '>', $data];
-                }
                 $col = 'website';
                 $order = 'website_id asc';
                 $fun = 'mac_url_website_detail';
@@ -177,9 +162,6 @@ class Urlsend extends Base
                 }
                 if(!empty($ids)){
                     $where['manga_id'] = $ids;
-                }
-                elseif(!empty($data)){
-                    $where[] = ['manga_id', '>', $data];
                 }
                 $col = 'manga';
                 $order = 'manga_id asc';
@@ -213,10 +195,16 @@ class Urlsend extends Base
         if(!empty($pp)){
             $this->_param = $pp;
         }
-        $ac = $this->_param['ac'];
+        $ac = $this->_param['ac'] ?? '';
+        if (!is_string($ac) || !preg_match('/^[A-Za-z0-9_]+$/D', $ac)) {
+            return $this->error(lang('param_err'));
+        }
         $cp = 'app\\common\\extend\\urlsend\\' . ucfirst($ac);
         if (class_exists($cp)) {
             $data = $this->data();
+            if (!is_array($data) || empty($data['urls'])) {
+                return;
+            }
 
             $c = new $cp;
             $res = $c->submit($data);
