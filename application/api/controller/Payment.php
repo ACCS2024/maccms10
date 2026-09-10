@@ -338,9 +338,10 @@ class Payment extends Base
      * 卡密充值
      * POST /api.php/payment/use_card
      *
-     * @param  card_no   string  必填，充值卡卡号
-     * @param  card_pwd  string  必填，充值卡密码
-     * @return JSON      {code:1, msg:'充值成功，增加积分【xxx】'}
+     * 请求字段 card_no、card_pwd：必填，分别为充值卡卡号和密码。
+     *
+     * @param \think\Request $request
+     * @return \think\response\Json
      */
     public function use_card(\think\Request $request)
     {

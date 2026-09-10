@@ -14,3 +14,5 @@ PHP 8.3.33 / 8.4.25 各自通过：
 - 前台表单 288 项；API 验证 149 项、41 个真实控制器动作。
 
 入口 `tests/framework_audit_card_ingress.php` 已加入金融套件；MySQL 使用 `maccms_audit_card_ingress`，无生产写入。原始固定源信息与观察见 `/tmp/maccms-audit-20260910/card-followups/ingress-source.json`、`ingress-{sqlite,mysql}-{83,84}.log`；修复记录 `ingress-check1.log` 和验证树文件。控制器通过不代表批量发卡、后台字段编辑/删除、完整客户端页面或跨请求异常核对已经完成。
+
+PHPDoc 后续（2026-09-11）：cc2d60bf 扫描中的 use_card 新返回提示源于旧文档把请求字段写成 PHP 参数、把 JSON 格式名称写成命名空间类。现将字段保留为请求说明，参数标注为实际 Request，返回标注为实际 think\response\Json，未修改方法体或加入原生返回类型。双版文件编译通过，PHPStan level 5 定向 Payment 文件从 44 条降为 37 条，该方法的 2 条参数解析、1 条返回类及 4 条返回值提示消除；其它方法的候选保留。证据为 /tmp/maccms-audit-20260910/card-followups/phpdoc-check1.log、phpdoc-static.json。此次为文档合同修正，未重复运行数据库回归来虚增验证范围。
