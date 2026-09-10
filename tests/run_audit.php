@@ -10,7 +10,7 @@ $groups = [
         ['security_audit_image_processing.php'], ['security_audit_image_upload.php'], ['security_audit_tinymce.php'],
         ['core_audit_helpers.php'], ['core_audit_substring.php'],
         ['extensions_audit_addons.php'], ['extensions_audit_aws.php'], ['extensions_audit_discovery.php'],
-        ['extensions_audit_collection.php'],
+        ['extensions_audit_collection.php'], ['extensions_audit_ip_location.php'],
         ['extensions_audit_lifecycle.php'], ['extensions_audit_oauth_sdk.php'],
         ['extensions_audit_qiniu_sdk.php'], ['extensions_audit_qiniu_upload.php'], ['extensions_audit_qiniu_response.php'], ['extensions_audit_qiniu_blocks.php'], ['extensions_audit_qrcode.php'],
         ['extensions_audit_qrcode_http.php'], ['extensions_audit_upyun_blocks.php'], ['extensions_audit_upyun_secure_purge.php'], ['extensions_audit_upyun.php'],
