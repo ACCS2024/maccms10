@@ -126,54 +126,61 @@ class Card extends Base {
 
     public function useData($card_no,$card_pwd,$user_info)
     {
-        if (empty($card_no) || empty($card_pwd) || empty($user_info)) {
+        $user_id = is_array($user_info) ? \app\common\util\PointsBalance::amount($user_info['user_id'] ?? null) : null;
+        if ((!is_string($card_no) && !is_int($card_no)) || (!is_string($card_pwd) && !is_int($card_pwd)) || $user_id === null) {
             return ['code' => 1001, 'msg'=>lang('param_err')];
         }
-
-        $where=[];
-        $where['card_no'] = $card_no;
-        $where['card_pwd'] = $card_pwd;
-        //$where['card_sale_status'] = 1;
-        $where['card_use_status'] = 0;
-
-        $info = $this->where($where)->find();
-        if(empty($info)){
-            return ['code' => 1002, 'msg' =>lang('model/card/not_found')];
+        $card_no = (string)$card_no;
+        $card_pwd = (string)$card_pwd;
+        if ($card_no === '' || $card_pwd === '' || !mb_check_encoding($card_no, 'UTF-8') || !mb_check_encoding($card_pwd, 'UTF-8')
+            || mb_strlen($card_no, 'UTF-8') > 16 || mb_strlen($card_pwd, 'UTF-8') > 8) {
+            return ['code' => 1001, 'msg'=>lang('param_err')];
         }
 
         Db::startTrans();
         try {
-            // 原子认领:仅当 card_use_status 仍为 0 时置 1;受影响行数==1 才算抢到本卡。
-            // 修复 TOCTOU:原逻辑"先加分、后置状态"非原子,并发请求可对同一张卡重复兑换(多次加分)。
+            // Lock the current face value; old schemas permit duplicate credentials,
+            // which must be reconciled instead of consuming an arbitrary/all matching card.
+            $matches = $this->where(['card_no'=>$card_no, 'card_pwd'=>$card_pwd])->lock(true)->limit(2)->select();
+            if (count($matches) !== 1 || (int)$matches[0]['card_use_status'] !== 0) {
+                Db::rollback();
+                return ['code'=>1002, 'msg'=>lang('model/card/not_found')];
+            }
+            $info = $matches[0];
+            $points = \app\common\util\PointsBalance::amount($info['card_points']);
+            if ($points === null) { throw new \RuntimeException('invalid card points'); }
+
             $claim = $this->where([
-                'card_no'         => $card_no,
-                'card_pwd'        => $card_pwd,
+                'card_id'         => $info['card_id'],
                 'card_use_status' => 0,
             ])->update([
                 'card_sale_status' => 1,
                 'card_use_status'  => 1,
                 'card_use_time'    => time(),
-                'user_id'          => $user_info['user_id'],
+                'user_id'          => $user_id,
             ]);
-            if (empty($claim)) {
+            if ($claim !== 1) {
                 // 0 行:已被(并发的)其它请求兑换
                 Db::rollback();
                 return ['code' => 1002, 'msg' => lang('model/card/not_found')];
             }
 
             // 认领成功后再加积分
-            (new \app\common\model\User())->where(['user_id' => $user_info['user_id']])->setInc('user_points', $info['card_points']);
+            if (!\app\common\util\PointsBalance::credit($user_id, $points)) {
+                throw new \RuntimeException('card credit rejected');
+            }
 
             //积分日志
-            (new \app\common\model\Plog())->saveData([
-                'user_id'     => $user_info['user_id'],
+            $log = (new \app\common\model\Plog())->saveData([
+                'user_id'     => $user_id,
                 'plog_type'   => 1,
-                'plog_points' => $info['card_points'],
+                'plog_points' => $points,
             ]);
+            if (($log['code'] ?? null) !== 1) { throw new \RuntimeException('card ledger rejected'); }
 
             Db::commit();
             return ['code' => 1, 'msg' => lang('model/card/used_card_ok',[$info['card_points']])];
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Db::rollback();
             return ['code' => 1004, 'msg' => lang('model/card/update_card_status_err')];
         }
