@@ -760,6 +760,9 @@ class User extends Base
 
     public function ulog()
     {
+        if (!\think\facade\View::engine()->exists('user/ulog')) {
+            throw new \think\exception\HttpException(404, lang('page_not_found'));
+        }
         $param = array_merge(['mid' => 0, 'type' => 0], \think\facade\Request::param());
         $param['page'] = intval($param['page'] ?? 1) < 1 ? 1 : intval($param['page'] ?? 1);
         $param['limit'] = intval($param['limit'] ?? 20) < 20 ? 20 : intval($param['limit'] ?? 20);

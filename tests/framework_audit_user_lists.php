@@ -47,6 +47,8 @@ namespace {
     $config = new think\Config();
     $config->set($configuration,'database');
     $container->instance('config',$config);
+    // This suite isolates rendering; actual template availability has its own regression.
+    $container->instance('view',new class { public function engine() { return $this; } public function exists($template) { return true; } });
     $container->instance('cache',new UserListCache());
     $db = new think\DbManager();
     $db->setConfig($configuration);
