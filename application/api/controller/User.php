@@ -646,15 +646,35 @@ class User extends Base
     /**
      * 找回密码 - 发送验证码
      * api.php/user/find_password (POST)
-     * 参数: user_email 或 user_phone
+     * 参数: user_email 或 user_phone；也支持 ac=email|phone 与 to，重复字段必须一致
      */
     public function find_password(\think\Request $request)
     {
-        $param = $request->param();
-        if (empty($param['user_email']) && empty($param['user_phone'])) {
-            return json(['code' => 1001, 'msg' => lang('api/findpass_need_contact')]);
+        if (!$request->isPost()) { return json(['code'=>1001, 'msg'=>lang('param_err')]); }
+        $param = $request->post();
+        foreach (['user_email','user_phone','ac','to'] as $field) {
+            if (array_key_exists($field, $param) && !is_string($param[$field])) {
+                return json(['code'=>1001, 'msg'=>lang('param_err')]);
+            }
+            $param[$field] = trim($param[$field] ?? '');
         }
-        $res = (new \app\common\model\User())->reg_msg($param);
+        if ($param['user_email'] !== '' && $param['user_phone'] !== '') { return json(['code'=>1001, 'msg'=>lang('param_err')]); }
+        $channel = $param['ac'];
+        $target = $param['to'];
+        if ($param['user_email'] !== '' || $param['user_phone'] !== '') {
+            $aliasChannel = $param['user_email'] !== '' ? 'email' : 'phone';
+            $aliasTarget = $param['user_'.$aliasChannel];
+            if (($channel !== '' && $channel !== $aliasChannel) || ($target !== '' && $target !== $aliasTarget)) {
+                return json(['code'=>1001, 'msg'=>lang('param_err')]);
+            }
+            $channel = $aliasChannel;
+            $target = $aliasTarget;
+        }
+        if (!in_array($channel, ['email','phone'], true) || $target === '') {
+            return json(['code'=>1001, 'msg'=>lang('api/findpass_need_contact')]);
+        }
+        // Recovery purpose is chosen by the server; aliases never pass request-controlled type or identity through.
+        $res = (new \app\common\model\User())->findpass_msg(['ac'=>$channel, 'to'=>$target]);
         return json($res);
     }
 
