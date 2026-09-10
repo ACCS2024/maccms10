@@ -1,7 +1,8 @@
 <?php
-/** Real authentication/session/controllers/financial ORM. Only page decoration and resource metadata are fixtures. */
+/** Real authentication/session/controllers/financial/video ORM. Only page decoration and Art/Manga metadata are fixtures. */
 declare(strict_types=1);
 require dirname(__DIR__,2).'/vendor/autoload.php';
+require dirname(__DIR__,2).'/application/common.php';
 require __DIR__.'/security_audit_test_helpers.php';
 use think\facade\Db;
 function lang($key,...$values){
@@ -15,9 +16,8 @@ function json($data){return think\Response::create($data,'json');}
 function cookie($name,...$args){$cookie=think\Container::getInstance()->make('cookie');if(!$args)return $cookie->get($name);return $cookie->set($name,(string)$args[0],$args[1]??null);}
 function session($name,...$args){$session=think\Container::getInstance()->make('session');if(!$args)return $session->get($name);return $session->set($name,$args[0]);}
 function mac_validate($name){$class='app\\common\\validate\\'.$name;return new $class();}
-function mac_get_refer(){return '';}
-function mac_content_read_points_amount($type,$data){return $data[$type.'_points_detail'];}
 if(!defined('ENTRANCE'))define('ENTRANCE','index');
+if(!defined('MAC_PLAYER_SORT'))define('MAC_PLAYER_SORT','1');
 class PurchaseCsrfIndex extends \app\index\controller\User {
     protected function label_maccms(){}
     protected function check_ip_limit(){}
@@ -35,7 +35,7 @@ class PurchaseCsrfMetadata {
             'art_points'=>40,'art_points_detail'=>20,'manga_points'=>40,'manga_points_detail'=>20]];
     }
 }
-foreach(['Vod','Art','Manga'] as $name)class_alias(PurchaseCsrfMetadata::class,'app\\common\\model\\'.$name);
+foreach(['Art','Manga'] as $name)class_alias(PurchaseCsrfMetadata::class,'app\\common\\model\\'.$name);
 class PurchaseCsrfRequest extends \app\Request {public function isCli():bool{return false;}}
 $purchaseHttp=defined('PURCHASE_CSRF_HTTP');
 $purchaseTemp=$purchaseHttp?getcwd():audit_temp_dir('purchase-csrf');
@@ -43,7 +43,7 @@ if(!$purchaseHttp)register_shutdown_function(static function()use($purchaseTemp)
 $app=new \think\App($purchaseTemp.'/app');
 $mysql=getenv('PURCHASE_CSRF_MYSQL')==='1';
 $connection=['type'=>$mysql?'mysql':'sqlite','database'=>$mysql?'maccms_audit_purchase_csrf':($purchaseHttp?$purchaseTemp.'/purchase.sqlite':':memory:'),
-    'prefix'=>'audit_','trigger_sql'=>false,'fields_cache'=>false,'charset'=>'utf8mb4',
+    'prefix'=>'audit_','trigger_sql'=>true,'fields_cache'=>false,'charset'=>'utf8mb4',
     'hostname'=>getenv('FRAMEWORK_AUDIT_HOST')?:'127.0.0.1','username'=>'root','password'=>getenv('FRAMEWORK_AUDIT_PASSWORD')?:''];
 if($mysql){
     $pdo=new PDO('mysql:host='.$connection['hostname'].';charset=utf8mb4','root',$connection['password'],[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION]);
@@ -51,15 +51,16 @@ if($mysql){
 }
 $configuration=['default'=>'audit','auto_timestamp'=>false,'connections'=>['audit'=>$connection]];
 $app->config->set($configuration,'database');$manager=new \think\DbManager();$manager->setConfig($configuration);$app->instance('think\\DbManager',$manager);
+Db::listen(static function($sql):void{if(preg_match('/\bFROM\s+[`"]?audit_vod\b/i',$sql))$GLOBALS['purchase_resource_reads']++;});
 $app->config->set(['type'=>'file','name'=>'fixture_session','path'=>$purchaseTemp.'/sessions','expire'=>3600,'var_session_id'=>''],'session');
 $app->config->set(['default'=>'file','stores'=>['file'=>['type'=>'File','path'=>$purchaseTemp.'/cache/']]],'cache');
 $app->instance('log',new class{public function record(...$args){}public function error(...$args){}});
 $app->instance(\think\exception\Handle::class,new class($app)extends \think\exception\Handle{public function render(\think\Request $request,\Throwable $error):\think\Response{throw $error;}});
 $app->bind(\app\index\controller\User::class,PurchaseCsrfIndex::class);$app->bind(\app\api\controller\Payment::class,PurchaseCsrfPayment::class);
 if($mysql)Db::execute("SET SESSION sql_mode=''");
-if(!$purchaseHttp||!is_file($purchaseTemp.'/schema.ready')){
+if(!defined('PURCHASE_CSRF_EXISTING_DB')&&(!$purchaseHttp||!is_file($purchaseTemp.'/schema.ready'))){
     $ddl=file_get_contents(dirname(__DIR__,2).'/application/install/sql/install.sql');
-    foreach(['user','group','plog','ulog']as $table){
+    foreach(['user','group','plog','ulog','vod']as $table){
         if(!preg_match('/CREATE TABLE `mac_'.$table.'` \(([\s\S]*?)\) ENGINE[^;]*;/',$ddl,$match))throw new RuntimeException('Purchase install schema missing');
         Db::execute('DROP TABLE IF EXISTS audit_'.$table);
         if($mysql){Db::execute(str_replace('`mac_'.$table.'`','`audit_'.$table.'`',$match[0]));continue;}
@@ -86,15 +87,34 @@ function purchaseCsrfConfig():void{
     global $app;
     $GLOBALS['config']=['site'=>['site_status'=>1,'install_dir'=>'/fixture/'],'api'=>['publicapi'=>['status'=>1,'charge'=>0]],
         'app'=>['cache_flag'=>'purchase_csrf','api_jwt_enabled'=>1,'api_jwt_secret'=>str_repeat('fixture-signing-',4),'api_jwt_iss'=>'purchase-fixture'],
-        'user'=>['reward_status'=>1,'reward_ratio'=>10,'reward_ratio_2'=>5,'reward_ratio_3'=>5,'vod_points_type'=>0,'art_points_type'=>0,'manga_points_type'=>0]];
+        'user'=>['status'=>1,'trysee'=>0,'reward_status'=>1,'reward_ratio'=>10,'reward_ratio_2'=>5,'reward_ratio_3'=>5,'vod_points_type'=>0,'art_points_type'=>0,'manga_points_type'=>0]];
     $app->config->set($GLOBALS['config'],'maccms');$GLOBALS['purchase_resource_reads']=0;
+    $players=['primary'=>['from'=>'primary','show'=>'Primary','status'=>1,'sort'=>2],'secondary'=>['from'=>'secondary','show'=>'Secondary','status'=>1,'sort'=>1]];
+    $app->config->set($players,'vodplayer');$app->config->set($players,'voddowner');$app->config->set([],'vodserver');
+}
+function purchaseCsrfVod(array $changes=[]):array{
+    static $defaults;
+    if($defaults===null){
+        $ddl=file_get_contents(dirname(__DIR__,2).'/application/install/sql/install.sql');
+        preg_match('/CREATE TABLE `mac_vod` \(([\s\S]*?)\) ENGINE[^;]*;/',$ddl,$match);$defaults=[];
+        foreach(explode("\n",$match[1])as $line){
+            if(preg_match('/^\s*`([^`]+)`\s+([^ ]+)(.*)$/',$line,$field)){
+                if(preg_match("/DEFAULT ('([^']*)'|[0-9]+)/",$field[3],$value))$defaults[$field[1]]=str_starts_with($value[1],"'")?$value[2]:(int)$value[1];
+                else $defaults[$field[1]]=str_contains($field[2],'int')?0:'';
+            }
+        }
+    }
+    $urls='One$https://fixture.invalid/VIDEO-ONE#Two$https://fixture.invalid/VIDEO-TWO#Three$https://fixture.invalid/VIDEO-THREE';
+    return $changes+['vod_id'=>17,'vod_name'=>'Fixture video','vod_status'=>1,'type_id'=>1,'vod_points'=>40,'vod_points_play'=>20,'vod_points_down'=>30,
+        'vod_play_from'=>'primary$$$secondary','vod_play_url'=>$urls.'$$$'.$urls,'vod_down_from'=>'primary$$$secondary','vod_down_url'=>$urls.'$$$'.$urls]+$defaults;
 }
 function purchaseCsrfSeed():void{
     purchaseCsrfConfig();
-    foreach(['ulog','plog','user','group']as $table)Db::execute('DELETE FROM audit_'.$table);
+    foreach(['ulog','plog','user','group','vod']as $table)Db::execute('DELETE FROM audit_'.$table);
     $groups=[];
-    foreach([1,2,3]as $id){$group=['group_id'=>$id,'group_name'=>'Fixture '.$id,'group_type'=>'','group_popedom'=>'{}','group_status'=>1];Db::name('Group')->insert($group);$groups[$id]=$group;}
+    foreach([1,2,3]as $id){$group=['group_id'=>$id,'group_name'=>'Fixture '.$id,'group_type'=>'1,','group_popedom'=>json_encode([1=>[3=>1,4=>1,5=>1]]),'group_status'=>1];Db::name('Group')->insert($group);$group['group_popedom']=json_decode($group['group_popedom'],true);$groups[$id]=$group;}
     \think\facade\Cache::set('purchase_csrf_group_list',$groups);
+    Db::name('Vod')->insert(purchaseCsrfVod());
     foreach([1,2,3,4]as $id)Db::name('User')->insert(['user_id'=>$id,'user_name'=>'fixture'.$id,'user_random'=>str_repeat((string)$id,32),
         'user_pwd'=>password_hash('fixture-password',PASSWORD_BCRYPT,['cost'=>4]),'user_status'=>1,'group_id'=>2,'user_points'=>$id===1?100:0,
         'user_pid'=>$id===1?2:0,'user_pid_2'=>$id===1?3:0,'user_pid_3'=>$id===1?4:0]);

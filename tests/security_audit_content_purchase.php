@@ -118,9 +118,10 @@ if ($mysql) {
 }
 
 // Exercise both real controller methods against actual MySQL authentication and the coordinator.
-// Only content metadata retrieval is replaced here; resource authorization is a subsequent suite.
+// This retains the non-video priced-record contract; actual video resources/policy have their own route suite.
 function request() { return \think\Container::getInstance()->make('request'); }
 function json($data) { return $data; }
+function mac_content_read_points_amount($type,$data) { return $data[$type.'_points_detail']; }
 class PurchaseContentFixture {
     public function infoData($where,...$args) {
         return ['code'=>1,'info'=>['vod_points'=>40,'vod_points_play'=>20,'vod_points_down'=>30,
@@ -128,7 +129,7 @@ class PurchaseContentFixture {
     }
 }
 if ($mysql) {
-    foreach (['Vod','Art','Manga'] as $model) { class_alias(PurchaseContentFixture::class,'app\\common\\model\\'.$model); }
+    foreach (['Art','Manga'] as $model) { class_alias(PurchaseContentFixture::class,'app\\common\\model\\'.$model); }
     $GLOBALS['config']['app'] += ['api_jwt_enabled'=>'1','api_jwt_secret'=>str_repeat('isolated-jwt-',4)];
     $GLOBALS['config']['user'] += ['vod_points_type'=>'0','art_points_type'=>'0','manga_points_type'=>'0'];
     foreach (['index','api'] as $entry) {
@@ -136,7 +137,7 @@ if ($mysql) {
         Db::name('User')->where('user_id',1)->update(['user_random'=>str_repeat('a',32)]);
         $token=\app\common\util\JwtService::encode(1,str_repeat('a',32));
         $request=(new \think\Request())->withServer(['REQUEST_METHOD'=>'POST'])->withHeader(['Authorization'=>'Bearer '.$token])
-            ->withPost(['mid'=>'1','type'=>'4','id'=>'7','sid'=>'1','nid'=>'2','ulog_points'=>'0','user_id'=>'999']);
+            ->withPost(['mid'=>'2','type'=>'1','id'=>'7','sid'=>'1','nid'=>'2','ulog_points'=>'0','user_id'=>'999']);
         \think\Container::getInstance()->instance('request',$request);
         $GLOBALS['user']=Db::name('User')->where('user_id',1)->find();
         if ($entry==='index') {

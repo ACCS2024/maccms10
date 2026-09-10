@@ -29,20 +29,38 @@ final class ContentPurchase
     /** $pricedRecord is built from current server content/configuration, never from submitted prices. */
     public static function buy($userId, array $pricedRecord): array
     {
-        $userId=PointsBalance::amount($userId);
+        return self::execute($userId, $pricedRecord);
+    }
+
+    /** Internal server quote only: it runs after the owner lock and must return a priced record or a final response. */
+    public static function buyVideo($userId, callable $quote): array
+    {
+        return self::execute($userId, [], $quote);
+    }
+
+    private static function record(int $userId, array $pricedRecord): ?array
+    {
         $selection=self::parameters([
             'mid'=>$pricedRecord['ulog_mid']??null,'type'=>$pricedRecord['ulog_type']??null,
             'id'=>$pricedRecord['ulog_rid']??null,'sid'=>$pricedRecord['ulog_sid']??null,'nid'=>$pricedRecord['ulog_nid']??null,
         ]);
         $points=PointsBalance::amount($pricedRecord['ulog_points']??null,true);
-        if ($userId===null || $selection===null || $points===null || $points>65535) {
-            return ['code'=>2001,'msg'=>lang('param_err')];
-        }
-        $record=['user_id'=>$userId,'ulog_mid'=>$selection['mid'],'ulog_type'=>$selection['type'],
+        if ($selection===null || $points===null || $points>65535) { return null; }
+        return ['user_id'=>$userId,'ulog_mid'=>$selection['mid'],'ulog_type'=>$selection['type'],
             'ulog_rid'=>$selection['id'],'ulog_sid'=>$selection['sid'],'ulog_nid'=>$selection['nid'],'ulog_points'=>$points];
+    }
+
+    private static function execute($userId, array $pricedRecord, ?callable $quote = null): array
+    {
+        $userId=PointsBalance::amount($userId);
+        $record=$userId!==null && $quote===null ? self::record($userId,$pricedRecord) : null;
+        if ($userId===null || ($quote===null && $record===null)) { return ['code'=>2001,'msg'=>lang('param_err')]; }
         $started=false;
         try {
-            self::requireTransactionalStorage();
+            if ($quote!==null && ($pdo=Db::connect()->getPdo()) && $pdo->inTransaction()) {
+                throw new \RuntimeException('A video purchase must own its transaction');
+            }
+            self::requireTransactionalStorage($quote!==null);
             Db::startTrans(); $started=true;
             // The same owner lock serializes all purchases before the authoritative receipt/balance reads.
             $user=Db::name('User')->master()->where('user_id',$userId)->lock(true)->find();
@@ -50,6 +68,19 @@ final class ContentPurchase
             if (!$user || (int)$user['user_status']!==1 || $balance===null) {
                 throw new \RuntimeException('Purchase owner is unavailable');
             }
+            if ($quote!==null) {
+                $resolved=$quote($user);
+                if (!is_array($resolved) || !isset($resolved['code'])) { throw new \RuntimeException('Invalid video quote'); }
+                if (!isset($resolved['record'])) {
+                    Db::rollback(); $started=false;
+                    return $resolved;
+                }
+                $record=self::record($userId,$resolved['record']);
+                if ($resolved['code']!==1 || $record===null || $record['ulog_mid']!==1 || $record['ulog_points']===0) {
+                    throw new \RuntimeException('Invalid video quote');
+                }
+            }
+            $points=$record['ulog_points'];
             // Use a current read: a transaction's earlier consistent snapshot may predate the lock winner.
             if (Db::name('Ulog')->master()->where($record)->lock(true)->find()) {
                 Db::commit(); $started=false;
@@ -87,14 +118,15 @@ final class ContentPurchase
         }
     }
 
-    private static function requireTransactionalStorage(): void
+    private static function requireTransactionalStorage(bool $video = false): void
     {
         $type=Db::connect()->getConfig('type');
         if ($type==='sqlite') { return; }
         if ($type!=='mysql') { throw new \RuntimeException('Unsupported purchase storage'); }
         $tables=[Db::name('User')->getTable(),Db::name('Plog')->getTable(),Db::name('Ulog')->getTable()];
+        if ($video) { $tables[]=Db::name('Vod')->getTable(); $tables[]=Db::name('Group')->getTable(); }
         $rows=Db::query('SELECT TABLE_NAME AS name, ENGINE AS engine FROM information_schema.TABLES '
-            .'WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME IN (?,?,?)',$tables,true);
+            .'WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME IN ('.implode(',',array_fill(0,count($tables),'?')).')',$tables,true);
         foreach ($rows as $row) {
             $index=array_search($row['name'],$tables,true);
             if ($index!==false && strtoupper((string)$row['engine'])==='INNODB') { unset($tables[$index]); }

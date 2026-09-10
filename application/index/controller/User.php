@@ -108,6 +108,10 @@ class User extends Base
         if ($identity['code'] !== 1) { return json($identity); }
         $param = \app\common\util\ContentPurchase::parameters(Request::post());
         if ($param === null) { return json(['code'=>2001, 'msg'=>lang('param_err')]); }
+        if ($param['mid'] === 1) {
+            return json(\app\common\util\VideoPurchase::buy($identity['info'], Request::post(),
+                fn(array $row, string $flag, array $coordinates): array => $this->check_vod_resource_access($row, $flag, $coordinates)));
+        }
         $data = [];
         $data['ulog_mid'] = intval($param['mid']) <=0 ? 1: intval($param['mid']);
         $data['ulog_rid'] = intval($param['id']);
@@ -147,22 +151,6 @@ class User extends Base
                 $data['ulog_nid']=0;
             }
         }
-        else{
-            // 视频播放/下载购买
-            $where['vod_id'] = $data['ulog_rid'];
-            $res = (new \app\common\model\Vod())->infoData($where);
-            if ($res['code'] > 1) {
-                return json($res);
-            }
-            $col = 'vod_points_' . ($param['type'] == '4' ? 'play' : 'down');
-            if($GLOBALS['config']['user']['vod_points_type']=='1'){
-                $col='vod_points';
-                $data['ulog_sid']=0;
-                $data['ulog_nid']=0;
-            }
-            $data['ulog_points'] = intval($res['info'][$col]);
-        }
-
         return json(\app\common\util\ContentPurchase::buy($identity['info']['user_id'], $data));
     }
 
