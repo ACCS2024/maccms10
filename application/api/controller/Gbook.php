@@ -37,7 +37,7 @@ class Gbook extends Base
             ]);
         }
         // 查询条件组装
-        $where = [];
+        $where = ['gbook_status'=>1];
 
         $offset = isset($param['offset']) ? (int)$param['offset'] : 0;
         $limit = isset($param['limit']) ? (int)$param['limit'] : 20;
@@ -54,9 +54,6 @@ class Gbook extends Base
             $where['user_id'] = (int)$param['user_id'];
         }
 
-        if (isset($param['status'])) {
-            $where['gbook_status'] = (int)$param['status'];
-        }
 
         if (isset($param['name']) && strlen($param['name']) > 0) {
             $where[] = ['gbook_name', 'like', '%' . $this->format_sql_string($param['name']) . '%'];
@@ -80,7 +77,7 @@ class Gbook extends Base
         if ($total > 0) {
             // 排序
             $order = "gbook_time DESC";
-            $field = '*';
+            $field = 'gbook_id,gbook_rid,user_id,gbook_status,gbook_name,gbook_time,gbook_reply_time,gbook_content,gbook_reply';
             if (!empty($param['orderby'])) {
                 $order = 'gbook_' . $param['orderby'] . " DESC";
             }
@@ -106,36 +103,7 @@ class Gbook extends Base
      */
     public function submit(\think\Request $request)
     {
-        // 安全加固:按 IP 温和限流(默认开启),防刷留言垃圾/CPU 打满;cookie 节流可被绕过,此为服务端兜底
-        if (!mac_fe_write_throttle('fe_gbook', 60, 30)) {
-            return json(['code' => 1005, 'msg' => lang('frequently')]);
-        }
-        $content = trim($request->param('gbook_content', ''));
-        if (empty($content)) return json(['code' => 1004, 'msg' => lang('index/require_content')]);
-        $cookie = 'gbook_timespan';
-        if (!empty(cookie($cookie))) return json(['code' => 1005, 'msg' => lang('frequently')]);
-        if ($GLOBALS['config']['gbook']['login'] == 1) {
-            $check = (new \app\common\model\User())->checkLogin();
-            if ($check['code'] > 1) return json(['code' => 1003, 'msg' => lang('index/require_login')]);
-        }
-        $data = [];
-        $data['gbook_content'] = htmlentities(mac_filter_words($content));
-        $data['gbook_reply'] = '';
-        $data['gbook_ip'] = mac_get_client_ip();
-        $data['gbook_time'] = time();
-        if (!empty(cookie('user_id'))) {
-            $uinfo = (new \app\common\model\User())->field('user_nick_name,user_name')->where(['user_id' => intval(cookie('user_id'))])->find();
-            $data['user_id'] = intval(cookie('user_id'));
-            $data['gbook_name'] = htmlentities($uinfo['user_nick_name'] ?: $uinfo['user_name']);
-        } else {
-            $data['user_id'] = 0;
-            $name = trim($request->param('gbook_name', ''));
-            $data['gbook_name'] = htmlentities($name ?: lang('controller/visitor'));
-        }
-        $data['gbook_status'] = ($GLOBALS['config']['gbook']['audit'] == 1) ? 0 : 1;
-        $res = (new \app\common\model\Gbook())->saveData($data);
-        cookie($cookie, 't', 30);
-        return json($res);
+        return json(\app\common\util\GbookSubmission::submit($request));
     }
 
     /**
@@ -144,12 +112,7 @@ class Gbook extends Base
      */
     public function report(\think\Request $request)
     {
-        $id = intval($request->param('id', 0));
-        if ($id < 1) return json(['code' => 1001, 'msg' => '参数错误']);
-        $cookie = 'gbook-report-' . $id;
-        if (!empty(cookie($cookie))) return json(['code' => 1002, 'msg' => lang('index/haved')]);
-        (new \app\common\model\Gbook())->where(['gbook_id' => $id])->setInc('gbook_up');
-        cookie($cookie, 't', 86400);
-        return json(['code' => 1, 'msg' => 'ok']);
+        // No moderation-report store or counter exists in the installed Gbook schema.
+        return json(['code'=>1003, 'msg'=>'留言举报暂不可用，请联系管理员']);
     }
 }

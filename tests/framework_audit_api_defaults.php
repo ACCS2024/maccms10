@@ -37,6 +37,7 @@ namespace {
         $prefix = strtolower($name);
         $columns = $name === 'Link' ? ', link_logo TEXT DEFAULT "", link_url TEXT DEFAULT ""' : '';
         if ($name === 'User') { $columns .= ', user_nick_name TEXT DEFAULT "", user_points INTEGER DEFAULT 0'; }
+        if ($name === 'Gbook') { $columns .= ', gbook_status INTEGER DEFAULT 1, gbook_rid INTEGER DEFAULT 0, user_id INTEGER DEFAULT 0, gbook_reply_time INTEGER DEFAULT 0, gbook_content TEXT DEFAULT "", gbook_reply TEXT DEFAULT ""'; }
         think\facade\Db::execute('CREATE TABLE mac_' . $prefix . ' (' . $prefix . '_id INTEGER PRIMARY KEY, ' . $prefix . '_name TEXT, ' . $time . ' INTEGER' . $columns . ')');
         think\facade\Db::name($name)->insertAll([
             [$prefix.'_id'=>1,$prefix.'_name'=>'newest',$time=>300],

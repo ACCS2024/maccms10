@@ -42,75 +42,7 @@ class Gbook extends Base
     }
     
     public function saveData() {
-        $param = \think\facade\Request::param();
-
-        if($GLOBALS['config']['gbook']['verify'] == 1){
-            if(!captcha_check((string)($param['verify'] ?? ''))){
-                return ['code'=>1002,'msg'=>lang('verify_err')];
-            }
-        }
-
-        if($GLOBALS['config']['gbook']['login'] ==1){
-            if(empty(cookie('user_id'))){
-                return ['code' => 1003, 'msg' => lang('index/require_login')];
-            }
-            $res = (new \app\common\model\User())->checkLogin();
-            if($res['code']>1) {
-                return ['code' => 1003, 'msg' => lang('index/require_login')];
-            }
-        }
-
-        if(empty($param['gbook_content'])){
-            return ['code'=>1004,'msg'=>lang('index/require_content')];
-        }
-
-        $cookie = 'gbook_timespan';
-        if(!empty(cookie($cookie))){
-            return ['code'=>1005,'msg'=>lang('frequently')];
-        }
-
-        $param['gbook_content']= htmlentities(mac_filter_words($param['gbook_content']));
-        // if(!preg_match('/[^\x00-\x80]/',$param['gbook_content'])){
-        //     return ['code'=>1005,'msg'=>lang('index/require_cn')];
-        // }
-
-        $param['gbook_reply'] = '';
-
-        if(empty(cookie('user_id'))){
-            $param['gbook_name'] = lang('controller/visitor');
-            $param['user_id']=0;
-        }
-        else{
-            $param['gbook_name'] = cookie('user_name');
-            $param['user_id'] = intval(cookie('user_id'));
-            $user_data = (new \app\common\model\User())->field('user_nick_name')->where(['user_id' => $param['user_id']])->find();
-            if (!empty($user_data['user_nick_name'])) {
-                $param['gbook_name'] = $user_data['user_nick_name'];
-            }
-        }
-        $param['gbook_name'] = htmlentities(trim($param['gbook_name']));
-
-        if($GLOBALS['config']['gbook']['audit'] ==1){
-            $param['gbook_status'] = 0;
-        }
-
-        $param['gbook_ip'] = mac_get_ip_long();
-
-        $res = (new \app\common\model\Gbook())->saveData($param);
-
-        if($res['code']>1){
-            return $res;
-        }
-        else{
-            cookie($cookie, 't', $GLOBALS['config']['gbook']['timespan']);
-            if($GLOBALS['config']['gbook']['audit'] ==1){
-                $res['msg'] =  lang('index/thanks_msg_audit');
-            }
-            else{
-                $res['msg'] = lang('index/thanks_msg');
-            }
-            return $res;
-        }
+        return \app\common\util\GbookSubmission::submit(request(), true);
     }
 
 }
