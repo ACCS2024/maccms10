@@ -1,5 +1,6 @@
 <?php
 namespace app\common\model;
+use app\common\util\PointsBalance;
 use think\facade\Db;
 
 class Cash extends Base {
@@ -158,13 +159,19 @@ class Cash extends Base {
             // 与审核使用相同的行锁顺序；退款、删除不可被另一个审核/删除请求穿插。
             $list = $this->where($where)->order('cash_id')->lock(true)->select()->toArray();
             foreach ($list as $row) {
-                if ((int)$row['cash_status'] === 0) {
-                    $points = (int)$row['cash_points'];
-                    if ($points < 1) {
+                $status = (int)$row['cash_status'];
+                if ($status !== 0 && $status !== 1) {
+                    throw new \RuntimeException('invalid cash state');
+                }
+                if ($status === 0) {
+                    $points = PointsBalance::amount($row['cash_points']);
+                    if ($points === null) {
                         throw new \RuntimeException('invalid frozen points');
                     }
+                    // 与解冻在同一 UPDATE 检查余额容量，避免非严格 MySQL 截断退款。
                     $changed = Db::name('User')->where('user_id', $row['user_id'])
                         ->where('user_points_froze', '>=', $points)
+                        ->where('user_points', '<=', PointsBalance::MAX - $points)
                         ->inc('user_points', $points)->dec('user_points_froze', $points)->update();
                     if ($changed !== 1) {
                         throw new \RuntimeException('cash refund failed');
