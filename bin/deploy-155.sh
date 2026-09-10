@@ -24,6 +24,24 @@ else
 fi
 SRC="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/"
 
+# The audit runner and DataConfig parser come from this reviewed checkout, never
+# from an untrusted remote webroot. Source audit runs before the first SSH call.
+for value in "$HOST" "${SITES[@]}"; do
+    [[ "$value" =~ ^[A-Za-z0-9][A-Za-z0-9.-]*[A-Za-z0-9]$ ]] || {
+        echo "非法主机/站点名" >&2; exit 1;
+    }
+done
+AUDIT_LOCAL=$(mktemp -d -t maccms-deploy-audit.XXXXXXXX)
+AUDIT_PHP="${MACCMS_AUDIT_PHP:-php}"
+python3 "${SRC}tools/security/maccms_audit.py" --root "$SRC" --profile source \
+    --php "$AUDIT_PHP" --data-parser "${SRC}application/common/util/DataConfig.php" \
+    --write-baseline "$AUDIT_LOCAL/baseline.json" --json "$AUDIT_LOCAL/source.json"
+if [ -n "${MACCMS_AUDIT_APPROVALS:-}" ]; then
+    cp -- "$MACCMS_AUDIT_APPROVALS" "$AUDIT_LOCAL/approved.json"
+else
+    printf '{"schema":1,"files":{}}\n' > "$AUDIT_LOCAL/approved.json"
+fi
+
 if [ -z "${SSHPASS:-}" ]; then
     echo "请先 export SSHPASS='<新机 root 口令>'" >&2
     exit 1
@@ -31,16 +49,53 @@ fi
 # 连接复用：本脚本会发起多次 ssh/rsync，逐次新建连接容易撞上 sshd 的
 # MaxStartups / 认证节流（表现为 kex_exchange_identification: Connection closed）。
 # ControlMaster 让所有操作共用一条连接，既避开节流也更快。
-CTL="/tmp/.deploy155-%r@%h:%p"
-SSH_OPTS="-o StrictHostKeyChecking=no -o PreferredAuthentications=password -o PubkeyAuthentication=no \
--o ControlMaster=auto -o ControlPath=$CTL -o ControlPersist=120"
-SSH="ssh $SSH_OPTS root@$HOST"
+CTL="$AUDIT_LOCAL/control-%r@%h:%p"
+KNOWN_HOSTS="${MACCMS_KNOWN_HOSTS:-$HOME/.ssh/known_hosts}"
+if [ ! -r "$KNOWN_HOSTS" ]; then
+    echo "缺少经独立核验的 SSH known_hosts：$KNOWN_HOSTS。请先核对主机指纹。" >&2
+    exit 1
+fi
+SSH_OPTS=(-o StrictHostKeyChecking=yes -o "UserKnownHostsFile=$KNOWN_HOSTS"
+    -o PreferredAuthentications=password -o PubkeyAuthentication=no
+    -o ControlMaster=auto -o "ControlPath=$CTL" -o ControlPersist=120)
+SSH=(ssh "${SSH_OPTS[@]}" "root@$HOST")
+printf -v SSH_RSYNC '%q ' ssh "${SSH_OPTS[@]}"
 
 cleanup() { ssh -O exit -o ControlPath="$CTL" "root@$HOST" 2>/dev/null || true; }
 trap cleanup EXIT
 
 # 建立主连接（唯一一次需要口令）
-sshpass -e ssh $SSH_OPTS -fN root@$HOST
+sshpass -e ssh "${SSH_OPTS[@]}" -fN "root@$HOST"
+
+REMOTE_AUDIT="/root/maccms-audit/$(date -u +%Y%m%dT%H%M%SZ)-$$"
+"${SSH[@]}" "umask 077; mkdir -p '$REMOTE_AUDIT'; chmod 700 '$REMOTE_AUDIT'"
+rsync -a -e "$SSH_RSYNC" \
+    "${SRC}tools/security/maccms_audit.py" "${SRC}application/common/util/DataConfig.php" \
+    "$AUDIT_LOCAL/baseline.json" "$AUDIT_LOCAL/approved.json" \
+    "root@$HOST:$REMOTE_AUDIT/"
+
+audit_remote() {
+    local site="$1" phase="$2" extra=""
+    if [ "$phase" = "after" ]; then extra="--verify-source"; fi
+    if [ "$phase" = "after" ] && [ "$site" = "155api.com" ]; then
+        extra="$extra --allow-missing application/api/controller/Ppvod.php --allow-missing application/api/controller/Yzm.php --allow-missing application/api/route/route.php"
+    fi
+    if [ "$phase" = "before" ] && [ "${MACCMS_QUARANTINE_KNOWN:-0}" = "1" ]; then
+        extra="--quarantine-known /root/maccms-quarantine/$site"
+    fi
+    "${SSH[@]}" "python3 '$REMOTE_AUDIT/maccms_audit.py' --root '/home/wwwroot/$site' \
+        --profile deployed --baseline '$REMOTE_AUDIT/baseline.json' \
+        --approved '$REMOTE_AUDIT/approved.json' --data-parser '$REMOTE_AUDIT/DataConfig.php' \
+        --json '$REMOTE_AUDIT/$site-$phase.json' $extra" || {
+        echo "安全审计阻断部署：$site ($phase)，报告 $REMOTE_AUDIT/$site-$phase.json" >&2
+        echo "源站文件尚需审阅；没有自动删除私有主题、上传或未知 PHP。" >&2
+        exit 1
+    }
+}
+
+# Inspect every target before overwriting any target: preserve evidence and catch
+# private themes / orphan PHP that an rsync without --delete would otherwise retain.
+for site in "${SITES[@]}"; do audit_remote "$site" before; done
 
 # 每个站点自有、绝不能被代码树覆盖的东西
 # 注意 runtime/upload/log 必须带【前导斜杠】锚定到站点根：
@@ -98,9 +153,8 @@ REMOVED_PATHS=(
     # TP8 下不再使用的实现
     "application/middleware/SessionSameSite.php"   # 依赖 session_start()，TP8 从不调用
     "application/index/controller/Myerror.php"     # TP5 的 _empty 约定，TP8 不认
-    # FUNNULL/RingH23 投毒链清理：孤儿的在线更新 JS（内含 update.maccms.la）
-    "static_new/js/update.js"
-    "static/js/update.js"
+    # Retired updater JS and known malware paths are handled by the evidence-
+    # preserving audit quarantine before rsync, never by this deletion list.
     # 全后台从未使用（0 处 data-hs-*），却每页加载 309KB 且抛异常
     "static_new/js/preline.js"
     # 播放器注入面治理（docs/security/player-injection-hardening.md）：
@@ -130,12 +184,12 @@ for site in "${SITES[@]}"; do
     #   upload/(图片) 已 EXCLUDE，故 checksum 只扫代码+静态资源(约几百个小文件)，
     #   多花几秒换「安全修复一定到位」，值。
     rsync -a --checksum --no-owner --no-group --info=stats1 \
-        -e "ssh $SSH_OPTS" "${EXCLUDES[@]}" \
-        "$SRC" "root@$HOST:/home/wwwroot/$site/" 2>&1 | grep -E 'transferred|created' || true
+        -e "$SSH_RSYNC" "${EXCLUDES[@]}" \
+        "$SRC" "root@$HOST:/home/wwwroot/$site/"
 
     if [ "$site" = "155api.com" ]; then
         for f in "${API_FORBIDDEN[@]}"; do
-            $SSH "rm -f /home/wwwroot/$site/$f" && echo "  已移除 $f（API 站不应包含）"
+            "${SSH[@]}" "rm -f /home/wwwroot/$site/$f" && echo "  已移除 $f（API 站不应包含）"
         done
     fi
 
@@ -143,8 +197,8 @@ for site in "${SITES[@]}"; do
     if [ ${#REMOVED_PATHS[@]} -gt 0 ]; then
         removed=0
         for p in "${REMOVED_PATHS[@]}"; do
-            if $SSH "test -e /home/wwwroot/$site/$p"; then
-                $SSH "rm -rf /home/wwwroot/$site/$p"
+            if "${SSH[@]}" "test -e /home/wwwroot/$site/$p"; then
+                "${SSH[@]}" "rm -rf /home/wwwroot/$site/$p"
                 echo "  已删除残留 $p"
                 removed=$((removed+1))
             fi
@@ -155,14 +209,17 @@ for site in "${SITES[@]}"; do
     # vendor/ 被 EXCLUDES 排除（由 composer 管理），所以依赖必须在远端装。
     # 不装的后果很隐蔽：改了 composer.json 的 psr-4 或加了新依赖之后，
     # 部署会"看起来成功"，然后整站 Class not found。
-    if $SSH "command -v composer >/dev/null 2>&1"; then
+    if "${SSH[@]}" "command -v composer >/dev/null 2>&1"; then
         echo "  composer install …"
-        $SSH "cd /home/wwwroot/$site && sudo -u www COMPOSER_ALLOW_SUPERUSER=1 composer install --no-dev --no-interaction --no-progress -o 2>&1 | tail -3" || {
-            echo "  ⚠ composer install 失败，请手工在 /home/wwwroot/$site 下执行后再冒烟"
+        "${SSH[@]}" "cd /home/wwwroot/$site && sudo -u www COMPOSER_ALLOW_SUPERUSER=1 composer install --no-dev --no-plugins --no-scripts --no-interaction --no-progress -o" || {
+            echo "  composer install 失败，停止部署" >&2; exit 1
         }
     else
-        echo "  ⚠ 远端没有 composer：跳过依赖安装。若本次改动了 composer.json，请先装 composer"
+        echo "  远端没有 composer，无法验证锁定依赖，停止部署" >&2; exit 1
     fi
+
+    # Recheck actual deployed bytes before invoking framework commands or reload.
+    audit_remote "$site" after
 
     # .user.ini 被 aaPanel 用 chattr +i 锁定，chown 必然失败且不应中断部署，
     # 故显式排除它；其余一律归还 www:www（rsync 以 root 跑会把新建文件留给 root）。
@@ -171,21 +228,21 @@ for site in "${SITES[@]}"; do
     # （20 次部署 = 20 次强制登出）。会话要单独清时用 --flush-sessions。
     KEEP_SESSION="! -name session"
     [ "${FLUSH_SESSIONS:-0}" = "1" ] && KEEP_SESSION=""
-    $SSH "find /home/wwwroot/$site -name .user.ini -prune -o -exec chown www:www {} + 2>/dev/null; \
+    "${SSH[@]}" "find /home/wwwroot/$site -name .user.ini -prune -o -exec chown www:www {} + 2>/dev/null; \
           chmod -R 775 /home/wwwroot/$site/runtime /home/wwwroot/$site/log /home/wwwroot/$site/application/data 2>/dev/null; \
           find /home/wwwroot/$site/runtime -mindepth 1 -maxdepth 1 $KEEP_SESSION -exec rm -rf {} + 2>/dev/null; \
           chown -R www:www /home/wwwroot/$site/runtime; true" >/dev/null
     # 静态资源版本戳：模板里的 ?v=__ASSETV__ 取这个值（见 middleware/AppInit.php）。
     # 每次部署写一个新时间戳 —— 这是唯一「每次 push 必变、同一次部署内不变」的来源。
     # 不写的话，改了 JS/CSS 推上去浏览器仍吃旧缓存，表现为「明明改了却没生效」。
-    $SSH "date +%Y%m%d%H%M%S > /home/wwwroot/$site/application/data/asset_version.txt && \
+    "${SSH[@]}" "date +%Y%m%d%H%M%S > /home/wwwroot/$site/application/data/asset_version.txt && \
           chown www:www /home/wwwroot/$site/application/data/asset_version.txt"
     echo "  静态资源版本戳已更新"
 
     # 替换助手执行前会把受影响的表 mysqldump 到这里。目录本来是 root:root 755，
     # PHP 以 www 跑，写不进去就只能回落到 application/data/rep/backup/ —— 那在
     # 站点目录里，下次 rsync 部署会被清掉，等于备份白做。这里补上属主。
-    $SSH "mkdir -p /home/backup/db && chown www:www /home/backup/db && chmod 750 /home/backup/db"
+    "${SSH[@]}" "mkdir -p /home/backup/db && chown www:www /home/backup/db && chmod 750 /home/backup/db"
     echo "  备份目录 /home/backup/db 属主已就绪"
 
     [ "${FLUSH_SESSIONS:-0}" = "1" ] && echo "  已清空会话（所有人需重新登录）"
@@ -196,10 +253,13 @@ done
 # 于是"改配置 → 立刻 curl 验证"既可能假绿也可能假红。放在冒烟之前。
 echo
 echo "── reload php-fpm ────────────────────"
-$SSH "if [ -x /etc/init.d/php-fpm-83 ]; then /etc/init.d/php-fpm-83 reload && echo '  php-fpm-83 reloaded'; \
+"${SSH[@]}" "if [ -x /etc/init.d/php-fpm-83 ]; then /etc/init.d/php-fpm-83 reload && echo '  php-fpm-83 reloaded'; \
       elif command -v systemctl >/dev/null 2>&1 && systemctl list-units --type=service --all 2>/dev/null | grep -qE 'php[0-9.-]*fpm'; then \
         systemctl reload \$(systemctl list-units --type=service --all --no-legend 2>/dev/null | grep -oE 'php[0-9.-]*fpm[^ ]*' | head -1) && echo '  php-fpm reloaded (systemd)'; \
-      else echo '  ⚠ 未找到 php-fpm 服务，请手工 reload，否则本次改动可能未生效'; fi" || true
+      else echo '  未找到 php-fpm 服务，本次改动可能未生效' >&2; exit 1; fi" || {
+    echo "php-fpm reload 未确认成功，停止发布验收" >&2
+    exit 1
+}
 
 echo
 echo "── 站点私有配置完整性 ────────────────"
@@ -209,9 +269,12 @@ echo "── 站点私有配置完整性 ─────────────
 missing=0
 for site in "${SITES[@]}"; do
     for f in ".env" "application/extra/maccms.php"; do
-        $SSH "test -s /home/wwwroot/$site/$f" \
-            && printf "  %-12s %-34s ok\n" "$site" "$f" \
-            || { printf "  %-12s %-34s !! 缺失\n" "$site" "$f"; missing=1; }
+        if "${SSH[@]}" "test -s /home/wwwroot/$site/$f"; then
+            printf "  %-12s %-34s ok\n" "$site" "$f"
+        else
+            printf "  %-12s %-34s !! 缺失\n" "$site" "$f"
+            missing=1
+        fi
     done
 done
 # PPVOD 入库配置：只有装了入库控制器的站才需要（API 站按设计不含它）。
@@ -222,11 +285,15 @@ done
 # 已并入 application/extra/maccms.php 的 'ppvod' 段，文件本身不该再存在。
 # 改为按「该站有没有 Ppvod 控制器」自描述地判断，并校验配置真的可用。
 for site in "${SITES[@]}"; do
-    if ! $SSH "test -f /home/wwwroot/$site/application/api/controller/Ppvod.php" 2>/dev/null; then
+    if ! "${SSH[@]}" "test -f /home/wwwroot/$site/application/api/controller/Ppvod.php" 2>/dev/null; then
         continue
     fi
-    if $SSH "sudo -u www php -r '
-        \$c = @include \"/home/wwwroot/$site/application/extra/maccms.php\";
+    if "${SSH[@]}" "audit_tokenizer=''; \
+        php -n -r 'exit(function_exists(\"token_get_all\") ? 0 : 1);' || audit_tokenizer='-d extension=tokenizer'; \
+        php -n \$audit_tokenizer -r '
+        require \"$REMOTE_AUDIT/DataConfig.php\";
+        try { \$c = \\app\\common\\util\\DataConfig::read(\"/home/wwwroot/$site/application/extra/maccms.php\"); }
+        catch (\\Throwable \$e) { exit(1); }
         \$p = (is_array(\$c) ? (\$c[\"ppvod\"] ?? []) : []);
         exit((is_array(\$p) && !empty(\$p[\"play_domain\"]) && !empty(\$p[\"pic_domain\"])
               && !empty(\$p[\"category_map\"])) ? 0 : 1);'" 2>/dev/null; then
@@ -241,6 +308,7 @@ if [ "$missing" = "1" ]; then
     echo "  ⚠ 有站点私有配置缺失或不完整。"
     echo "     .env / extra/maccms.php 被本脚本 EXCLUDES 排除，不随代码分发。"
     echo "     PPVOD 相关项在后台「系统 → PPVOD 转码入库」里填（播放域名/图床域名/分类映射为必填）。"
+    exit 1
 fi
 
 echo
@@ -248,9 +316,11 @@ echo "── 远端静态自检 ────────────────
 # 以 www 身份跑：以 root 跑会在 www 属主的 runtime 下留 root 属主文件，
 # 下一次 FPM 写同一路径会失败——而这条路径恰好是 fail-silent 的。
 for site in "${SITES[@]}"; do
-    out=$($SSH "cd /home/wwwroot/$site && sudo -u www php think mac:selfcheck 2>&1 | tail -1" || echo "ERR")
+    out=$("${SSH[@]}" "cd /home/wwwroot/$site && sudo -u www php think mac:selfcheck 2>&1") || {
+        printf '%s\n' "$out" >&2; echo "远端自检失败，停止部署" >&2; exit 1;
+    }
     printf "  %-12s %s\n" "$site" "$out"
-    $SSH "chown -R www:www /home/wwwroot/$site/runtime 2>/dev/null; true" >/dev/null
+    "${SSH[@]}" "chown -R www:www /home/wwwroot/$site/runtime 2>/dev/null; true" >/dev/null
 done
 
 echo
@@ -259,6 +329,10 @@ for site in "${SITES[@]}"; do
     for path in "/" "/api.php/provide/vod/?ac=list"; do
         code=$(curl -sS -o /dev/null -w '%{http_code}' -m 25 -H "Host: $site" "http://$HOST$path" 2>/dev/null || echo "ERR")
         printf "  %-12s %-32s %s\n" "$site" "${path:0:30}" "$code"
+        if [ "$path" = "/api.php/provide/vod/?ac=list" ] && [ "$code" != "200" ]; then
+            echo "API 冒烟未返回 200，停止发布验收" >&2
+            exit 1
+        fi
     done
 done
 echo
