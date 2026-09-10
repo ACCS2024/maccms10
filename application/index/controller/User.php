@@ -122,33 +122,8 @@ class User extends Base
             return json(\app\common\util\ArtPurchase::buy($identity['info'], Request::post(),
                 fn(array $row, array $coordinates): array => $this->check_art_resource_access($row, $coordinates)));
         }
-        $data = [];
-        $data['ulog_mid'] = intval($param['mid']) <=0 ? 1: intval($param['mid']);
-        $data['ulog_rid'] = intval($param['id']);
-        $data['ulog_sid'] = intval($param['sid']);
-        $data['ulog_nid'] = intval($param['nid']);
-
-        if (!in_array($param['mid'], ['1','2','12']) || !in_array($param['type'], ['1','4','5']) || empty($data['ulog_rid']) ) {
-            return json(['code' => 2001, 'msg' => lang('param_err')]);
-        }
-        $data['ulog_type'] = $param['type'];
-        $data['user_id'] = $identity['info']['user_id'];
-
-        $where = [];
-        if($param['mid']=='12'){
-            // 漫画购买（扣费额与 check_user_popedom 一致）
-            $where['manga_id'] = $data['ulog_rid'];
-            $res = (new \app\common\model\Manga())->infoData($where);
-            if ($res['code'] > 1) {
-                return json($res);
-            }
-            $data['ulog_points'] = mac_content_read_points_amount('manga', $res['info']);
-            if($GLOBALS['config']['user']['manga_points_type']=='1'){
-                $data['ulog_sid']=0;
-                $data['ulog_nid']=0;
-            }
-        }
-        return json(\app\common\util\ContentPurchase::buy($identity['info']['user_id'], $data));
+        return json(\app\common\util\MangaPurchase::buy($identity['info'], Request::post(),
+            fn(array $row, array $coordinates): array => $this->check_manga_resource_access($row, $coordinates)));
     }
 
     /** Same-origin clients fetch this after login; it is never embedded in a cached public page. */

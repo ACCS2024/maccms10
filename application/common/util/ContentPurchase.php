@@ -44,6 +44,12 @@ final class ContentPurchase
         return self::execute($userId, [], $quote, 2);
     }
 
+    /** Manga quotes validate the actual source/chapter before the same transactional debit. */
+    public static function buyManga($userId, callable $quote): array
+    {
+        return self::execute($userId, [], $quote, 12);
+    }
+
     private static function record(int $userId, array $pricedRecord): ?array
     {
         $selection=self::parameters([
@@ -131,7 +137,7 @@ final class ContentPurchase
         if ($type!=='mysql') { throw new \RuntimeException('Unsupported purchase storage'); }
         $tables=[Db::name('User')->getTable(),Db::name('Plog')->getTable(),Db::name('Ulog')->getTable()];
         if ($resourceMid!==null) {
-            $resource=[1=>'Vod',2=>'Art'][$resourceMid]??null;
+            $resource=[1=>'Vod',2=>'Art',12=>'Manga'][$resourceMid]??null;
             if ($resource===null) { throw new \RuntimeException('Unsupported purchase resource'); }
             $tables[]=Db::name($resource)->getTable(); $tables[]=Db::name('Group')->getTable();
         }

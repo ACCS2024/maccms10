@@ -10,7 +10,7 @@ if($path==='/fixture/client.js'){
     if(!is_string($client)||!preg_match('/^[0-5]$/D',$client)){http_response_code(404);exit;}
     header('Content-Type: application/javascript');readfile(getcwd().'/client-'.$client.'.js');exit;
 }
-putenv('PURCHASE_CSRF_MYSQL=0');define('PURCHASE_CSRF_HTTP',true);
+putenv('PURCHASE_CSRF_MYSQL=0');putenv('MANGA_PURCHASE_AUDIT=1');define('PURCHASE_CSRF_HTTP',true);
 require __DIR__.'/purchase_csrf.php';
 function url($route){return '/fixture/index.php/'.$route;}
 if($path==='/fixture/reset'&&$_SERVER['REQUEST_METHOD']==='POST'){
@@ -28,10 +28,14 @@ if($path==='/fixture/page'){
     header('Content-Type: text/html; charset=utf-8');header('Cache-Control: private, no-store');
     echo '<!doctype html><meta charset="utf-8"><script src="/jquery.js"></script><script src="/fixture/client.js?client='.$client.'"></script>';
     if(($_GET['gate']??'')==='1'){
+        // Build the actual read permission for the fixture's normal Cookie identity, including new gate coordinates.
+        purchaseCsrfRoute('user/write_token',[],[],purchaseCsrfCookies()+$_COOKIE,[],'GET');
+        $row=\think\facade\Db::name('Manga')->where('manga_id',17)->find();
+        $controller=(new ReflectionClass(PurchaseCsrfIndex::class))->newInstanceWithoutConstructor();
+        $access=(new ReflectionMethod($controller,'check_manga_resource_access'))->invoke($controller,$row,['id'=>17,'sid'=>2,'nid'=>3]);
         (new \think\Template(['cache_path'=>getcwd().'/templates/']))->display(file_get_contents($source.'/template/default/html/widget/popedom_upgrade_gate.html'),
             ['maccms'=>['path'=>'/fixture/','path_tpl'=>'/fixture/template/default','mid'=>12],
-                'obj'=>['manga_id'=>17],'param'=>['sid'=>2,'nid'=>3],'popedom'=>['points'=>20],
-                'manga_access'=>['purchase_supported'=>true,'password_required'=>false,'purchase_sid'=>2,'purchase_nid'=>3]]);
+                'obj'=>['manga_id'=>17],'param'=>['sid'=>2,'nid'=>3],'popedom'=>$access,'manga_access'=>$access]);
     }else{
         echo '<button id="purchase" onclick="MAC.User.BuyPopedom(this)" data-mid="1" data-id="17" data-type="4" data-sid="2" data-nid="3">Buy</button>';
     }
