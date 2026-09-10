@@ -39,17 +39,21 @@ namespace {
     $manager->setConfig($configuration);
     $container->instance('think\\DbManager', $manager);
     $GLOBALS['config'] = ['app'=>['count_cache_sec'=>0, 'cache_flag'=>'api_runtime_audit']];
-    think\facade\Db::execute('CREATE TABLE mac_vod (vod_id INTEGER PRIMARY KEY, vod_name TEXT, vod_pic TEXT)');
+    think\facade\Db::execute('CREATE TABLE mac_vod (vod_id INTEGER PRIMARY KEY, vod_name TEXT, vod_pic TEXT, vod_status INTEGER DEFAULT 1, vod_recycle_time INTEGER DEFAULT 0)');
     think\facade\Db::name('Vod')->insertAll([
         ['vod_id'=>1, 'vod_name'=>'First video', 'vod_pic'=>'one.png'],
         ['vod_id'=>2, 'vod_name'=>'Second video', 'vod_pic'=>'two.png'],
     ]);
-    think\facade\Db::execute('CREATE TABLE mac_art (art_id INTEGER PRIMARY KEY, art_name TEXT, art_sub TEXT DEFAULT "", art_en TEXT DEFAULT "", art_pic TEXT DEFAULT "", art_blurb TEXT DEFAULT "", art_time INTEGER, art_time_add INTEGER DEFAULT 0, art_hits INTEGER, art_points INTEGER DEFAULT 0, art_points_detail INTEGER DEFAULT 0, art_remarks TEXT DEFAULT "", art_author TEXT DEFAULT "", type_id INTEGER DEFAULT 1)');
+    think\facade\Db::name('Vod')->insert(['vod_id'=>3, 'vod_name'=>'Hidden video', 'vod_pic'=>'hidden.png', 'vod_status'=>0]);
+    think\facade\Db::name('Vod')->insert(['vod_id'=>4, 'vod_name'=>'Recycled video', 'vod_pic'=>'recycled.png', 'vod_recycle_time'=>100]);
+    think\facade\Db::execute('CREATE TABLE mac_art (art_id INTEGER PRIMARY KEY, art_name TEXT, art_sub TEXT DEFAULT "", art_en TEXT DEFAULT "", art_pic TEXT DEFAULT "", art_blurb TEXT DEFAULT "", art_time INTEGER, art_time_add INTEGER DEFAULT 0, art_hits INTEGER, art_points INTEGER DEFAULT 0, art_points_detail INTEGER DEFAULT 0, art_remarks TEXT DEFAULT "", art_author TEXT DEFAULT "", type_id INTEGER DEFAULT 1, art_status INTEGER DEFAULT 1, art_recycle_time INTEGER DEFAULT 0)');
     think\facade\Db::name('Art')->insertAll([
         ['art_id'=>1, 'art_name'=>'Old popular article', 'art_time'=>100, 'art_hits'=>30],
         ['art_id'=>2, 'art_name'=>'Newest article', 'art_time'=>300, 'art_hits'=>10],
         ['art_id'=>3, 'art_name'=>'Middle article', 'art_time'=>200, 'art_hits'=>20],
     ]);
+    think\facade\Db::name('Art')->insert(['art_id'=>4, 'art_name'=>'Hidden article', 'art_time'=>400, 'art_hits'=>40, 'art_status'=>0]);
+    think\facade\Db::name('Art')->insert(['art_id'=>5, 'art_name'=>'Recycled article', 'art_time'=>500, 'art_hits'=>50, 'art_recycle_time'=>100]);
     $checks = 0;
     function apiRuntimeExpect($condition, string $message): void {
         global $checks;
@@ -89,6 +93,9 @@ namespace {
             apiRuntimeExpect($data['code'] === 1 && $data['info']['vod_id'] === $id && $data['info']['vod_pic'] === ($id === 1 ? 'one.png' : 'two.png'), 'Valid detail IDs must select the requested database row');
         }
         apiRuntimeExpect(apiRuntimeCall($vod, 'get_detail', ['vod_id'=>999])['code'] === 1001, 'A valid but absent detail ID must keep the existing not-found contract');
+        foreach ([3, 4] as $id) {
+            apiRuntimeExpect(apiRuntimeCall($vod, 'get_detail', ['vod_id'=>$id])['code'] === 1001, 'Hidden and recycled video IDs must not resolve through the public detail endpoint');
+        }
 
         foreach ([[[], [2,3,1]], [['orderby'=>''], [2,3,1]], [['orderby'=>'hits'], [1,3,2]], [['orderby'=>'id'], [3,2,1]]] as [$params, $ids]) {
             $data = apiRuntimeCall($art, 'get_list', $params);
