@@ -37,13 +37,13 @@ class Cash extends Base {
 
         if(!empty($user_ids)){
             $where2=[];
-            $where['user_id'] = $user_ids;
+            $where2['user_id'] = $user_ids;
             $order='user_id desc';
             $user_list = (new \app\common\model\User())->listData($where2,$order,1,999);
             $user_list = mac_array_rekey($user_list['list'],'user_id');
 
             foreach($list as $k=>&$v){
-                $list[$k]['user_name'] = $user_list[$v['user_id']]['user_name'];
+                $list[$k]['user_name'] = $user_list[$v['user_id']]['user_name'] ?? '';
             }
         }
 
@@ -67,87 +67,122 @@ class Cash extends Base {
 
     public function saveData($param)
     {
-        $data=[];
-        $data['cash_money']  = floatval($param['cash_money']);
-
-        if($GLOBALS['config']['user']['cash_status'] !='1'){
+        $settings = $GLOBALS['config']['user'] ?? [];
+        if (($settings['cash_status'] ?? '0') != '1') {
             return ['code'=>1005,'msg'=>lang('model/cash/not_open')];
         }
-
-        if($data['cash_money'] < $GLOBALS['config']['user']['cash_min']){
-            return ['code'=>1006,'msg'=>lang('model/cash/min_money_err').'：'.$GLOBALS['config']['user']['cash_min'] ];
+        $money = $param['cash_money'] ?? null;
+        $ratio = $settings['cash_ratio'] ?? null;
+        if (!is_numeric($money) || !is_finite((float)$money) || (float)$money <= 0
+            || !is_numeric($ratio) || !is_finite((float)$ratio) || (float)$ratio <= 0) {
+            return ['code'=>1001,'msg'=>lang('param_err')];
         }
-
-        $tx_points = intval($data['cash_money'] * $GLOBALS['config']['user']['cash_ratio']);
-        if($tx_points > $GLOBALS['user']['user_points']){
-            return ['code'=>1007,'msg'=>lang('model/cash/mush_money_err')];
+        // 数据库金额保留两位小数；按实际可存储金额计算积分。
+        $money = round((float)$money, 2);
+        if ($money <= 0) {
+            return ['code'=>1001,'msg'=>lang('param_err')];
         }
-        $data['user_id'] = $GLOBALS['user']['user_id'];
-        $data['cash_bank_name'] = htmlspecialchars(urldecode(trim($param['cash_bank_name'])));
-        $data['cash_bank_no'] = htmlspecialchars(urldecode(trim($param['cash_bank_no'])));
-        $data['cash_payee_name'] = htmlspecialchars(urldecode(trim($param['cash_payee_name'])));
-        $data['cash_points'] = $tx_points;
-        $data['cash_time'] = time();
-
-        $validate = mac_validate('Cash');
-        if(!$validate->check($data)){
-            return ['code'=>1001,'msg'=>lang('param_err').'：'.$validate->getError() ];
+        if ($money < (float)($settings['cash_min'] ?? 0)) {
+            return ['code'=>1006,'msg'=>lang('model/cash/min_money_err').'：'.($settings['cash_min'] ?? 0)];
         }
-
-        if($data['user_id']==0 ) {
+        $rawPoints = $money * (float)$ratio;
+        if (!is_finite($rawPoints) || $rawPoints >= PHP_INT_MAX || $rawPoints < 1) {
+            return ['code'=>1001,'msg'=>lang('param_err')];
+        }
+        $points = (int)$rawPoints;
+        if ($points > 65535) {
+            return ['code'=>1001,'msg'=>lang('param_err')];
+        }
+        $userId = (int)($GLOBALS['user']['user_id'] ?? 0);
+        if ($userId < 1) {
             return ['code'=>1002,'msg'=>lang('param_err')];
         }
-        $data = $this->filterFields($data);
-        $res = $this->insert($data);
-        if(false === $res){
-            return ['code'=>1004,'msg'=>lang('save_err').'：'.$this->getError() ];
+        $data = [
+            'cash_money' => $money,
+            'user_id' => $userId,
+            'cash_points' => $points,
+            'cash_time' => time(),
+            'cash_status' => 0,
+        ];
+        foreach (['cash_bank_name', 'cash_bank_no', 'cash_payee_name'] as $field) {
+            if (!isset($param[$field]) || !is_scalar($param[$field])) {
+                return ['code'=>1001,'msg'=>lang('param_err')];
+            }
+            $data[$field] = htmlspecialchars(urldecode(trim((string)$param[$field])));
+        }
+        $validate = mac_validate('Cash');
+        if (!$validate->check($data)) {
+            return ['code'=>1001,'msg'=>lang('param_err').'：'.$validate->getError()];
         }
 
-        //更新用户表
-        $update=[];
-        $update['user_points'] = $GLOBALS['user']['user_points'] - $tx_points;
-        $update['user_points_froze'] = $GLOBALS['user']['user_points_froze'] + $tx_points;
-
-        $where=[];
-        $where['user_id'] = $GLOBALS['user']['user_id'];
-        $res = (new \app\common\model\User())->where($where)->update($update);
-        if(false === $res){
-            return ['code'=>1005,'msg'=>'更新用户积分失败：'.$this->getError() ];
+        Db::startTrans();
+        try {
+            $user = Db::name('User')->where('user_id', $userId)->lock(true)->find();
+            if (!$user || (int)$user['user_points'] < $points) {
+                Db::rollback();
+                return ['code'=>1007,'msg'=>lang('model/cash/mush_money_err')];
+            }
+            // 余额在数据库内检查并转为冻结积分，不能用请求开始时的全局快照覆盖。
+            $changed = Db::name('User')->where('user_id', $userId)
+                ->where('user_points', '>=', $points)
+                ->dec('user_points', $points)->inc('user_points_froze', $points)->update();
+            if ($changed !== 1) {
+                Db::rollback();
+                return ['code'=>1007,'msg'=>lang('model/cash/mush_money_err')];
+            }
+            $cashId = $this->insertGetId($this->filterFields($data));
+            if ((int)$cashId < 1) {
+                throw new \RuntimeException('cash insert failed');
+            }
+            // 老库 cash_points 是 SMALLINT，且连接允许 MySQL 静默截断。
+            // 回读核实记账数值；兼容已扩容的库，并避免扣全额却只记录部分积分。
+            $stored = $this->where('cash_id', $cashId)->find();
+            $reserved = Db::name('User')->where('user_id', $userId)->find();
+            if (!$stored || !$reserved || (int)$stored['cash_points'] !== $points
+                || round((float)$stored['cash_money'], 2) !== $money
+                || (int)$reserved['user_points'] !== (int)$user['user_points'] - $points
+                || (int)$reserved['user_points_froze'] !== (int)$user['user_points_froze'] + $points) {
+                throw new \RuntimeException('cash ledger values were truncated');
+            }
+            Db::commit();
+        } catch (\Throwable $e) {
+            Db::rollback();
+            return ['code'=>1004,'msg'=>lang('save_err')];
         }
-
         return ['code'=>1,'msg'=>lang('save_ok')];
     }
 
     public function delData($where)
     {
-        $list = $this->where($where)->select()->toArray();
-
-        foreach($list as $k=>$v){
-            $where=[];
-            $where['cash_id'] = $v['cash_id'];
-
-            $res = $this->where($where)->delete();
-            if($res===false){
-                return ['code'=>1001,'msg'=>lang('del_err').'：'.$this->getError() ];
-            }
-
-            //如果未审核则恢复冻结积分
-            if($v['cash_status'] ==0){
-                $where=[];
-                $where['user_id'] = $v['user_id'];
-
-                $user = (new \app\common\model\User())->where($where)->find();
-                $update=[];
-                $update['user_points'] = $user['user_points'] + $v['cash_points'];
-                $update['user_points_froze'] = $user['user_points_froze'] - $v['cash_points'];
-
-                $res = (new \app\common\model\User())->where($where)->update($update);
-                if(false === $res){
-                    return ['code'=>1005,'msg'=>'更新用户积分失败：'.$this->getError() ];
+        if (empty($where) || !is_array($where)) {
+            return ['code'=>1001,'msg'=>lang('param_err')];
+        }
+        Db::startTrans();
+        try {
+            // 与审核使用相同的行锁顺序；退款、删除不可被另一个审核/删除请求穿插。
+            $list = $this->where($where)->order('cash_id')->lock(true)->select()->toArray();
+            foreach ($list as $row) {
+                if ((int)$row['cash_status'] === 0) {
+                    $points = (int)$row['cash_points'];
+                    if ($points < 1) {
+                        throw new \RuntimeException('invalid frozen points');
+                    }
+                    $changed = Db::name('User')->where('user_id', $row['user_id'])
+                        ->where('user_points_froze', '>=', $points)
+                        ->inc('user_points', $points)->dec('user_points_froze', $points)->update();
+                    if ($changed !== 1) {
+                        throw new \RuntimeException('cash refund failed');
+                    }
+                }
+                if ($this->where('cash_id', $row['cash_id'])->delete() !== 1) {
+                    throw new \RuntimeException('cash delete failed');
                 }
             }
+            Db::commit();
+        } catch (\Throwable $e) {
+            Db::rollback();
+            return ['code'=>1005,'msg'=>lang('del_err')];
         }
-
         return ['code'=>1,'msg'=>lang('del_ok')];
     }
 
@@ -168,30 +203,43 @@ class Cash extends Base {
 
     public function auditData($where)
     {
-        $list = $this->where($where)->select()->toArray();
-        foreach($list as $k=>$v){
-            $where2=[];
-            $where2['user_id'] = $v['user_id'];
-
-            $update=[];
-            $update['cash_status'] = 1;
-            $update['cash_time_audit'] = time();
-            $res = (new \app\common\model\Cash())->where($where)->update($update);
-            if($res===false){
-                return ['code'=>1001,'msg'=>lang('del_err').'：'.$this->getError() ];
+        if (empty($where) || !is_array($where)) {
+            return ['code'=>1001,'msg'=>lang('param_err')];
+        }
+        Db::startTrans();
+        try {
+            $list = $this->where($where)->where('cash_status', 0)
+                ->order('cash_id')->lock(true)->select()->toArray();
+            foreach ($list as $row) {
+                $points = (int)$row['cash_points'];
+                if ($points < 1) {
+                    throw new \RuntimeException('invalid frozen points');
+                }
+                $changed = $this->where('cash_id', $row['cash_id'])->where('cash_status', 0)->update([
+                    'cash_status' => 1,
+                    'cash_time_audit' => time(),
+                ]);
+                if ($changed !== 1) {
+                    throw new \RuntimeException('cash state changed');
+                }
+                $changed = Db::name('User')->where('user_id', $row['user_id'])
+                    ->where('user_points_froze', '>=', $points)->setDec('user_points_froze', $points);
+                if ($changed !== 1) {
+                    throw new \RuntimeException('cash settlement failed');
+                }
+                $log = (new \app\common\model\Plog())->saveData([
+                    'user_id' => $row['user_id'],
+                    'plog_type' => 9,
+                    'plog_points' => $points,
+                ]);
+                if ((int)($log['code'] ?? 0) !== 1) {
+                    throw new \RuntimeException('cash points log failed');
+                }
             }
-
-            $res = (new \app\common\model\User())->where($where2)->setDec('user_points_froze', $v['cash_points']);
-            if(false === $res){
-                return ['code'=>1005,'msg'=>'更新用户积分失败：'.$this->getError() ];
-            }
-            //积分日志
-            $data = [];
-            $data['user_id'] = $v['user_id'];
-            $data['plog_type'] = 9;
-            $data['plog_points'] = $v['cash_points'];
-            $result = (new \app\common\model\Plog())->saveData($data);
-
+            Db::commit();
+        } catch (\Throwable $e) {
+            Db::rollback();
+            return ['code'=>1005,'msg'=>lang('save_err')];
         }
         return ['code'=>1,'msg'=>'审核成功'];
     }
