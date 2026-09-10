@@ -43,11 +43,12 @@ Route::any('index-<page?>', 'index/index');
 Route::any('gbook-<page?>', 'gbook/index');
 Route::any('gbook$', 'gbook/index');
 
-Route::any('topic-<page?>', 'topic/index');
+// Optional pagination must end here; prefix matching otherwise captures detail/search URLs.
+Route::any('topic-<page?>', 'topic/index')->completeMatch();
 Route::any('topic$', 'topic/index');
 Route::any('topicdetail-<id>', 'topic/detail');
 
-Route::any('actor-<page?>', 'actor/index');
+Route::any('actor-<page?>', 'actor/index')->completeMatch();
 Route::any('actor$', 'actor/index');
 Route::any('actordetail-<id>', 'actor/detail');
 Route::any('actorshow/<area?>-<blood?>-<by?>-<letter?>-<level?>-<order?>-<page?>-<sex?>-<starsign?>', 'actor/show');
