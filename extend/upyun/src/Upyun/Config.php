@@ -102,7 +102,7 @@ class Config
         $this->bucketName = $serviceName;
         $this->operatorName = $operatorName;
         $this->setOperatorPassword($operatorPassword);
-        $this->useSsl          = false;
+        $this->useSsl          = true;
         self::$restApiEndPoint = self::ED_AUTO;
     }
 

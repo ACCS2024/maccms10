@@ -4,3 +4,5 @@
 !/aws/*
 !/ip_limit/
 !/ip_limit/*
+!/upyun/
+!/upyun/**

@@ -154,7 +154,13 @@ class Upyun
 
         if (! isset($params['x-upyun-list-iter'])) {
             if (is_resource($saveHandler)) {
-                Psr7\copy_to_stream($response->getBody(), Psr7\stream_for($saveHandler));
+                $destination = Psr7\Utils::streamFor($saveHandler);
+                try {
+                    Psr7\Utils::copyToStream($response->getBody(), $destination);
+                } finally {
+                    // The caller owns the supplied resource; releasing the wrapper must not close it.
+                    $destination->detach();
+                }
                 return true;
             } else {
                 return $response->getBody()->getContents();
