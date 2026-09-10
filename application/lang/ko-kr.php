@@ -1659,6 +1659,8 @@ https://www.baidu.com/123.jpg
   'admin/website/referer_week' => '주간 리퍼러',
   'admin/website/referer_day' => '일일 리퍼러',
   'admin/vod/title' => '동영상 관리',
+  'admin/vod/repeat_refresh_pending' => '동일한 제목의 동영상 목록 갱신이 대기 중입니다. 해당 목록 페이지에서 다시 시도해 주세요.',
+  'admin/vod/repeat_refresh_failed' => '동일한 제목의 동영상 목록을 갱신하지 못했습니다. 나중에 다시 시도해 주세요.',
   'admin/vod/no' => '없음',
   'admin/vod/have' => '있음',
   'admin/vod/plot/title' => '에피소드 줄거리 관리',

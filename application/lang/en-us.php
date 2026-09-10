@@ -1811,6 +1811,8 @@ Note: If both black and white lists are filled, both policies will take effect.'
   'admin/website/referer_week' => 'Weekly Referrals',
   'admin/website/referer_day' => 'Daily Referrals',
   'admin/vod/title' => 'Video Management',
+  'admin/vod/repeat_refresh_pending' => 'Duplicate video list refresh is pending. Retry from the duplicate video page.',
+  'admin/vod/repeat_refresh_failed' => 'The duplicate video list could not be refreshed. Please retry later.',
   'admin/vod/no' => 'No',
   'admin/vod/have' => 'Yes',
   'admin/vod/plot/title' => 'Episode Plot Management',

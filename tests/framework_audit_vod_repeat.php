@@ -46,8 +46,11 @@ foreach(['','NO_AUTO_VALUE_ON_ZERO','STRICT_ALL_TABLES,NO_AUTO_VALUE_ON_ZERO']as
  repeatSave(8,'Before',['vod_recycle_time'=>100]);
  check(repeatRows()===['Other'=>[10]],'Recycled videos do not keep an otherwise unique group in the catalog');
  repeatSeed();Db::execute('DROP TABLE vod_save_audit_vod_repeat');
- (new app\common\model\Vod())->cacheRepeatWithName('Solo');
- check(repeatRows()===['Before'=>[7],'Other'=>[10]],'Existing missing-table fallback rebuilds the complete catalog once');
+ $missingRejected=false;try{(new app\common\model\Vod())->cacheRepeatWithName('Solo');}catch(RuntimeException $error){$missingRejected=true;}
+ check($missingRejected,'A normal refresh never creates a missing catalog');
+ check(Db::query("SHOW TABLES LIKE 'vod_save_audit_vod_repeat'")===[],'Missing catalog remains absent until explicit rebuild');
+ (new app\common\model\Vod())->createRepeatCache();
+ check(repeatRows()===['Before'=>[7],'Other'=>[10]],'Explicit rebuild initializes the complete catalog once');
  (new app\common\model\Vod())->cacheRepeatWithName('Solo');
  check(repeatRows()===['Before'=>[7],'Other'=>[10]],'The next refresh does not repeat the full-table append');
  repeatSeed();Db::name('Vod')->whereIn('vod_id',[7,8,9])->update(['vod_name'=>"Studio's Film"]);
@@ -57,8 +60,8 @@ foreach(['','NO_AUTO_VALUE_ON_ZERO','STRICT_ALL_TABLES,NO_AUTO_VALUE_ON_ZERO']as
  repeatSeed();$before=repeatRows();Db::startTrans();
  try{
   repeatSave(7,'Renamed');check(Db::connect()->getPdo()->inTransaction(),'Normal existing-table refresh preserves caller transaction');
-  check(repeatRows()===['Before'=>[8],'Other'=>[10]],'Caller sees its updated duplicate catalog');
+  check(repeatRows()===$before,'Caller-owned save defers catalog DML until an independent rebuild');
  }finally{Db::rollback();}
- check(repeatRows()===$before && Db::name('Vod')->where('vod_id',7)->value('vod_name')==='Before','Caller rollback restores resource and catalog when no DDL/fault occurs');
+ check(repeatRows()===$before && Db::name('Vod')->where('vod_id',7)->value('vod_name')==='Before','Caller rollback restores resource and preserves the deferred catalog');
 }
 echo 'framework_audit_vod_repeat: '.$checks.' checks passed on PHP '.PHP_VERSION.' / installation MySQL (three SQL modes)'.PHP_EOL;

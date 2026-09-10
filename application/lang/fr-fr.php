@@ -1665,6 +1665,8 @@ Note: Si les listes noires et blanches sont remplies, les stratégies s\'appliqu
   'admin/website/referer_week' => 'Trafic hebdomadaire',
   'admin/website/referer_day' => 'Trafic quotidien',
   'admin/vod/title' => 'Gestion des vidéos',
+  'admin/vod/repeat_refresh_pending' => 'La liste des vidéos en double doit encore être actualisée. Réessayez depuis la page des vidéos en double.',
+  'admin/vod/repeat_refresh_failed' => 'La liste des vidéos en double ne peut pas être actualisée pour le moment. Réessayez plus tard.',
   'admin/vod/no' => 'Non',
   'admin/vod/have' => 'Oui',
   'admin/vod/plot/title' => 'Gestion des intrigues par épisode',

@@ -1664,6 +1664,8 @@ https://www.baidu.com/123.jpg
   'admin/website/referer_week' => 'Referências semanais',
   'admin/website/referer_day' => 'Referências diárias',
   'admin/vod/title' => 'Gerenciamento de vídeos',
+  'admin/vod/repeat_refresh_pending' => 'A lista de vídeos duplicados está pendente de atualização. Tente novamente na página de vídeos duplicados.',
+  'admin/vod/repeat_refresh_failed' => 'Não foi possível atualizar a lista de vídeos duplicados. Tente novamente mais tarde.',
   'admin/vod/no' => 'Não',
   'admin/vod/have' => 'Sim',
   'admin/vod/plot/title' => 'Gerenciamento de enredo de episódio',

@@ -1663,6 +1663,8 @@ Nota: Si se especifican listas negras y blancas, ambas se aplicarán simultánea
   'admin/website/referer_week' => 'Tráfico Semanal',
   'admin/website/referer_day' => 'Tráfico Diario',
   'admin/vod/title' => 'Gestión de Videos',
+  'admin/vod/repeat_refresh_pending' => 'La lista de vídeos duplicados está pendiente de actualización. Vuelve a intentarlo desde la página de vídeos duplicados.',
+  'admin/vod/repeat_refresh_failed' => 'No se pudo actualizar la lista de vídeos duplicados. Inténtalo de nuevo más tarde.',
   'admin/vod/no' => 'No',
   'admin/vod/have' => 'Sí',
   'admin/vod/plot/title' => 'Gestión de Tramas de Episodios',

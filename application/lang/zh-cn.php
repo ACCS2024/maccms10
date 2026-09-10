@@ -1991,6 +1991,8 @@ https://www.baidu.com/123.jpg
 
 
     'admin/vod/title'=>'视频管理',
+    'admin/vod/repeat_refresh_pending' => '重名数据目录尚未更新，请在重名视频页重试。',
+    'admin/vod/repeat_refresh_failed' => '重名数据目录刷新未完成，请稍后重试。',
     'admin/vod/no'=>'没有',
     'admin/vod/have'=>'有',
     'admin/vod/plot/title'=>'分集剧情管理',

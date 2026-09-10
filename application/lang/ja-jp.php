@@ -1661,6 +1661,8 @@ https://www.baidu.com/123.jpg
   'admin/website/referer_week' => '週間リファラー',
   'admin/website/referer_day' => '日間リファラー',
   'admin/vod/title' => 'ビデオ管理',
+  'admin/vod/repeat_refresh_pending' => '同名動画の一覧はまだ更新されていません。同名動画のページで再試行してください。',
+  'admin/vod/repeat_refresh_failed' => '同名動画の一覧を更新できませんでした。しばらくしてから再試行してください。',
   'admin/vod/no' => 'いいえ',
   'admin/vod/have' => 'はい',
   'admin/vod/plot/title' => 'エピソードプロット管理',

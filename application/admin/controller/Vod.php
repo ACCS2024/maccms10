@@ -130,7 +130,8 @@ class Vod extends Base
 
         if(!empty($param['repeat'])){
             if(!empty($param['cache'])){
-                (new \app\common\model\Vod())->createRepeatCache();
+                try { (new \app\common\model\Vod())->createRepeatCache(); }
+                catch (\Throwable $error) { return $this->error(lang('admin/vod/repeat_refresh_failed')); }
                 return $this->success(lang('update_ok'));
             }
 
@@ -139,7 +140,8 @@ class Vod extends Base
                 $cacheResult = Cache::get('vod_repeat_table_created_time',0);
                 //缓存时间超过7天和没有创建过缓存都会重建缓存
                 if( $cacheResult == 0 || time() - $cacheResult > 604800){
-                    (new \app\common\model\Vod())->createRepeatCache();
+                    try { (new \app\common\model\Vod())->createRepeatCache(); }
+                    catch (\Throwable $error) { return $this->error(lang('admin/vod/repeat_refresh_failed')); }
                 }
             }
             $order='vod_name asc';

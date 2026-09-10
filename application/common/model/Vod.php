@@ -782,6 +782,9 @@ class Vod extends Base {
         if(!$validate->check($data)){
             return ['code'=>1001,'msg'=>lang('param_err').'：'.$validate->getError() ];
         }
+        $saveMessage = lang('save_ok');
+        $repeatPendingMessage = lang('admin/vod/repeat_refresh_pending');
+        $missingMessage = lang('obtain_err');
         if(isset($data['vod_jumpurl'])){ $data['vod_jumpurl'] = mac_safe_jumpurl($data['vod_jumpurl']); }
         // vod_en 是可选字段(表单不填就没有),清缓存时缺键属正常形态
         $id = $data['vod_id'] ?? 0;
@@ -857,6 +860,7 @@ class Vod extends Base {
 
         $data = VodValidate::formatDataBeforeDb($data);
         $seoObjId = 0;
+        $repeatNames = [];
         if(!empty($data['vod_id'])){
 
             $where=[];
@@ -864,11 +868,15 @@ class Vod extends Base {
             $data = $this->filterFields($data);
             // Capture the previous group before UPDATE replaces the name.
             $old_name = $this->master()->where('vod_id', $data['vod_id'])->value('vod_name');
+            if ($old_name === null) { return ['code'=>1002, 'msg'=>$missingMessage]; }
             $res = $this->where($where)->update($data);
-            if (is_string($old_name) && $old_name !== $data['vod_name']) {
-                $this->cacheRepeatWithName($old_name);
+            if ($res === 0 && !$this->master()->where($where)->find()) {
+                return ['code'=>1002, 'msg'=>$missingMessage];
             }
-            $this->cacheRepeatWithName($data['vod_name']);
+            if (is_string($old_name) && $old_name !== $data['vod_name']) {
+                $repeatNames[] = $old_name;
+            }
+            $repeatNames[] = $data['vod_name'];
             $seoObjId = intval($data['vod_id']);
         }
         else{
@@ -884,11 +892,13 @@ class Vod extends Base {
                 (new \app\common\model\VodSearch())->checkAndUpdateTopResults(['vod_id' => $seoObjId] + $data);
             }
             //新增 针对当前name 判断是否重复
-            $this->cacheRepeatWithName($data['vod_name']);
+            $repeatNames[] = $data['vod_name'];
         }
         if(false === $res){
             return ['code'=>1002,'msg'=>lang('save_err').'：'.$this->getError() ];
         }
+
+        $repeatReady = \app\common\util\VodRepeatCatalog::afterSave($repeatNames, $seoObjId);
 
         $ixVodId = $seoObjId > 0 ? $seoObjId : intval($data['vod_id'] ?? 0);
         if ($ixVodId <= 0) {
@@ -896,7 +906,8 @@ class Vod extends Base {
         }
         MeilisearchSync::afterVodSave($ixVodId);
 
-        return ['code'=>1,'msg'=>lang('save_ok')];
+        return ['code'=>1, 'msg'=>$repeatReady ? $saveMessage : $saveMessage . ' / ' . $repeatPendingMessage,
+            'info'=>['repeat_index_pending'=>!$repeatReady]];
     }
 
     public function savePlot($data)
@@ -1025,38 +1036,11 @@ class Vod extends Base {
 
     public function cacheRepeatWithName($name)
     {
-        $rebuilt = false;
-        try{
-            Db::execute('delete from `' . config('database.connections.mysql.prefix') . 'vod_repeat` where name1 =?', [$name]);
-            Db::execute('INSERT INTO `' . config('database.connections.mysql.prefix') . 'vod_repeat` (SELECT min(vod_id)as id1,vod_name as name1 FROM ' . config('database.connections.mysql.prefix') . 'vod WHERE vod_name = ? AND vod_recycle_time = 0 GROUP BY name1 HAVING COUNT(name1)>1)', [$name]);
-        }catch (\Exception $e){
-            Db::execute('DROP TABLE IF EXISTS ' . config('database.connections.mysql.prefix') . 'vod_repeat');
-            Db::execute('CREATE TABLE `' . config('database.connections.mysql.prefix') . 'vod_repeat` (`id1` int unsigned DEFAULT NULL, `name1` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT \'\') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci');
-            Db::execute('ALTER TABLE `' . config('database.connections.mysql.prefix') . 'vod_repeat` ADD INDEX `name1` (`name1`(100))');
-            $rebuilt = true;
-        }
-        // A normal single-name refresh must not append every other duplicate group.
-        if ($rebuilt) {
-            Db::execute('INSERT INTO `' . config('database.connections.mysql.prefix') . 'vod_repeat` (SELECT min(vod_id)as id1,vod_name as name1 FROM ' .
-                config('database.connections.mysql.prefix') . 'vod WHERE vod_recycle_time = 0 GROUP BY name1 HAVING COUNT(name1)>1)');
-        }
-        Cache::set('vod_repeat_table_created_time',time());
-    }
-    public function  createRepeatCache()
-    {
-        $prefix = config('database.connections.mysql.prefix');
-        $tableName = $prefix . 'vod_repeat';
-        try{
-            Db::execute("TRUNCATE TABLE `{$tableName}`");
-        }catch (\Exception $e){
-            //创建表
-            Db::execute('DROP TABLE IF EXISTS ' . config('database.connections.mysql.prefix') . 'vod_repeat');
-            Db::execute('CREATE TABLE `' . config('database.connections.mysql.prefix') . 'vod_repeat` (`id1` int unsigned DEFAULT NULL, `name1` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT \'\') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci');
-            Db::execute('ALTER TABLE `' . config('database.connections.mysql.prefix') . 'vod_repeat` ADD INDEX `name1` (`name1`(100))');
-        }
-        Db::execute('INSERT INTO `' . config('database.connections.mysql.prefix') . 'vod_repeat` (SELECT min(vod_id)as id1,vod_name as name1 FROM ' .
-            config('database.connections.mysql.prefix') . 'vod WHERE vod_recycle_time = 0 GROUP BY name1 HAVING COUNT(name1)>1)');
-        Cache::set('vod_repeat_table_created_time',time());
+        \app\common\util\VodRepeatCatalog::refresh($name);
     }
 
+    public function createRepeatCache()
+    {
+        \app\common\util\VodRepeatCatalog::rebuild();
+    }
 }

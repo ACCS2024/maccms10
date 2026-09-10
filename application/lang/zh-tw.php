@@ -1662,6 +1662,8 @@ https://www.baidu.com/123.jpg
   'admin/website/referer_week' => '周來路',
   'admin/website/referer_day' => '日來路',
   'admin/vod/title' => '視頻管理',
+  'admin/vod/repeat_refresh_pending' => '重名資料目錄尚未更新，請在重名影片頁重試。',
+  'admin/vod/repeat_refresh_failed' => '重名資料目錄更新未完成，請稍後重試。',
   'admin/vod/no' => '沒有',
   'admin/vod/have' => '有',
   'admin/vod/plot/title' => '分集劇情管理',

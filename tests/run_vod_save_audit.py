@@ -54,7 +54,7 @@ def main():
             else:
                 raise RuntimeError("Disposable MySQL fixture did not become ready")
             for image in images:
-                for test in ["framework_audit_vod_save.php", "framework_audit_vod_repeat.php"]:
+                for test in ["framework_audit_vod_save.php", "framework_audit_vod_repeat.php", "framework_audit_vod_repeat_faults.php"]:
                     subprocess.run([
                         "docker", "run", "--rm", "--network", "none", "--env-file", str(env_file),
                         "-e", "FRAMEWORK_AUDIT_MYSQL=1",

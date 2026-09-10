@@ -1654,6 +1654,8 @@ Hinweis: Wenn sowohl Blacklist als auch Whitelist ausgefüllt sind, werden beide
   'admin/website/referer_week' => 'Wöchentliche Verweise',
   'admin/website/referer_day' => 'Tägliche Verweise',
   'admin/vod/title' => 'Video-Verwaltung',
+  'admin/vod/repeat_refresh_pending' => 'Die Liste gleichnamiger Videos muss noch aktualisiert werden. Bitte auf der Seite für gleichnamige Videos erneut versuchen.',
+  'admin/vod/repeat_refresh_failed' => 'Die Liste gleichnamiger Videos konnte nicht aktualisiert werden. Bitte später erneut versuchen.',
   'admin/vod/no' => 'Nein',
   'admin/vod/have' => 'Sim',
   'admin/vod/plot/title' => 'Episoden-Handlung-Verwaltung',
