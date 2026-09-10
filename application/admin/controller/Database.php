@@ -1,7 +1,6 @@
 <?php
 namespace app\admin\controller;
 use think\facade\Db;
-use app\common\util\Dir;
 use app\common\util\Database as dbOper;
 
 class Database extends Base
@@ -12,171 +11,252 @@ class Database extends Base
         parent::__construct();
     }
 
-    public function index()
+    private function backupConfig(): array
     {
-        $group = \think\facade\Request::param("group");
-        if($group=='import'){
-            //列出备份文件列表
-            $path = trim( $GLOBALS['config']['db']['backup_path'], '/').DS;
-            if (!is_dir($path)) {
-                Dir::create($path);
-            }
-            $flag = \FilesystemIterator::KEY_AS_FILENAME;
-            $glob = new \FilesystemIterator($path,  $flag);
+        $settings = $GLOBALS['config']['db'] ?? null;
+        $path = is_array($settings) ? ($settings['backup_path'] ?? null) : null;
+        if (!is_string($path) || trim($path) === '' || preg_match('/[\x00-\x1f\x7f]/', $path)
+            || str_contains($path, '://')) {
+            throw new \RuntimeException('Invalid backup directory');
+        }
+        $path = str_replace('\\', '/', trim($path));
+        if (in_array('..', explode('/', $path), true)) { throw new \RuntimeException('Invalid backup directory'); }
+        if (!str_starts_with($path, '/') && !preg_match('/^[a-zA-Z]:\//', $path)) { $path = ROOT_PATH.$path; }
+        if (!is_dir($path) && !@mkdir($path, 0700, true) && !is_dir($path)) {
+            throw new \RuntimeException('Cannot create backup directory');
+        }
+        $path = realpath($path);
+        if ($path === false) { throw new \RuntimeException('Invalid backup directory'); }
+        return ['path'=>rtrim($path, DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR,
+            'part'=>$settings['part_size'] ?? 20971520, 'compress'=>$settings['compress'] ?? 0,
+            'level'=>$settings['compress_level'] ?? 6];
+    }
 
-            $list = [];
-            foreach ($glob as $name => $file) {
-                if(preg_match('/^\d{8,8}-\d{6,6}-\d+\.sql(?:\.gz)?$/', $name)){
-                    $name = sscanf($name, '%4s%2s%2s-%2s%2s%2s-%d');
-                    $date = "{$name[0]}-{$name[1]}-{$name[2]}";
-                    $time = "{$name[3]}:{$name[4]}:{$name[5]}";
-                    $part = $name[6];
+    /** The inode stays in place: existence is not ownership, flock is. */
+    private function backupLock(string $path)
+    {
+        $filename = $path.'backup.lock';
+        $mask = umask(0077);
+        try { $stream = @fopen($filename, 'x+b'); }
+        finally { umask($mask); }
+        if ($stream === false) {
+            if (is_link($filename) || !is_file($filename)) { throw new \RuntimeException('Invalid backup lock'); }
+            $stream = @fopen($filename, 'r+b');
+        }
+        if ($stream === false) { throw new \RuntimeException('Cannot open backup lock'); }
+        if (!@flock($stream, LOCK_EX | LOCK_NB)) { fclose($stream); return null; }
+        clearstatcache(true, $filename);
+        $stat = @lstat($filename); $opened = fstat($stream);
+        if (!$stat || !$opened || ($stat['mode'] & 0170000) !== 0100000 || $stat['nlink'] !== 1
+            || $stat['dev'] !== $opened['dev'] || $stat['ino'] !== $opened['ino']) {
+            fclose($stream); throw new \RuntimeException('Backup lock changed');
+        }
+        $owner = getmypid().' '.time()."\n";
+        if (!@ftruncate($stream, 0) || @fwrite($stream, $owner) !== strlen($owner) || !@fflush($stream)) {
+            fclose($stream); throw new \RuntimeException('Cannot write backup lock');
+        }
+        return $stream;
+    }
 
-                    if(isset($list["{$date} {$time}"])){
-                        $info = $list["{$date} {$time}"];
-                        $info['part'] = max($info['part'], $part);
-                        $info['size'] = $info['size'] + $file->getSize();
-                    } else {
-                        $info['part'] = $part;
-                        $info['size'] = $file->getSize();
-                    }
+    private function backupName($id): ?string
+    {
+        if ((!is_int($id) && !is_string($id)) || !preg_match('/^[1-9][0-9]*$/D', (string)$id)) { return null; }
+        $time = filter_var($id, FILTER_VALIDATE_INT, ['options'=>['min_range'=>1,'max_range'=>253402214399]]);
+        return $time === false ? null : date('Ymd-His', $time);
+    }
 
-                    $extension        = strtoupper($file->getExtension());
-                    $info['compress'] = ($extension === 'SQL') ? '无' : $extension;
-                    $info['time']     = strtotime("{$date} {$time}");
-
-                    $list["{$date} {$time}"] = $info;
+    /** Exact filenames only; a new archive is usable after its manifest is published. */
+    private function backupParts(string $path, string $name, bool $verifyHashes = false): array
+    {
+        if (file_exists($path.'.'.$name.'.pending') || is_link($path.'.'.$name.'.pending')) {
+            throw new \RuntimeException('Backup is incomplete');
+        }
+        $parts = []; $compression = null;
+        foreach (glob($path.$name.'-*.sql*') ?: [] as $filename) {
+            if (!preg_match('/^'.preg_quote($name, '/').'-([1-9][0-9]*)\.sql(\.gz)?$/D', basename($filename), $match)) { continue; }
+            $part = filter_var($match[1], FILTER_VALIDATE_INT, ['options'=>['min_range'=>1]]);
+            $gzip = !empty($match[2]) ? 1 : 0;
+            if ($part === false || !is_file($filename) || is_link($filename) || isset($parts[$part])
+                || ($compression !== null && $compression !== $gzip)) { throw new \RuntimeException('Invalid backup part'); }
+            $compression = $gzip; $parts[$part] = [$part, $filename, $gzip];
+        }
+        ksort($parts);
+        if (!$parts || array_keys($parts) !== range(1, count($parts))) { throw new \RuntimeException('Missing backup part'); }
+        $manifest = $path.'.'.$name.'.json';
+        if (file_exists($manifest) || is_link($manifest)) {
+            if (!is_file($manifest) || is_link($manifest) || filesize($manifest) > 1048576) { throw new \RuntimeException('Invalid backup manifest'); }
+            $data = json_decode((string)file_get_contents($manifest), true);
+            if (!is_array($data) || ($data['version'] ?? null) !== 1 || !is_array($data['parts'] ?? null)
+                || count($data['parts']) !== count($parts)) { throw new \RuntimeException('Invalid backup manifest'); }
+            foreach (array_values($parts) as $index=>$part) {
+                $expected = $data['parts'][$index] ?? null;
+                if (!is_array($expected) || ($expected['name'] ?? null) !== basename($part[1])
+                    || ($expected['size'] ?? null) !== filesize($part[1]) || !is_string($expected['sha256'] ?? null)
+                    || !preg_match('/^[a-f0-9]{64}$/D', $expected['sha256'])
+                    || ($verifyHashes && !hash_equals($expected['sha256'], hash_file('sha256', $part[1])))) {
+                    throw new \RuntimeException('Backup integrity check failed');
                 }
             }
+        } else {
+            // Old MacCMS archives had no manifest. New codec archives require theirs.
+            $first = reset($parts);
+            $stream = $first[2] ? @gzopen($first[1], 'rb') : @fopen($first[1], 'rb');
+            if (!is_resource($stream)) { throw new \RuntimeException('Cannot read backup'); }
+            try { $header = $first[2] ? gzgets($stream, 80) : fgets($stream, 80); }
+            finally { $first[2] ? gzclose($stream) : fclose($stream); }
+            if (trim((string)$header) === '-- MySQL backup') { throw new \RuntimeException('Missing backup manifest'); }
         }
-        else{
-            $group='export';
-            $list = Db::query("SHOW TABLE STATUS");
-        }
+        return $parts;
+    }
 
-        $this->assign('list',$list);
-        $this->assign('title',lang('admin/database/title'));
+    private function writeBackupMetadata(string $filename, string $bytes): void
+    {
+        $mask = umask(0077);
+        try { $stream = @fopen($filename, 'xb'); }
+        finally { umask($mask); }
+        if ($stream === false) { throw new \RuntimeException('Cannot create backup metadata'); }
+        try {
+            for ($offset = 0, $length = strlen($bytes); $offset < $length;) {
+                $written = @fwrite($stream, substr($bytes, $offset));
+                if ($written === false || $written === 0) { throw new \RuntimeException('Cannot write backup metadata'); }
+                $offset += $written;
+            }
+            if (!@fflush($stream)) { throw new \RuntimeException('Cannot flush backup metadata'); }
+        } finally { fclose($stream); }
+    }
+
+    public function index()
+    {
+        $group = $this->request->param('group');
+        $list = [];
+        if ($group === 'import') {
+            try {
+                $path = $this->backupConfig()['path'];
+                $names = [];
+                foreach (new \FilesystemIterator($path, \FilesystemIterator::SKIP_DOTS) as $file) {
+                    if (preg_match('/^(\d{8}-\d{6})-[1-9][0-9]*\.sql(?:\.gz)?$/D', $file->getFilename(), $match)) {
+                        $names[$match[1]] = true;
+                    }
+                }
+                foreach (array_keys($names) as $name) {
+                    try { $parts = $this->backupParts($path, $name); }
+                    catch (\Throwable $error) { continue; }
+                    $date = \DateTimeImmutable::createFromFormat('!Ymd-His', $name);
+                    if (!$date || $date->format('Ymd-His') !== $name) { continue; }
+                    $first = reset($parts);
+                    $list[$date->format('Y-m-d H:i:s')] = ['part'=>count($parts),
+                        'size'=>array_sum(array_map(static fn($part)=>filesize($part[1]), $parts)),
+                        'compress'=>$first[2] ? 'GZ' : '无', 'time'=>$date->getTimestamp()];
+                }
+            } catch (\Throwable $error) { return $this->error(lang('admin/database/file_damage')); }
+        } else {
+            $group = 'export';
+            $list = Db::query('SHOW TABLE STATUS');
+        }
+        $this->assign('list', $list);
+        $this->assign('title', lang('admin/database/title'));
         return $this->fetch('admin@database/'.$group);
     }
 
     public function export($ids = '', $start = 0)
     {
-        if ($this->request->isPost()) {
-            if (empty($ids)) {
+        if (!$this->request->isPost()) { return $this->error(lang('admin/database/backup_err')); }
+        $tables = is_array($ids) ? $ids : [$ids];
+        if (!$tables) { return $this->error(lang('admin/database/select_export_table')); }
+        foreach ($tables as $table) {
+            if (!is_string($table) || $table === '' || str_contains($table, "\0")) {
                 return $this->error(lang('admin/database/select_export_table'));
             }
-
-            if (!is_array($ids)) {
-                $tables[] = $ids;
-            } else {
-                $tables = $ids;
-            }
-            $have_admin = false;
-            $admin_table='';
-            foreach($tables as $k=>$v){
-                if(strpos($v,'_admin')!==false){
-                    $have_admin=true;
-                    $admin_table = $v;
-                    unset($tables[$k]);
-                }
-            }
-            if($have_admin){
-                $tables[] = $admin_table;
-            }
-
-            //读取备份配置
-            $config = array(
-                'path'     => $GLOBALS['config']['db']['backup_path'] .DS,
-                'part'     => $GLOBALS['config']['db']['part_size'] ,
-                'compress' => $GLOBALS['config']['db']['compress'] ,
-                'level'    => $GLOBALS['config']['db']['compress_level'] ,
-            );
-
-            //检查是否有正在执行的任务
-            $lock = "{$config['path']}backup.lock";
-            if(is_file($lock)){
-                return $this->error(lang('admin/database/lock_check'));
-            } else {
-                if (!is_dir($config['path'])) {
-                    Dir::create($config['path'], 0755, true);
-                }
-                //创建锁文件
-                file_put_contents($lock, $this->request->time());
-            }
-
-            //生成备份文件信息
-            $file = [
-                'name' => date('Ymd-His', $this->request->time()),
-                'part' => 1,
-            ];
-
-            // 创建备份文件
-            $database = new dbOper($file, $config);
-            if($database->create() !== false) {
-                // 备份指定表
-                foreach ($tables as $table) {
-                    $start = $database->backup($table, $start);
-                    while (0 !== $start) {
-                        if (false === $start) {
-                            return $this->error(lang('admin/database/backup_err'));
-                        }
-                        $start = $database->backup($table, $start[0]);
-                    }
-                }
-                // 备份完成，删除锁定文件
-                unlink($lock);
-            }
-            return $this->success(lang('admin/database/backup_ok'));
         }
-        return $this->error(lang('admin/database/backup_err'));
+        // This endpoint has always completed one synchronous job; no cross-request offset is safe.
+        if (!in_array($start, [0, '0'], true)) { return $this->error(lang('admin/database/backup_err')); }
+        $lock = null; $database = null; $staging = null; $marker = null; $manifest = null;
+        $published = []; $complete = false; $message = 'admin/database/backup_err';
+        try {
+            $known = array_column(Db::query('SHOW TABLE STATUS'), 'Name');
+            $tables = array_values(array_unique($tables));
+            foreach ($tables as $table) {
+                if (!in_array($table, $known, true)) { throw new \RuntimeException('Invalid backup table'); }
+            }
+            // Keep administrator tables last, without dropping multiple selected matching tables.
+            usort($tables, static fn($a,$b)=>(int)str_contains($a,'_admin') <=> (int)str_contains($b,'_admin'));
+            $config = $this->backupConfig(); $path = $config['path'];
+            $lock = $this->backupLock($path);
+            if ($lock === null) { $message = 'admin/database/lock_check'; throw new \RuntimeException('Backup is busy'); }
+            $name = $this->backupName($this->request->time());
+            if ($name === null || (glob($path.$name.'-*.sql*') ?: [])
+                || file_exists($path.'.'.$name.'.json') || is_link($path.'.'.$name.'.json')
+                || file_exists($path.'.'.$name.'.pending') || is_link($path.'.'.$name.'.pending')) {
+                throw new \RuntimeException('Backup name already exists');
+            }
+            $marker = $path.'.'.$name.'.pending';
+            $this->writeBackupMetadata($marker, "Backup has not completed.\n");
+            $staging = $path.'.backup-'.bin2hex(random_bytes(12));
+            if (!@mkdir($staging, 0700)) { throw new \RuntimeException('Cannot create backup staging directory'); }
+            $config['path'] = $staging.DIRECTORY_SEPARATOR;
+            $database = new dbOper(['name'=>$name, 'part'=>1], $config);
+            if (!$database->create()) { throw new \RuntimeException('Cannot create backup'); }
+            foreach ($tables as $table) {
+                $next = $database->backup($table, 0);
+                while (is_array($next)) { $next = $database->backup($table, $next[0]); }
+                if ($next !== 0) { throw new \RuntimeException('Cannot complete backup'); }
+            }
+            if (!$database->close()) { throw new \RuntimeException('Cannot close backup'); }
+            $metadata = ['version'=>1, 'parts'=>[]];
+            foreach ($database->createdFiles() as $source) {
+                $destination = $path.basename($source);
+                // Hard-link publication is exclusive and stays on the same filesystem.
+                if (!@link($source, $destination)) { throw new \RuntimeException('Cannot publish backup'); }
+                $published[] = $destination;
+                $metadata['parts'][] = ['name'=>basename($source), 'size'=>filesize($source), 'sha256'=>hash_file('sha256', $source)];
+            }
+            $manifest = $path.'.'.$name.'.json';
+            $encoded = json_encode($metadata, JSON_THROW_ON_ERROR);
+            if (strlen($encoded) > 1048576) { throw new \RuntimeException('Backup manifest is too large'); }
+            $this->writeBackupMetadata($manifest, $encoded);
+            if (!@unlink($marker)) { throw new \RuntimeException('Cannot complete backup publication'); }
+            $complete = true;
+        } catch (\Throwable $error) {
+            // Only resources owned by this attempt may be removed; an old archive is never overwritten.
+        } finally {
+            if ($database !== null) { $database->close(); }
+            $cleaned = true;
+            if (!$complete) {
+                foreach ($published as $filename) { $cleaned = @unlink($filename) && $cleaned; }
+                if ($manifest !== null && is_file($manifest)) { $cleaned = @unlink($manifest) && $cleaned; }
+            }
+            if ($staging !== null && is_dir($staging)) {
+                foreach ($database !== null ? $database->createdFiles() : [] as $filename) { @unlink($filename); }
+                @rmdir($staging);
+            }
+            if (!$complete && $cleaned && $marker !== null && is_file($marker)) { @unlink($marker); }
+            if (is_resource($lock)) { flock($lock, LOCK_UN); fclose($lock); }
+        }
+        return $complete ? $this->success(lang('admin/database/backup_ok')) : $this->error(lang($message));
     }
 
-    /**
-     * 恢复数据库 [参考原作者 麦当苗儿 <zuojiazi@vip.qq.com>]
-     * @param string|array $ids 表名
-     * @param integer $start 起始行数
-     * @author 橘子俊 <364666827@qq.com>
-     * @return mixed
-     */
     public function import($id = '')
     {
-        if (empty($id)) {
-            return $this->error(lang('admin/database/select_file'));
-        }
-
-        $name  = date('Ymd-His', $id) . '-*.sql*';
-        $path  = trim( $GLOBALS['config']['db']['backup_path'] , '/').DS.$name;
-        $files = glob($path);
-        $list  = array();
-        foreach($files as $name){
-            $basename = basename($name);
-            $match    = sscanf($basename, '%4s%2s%2s-%2s%2s%2s-%d');
-            $gz       = preg_match('/^\d{8,8}-\d{6,6}-\d+\.sql.gz$/', $basename);
-            $list[$match[6]] = array($match[6], $name, $gz);
-        }
-        ksort($list);
-
-        // 检测文件正确性
-        $last = end($list);
-        if(count($list) === $last[0]){
-            foreach ($list as $item) {
-                $config = [
-                    'path'     => trim($GLOBALS['config']['db']['backup_path'], '/').DS,
-                    'compress' => $item[2]
-                ];
-                $database = new dbOper($item, $config);
-                $start = $database->import(0);
-                // 导入所有数据
-                while (0 !== $start) {
-                    if (false === $start) {
-                        return $this->error(lang('admin/database/import_err'));
-                    }
-                    $start = $database->import($start[0]);
-                }
+        $name = $this->backupName($id);
+        if (!$this->request->isPost() || $name === null) { return $this->error(lang('admin/database/select_file')); }
+        $lock = null; $complete = false; $message = 'admin/database/file_damage';
+        try {
+            $config = $this->backupConfig();
+            $lock = $this->backupLock($config['path']);
+            if ($lock === null) { $message = 'admin/database/lock_check'; throw new \RuntimeException('Backup is busy'); }
+            $parts = $this->backupParts($config['path'], $name, true);
+            $message = 'admin/database/import_err';
+            foreach ($parts as $part) {
+                $config['compress'] = $part[2];
+                $database = new dbOper($part, $config, 'import');
+                $next = $database->import(0);
+                while (is_array($next)) { $next = $database->import($next[0]); }
+                if ($next !== 0) { throw new \RuntimeException('Cannot restore backup'); }
             }
-            return $this->success(lang('admin/database/import_ok'));
-        }
-        return $this->error(lang('admin/database/file_damage'));
+            $complete = true;
+        } catch (\Throwable $error) {
+        } finally { if (is_resource($lock)) { flock($lock, LOCK_UN); fclose($lock); } }
+        return $complete ? $this->success(lang('admin/database/import_ok')) : $this->error(lang($message));
     }
 
     public function optimize($ids = '')
@@ -530,17 +610,33 @@ class Database extends Base
 
     public function del($id = '')
     {
-        if (empty($id)) {
-            return $this->error(lang('admin/database/select_del_file'));
-        }
-
-        $name  = date('Ymd-His', $id) . '-*.sql*';
-        $path = trim($GLOBALS['config']['db']['backup_path']).DS.$name;
-        array_map("unlink", glob($path));
-        if(count(glob($path)) && glob($path)){
-            return $this->error(lang('del_err'));
-        }
-        return $this->success(lang('del_ok'));
+        $name = $this->backupName($id);
+        if (!$this->request->isPost() || $name === null) { return $this->error(lang('admin/database/select_del_file')); }
+        $lock = null; $complete = false; $message = 'del_err';
+        try {
+            $path = $this->backupConfig()['path'];
+            $lock = $this->backupLock($path);
+            if ($lock === null) { $message = 'admin/database/lock_check'; throw new \RuntimeException('Backup is busy'); }
+            $files = [];
+            foreach (glob($path.$name.'-*.sql*') ?: [] as $filename) {
+                if (preg_match('/^'.preg_quote($name, '/').'-[1-9][0-9]*\.sql(?:\.gz)?$/D', basename($filename))) { $files[] = $filename; }
+            }
+            foreach (['json','pending'] as $suffix) {
+                $filename = $path.'.'.$name.'.'.$suffix;
+                if (file_exists($filename) || is_link($filename)) { $files[] = $filename; }
+            }
+            if (!$files) { throw new \RuntimeException('No backup files selected'); }
+            // Deletion also works for incomplete archives, but never follows links or loose suffixes.
+            foreach ($files as $filename) {
+                if (!is_file($filename) || is_link($filename)) { throw new \RuntimeException('Invalid backup file'); }
+            }
+            foreach ($files as $filename) {
+                if (!@unlink($filename)) { throw new \RuntimeException('Cannot delete backup file'); }
+            }
+            $complete = true;
+        } catch (\Throwable $error) {
+        } finally { if (is_resource($lock)) { flock($lock, LOCK_UN); fclose($lock); } }
+        return $complete ? $this->success(lang('del_ok')) : $this->error(lang($message));
     }
 
     public function sql()
