@@ -9,9 +9,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
  && pecl install redis \
  && docker-php-ext-enable redis \
  && a2enmod rewrite \
- && printf '%s\n' '<Directory /var/www/html>' '  AllowOverride All' '  Require all granted' '</Directory>' > /etc/apache2/conf-available/maccms.conf \
- && a2enconf maccms \
  && rm -rf /var/lib/apt/lists/*
+
+# Default HTTP boundary lives in the image, not a writable repository .htaccess.
+COPY apache/maccms.conf /etc/apache2/sites-available/000-default.conf
 
 # 生产推荐 OPcache 配置(zz- 前缀确保覆盖默认)
 COPY php/opcache.ini /usr/local/etc/php/conf.d/zz-opcache.ini

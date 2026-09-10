@@ -1,4 +1,4 @@
-# maccms10 Docker 部署(含性能基线:PHP 8.3 / MySQL 8.0 / OPcache / Redis / InnoDB)
+# maccms10 Docker 部署(含性能基线:PHP 8.4 / MySQL 8.0 / OPcache / Redis / InnoDB)
 
 可复现的本地/演示环境,默认即开启 **OPcache**;并预置 **Redis** 与 **Meilisearch** 供"缓存/会话/搜索"按需启用。
 
@@ -9,6 +9,14 @@ docker compose up -d --build
 # 浏览器打开 http://localhost:8088,首次进入安装向导:
 #   数据库主机 db、库名 maccms、用户 root、密码 maccmsroot
 ```
+
+## Apache 默认访问边界
+
+镜像使用 [apache/maccms.conf](apache/maccms.conf) 保护以仓库根目录为 DocumentRoot 的部署，支持 PHP 8.3/8.4。重新构建镜像后生效：内部配置、依赖、运行数据、点文件和备份文件禁止通过 HTTP 读取，上传脚本禁止执行，目录列表和符号链接访问关闭。
+
+前台、根目录改名后的后台 `.php`、API/PATH_INFO 和漂亮 URL 默认可用。现有模板/插件静态资源、编辑器页面、上传图片及允许的下载文件保持原路径；模板 view 和插件配置不作为静态资源公开。
+
+`.htaccess` 不再生效。部署自定义路由或新增插件资源类型时，请审查后修改镜像中的可信配置并重建，保留内部目录及上传执行限制。详见[审计范围与验证](../docs/audit/2026-09/apache-boundary.md)。
 
 ## 性能项落地对照
 | 项 | 如何启用 | 说明 |

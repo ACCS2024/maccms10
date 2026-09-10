@@ -149,6 +149,7 @@ jobs:
           python3 tests/run_hits_buffer_audit.py maccms-ci:${{ matrix.php }}
           python3 tests/run_collection_audit.py maccms-ci:${{ matrix.php }}
           python3 tests/run_baidu_urlsend_audit.py maccms-ci:${{ matrix.php }}
+          python3 tests/run_apache_boundary_audit.py maccms-ci:${{ matrix.php }}
       - name: Decode generated QR images with an independent implementation
         run: |
           python3 -m venv /tmp/maccms-qr-venv

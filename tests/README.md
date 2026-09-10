@@ -53,12 +53,13 @@ docker build --build-arg PHP_VERSION=8.4 -t maccms-audit:8.4 docker
 python3 tests/run_hits_buffer_audit.py maccms-audit:8.4
 python3 tests/run_collection_audit.py maccms-audit:8.4
 python3 tests/run_baidu_urlsend_audit.py maccms-audit:8.4
+python3 tests/run_apache_boundary_audit.py maccms-audit:8.4
 python3 -m venv /tmp/maccms-qr-venv
 /tmp/maccms-qr-venv/bin/pip install -r tests/requirements-qr.txt
 /tmp/maccms-qr-venv/bin/python tests/run_qrcode_audit.py maccms-audit:8.4
 ```
 
-容器回归需要 Docker、Python 3；HitsBuffer 还需要宿主 redis-server，百度 TLS 测试需要 openssl。各运行器创建并清理自己的临时服务。QR 测试独立解码实际 PNG，避免只比较生成器自身结果。
+容器回归需要 Docker、Python 3；HitsBuffer 还需要宿主 redis-server，百度 TLS 测试需要 openssl。各运行器创建并清理自己的临时服务。QR 测试独立解码实际 PNG，避免只比较生成器自身结果。Apache 测试用纯假站点验证镜像内默认配置和真实 TP8 Request，不请求仓库秘密文件；完整业务 HTTP 由另一层单独覆盖。
 
 ## 工作流与静态分析
 
