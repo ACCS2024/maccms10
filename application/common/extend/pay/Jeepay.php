@@ -131,75 +131,94 @@ class Jeepay {
         $param = $_POST;
         if (empty($param)) {
             echo 'invalid request';
-            exit;
+            return;
         }
 
-        $jeepay_config = $GLOBALS['config']['pay']['jeepay'];
-        $app_secret = trim($jeepay_config['appkey']);
+        foreach ($param as $value) {
+            if (!is_string($value) && !is_int($value)) {
+                echo 'fail';
+                return;
+            }
+        }
+        $GLOBALS['config']['pay'] = config('maccms.pay');
+        $jeepay_config = $GLOBALS['config']['pay']['jeepay'] ?? [];
+        $app_secret = trim((string)($jeepay_config['appkey'] ?? ''));
+        if ($app_secret === '' || empty($jeepay_config['appid']) || empty($jeepay_config['mch_no'])
+            || (string)($param['appId'] ?? '') !== trim((string)$jeepay_config['appid'])
+            || (string)($param['mchNo'] ?? '') !== trim((string)$jeepay_config['mch_no'])
+            || ($param['signType'] ?? 'MD5') !== 'MD5') {
+            echo 'fail';
+            return;
+        }
 
         // 取出签名
         $sign = $param['sign'] ?? '';
         if (empty($sign)) {
             echo 'sign is empty';
-            exit;
+            return;
         }
 
         // 验证签名
         $calc_sign = $this->makeSign($param, $app_secret);
-        if ($calc_sign !== $sign) {
+        if (!hash_equals($calc_sign, (string)$sign)) {
             echo 'sign verify failed';
-            exit;
+            return;
         }
 
         // 检查订单状态 state=2 为支付成功
-        $state = intval($param['state'] ?? 0);
+        $state = (string)($param['state'] ?? '');
         $mch_order_no = $param['mchOrderNo'] ?? '';
 
         if (empty($mch_order_no)) {
             echo 'mchOrderNo is empty';
-            exit;
+            return;
         }
 
         // 只处理 state=2（支付成功），其他状态返回 fail 让网关继续重试
-        if ($state != 2) {
+        if ($state !== '2') {
             echo 'fail';
-            exit;
+            return;
         }
 
         // 金额复核：防止改价攻击
-        $callback_amount = intval($param['amount'] ?? 0);
-        $order = \think\facade\Db::name('order')->where('order_code', $mch_order_no)->find();
-        if (empty($order)) {
-            echo 'order not found';
-            exit;
-        }
-        $expect_amount = intval(round(floatval($order['order_price']) * 100));
-        if ($callback_amount !== $expect_amount) {
+        $amount = (string)($param['amount'] ?? '');
+        if (!preg_match('/^[0-9]{1,10}$/D', $amount) || (int)$amount <= 0) {
             echo 'amount mismatch';
-            exit;
+            return;
         }
+        $callback_amount = (int)$amount;
 
         // 币种校验
         $currency = strtoupper(trim($param['currency'] ?? ''));
-        if ($currency !== '' && $currency !== 'CNY') {
+        if ($currency !== 'CNY') {
             echo 'currency mismatch';
-            exit;
+            return;
         }
 
-        // 支付成功，更新订单
-        $res = (new \app\common\model\Order())->notify($mch_order_no, 'jeepay');
-        if ($res['code'] > 1) {
+        try {
+            $order = \think\facade\Db::name('order')->where('order_code', $mch_order_no)->find();
+            if (empty($order)) {
+                echo 'order not found';
+                return;
+            }
+            $expect_amount = intval(round(floatval($order['order_price']) * 100));
+            if ($callback_amount !== $expect_amount) {
+                echo 'amount mismatch';
+                return;
+            }
+            $paid = intdiv($callback_amount, 100) . '.' . str_pad((string)($callback_amount % 100), 2, '0', STR_PAD_LEFT);
+            $res = (new \app\common\model\Order())->notify($mch_order_no, 'jeepay', $paid);
+            echo in_array($res['code'] ?? null, [1, '1'], true) ? 'SUCCESS' : 'fail';
+        } catch (\Throwable $e) {
             echo 'fail';
-            exit;
         }
-        echo 'SUCCESS';
     }
 
     /**
      * JeePay 签名算法
      * 1. 删除 sign 字段
      * 2. 删除值为 null 或空字符串的字段
-     * 3. 按参数名不区分大小写升序排序
+     * 3. 按参数名 ASCII 升序排序
      * 4. 拼接 key=value& 形式
      * 5. 末尾追加 key=appSecret
      * 6. MD5 转大写
@@ -216,7 +235,7 @@ class Jeepay {
             $filtered[$key] = $value;
         }
 
-        uksort($filtered, 'strcasecmp');
+        ksort($filtered, SORT_STRING);
 
         $pairs = [];
         foreach ($filtered as $key => $value) {
