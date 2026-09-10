@@ -43,6 +43,8 @@ jobs:
           composer check-platform-reqs --no-dev
           composer audit --locked --no-dev
           composer --working-dir=extend/upyun audit --locked --no-dev
+      - name: Compile the installed tree including dependencies
+        run: php tests/php_lint.php --all --json=/tmp/php-installed-lint.json
       - name: Independent regression suites and SQLite models
         run: |
           php tests/run_audit.php --suite=unit,models,financial
@@ -136,6 +138,7 @@ jobs:
           name: php-${{ matrix.php }}-diagnostics
           path: |
             /tmp/php-lint.json
+            /tmp/php-installed-lint.json
             /tmp/admin_srv.log
             /tmp/ledger_srv.log
             runtime/*/log/

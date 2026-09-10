@@ -13,6 +13,8 @@ bash tests/lint.sh --json=/tmp/maccms-php-lint.json
 php tests/run_audit.php
 ```
 
+CI 在依赖安装后额外编译包含 vendor 的整份检出目录，并保存独立报告，避免维护目录的 lint 漏掉旧依赖中的 PHP 语法错误。
+
 原生 lint 对维护中的业务、扩展、入口和脚本逐个执行 `php -n -d error_reporting=-1 -l`，不加载应用或 php.ini；解析错误、弃用等额外诊断和未完成扫描均失败。`--all` 另外包含依赖、运行目录和旧归档，报告记录范围与排除项。
 
 `run_audit.php` 使用显式文件清单，每项运行在独立进程中，启用 E_ALL，限时 180 秒；缺文件、未知选项、超时及非零退出都会失败。默认执行 unit、models、financial，后两组默认用 SQLite。可以使用 `--suite=unit`、`--suite=models,financial`、`--list` 或 `--suite=all`。install 组的拒绝写入测试必须以普通用户运行，root 无法验证文件权限拒绝。
