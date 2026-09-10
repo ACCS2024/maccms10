@@ -74,3 +74,9 @@ AiSearch 的 Collection 问题已经在 c84bc161 通过实际 MySQL 修复；不
 相对 91486040，level 1 的 Art/Manga 各减少一处可选字段警告，旧 BulkTableIo 解析器减少一处，新 XlsxTableReader 增加一处未使用闭包捕获。level 5 的 Art/Manga 各减少一处、BulkTableIo 减少两处、XlsxTableReader 新增 16 处。XLSX 的多处 null/不可达提示横跨 XMLReader 回调和捕获变量的状态变化；449 项实际解析/边界和 68 项普通文本回归已运行，但不能据此一笔勾销全部静态候选。未使用捕获、已知原生返回类型和更复杂状态推导分别复核，不为数字归零添加无效默认值。
 
 普通模型调查已把一部分候选变成实际证据：漫画和文章保存已独立修复，Vod 保存及重复目录的问题仍待处理，详见跨模块清单。PHPStan 的全局零错误表示分析器跑完，不表示应用没有问题。
+
+## 691eb9ab 重扫
+
+见[固定阶段记录](phase-verification-691eb9ab.md)：level 1 为 410、level 5 为 1,180，均无全局分析错误；PHPCompatibility 0 错误、8 警告。两档 Vod 模型均减少 11 项。level 5 新增 VodRepeatCatalog::insertGroups 的 `BaseQuery::group` 方法推导：锁定 ORM 的 `newQuery(): BaseQuery` 实际按配置创建 SQL Query 子类，该子类提供 group；真实 MySQL 已执行这条路径。它与实际缺失方法或默认运行失败须分开记录，后续进一步明确所支持的查询构造器合同，不能仅为减小数字追加忽略规则。
+
+正文边界扩查在固定后台模板中定位到 124 个含服务端变量的 textarea，八个正文/剧情已修复。其余位置既有直接原文，也有 htmlspecialchars、mac_filter_xss 和旧分隔处理；数量不是未修漏洞数。评论等部分内容在写入时已经编码，不能一律追加双重编码，否则会改变再次编辑/保存的内容。需结合存储表示和实际模板往返逐项核对。
