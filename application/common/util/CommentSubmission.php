@@ -103,7 +103,7 @@ final class CommentSubmission
             ])->find()) {
                 return ['code'=>1001, 'msg'=>lang('param_err')];
             }
-            $result = (new Comment())->saveData($data);
+            $result = (new Comment())->saveData($data, true);
         } catch (\Throwable $e) {
             return ['code'=>1002, 'msg'=>lang('save_err')];
         }

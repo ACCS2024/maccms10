@@ -220,8 +220,25 @@ class Comment extends Base {
         return ['code'=>1,'msg'=>lang('obtain_ok'),'info'=>$info];
     }
 
-    public function saveData($data)
+    public function saveData($data, bool $trustedSubmission = false)
     {
+        if (!is_array($data)) {
+            return ['code'=>1001,'msg'=>lang('param_err')];
+        }
+        $canonical = [];
+        foreach ($data as $key => $value) {
+            if (!is_string($key) || !preg_match('/^[A-Za-z_][A-Za-z0-9_]{0,63}$/D', $key)
+                || array_key_exists(strtolower($key), $canonical)) {
+                return ['code'=>1001,'msg'=>lang('param_err')];
+            }
+            $canonical[strtolower($key)] = $value;
+        }
+        $data = $canonical;
+        if ($trustedSubmission && !empty($data['comment_id'])) {
+            return ['code'=>1001,'msg'=>lang('param_err')];
+        }
+        // Only the authenticated public create service may attest a new comment.
+        unset($data['comment_reward_verified']);
         $validate = mac_validate('Comment');
         if(!$validate->check($data)){
             return ['code'=>1001,'msg'=>lang('param_err').'：'.$validate->getError() ];
@@ -242,11 +259,21 @@ class Comment extends Base {
         if(!empty($data['comment_id'])){
             $where=[];
             $where['comment_id'] = $data['comment_id'];
+            if ($this->supportsRewardVerification()) {
+                $existing = Db::name('Comment')->where($where)->find();
+                if ($existing && self::rewardEvidenceChanged($data, $existing)) {
+                    $data['comment_reward_verified'] = 0;
+                }
+            }
             $data = $this->filterFields($data);
             $res = $this->where($where)->update($data);
         }
         else{
             $data['comment_time'] = time();
+            if ($this->supportsRewardVerification()) {
+                $data['comment_reward_verified'] = $trustedSubmission
+                    && \app\common\util\PointsBalance::amount($data['user_id'] ?? null) !== null ? 1 : 0;
+            }
             $data = $this->filterFields($data);
             $res = $this->insert($data);
         }
@@ -254,6 +281,25 @@ class Comment extends Base {
             return ['code'=>1002,'msg'=>lang('save_err').'：'.$this->getError() ];
         }
         return ['code'=>1,'msg'=>lang('save_ok')];
+    }
+
+    /** Missing migrations must not prevent ordinary comments or create reward provenance. */
+    public function supportsRewardVerification(): bool
+    {
+        return in_array('comment_reward_verified', Db::name('Comment')->getTableFields(), true);
+    }
+
+    private const REWARD_EVIDENCE_FIELDS = ['user_id','comment_time','comment_content','comment_mid','comment_rid','comment_pid'];
+
+    private static function rewardEvidenceChanged(array $data, array $existing): bool
+    {
+        foreach (self::REWARD_EVIDENCE_FIELDS as $field) {
+            if (array_key_exists($field, $data)
+                && (!is_scalar($data[$field]) || (string)$data[$field] !== (string)$existing[$field])) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public function delData($where)
@@ -267,12 +313,20 @@ class Comment extends Base {
 
     public function fieldData($where,$col,$val)
     {
-        if(!isset($col) || !isset($val)){
+        if (!is_string($col) || !preg_match('/^[A-Za-z_][A-Za-z0-9_]{0,63}$/D', $col) || !isset($val)) {
+            return ['code'=>1001,'msg'=>lang('param_err')];
+        }
+        // MySQL identifiers are case-insensitive, so authorization must use the same canonical name.
+        $col = strtolower($col);
+        if ($col === 'comment_reward_verified') {
             return ['code'=>1001,'msg'=>lang('param_err')];
         }
 
         $data = [];
         $data[$col] = $val;
+        if (in_array($col, self::REWARD_EVIDENCE_FIELDS, true) && $this->supportsRewardVerification()) {
+            $data['comment_reward_verified'] = 0;
+        }
         $res = $this->where($where)->update($data);
         if($res===false){
             return ['code'=>1001,'msg'=>lang('set_err').'：'.$this->getError() ];

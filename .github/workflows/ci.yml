@@ -80,6 +80,7 @@ jobs:
           php tests/run_audit.php --suite=financial
           php tests/security_audit_payment_schema.php
           php tests/security_audit_ledger_schema.php
+          php tests/security_audit_comment_reward_schema.php
       - name: Installer failure boundaries as the unprivileged runner
         run: php tests/run_audit.php --suite=install
       - name: Real MySQL installation through Web and CLI paths

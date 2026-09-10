@@ -402,6 +402,7 @@ CREATE TABLE `mac_comment` (
   `comment_pid` int(10) unsigned NOT NULL DEFAULT '0' ,
   `user_id` int(10) unsigned NOT NULL DEFAULT '0' ,
   `comment_status` tinyint(1) unsigned NOT NULL DEFAULT '1' ,
+  `comment_reward_verified` tinyint(1) unsigned NOT NULL DEFAULT '0' COMMENT '可信公开创建的会员评论，历史记录不自动认证' ,
   `comment_name` varchar(60) NOT NULL DEFAULT '' ,
   `comment_ip` int(10) unsigned NOT NULL DEFAULT '0' ,
   `comment_time` int(10) unsigned NOT NULL DEFAULT '0',
@@ -416,6 +417,7 @@ CREATE TABLE `mac_comment` (
   KEY `comment_time` (`comment_time`) USING BTREE,
   KEY `comment_pid` (`comment_pid`),
   KEY `user_id` (`user_id`),
+  KEY `comment_reward_user` (`user_id`,`comment_reward_verified`,`comment_status`,`comment_time`),
   KEY `comment_reply` (`comment_reply`)
 ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 ;
 
