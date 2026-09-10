@@ -70,6 +70,7 @@ class Manga extends Base
                     $v['manga_pic'] = mac_url_img($v['manga_pic']);
                 }
                 $v['manga_link'] = mac_url_manga_detail($v);
+                $v = \app\common\util\PublicContentView::detail('manga', $v);
             }
             unset($v);
         }
@@ -127,8 +128,7 @@ class Manga extends Base
             $info['is_fav'] = $fav['is_fav'];
             $info['fav_ulog_id'] = $fav['fav_ulog_id'];
 
-            unset($data['info']);
-            $data['info'] = $info;
+            $data['info'] = \app\common\util\PublicContentView::detail('manga', $info);
         }
         return json($data);
     }

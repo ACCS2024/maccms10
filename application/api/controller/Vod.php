@@ -183,75 +183,8 @@ class Vod extends Base
         $res['vod_pic_slide'] = mac_url_img($res['vod_pic_slide'] ?? '');
         $res['vod_link'] = mac_url_vod_detail($res);
 
-        // 解析播放源列表 vod_play_list
-        $playList = [];
-        if (!empty($res['vod_play_from']) && !empty($res['vod_play_url'])) {
-            $playerConfig = config('maccms.player') ?: [];
-            $froms = explode('$$$', $res['vod_play_from']);
-            $urls = explode('$$$', $res['vod_play_url']);
-            foreach ($froms as $k => $from) {
-                $from = trim($from);
-                if (empty($from)) continue;
-                $episodes = [];
-                $urlStr = isset($urls[$k]) ? $urls[$k] : '';
-                if (!empty($urlStr)) {
-                    $parts = explode('#', $urlStr);
-                    foreach ($parts as $idx => $part) {
-                        $part = trim($part);
-                        if (empty($part)) continue;
-                        $arr = explode('$', $part);
-                        $episodes[] = [
-                            'name' => isset($arr[0]) ? $arr[0] : '第' . ($idx + 1) . '集',
-                            'url'  => isset($arr[1]) ? $arr[1] : $arr[0],
-                        ];
-                    }
-                }
-                $show = $from;
-                if (isset($playerConfig[$from]) && !empty($playerConfig[$from]['show'])) {
-                    $show = $playerConfig[$from]['show'];
-                }
-                $playList[] = [
-                    'from'        => $from,
-                    'player_info' => ['show' => $show, 'from' => $from],
-                    'urls'        => $episodes,
-                ];
-            }
-        }
-        $res['vod_play_list'] = $playList;
-
-        // 解析下载源列表
-        $downList = [];
-        if (!empty($res['vod_down_from']) && !empty($res['vod_down_url'])) {
-            $froms = explode('$$$', $res['vod_down_from']);
-            $urls = explode('$$$', $res['vod_down_url']);
-            foreach ($froms as $k => $from) {
-                $from = trim($from);
-                if (empty($from)) continue;
-                $episodes = [];
-                $urlStr = isset($urls[$k]) ? $urls[$k] : '';
-                if (!empty($urlStr)) {
-                    $parts = explode('#', $urlStr);
-                    foreach ($parts as $idx => $part) {
-                        $part = trim($part);
-                        if (empty($part)) continue;
-                        $arr = explode('$', $part);
-                        $episodes[] = [
-                            'name' => isset($arr[0]) ? $arr[0] : '下载' . ($idx + 1),
-                            'url'  => isset($arr[1]) ? $arr[1] : $arr[0],
-                        ];
-                    }
-                }
-                $downList[] = [
-                    'from' => $from,
-                    'urls' => $episodes,
-                ];
-            }
-        }
-        $res['vod_down_list'] = $downList;
-
-        // 清理原始大字段（可选）
-        unset($res['vod_play_url'], $res['vod_play_server'], $res['vod_play_note']);
-        unset($res['vod_down_url'], $res['vod_down_server'], $res['vod_down_note']);
+        $players = config('maccms.player');
+        $res = \app\common\util\PublicContentView::detail('vod', $res, is_array($players) ? $players : []);
 
         // 与 get_list / model Vod 一致：mac_get_vip_exclusive_type_ids()
         $detailWrap = [$res];

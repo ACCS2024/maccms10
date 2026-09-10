@@ -231,6 +231,7 @@ class Art extends Base
         $info['is_fav'] = $fav['is_fav'];
         $info['fav_ulog_id'] = $fav['fav_ulog_id'];
         $info['user_has_up'] = mac_user_has_digg(2, $aid);
+        $info = \app\common\util\PublicContentView::detail('art', $info);
 
         return json([
             'code' => 1,
