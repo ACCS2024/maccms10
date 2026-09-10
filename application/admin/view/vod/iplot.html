@@ -28,7 +28,8 @@
                             <div class="layui-input-inline w500"><input type="text" name="vod_plot_name[]" class="layui-input" value="{$vo.name}" placeholder="{:lang('admin/vod/plot_name')}"></div>
                             <div class="layui-input-inline w400 p10"><a href="javascript:void(0)" class="j-editor-clear">{:lang('clear')}</a>&nbsp;<a href="javascript:void(0)" class="j-editor-remove">{:lang('del')}</a>&nbsp;<a href="javascript:void(0)" class="j-editor-up">{:lang('admin/vod/move_up')}</a>&nbsp;<a href="javascript:void(0)" class="j-editor-down">{:lang('admin/vod/move_down')}</a><br></div>
                             <div class="p10 m20"> </div>
-                            <div class="layui-input-block "><textarea id="vod_plot_detail{$key}" name="vod_plot_detail[]" type="text/plain" style="width:100%;height:150px">{$vo.detail|mac_str_correct=###,'#',chr(13)}</textarea></div>
+                            <div class="layui-input-block "><textarea id="vod_plot_detail{$key}" name="vod_plot_detail[]" type="text/plain" style="width:100%;height:150px">
+{$vo.detail|mac_str_correct=###,'#',chr(13)|mac_escape_textarea}</textarea></div>
                             <script>ueArray[{$key}] = editor_getEditor('vod_plot_detail{$key}');</script>
                         </div>
                         {/volist}

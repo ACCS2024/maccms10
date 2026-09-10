@@ -188,7 +188,8 @@
                     <div class="layui-form-item">
                         <label class="layui-form-label">{:lang('content')}：</label>
                         <div class="layui-input-block">
-                            <textarea id="website_content" name="website_content" type="text/plain" style="width:100%;height:300px">{$info.website_content|mac_url_content_img}</textarea>
+                            <textarea id="website_content" name="website_content" type="text/plain" style="width:100%;height:300px">
+{$info.website_content|mac_url_content_img|mac_escape_textarea}</textarea>
                         </div>
                     </div>
                 </div>

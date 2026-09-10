@@ -208,7 +208,8 @@
                         <div class="layui-input-inline w200"><input type="text" name="art_note[]" class="layui-input" value="{$vo.note}" placeholder="{:lang('page_note')}"></div>
                         <div class="layui-input-inline w200"><a href="javascript:void(0)" class="j-editor-clear">{:lang('clear')}</a>&nbsp;<a href="javascript:void(0)" class="j-editor-remove">{:lang('del')}</a>&nbsp;<a href="javascript:void(0)" class="j-editor-up">上移</a>&nbsp;<a href="javascript:void(0)" class="j-editor-down">下移</a>&nbsp;<br></div>
                         <div class="p10 m20"></div>
-                        <div class="layui-input-block"><textarea id="art_content{$key}" name="art_content[]" type="text/plain" style="width:100%;height:250px">{$vo.content|mac_url_content_img}</textarea></div>
+                        <div class="layui-input-block"><textarea id="art_content{$key}" name="art_content[]" type="text/plain" style="width:100%;height:250px">
+{$vo.content|mac_url_content_img|mac_escape_textarea}</textarea></div>
                         <script>ueArray[{$key}] = editor_getEditor('art_content{$key}');</script>
                     </div>
                     {/volist}

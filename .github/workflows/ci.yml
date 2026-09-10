@@ -74,6 +74,7 @@ jobs:
           CHROMIUM_BINARY="$browser_binary" node tests/browser/suggest.cjs
           CHROMIUM_BINARY="$browser_binary" node tests/browser/suggest_history.cjs
           CHROMIUM_BINARY="$browser_binary" PHP_BINARY=php node tests/browser/purchase_csrf_php.cjs
+          CHROMIUM_BINARY="$browser_binary" PHP_BINARY=php node tests/browser/editor_textarea.cjs
       - name: Prepare dedicated MySQL fixtures and verify InnoDB schema
         run: |
           set -euo pipefail

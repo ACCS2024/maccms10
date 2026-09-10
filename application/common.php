@@ -2123,6 +2123,12 @@ function mac_scalar_string($val, $default = '')
     return (string)$val;
 }
 
+/** Escape only textarea text; its template supplies the initial HTML parser newline. */
+function mac_escape_textarea($value): string
+{
+    return htmlspecialchars(mac_scalar_string($value), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8', true);
+}
+
 function mac_filter_html($str)
 {
     $str = mac_scalar_string($str);
