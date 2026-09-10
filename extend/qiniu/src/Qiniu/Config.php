@@ -127,6 +127,11 @@ final class Config
             $this->zoneCache[$cacheId] = $zone;
         } else {
             $zone = Zone::queryZone($accessKey, $bucket);
+            if (!$zone instanceof Zone) {
+                // queryZone retains the SDK's [null, Error] result on failure;
+                // a hostname getter cannot return that tuple or cache it as a Zone.
+                throw new \RuntimeException('Qiniu zone query failed');
+            }
             $this->zoneCache[$cacheId] = $zone;
         }
         return $zone;

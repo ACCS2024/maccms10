@@ -250,13 +250,29 @@ if (!defined('QINIU_FUNCTIONS_VERSION')) {
      */
     function explodeUpToken($upToken)
     {
+        if (!is_string($upToken)) {
+            return array(null, null, "invalid uptoken");
+        }
         $items = explode(':', $upToken);
-        if (count($items) != 3) {
+        if (count($items) != 3 || !preg_match('/^[A-Za-z0-9_-]+$/D', $items[0]) ||
+            !preg_match('/^[A-Za-z0-9_-]+={0,2}$/D', $items[1]) ||
+            !preg_match('/^[A-Za-z0-9_-]+={0,2}$/D', $items[2])) {
             return array(null, null, "invalid uptoken");
         }
         $accessKey = $items[0];
-        $putPolicy = json_decode(base64_decode($items[2]));
-        $scope = $putPolicy->scope;
+        $decoded = base64_decode(strtr($items[2], '-_', '+/'), true);
+        if ($decoded === false) {
+            return array(null, null, "invalid uptoken");
+        }
+        try {
+            $putPolicy = \json_decode($decoded, true, 512, JSON_THROW_ON_ERROR);
+        } catch (\JsonException $e) {
+            return array(null, null, "invalid uptoken");
+        }
+        $scope = is_array($putPolicy) ? ($putPolicy['scope'] ?? null) : null;
+        if (!is_string($scope) || $scope === '' || $scope[0] === ':') {
+            return array(null, null, "invalid uptoken");
+        }
         $scopeItems = explode(':', $scope);
         $bucket = $scopeItems[0];
         return array($accessKey, $bucket, null);

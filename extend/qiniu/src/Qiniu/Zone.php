@@ -102,29 +102,36 @@ final class Zone
     public static function queryZone($ak, $bucket)
     {
         $zone = new Zone();
-        $url = Config::UC_HOST . '/v2/query' . "?ak=$ak&bucket=$bucket";
+        $url = Config::UC_HOST . '/v2/query?' . http_build_query(
+            array('ak' => $ak, 'bucket' => $bucket), '', '&', PHP_QUERY_RFC3986
+        );
         $ret = Client::Get($url);
         if (!$ret->ok()) {
             return array(null, new Error($url, $ret));
         }
-        $r = ($ret->body === null) ? array() : $ret->json();
-        //parse zone;
-
-        $iovipHost = $r['io']['src']['main'][0];
-        $zone->iovipHost = $iovipHost;
-        $accMain = $r['up']['acc']['main'][0];
-        array_push($zone->cdnUpHosts, $accMain);
-        if (isset($r['up']['acc']['backup'])) {
-            foreach ($r['up']['acc']['backup'] as $key => $value) {
-                array_push($zone->cdnUpHosts, $value);
-            }
+        $r = $ret->json();
+        $io = $r['io']['src']['main'] ?? null;
+        $acc = $r['up']['acc']['main'] ?? null;
+        $src = $r['up']['src']['main'] ?? null;
+        $accBackup = $r['up']['acc']['backup'] ?? array();
+        $srcBackup = $r['up']['src']['backup'] ?? array();
+        if (!self::validHosts($io) || !self::validHosts($acc) || !self::validHosts($src) ||
+            !self::validHosts($accBackup, true) || !self::validHosts($srcBackup, true)) {
+            $ret->error = 'Invalid zone query response';
+            return array(null, new Error($url, $ret));
         }
-        $srcMain = $r['up']['src']['main'][0];
+
+        $iovipHost = $io[0];
+        $zone->iovipHost = $iovipHost;
+        $accMain = $acc[0];
+        array_push($zone->cdnUpHosts, $accMain);
+        foreach ($accBackup as $value) {
+            array_push($zone->cdnUpHosts, $value);
+        }
+        $srcMain = $src[0];
         array_push($zone->srcUpHosts, $srcMain);
-        if (isset($r['up']['src']['backup'])) {
-            foreach ($r['up']['src']['backup'] as $key => $value) {
-                array_push($zone->srcUpHosts, $value);
-            }
+        foreach ($srcBackup as $value) {
+            array_push($zone->srcUpHosts, $value);
         }
 
         //set specific hosts
@@ -147,5 +154,20 @@ final class Zone
         }
 
         return $zone;
+    }
+
+    private static function validHosts($hosts, $allowEmpty = false)
+    {
+        if (!is_array($hosts) || !array_is_list($hosts) || (!$allowEmpty && $hosts === array())) {
+            return false;
+        }
+        foreach ($hosts as $host) {
+            // Discovery returns hostnames, never a URL with userinfo, path or port.
+            if (!is_string($host) || $host === '' ||
+                filter_var($host, FILTER_VALIDATE_DOMAIN, FILTER_FLAG_HOSTNAME) === false) {
+                return false;
+            }
+        }
+        return true;
     }
 }

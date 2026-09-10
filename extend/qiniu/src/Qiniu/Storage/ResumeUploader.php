@@ -58,13 +58,14 @@ final class ResumeUploader
 
         list($accessKey, $bucket, $err) = \Qiniu\explodeUpToken($upToken);
         if ($err != null) {
-            return array(null, $err);
+            throw new \InvalidArgumentException($err);
         }
 
-        $upHost = $config->getUpHost($accessKey, $bucket);
-        if ($err != null) {
-            throw new \Exception($err->message(), 1);
+        if (!is_resource($inputStream) || get_resource_type($inputStream) !== 'stream' ||
+            !is_int($size) || $size < 0) {
+            throw new \InvalidArgumentException('Invalid upload stream or size');
         }
+        $upHost = $config->getUpHost($accessKey, $bucket);
         $this->host = $upHost;
     }
 
@@ -76,16 +77,17 @@ final class ResumeUploader
         $uploaded = 0;
         while ($uploaded < $this->size) {
             $blockSize = $this->blockSize($uploaded);
-            $data = fread($this->inputStream, $blockSize);
-            if ($data === false) {
-                throw new \Exception("file read failed", 1);
+            $data = '';
+            while (strlen($data) < $blockSize) {
+                $chunk = fread($this->inputStream, $blockSize - strlen($data));
+                if ($chunk === false || $chunk === '') {
+                    throw new \RuntimeException('file can not be read completely');
+                }
+                $data .= $chunk;
             }
             $crc = \Qiniu\crc32_data($data);
             $response = $this->makeBlock($data, $blockSize);
-            $ret = null;
-            if ($response->ok() && $response->json() != null) {
-                $ret = $response->json();
-            }
+            $ret = $response->json();
             if ($response->statusCode < 0) {
                 list($accessKey, $bucket, $err) = \Qiniu\explodeUpToken($this->upToken);
                 if ($err != null) {
@@ -95,12 +97,15 @@ final class ResumeUploader
                 $upHostBackup = $this->config->getUpBackupHost($accessKey, $bucket);
                 $this->host = $upHostBackup;
             }
-            if ($response->needRetry() || !isset($ret['crc32']) || $crc != $ret['crc32']) {
+            if ($response->needRetry() || ($response->ok() && !self::validBlock($ret, $crc, $blockSize))) {
                 $response = $this->makeBlock($data, $blockSize);
                 $ret = $response->json();
             }
 
-            if (!$response->ok() || !isset($ret['crc32']) || $crc != $ret['crc32']) {
+            if (!$response->ok() || !self::validBlock($ret, $crc, $blockSize)) {
+                if ($response->ok()) {
+                    $response->error = 'Invalid block upload response';
+                }
                 return array(null, new Error($this->currentUrl, $response));
             }
             array_push($this->contexts, $ret['ctx']);
@@ -155,8 +160,20 @@ final class ResumeUploader
     private function post($url, $data)
     {
         $this->currentUrl = $url;
-        $headers = array('Authorization' => 'UpToken ' . $this->upToken);
+        $headers = array('Authorization' => 'UpToken ' . $this->upToken,
+            'Content-Type' => 'application/octet-stream');
         return Client::post($url, $data, $headers);
+    }
+
+    private static function validBlock($data, $crc, $blockSize)
+    {
+        return is_array($data) && isset($data['crc32'], $data['ctx'], $data['offset']) &&
+            (is_int($data['crc32']) || is_string($data['crc32'])) &&
+            (string)$data['crc32'] === $crc &&
+            is_string($data['ctx']) && $data['ctx'] !== '' &&
+            !preg_match('/[\x00-\x20,\x7f]/', $data['ctx']) &&
+            (is_int($data['offset']) || is_string($data['offset'])) &&
+            (string)$data['offset'] === (string)$blockSize;
     }
 
     private function blockSize($uploaded)
