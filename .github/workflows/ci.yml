@@ -71,6 +71,7 @@ jobs:
           CHROMIUM_BINARY="$browser_binary" PHP_BINARY=php node tests/browser/upload_csrf.cjs
           CHROMIUM_BINARY="$browser_binary" PHP_BINARY=php REMOTE_UPLOAD_AUDIT_BROWSER=1 node tests/browser/upload_csrf.cjs
           CHROMIUM_BINARY="$browser_binary" node tests/browser/purchase_csrf.cjs
+          CHROMIUM_BINARY="$browser_binary" node tests/browser/suggest.cjs
           CHROMIUM_BINARY="$browser_binary" PHP_BINARY=php node tests/browser/purchase_csrf_php.cjs
       - name: Prepare dedicated MySQL fixtures and verify InnoDB schema
         run: |

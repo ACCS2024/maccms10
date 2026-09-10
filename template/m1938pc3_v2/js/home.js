@@ -387,8 +387,22 @@ var MAC={
             return false;
         }
     },
-    'Suggest':{
-        'Init':function($obj,$mid,$jumpurl){
+    'Suggest': {
+        'Init': function ($obj, $mid, $jumpurl) {
+            // The legacy widget inserts formatItem as HTML and requires all three parsed fields.
+            function escapeText(value) {
+                return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+            }
+            function destination(value) {
+                if (typeof value !== 'string' || value.length > 8192 || value.indexOf('mac_wd') < 0
+                    || /[\u0000-\u0020\u007f\\]/.test(value)) { return null; }
+                try {
+                    var url = new URL(value, location.href);
+                    return (url.protocol === 'http:' || url.protocol === 'https:')
+                        && url.origin === location.origin && !url.username && !url.password ? url.href : null;
+                } catch (error) { return null; }
+            }
             try {
                 $($obj).autocomplete(maccms.path + '/index.php/ajax/suggest?mid=' + $mid, {
                     inputClass: "mac_input",
@@ -398,31 +412,33 @@ var MAC={
                     cacheLength: 10, multiple: false, matchContains: true, autoFill: false,
                     dataType: "json",
                     parse: function (r) {
-                        if (r.code == 1) {
-                            var parsed = [];
-                            $.each(r['list'], function (index, row) {
-                                row.url = r.url;
-                                parsed[index] = {
-                                    data: row
-                                };
-                            });
-                            return parsed;
-                        } else {
-                            return {data: ''};
-                        }
+                        if (!r || (r.code !== 1 && r.code !== '1') || !Array.isArray(r.list)) { return []; }
+                        var url = destination(r.url), parsed = [];
+                        if (url === null) { return parsed; }
+                        $.each(r.list.slice(0, 50), function (index, row) {
+                            if (!row || typeof row.name !== 'string' || row.name === '' || row.name.length > 4096) { return; }
+                            // JSON can contain lone UTF-16 surrogates; they cannot form a search URL.
+                            try { encodeURIComponent(row.name); } catch (error) { return; }
+                            var data = $.extend({}, row, {url: url});
+                            parsed.push({data: data, value: row.name, result: row.name});
+                        });
+                        return parsed;
                     },
                     formatItem: function (row, i, max) {
-                        return row.name;
+                        return escapeText(row.name);
                     },
                     formatResult: function (row, i, max) {
-                        return row.text;
+                        return row.name;
                     }
                 }).result(function (event, data, formatted) {
+                    if (!data || typeof data.name !== 'string') { return; }
+                    var url = destination(data.url);
+                    if (url === null) { return; }
                     $($obj).val(data.name);
-                    location.href = data.url.replace('mac_wd', encodeURIComponent(data.name));
+                    location.href = url.replace('mac_wd', encodeURIComponent(data.name));
                 });
             }
-            catch(e){}
+            catch (e) { }
         }
     },
     'History': {
