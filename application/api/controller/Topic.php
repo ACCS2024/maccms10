@@ -117,7 +117,7 @@ class Topic extends Base
             {
                 $topic_rel_vod_arr = explode(',',$result['topic_rel_vod']);
                 foreach ($topic_rel_vod_arr as $index => $item) {
-                    $vod = Db::name('vod')->where(['vod_id' => $item])->field('vod_id,vod_name,vod_en,vod_pic,vod_actor,vod_director,vod_blurb,vod_remarks,vod_score,vod_year,vod_area,vod_class,type_id,type_id_1')->find();
+                    $vod = \app\common\util\PublicContentQuery::query('vod')->where(['vod_id' => $item])->field('vod_id,vod_name,vod_en,vod_pic,vod_actor,vod_director,vod_blurb,vod_remarks,vod_score,vod_year,vod_area,vod_class,type_id,type_id_1')->find();
                     if ($vod) {
                         $vod['vod_pic'] = mac_url_img($vod['vod_pic']);
                         $vod['vod_link'] = mac_url_vod_detail($vod);
@@ -132,7 +132,7 @@ class Topic extends Base
             {
                 $topic_rel_art_arr = explode(',',$result['topic_rel_art']);
                 foreach ($topic_rel_art_arr as $index => $item) {
-                    $art = Db::name('art')->where(['art_id' => $item])->field('art_id,type_id,art_name,art_sub,art_en,art_pic,art_blurb,art_remarks,art_time')->find();
+                    $art = \app\common\util\PublicContentQuery::query('art')->where(['art_id' => $item])->field('art_id,type_id,art_name,art_sub,art_en,art_pic,art_blurb,art_remarks,art_time')->find();
                     if ($art) {
                         $art['art_pic'] = mac_url_img($art['art_pic'] ?? '');
                         $art['art_link'] = mac_url_art_detail($art);

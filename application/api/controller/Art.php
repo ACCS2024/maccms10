@@ -68,9 +68,10 @@ class Art extends Base
             $where['art_letter'] = $param['letter'];
         }
 
-        if (isset($param['status'])) {
-            $where['art_status'] = (int)$param['status'];
+        if (isset($param['status']) && (int)$param['status'] !== 1) {
+            return json(['code' => 1001, 'msg' => lang('param_err')]);
         }
+        $where['art_status'] = 1;
 
         if (isset($param['name']) && strlen($param['name']) > 0) {
             $where[] = ['art_name', 'like', '%' . $this->format_sql_string($param['name']) . '%'];
@@ -120,12 +121,12 @@ class Art extends Base
             }
         }
         // 数据获取
-        $total = ($meili_on && $meili_total !== null) ? (int)$meili_total : (new \app\common\model\Art())->getCountByCond($where);
+        $total = ($meili_on && $meili_total !== null) ? (int)$meili_total : (new \app\common\model\Art())->getCountByCond(array_merge($where, \app\common\util\PublicContentQuery::conditions('art')));
         $list = [];
         if ($total > 0) {
             $field = 'art_id,art_name,art_sub,art_en,art_pic,art_blurb,art_time,art_time_add,art_hits,art_points,art_points_detail,art_remarks,art_author,type_id';
             // Meili 命中已按偏移分页,DB 不可二次 offset
-            $list = (new \app\common\model\Art())->getListByCond($meili_on ? 0 : $offset, $limit, $where, $order, $field, []);
+            $list = \app\common\util\PublicContentQuery::query('art')->where($where)->order($order)->order('art_id', 'desc')->field($field)->limit($meili_on ? 0 : $offset, $limit)->select()->toArray();
             $type_list = (new \app\common\model\Type())->getCache('type_list');
             foreach ($list as &$v) {
                 if (!empty($v['type_id']) && isset($type_list[$v['type_id']])) {
@@ -407,7 +408,7 @@ class Art extends Base
             };
         }
 
-        $list = Db::name('art')
+        $list = \app\common\util\PublicContentQuery::query('art')
             ->field('art_id,art_name,art_sub,art_pic,art_author,art_blurb,art_time,art_hits,art_hits_month,art_points,art_remarks,type_id')
             ->where($where)
             ->order('art_' . $by . ' desc')
@@ -457,7 +458,7 @@ class Art extends Base
             };
         }
 
-        $list = Db::name('art')
+        $list = \app\common\util\PublicContentQuery::query('art')
             ->field('art_id,art_name,art_sub,art_pic,art_author,art_blurb,art_remarks,art_points,art_hits,art_time,type_id')
             ->where($where)
             ->order('art_time desc')

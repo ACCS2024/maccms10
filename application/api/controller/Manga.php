@@ -240,7 +240,7 @@ class Manga extends Base
         $where = [];
         $where['manga_status'] = 1;
 
-        $list = Db::name('manga')
+        $list = \app\common\util\PublicContentQuery::query('manga')
             ->field('manga_id,manga_name,manga_pic,manga_blurb,manga_remarks,manga_score,manga_time,manga_hits_month,type_id')
             ->where($where)
             ->order('manga_' . $by . ' desc')
@@ -283,7 +283,7 @@ class Manga extends Base
         $where = [];
         $where['manga_status'] = 1;
 
-        $list = Db::name('manga')
+        $list = \app\common\util\PublicContentQuery::query('manga')
             ->field('manga_id,manga_name,manga_pic,manga_blurb,manga_remarks,manga_score,manga_points,manga_time,type_id')
             ->where($where)
             ->order('manga_time desc')

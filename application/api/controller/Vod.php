@@ -115,12 +115,12 @@ class Vod extends Base
             }
         }
         // 数据获取
-        $total = ($meili_on && $meili_total !== null) ? (int)$meili_total : (new \app\common\model\Vod())->getCountByCond($where);
+        $total = ($meili_on && $meili_total !== null) ? (int)$meili_total : (new \app\common\model\Vod())->getCountByCond(array_merge($where, \app\common\util\PublicContentQuery::conditions('vod')));
         $list = [];
         if ($total > 0) {
             $field = 'vod_id,vod_en,vod_name,vod_sub,vod_pic,vod_actor,vod_hits,vod_hits_day,vod_hits_week,vod_hits_month,vod_time,vod_remarks,vod_score,vod_area,vod_year,vod_class,vod_blurb,vod_points_play,vod_isend,type_id,type_id_1';
             // Meili 命中已按偏移分页,DB 不可二次 offset(否则第 2 页起为空)
-            $list = (new \app\common\model\Vod())->getListByCond($meili_on ? 0 : $offset, $limit, $where, $order, $field);
+            $list = \app\common\util\PublicContentQuery::query('vod')->where($where)->order($order)->order('vod_id', 'desc')->field($field)->limit($meili_on ? 0 : $offset, $limit)->select()->toArray();
 
             // 补充 vod_pic、vod_link；主题「进播放页」时补充 vod_play_link（与 mac_url_vod_play 一致，避免前端拼 URL 与伪静态不一致）
             $playlinkOn = mac_tpl_vod_playlink_on();
@@ -172,7 +172,7 @@ class Vod extends Base
             ]);
         }
 
-        $res = Db::name('vod')->where(['vod_id' => $param['vod_id']])->find();
+        $res = \app\common\util\PublicContentQuery::query('vod')->where(['vod_id' => $param['vod_id']])->find();
         if (empty($res)) {
             return json(['code' => 1001, 'msg' => '数据不存在']);
         }
@@ -226,22 +226,18 @@ class Vod extends Base
         }
 
         $tid1 = (int)$param['type_id_1'];
-        $cacheKey = 'vod_meta_year_' . $tid1;
-        $return = Cache::get($cacheKey);
-        if ($return === null) {
-            $result = Db::name('vod')
-                ->distinct(true)
-                ->field('vod_year')
-                ->where(['type_id_1' => $tid1, 'vod_status' => 1])
-                ->limit(200)
-                ->select();
-            $return = [];
-            foreach ($result as $item) {
-                if (!empty($item['vod_year'])) {
-                    $return[] = $item['vod_year'];
-                }
+        // Facet-only caches cannot prove that a value still has a public source row.
+        $result = \app\common\util\PublicContentQuery::query('vod')
+            ->distinct(true)
+            ->field('vod_year')
+            ->where(['type_id_1' => $tid1])
+            ->limit(200)
+            ->select();
+        $return = [];
+        foreach ($result as $item) {
+            if (!empty($item['vod_year'])) {
+                $return[] = $item['vod_year'];
             }
-            Cache::set($cacheKey, $return, 600);
         }
         // 返回
         return json([
@@ -274,22 +270,18 @@ class Vod extends Base
         }
 
         $tid1 = (int)$param['type_id_1'];
-        $cacheKey = 'vod_meta_class_' . $tid1;
-        $return = Cache::get($cacheKey);
-        if ($return === null) {
-            $result = Db::name('vod')
-                ->distinct(true)
-                ->field('vod_class')
-                ->where(['type_id_1' => $tid1, 'vod_status' => 1])
-                ->limit(500)
-                ->select();
-            $return = [];
-            foreach ($result as $item) {
-                if (!empty($item['vod_class'])) {
-                    $return[] = $item['vod_class'];
-                }
+        // Facet-only caches cannot prove that a value still has a public source row.
+        $result = \app\common\util\PublicContentQuery::query('vod')
+            ->distinct(true)
+            ->field('vod_class')
+            ->where(['type_id_1' => $tid1])
+            ->limit(500)
+            ->select();
+        $return = [];
+        foreach ($result as $item) {
+            if (!empty($item['vod_class'])) {
+                $return[] = $item['vod_class'];
             }
-            Cache::set($cacheKey, $return, 600);
         }
         // 返回
         return json([
@@ -322,22 +314,18 @@ class Vod extends Base
         }
 
         $tid1 = (int)$param['type_id_1'];
-        $cacheKey = 'vod_meta_area_' . $tid1;
-        $return = Cache::get($cacheKey);
-        if ($return === null) {
-            $result = Db::name('vod')
-                ->distinct(true)
-                ->field('vod_area')
-                ->where(['type_id_1' => $tid1, 'vod_status' => 1])
-                ->limit(200)
-                ->select();
-            $return = [];
-            foreach ($result as $item) {
-                if (!empty($item['vod_area'])) {
-                    $return[] = $item['vod_area'];
-                }
+        // Facet-only caches cannot prove that a value still has a public source row.
+        $result = \app\common\util\PublicContentQuery::query('vod')
+            ->distinct(true)
+            ->field('vod_area')
+            ->where(['type_id_1' => $tid1])
+            ->limit(200)
+            ->select();
+        $return = [];
+        foreach ($result as $item) {
+            if (!empty($item['vod_area'])) {
+                $return[] = $item['vod_area'];
             }
-            Cache::set($cacheKey, $return, 600);
         }
         // 返回
         return json([
@@ -556,7 +544,8 @@ class Vod extends Base
         $cacheKey = $cacheFlag . '_api_vod_latest_by_type_v2_' . md5($typeId . '_' . $num . '_' . $start . '_' . implode(',', $idsForKey) . '_' . date('Y-m-d'));
         if (!empty($GLOBALS['config']['app']['cache_core']) && $cacheTime > 0) {
             $cached = Cache::get($cacheKey);
-            if (is_array($cached) && isset($cached['code'])) {
+            if (is_array($cached) && isset($cached['code'])
+                && \app\common\util\PublicContentQuery::cachedRowsVisible('vod', $cached['info']['rows'] ?? null, 60)) {
                 return json($cached);
             }
         }

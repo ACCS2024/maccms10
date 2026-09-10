@@ -126,7 +126,7 @@ class Role extends Base
             $rids = array_unique(array_filter($rids));
             $vodTitleMap = [];
             if (!empty($rids)) {
-                $vodTitleMap = Db::name('vod')->where('vod_id', 'in', $rids)->column('vod_name', 'vod_id');
+                $vodTitleMap = \app\common\util\PublicContentQuery::query('vod')->where('vod_id', 'in', $rids)->column('vod_name', 'vod_id');
             }
             foreach ($list as &$v) {
                 $rid = (int)($v['role_rid'] ?? 0);
@@ -184,7 +184,7 @@ class Role extends Base
         // 关联视频信息
         $res['vod_info'] = null;
         if (!empty($res['role_rid'])) {
-            $vodInfo = Db::name('vod')
+            $vodInfo = \app\common\util\PublicContentQuery::query('vod')
                 ->field('vod_id,vod_name,vod_sub,vod_pic,vod_remarks,vod_score,vod_year,vod_area,vod_class,type_id,type_id_1')
                 ->where('vod_id', intval($res['role_rid']))
                 ->find();
