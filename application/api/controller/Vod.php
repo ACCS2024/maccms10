@@ -163,7 +163,8 @@ class Vod extends Base
     public function get_detail(\think\Request $request)
     {
         $param = $request->param();
-        $validate = validate($request->controller());
+        // The standalone TP8 validate() helper does not resolve application short names.
+        $validate = new \app\api\validate\Vod();
         if (!$validate->scene($request->action())->check($param)) {
             return json([
                 'code' => 1001,

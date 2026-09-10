@@ -30,7 +30,8 @@ class Art extends Base
     {
         // 参数校验
         $param = $request->param();
-        $validate = validate($request->controller());
+        // Resolve the actual API rules and preserve the JSON validation-error branch.
+        $validate = new \app\api\validate\Art();
         if (!$validate->scene($request->action())->check($param)) {
             return json([
                 'code' => 1001,
@@ -99,7 +100,7 @@ class Art extends Base
 
         // 排序(Meili 接入需提前确定 $order)
         $order = "art_time DESC";
-        if (strlen($param['orderby']) > 0) {
+        if (!empty($param['orderby'])) {
             $order = 'art_' . $param['orderby'] . " DESC";
         }
         // 关键词搜索接 Meilisearch(art_name);命中→art_id IN(本页命中,已分页);未启用/无命中/异常→回退原 LIKE
