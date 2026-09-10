@@ -70,9 +70,7 @@
                 <td>{$vo.user_id}</td>
                 <td>{$vo.user_name}</td>
                 <td>
-                    {volist name=":explode(',',$vo.group_id)" id="gid"}
-                    {$group_list[$gid]['group_name']}{if !$i.last},{/if}
-                    {/volist}
+                    {$vo.group_name}
                 </td>
                 <td>
                     <input type="checkbox" name="status" {if condition="$vo['user_status'] eq 1" }checked{/if}
