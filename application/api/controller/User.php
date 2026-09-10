@@ -4,7 +4,6 @@ namespace app\api\controller;
 
 use think\facade\Db;
 use think\facade\Request;
-use think\facade\Url;
 
 class User extends Base
 {
@@ -903,7 +902,12 @@ class User extends Base
             return json($this_order);
         }
 
-        $pay_url = Url::build('index/user/pay', ['order_code' => $data['order_code']]);
+        // api.php binds the API app; its URL builder cannot switch to the frontend entry.
+        $entryDirectory = str_replace('\\', '/', dirname($request->baseFile()));
+        if ($entryDirectory === '/' || $entryDirectory === '.') { $entryDirectory = ''; }
+        $pay_url = $entryDirectory . '/index.php/user/pay?' . http_build_query(
+            ['order_code' => $data['order_code']], '', '&', PHP_QUERY_RFC3986
+        );
 
         return json([
             'code' => 1,
