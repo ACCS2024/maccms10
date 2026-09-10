@@ -288,11 +288,13 @@ class User extends Base
         if (!$is_from_3rdparty) {
             // https://github.com/magicblack/maccms10/issues/418
             if($config['user']['reg_phone_sms'] == '1'){
+                if (($param['ac'] ?? null) !== 'phone') { return ['code'=>9001, 'msg'=>lang('param_err')]; }
                 $param['type'] = 3;
                 $res = $this->check_msg($param);
                 if($res['code'] >1){
                     return $res;
                 }
+                $param['to'] = $res['to'];
                 $fields['user_phone'] = $param['to'];
 
                 $update=[];
@@ -307,11 +309,13 @@ class User extends Base
                 //$this->where($where2)->update($update);
             }
             elseif($config['user']['reg_email_sms'] == '1'){
+                if (($param['ac'] ?? null) !== 'email') { return ['code'=>9001, 'msg'=>lang('param_err')]; }
                 $param['type'] = 3;
                 $res = $this->check_msg($param);
                 if($res['code'] >1){
                     return $res;
                 }
+                $param['to'] = $res['to'];
                 $fields['user_email'] = $param['to'];
 
                 $update=[];
@@ -1083,132 +1087,124 @@ class User extends Base
         }
     }
 
+    /** Match the same decoded HTTP text that is stored and later used for the account. */
+    private function messageParameters($param, bool $requireCode): ?array
+    {
+        if (!is_array($param)) { return null; }
+        foreach (['ac', 'to'] as $key) {
+            if (!is_string($param[$key] ?? null)) { return null; }
+            $param[$key] = trim($param[$key]);
+        }
+        if (!in_array($param['type'] ?? null, [1, 2, 3, '1', '2', '3'], true)
+            || !in_array($param['ac'], ['email', 'phone'], true)
+            || $param['to'] === '' || strlen($param['to']) > 30) { return null; }
+        $param['type'] = (int)$param['type'];
+        if ($param['ac'] === 'email') {
+            if (filter_var($param['to'], FILTER_VALIDATE_EMAIL) === false) { return null; }
+        } elseif (preg_match('/^1[0-9]{10}$/D', $param['to']) !== 1) { return null; }
+        if ($requireCode) {
+            if (!is_string($param['code'] ?? null)) { return null; }
+            $param['code'] = trim($param['code']);
+            if (preg_match('/^[0-9]{6}$/D', $param['code']) !== 1) { return null; }
+        }
+        return $param;
+    }
+
+    private function messageCutoff(string $channel): int
+    {
+        $minutes = filter_var($GLOBALS['config']['email']['time'] ?? 5, FILTER_VALIDATE_INT,
+            ['options'=>['min_range'=>1, 'max_range'=>1440]]);
+        return time() - 60 * ($channel === 'email' && $minutes !== false ? $minutes : 5);
+    }
+
     public function check_msg($param)
     {
-        $param['to'] = htmlspecialchars(urldecode(trim($param['to'])));
-        $param['code'] = htmlspecialchars(urldecode(trim($param['code'])));
-        if(!in_array($param['ac'],['email','phone']) || empty($param['to']) || empty($param['code']) || empty($param['type'])){
-            return ['code'=>9001,'msg'=>lang('param_err')];
-        }
-        // https://github.com/magicblack/maccms10/issues/792 邮箱增加黑白名单校验
-        if ($param['ac'] == 'email' && in_array($param['type'], [1, 3])) {
+        $param = $this->messageParameters($param, true);
+        if ($param === null) { return ['code'=>9001, 'msg'=>lang('param_err')]; }
+        if ($param['ac'] === 'email' && in_array($param['type'], [1, 3], true)) {
             $result = UserValidate::validateEmail($param['to']);
-            if ($result['code'] > 1) {
-                return $result;
-            }
+            if ($result['code'] > 1) { return $result; }
         }
-        //msg_type  1绑定2找回3注册
-        $stime = strtotime('-5 min');
-        if($param['ac']=='email' && intval($GLOBALS['config']['email']['time'])>0){
-            $stime = strtotime('-'.$GLOBALS['config']['email']['time'].' min');
+        $where = [
+            'user_id'=>(int)($GLOBALS['user']['user_id'] ?? 0),
+            'msg_to'=>$param['to'], 'msg_code'=>$param['code'],
+            'msg_type'=>$param['type'], 'msg_status'=>0,
+            ['msg_time', '>', $this->messageCutoff($param['ac'])],
+            ['msg_time', '<=', time()],
+        ];
+        try { $res = (new Msg())->infoData($where); }
+        catch (\Throwable $error) { return ['code'=>9002, 'msg'=>lang('model/user/msg_not_found')]; }
+        if (($res['code'] ?? null) !== 1) {
+            return ['code'=>9002, 'msg'=>lang('model/user/msg_not_found')];
         }
-
-        $where=[];
-        $where['user_id'] = intval($GLOBALS['user']['user_id']);
-        $where[] = ['msg_time', '>', $stime];
-        $where['msg_code'] = $param['code'];
-        $where['msg_type'] = $param['type'] ;
-        $res = (new \app\common\model\Msg())->infoData($where);
-        if($res['code'] >1){
-            return ['code'=>9002,'msg'=>lang('model/user/msg_not_found')];
-        }
-        return  ['code'=>1,'msg'=>'ok'];
+        return ['code'=>1, 'msg'=>'ok', 'msg_id'=>(int)$res['info']['msg_id'], 'to'=>$param['to']];
     }
 
     public function send_msg($param)
     {
-        // 安全加固:验证码下发按 IP 温和限流(默认开启,失败开放)。
-        // 既有"重发间隔"按 user_id+msg_to 计,匿名(user_id=0)下轮换收件号即可绕过 → 短信/邮件轰炸;
-        // 此处加 IP 维度兜底(8 条/5 分钟/IP),不影响正常用户取码及有限次重发。
+        $param = $this->messageParameters($param, false);
+        if ($param === null) { return ['code'=>9001, 'msg'=>lang('param_err')]; }
         if (!mac_fe_write_throttle('fe_sendmsg', 300, 8)) {
-            return ['code' => 9002, 'msg' => lang('model/user/do_not_send_frequently')];
+            return ['code'=>9002, 'msg'=>lang('model/user/do_not_send_frequently')];
         }
-        $param['to'] = htmlspecialchars(urldecode(trim($param['to'])));
-        $param['code'] = htmlspecialchars(urldecode(trim($param['code'])));
-
-        $type_arr = [
-            1=>['des'=>lang('bind'),'flag'=>'bind'],
-            2=>['des'=>lang('findpass'),'flag'=>'findpass'],
-            3=>['des'=>lang('register'),'flag'=>'reg'],
-        ];
-        if(!in_array($param['ac'],['email','phone']) || !isset($type_arr[$param['type']]) || empty($param['to'])  || empty($param['type'])){
-            return ['code'=>9001,'msg'=>lang('param_err')];
-        }
-        // https://github.com/magicblack/maccms10/issues/792 邮箱增加黑白名单校验
-        if ($param['ac'] == 'email' && in_array($param['type'], [1, 3])) {
+        if ($param['ac'] === 'email' && in_array($param['type'], [1, 3], true)) {
             $result = UserValidate::validateEmail($param['to']);
-            if ($result['code'] > 1) {
-                return $result;
+            if ($result['code'] > 1) { return $result; }
+        }
+        $types = [1=>['bind', 'bind'], 2=>['findpass', 'findpass'], 3=>['register', 'reg']];
+        [$description, $flag] = $types[$param['type']];
+        $description = lang($description);
+        $where = ['user_id'=>(int)($GLOBALS['user']['user_id'] ?? 0),
+            'msg_type'=>$param['type'], 'msg_to'=>$param['to'],
+            ['msg_time', '>', $this->messageCutoff($param['ac'])]];
+        try {
+            $existing = (new Msg())->infoData($where);
+            if (($existing['code'] ?? null) === 1) {
+                return ['code'=>9002, 'msg'=>lang('model/user/do_not_send_frequently')];
             }
+            $code = (string)random_int(100000, 999999);
+            if ($param['ac'] === 'email') {
+                $templates = $GLOBALS['config']['email']['tpl'] ?? [];
+                $title = $templates['user_'.$flag.'_title'] ?? null;
+                $body = $templates['user_'.$flag.'_body'] ?? null;
+                if (!is_string($title) || !is_string($body)) { throw new \RuntimeException('Missing message template'); }
+                \think\facade\View::assign(['code'=>$code, 'time'=>$GLOBALS['config']['email']['time'] ?? 5]);
+                $title = \think\facade\View::display($title);
+                $body = htmlspecialchars_decode(\think\facade\View::display($body));
+                $delivery = mac_send_mail($param['to'], $title, $body);
+            } else {
+                $body = $GLOBALS['config']['sms']['content'] ?? null;
+                if (!is_string($body)) { throw new \RuntimeException('Missing message template'); }
+                $body = str_replace(['[用户]','[类型]','[时长]','[验证码]'],
+                    [(string)($GLOBALS['user']['user_name'] ?? ''), $description, '5', $code], $body);
+                $delivery = mac_send_sms($param['to'], $code, $flag, $description, $body);
+            }
+            if (!is_array($delivery) || !in_array($delivery['code'] ?? null, [1, '1'], true)) {
+                return ['code'=>9009, 'msg'=>lang('model/user/msg_send_err')];
+            }
+            $saved = (new Msg())->saveData([
+                'user_id'=>$where['user_id'], 'msg_type'=>$param['type'], 'msg_status'=>0,
+                'msg_to'=>$param['to'], 'msg_code'=>$code,
+                // The message table is an audit record, not a copy of an arbitrarily long HTML template.
+                'msg_content'=>mb_substr(strip_tags($body), 0, 255, 'UTF-8'), 'msg_time'=>time(),
+            ]);
+            if (($saved['code'] ?? null) !== 1) { throw new \RuntimeException('Cannot record message'); }
+        } catch (\Throwable $error) {
+            return ['code'=>9009, 'msg'=>lang('model/user/msg_send_err')];
         }
-
-        $type_des = $type_arr[$param['type']]['des'];
-        $type_flag = $type_arr[$param['type']]['flag'];
-
-
-        $to = $param['to'];
-        $code = mac_get_rndstr(6,'num');
-        $r=0;
-
-        $stime = strtotime('-5 min');
-        if($param['ac']=='email' && intval($GLOBALS['config']['email']['time'])>0){
-            $stime = strtotime('-'.$GLOBALS['config']['email']['time'].' min');
-        }
-        $where=[];
-        $where['user_id'] = intval($GLOBALS['user']['user_id']);
-        $where[] = ['msg_time', '>', $stime];
-        $where['msg_type'] = $param['type'] ;
-        $where['msg_to'] = $param['to'] ;
-        $res = (new \app\common\model\Msg())->infoData($where);
-        if($res['code'] ==1){
-            return ['code'=>9002,'msg'=>lang('model/user/do_not_send_frequently')];
-        }
-        $res_msg= ','.lang('please_try_again');
-        if($param['ac']=='email'){
-            $title = $GLOBALS['config']['email']['tpl']['user_'.$type_flag.'_title'];
-            $msg = $GLOBALS['config']['email']['tpl']['user_'.$type_flag.'_body'];
-            \think\facade\View::assign(['code'=>$code,'time'=>$GLOBALS['config']['email']['time']]);
-            $title =  \think\facade\View::display($title);
-            $msg =  \think\facade\View::display($msg);
-            $msg = htmlspecialchars_decode($msg);
-            $res_send = mac_send_mail($to, $title, $msg);
-            $res_code = $res_send['code'];
-            $res_msg = $res_send['msg'];
-        }
-        else{
-            $msg = $GLOBALS['config']['sms']['content'];
-            $msg = str_replace(['[用户]','[类型]','[时长]','[验证码]'],[$GLOBALS['user']['user_name'],$type_des,'5',$code],$msg);
-            $res_send = mac_send_sms($to,$code,$type_flag,$type_des,$msg);
-            $res_code = $res_send['code'];
-            $res_msg = $res_send['msg'];
-        }
-        
-        if($res_code==1){
-            $data=[];
-            $data['user_id'] = intval($GLOBALS['user']['user_id']);
-            $data['msg_type'] = $param['type'];
-            $data['msg_status'] = 0;
-            $data['msg_to'] = $to;
-            $data['msg_code'] = $code;
-            $data['msg_content'] = $msg;
-            $data['msg_time'] = time();
-            $res = (new \app\common\model\Msg())->saveData($data);
-
-            return ['code'=>1,'msg'=>lang('model/user/msg_send_ok')];
-        }
-        else{
-            return ['code'=>9009,'msg'=>lang('model/user/msg_send_err').'：'.$res_msg];
-        }
+        return ['code'=>1, 'msg'=>lang('model/user/msg_send_ok')];
     }
 
     public function bind($param)
     {
+        if (!is_array($param)) { return ['code'=>9001, 'msg'=>lang('param_err')]; }
         $param['type'] = 1;
         $res = $this->check_msg($param);
         if($res['code'] >1){
             return ['code'=>$res['code'],'msg'=>$res['msg']];
         }
 
+        $param['to'] = $res['to'];
         $update=[];
         $update2=[];
         $where2=[];
@@ -1255,18 +1251,21 @@ class User extends Base
 
     public function bindmsg($param)
     {
+        if (!is_array($param)) { return ['code'=>9001, 'msg'=>lang('param_err')]; }
         $param['type'] = 1;
         return $this->send_msg($param);
     }
 
     public function findpass_msg($param)
     {
+        if (!is_array($param)) { return ['code'=>9001, 'msg'=>lang('param_err')]; }
         $param['type'] = 2;
         return $this->send_msg($param);
     }
 
     public function reg_msg($param)
     {
+        if (!is_array($param)) { return ['code'=>9001, 'msg'=>lang('param_err')]; }
         $param['type'] = 3;
         return $this->send_msg($param);
     }

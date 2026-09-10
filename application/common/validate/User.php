@@ -26,7 +26,15 @@ class User extends Validate
      */
     public static function validateEmail($email)
     {
-        list(, $email_host) = explode('@', $email, 2);
+        if (!is_string($email) || filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
+            return ['code'=>1001, 'msg'=>lang('model/user/email_format_err')];
+        }
+        foreach (['email_white_hosts', 'email_black_hosts'] as $key) {
+            if (isset($GLOBALS['config']['user'][$key]) && !is_string($GLOBALS['config']['user'][$key])) {
+                return ['code'=>1001, 'msg'=>lang('param_err')];
+            }
+        }
+        $email_host = strtolower(substr(strrchr($email, '@'), 1));
         // 不在白名单内，报错
         $email_white_host_sets = self::formatEmailHostSets('white');
         if (!empty($email_white_host_sets) && !isset($email_white_host_sets[$email_host])) {
@@ -44,7 +52,7 @@ class User extends Validate
         $config_string = isset($GLOBALS['config']['user']['email_' . $type . '_hosts']) ? $GLOBALS['config']['user']['email_' . $type . '_hosts'] : '';
         $email_host_sets = [];
         foreach (explode(',', str_replace("\n", ',', $config_string)) as $host) {
-            $host = trim($host);
+            $host = strtolower(trim($host));
             if (strlen($host) == 0) {
                 continue;
             }

@@ -18,7 +18,7 @@ $groups = [
         ['framework_audit_csv.php'], ['framework_audit_request_injection.php'], ['framework_audit_receive.php'], ['framework_audit_request_security.php'],
         ['framework_audit_api_runtime.php'], ['framework_audit_api_validation.php'],
         ['framework_audit_api_defaults.php'], ['framework_audit_detail_routes.php'],
-        ['framework_audit_user_forms.php'], ['framework_audit_user_lists.php'], ['framework_audit_ulog_template.php'], ['security_audit_member_order_url.php'], ['security_audit_order_amount.php'], ['security_audit_order_price_template.php'],
+        ['framework_audit_user_forms.php'], ['framework_audit_user_messages.php'], ['framework_audit_user_lists.php'], ['framework_audit_ulog_template.php'], ['security_audit_member_order_url.php'], ['security_audit_order_amount.php'], ['security_audit_order_price_template.php'],
         ['validator_audit_chatroom_danmaku.php'],
         ['framework_audit_strict_errors.php', 'strict'], ['framework_audit_strict_errors.php', 'default'],
         ['security_audit_admin.php'], ['security_audit_annex.php'], ['security_audit_api.php'],
