@@ -136,7 +136,7 @@ return array (
     'security_csp_policy' => '',
     'security_csp_report_uri' => '',
     'security_csrf_admin' => '1',
-    'security_csrf_admin_exempt' => 'upload/*',
+        'security_csrf_admin_exempt' => '',
     'security_csrf_http_code' => '403',
     'api_jwt_enabled' => '0',
     'api_jwt_secret' => '',

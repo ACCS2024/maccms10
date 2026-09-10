@@ -110,6 +110,7 @@ try {
     imageAuditRequest(['flag'=>'vod'],['file'=>new UploadedFile($temp . '/source.png','bad.png',null,UPLOAD_ERR_PARTIAL,true)]);
     check((new Upload())->upload([], true)['code'] !== 1, 'An incomplete uploaded file was accepted');
     $request = (new think\Request())->withServer(['REQUEST_METHOD'=>'POST','REQUEST_TIME'=>123456])
+        ->withHeader(['X-CSRF-Token'=>'image-upload-csrf'])
         ->withPost(['flag'=>'user','user_id'=>1])->withFiles(['file'=>[
             'name'=>'failed.png','type'=>'image/png','tmp_name'=>$temp . '/source.png','error'=>UPLOAD_ERR_PARTIAL,'size'=>10,
         ]]);

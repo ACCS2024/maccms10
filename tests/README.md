@@ -85,3 +85,5 @@ AI 插件任务表生命周期已纳入 models：默认/自定义前缀各执行
 内容身份与缓存：`python3 tests/run_content_identity_cache_audit.py <PHP镜像>...` 使用一次性MySQL，验证前台/API的Cookie与Bearer、真实会话和最终响应缓存头，包含本地HTTP直接缓存命中路径。
 
 注册事务与邀请凭证回归：`php tests/framework_audit_registration_transactions.php`。默认 SQLite，`FRAMEWORK_AUDIT_MYSQL=1` 使用独立注册测试库；已纳入 `models`，覆盖代码消费、完整回滚、非严格存储和并发竞争。
+
+上传 Cookie CSRF 已纳入 `upload` 双返回格式套件；实际浏览器检查运行 `npm ci --prefix tests/browser --ignore-scripts --no-audit --no-fund` 后执行 `CHROMIUM_BINARY=/usr/bin/chromium PHP_BINARY=php node tests/browser/upload_csrf.cjs`，仅使用隔离 loopback fixture。

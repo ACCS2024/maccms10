@@ -75,6 +75,7 @@ class Upload {
             return self::upload_return(lang('param_err'));
         }
 
+        $verifiedBearer = false;
         try {
             if ($adminContext) {
                 $login = (new Admin())->checkLogin();
@@ -96,6 +97,9 @@ class Upload {
                 if ($ownerId === null) {
                     return self::upload_return(lang('model/user/not_login'));
                 }
+                // checkLogin above verifies this same enabled Bearer and never falls back on failure.
+                $verifiedBearer = \app\common\util\JwtService::isEnabled()
+                    && \app\common\util\JwtService::bearerFromRequest(request()) !== '';
                 if (($GLOBALS['config']['user']['portrait_status'] ?? '0') != '1') {
                     return self::upload_return(lang('index/portrait_tip1'));
                 }
@@ -115,6 +119,9 @@ class Upload {
             && in_array($param['from'], ['ueditor', 'umeditor'], true) && ($param['action'] ?? '') === 'config';
         if (!request()->isPost() && !$editorConfig) {
             return self::upload_return(lang('illegal_request'));
+        }
+        if (!$editorConfig && !$verifiedBearer && !\app\common\util\UploadCsrf::validate(request())) {
+            return self::upload_return(lang('token_err'));
         }
 
         $base64_img = $param['imgdata'] ?? '';

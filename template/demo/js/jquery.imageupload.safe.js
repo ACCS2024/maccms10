@@ -63,7 +63,8 @@
                     method: 'POST',
                     body: body,
                     credentials: 'same-origin',
-                    headers: {'X-Requested-With': 'XMLHttpRequest'}
+                    headers: Object.assign({'X-Requested-With': 'XMLHttpRequest'},
+                        window.MacUploadCsrf ? window.MacUploadCsrf.headers(settings.formAction) : {})
                 })
                     .then(function (response) {
                         if (!response.ok) {
@@ -77,7 +78,7 @@
                             return;
                         }
 
-                        var url = payload.url || (payload.data && payload.data.url);
+                        var url = payload.file || payload.url || (payload.data && (payload.data.file || payload.data.url));
                         if (typeof url !== 'string' || !isSafeImageUrl(url)) {
                             fail('返回的图片地址无效');
                             return;

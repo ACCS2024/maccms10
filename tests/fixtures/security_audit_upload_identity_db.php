@@ -12,7 +12,7 @@ namespace {
     function lang($key, $vars = []) { return $key; }
     function config($key, $default = null) { return \think\facade\Config::get($key, $default); }
     function request() { return \think\Container::getInstance()->make('request'); }
-    function json($data) { return new \think\response\Json(new \think\Cookie(request()), $data); }
+    function json($data, $code = 200) { return new \think\response\Json(new \think\Cookie(request()), $data, $code); }
     function cookie($key, $value = null, $options = []) {
         if (func_num_args() === 1) { return $GLOBALS['upload_cookies'][$key] ?? null; }
         $GLOBALS['upload_cookies'][$key] = $value;
@@ -85,6 +85,8 @@ namespace {
     chdir($temporary);
     register_shutdown_function(static function () use ($temporary, $originalCwd): void {
         try {
+            // CLI-server restores its working directory before shutdown callbacks.
+            chdir($temporary);
             if (isset($GLOBALS['upload_identity_before_cleanup'])) { ($GLOBALS['upload_identity_before_cleanup'])(); }
         } finally {
             chdir($originalCwd);
@@ -107,6 +109,8 @@ namespace {
     $GLOBALS['upload_cookies'] = $GLOBALS['upload_session'] = [];
 
     function uploadIdentityRequest(array $parameters = [], string $method = 'POST', bool $file = true, array $headers = []): void {
+        $GLOBALS['upload_session']['__csrf_token__'] = 'upload-identity-csrf';
+        $headers = array_merge(['X-CSRF-Token'=>'upload-identity-csrf'], $headers);
         $request = (new UploadIdentityRequest())->withServer(['REQUEST_METHOD'=>$method, 'REQUEST_TIME'=>time()])->withHeader($headers);
         $request = match ($method) {
             'GET' => $request->withGet($parameters),

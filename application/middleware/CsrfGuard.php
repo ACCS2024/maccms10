@@ -23,11 +23,17 @@ class CsrfGuard
         $app = isset($GLOBALS['config']['app']) && is_array($GLOBALS['config']['app'])
             ? $GLOBALS['config']['app']
             : [];
+        [$c, $a] = $this->parsePathinfo($request);
+        // Uploads remain protected even on deployments retaining the old upload/* exemption.
+        // Read-only editor configuration GETs still pass through to the model's identity/method checks.
+        if ($c === 'upload' && $a === 'upload' && $request->isPost()) {
+            if (!\app\common\util\UploadCsrf::validate($request)) { $this->deny($request, $app); }
+            return $next($request);
+        }
         if (empty($app['security_csrf_admin']) || (string)$app['security_csrf_admin'] === '0') {
             return $next($request);
         }
 
-        [$c, $a] = $this->parsePathinfo($request);
         $routeKey = $c . '/' . $a;
 
         if ($routeKey === 'index/login' || $a === 'login') {

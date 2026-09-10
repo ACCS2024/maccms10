@@ -102,6 +102,8 @@ $ue_ai_csrf = \app\common\util\UeditorAiCsrf::token();
         })();
     })(window);
     window.UEDITOR_CONFIG.serverUrl = "{:url('upload/upload')}?from=ueditor&flag={$cl|strtolower}_editor&input=upfile&ueditor_theme=new";
+    window.UEDITOR_CONFIG.serverHeaders = Object.assign({}, window.UEDITOR_CONFIG.serverHeaders || {},
+        {'X-CSRF-Token': {:json_encode(mac_csrf_token())}});
     var EDITOR = UE;
     /* 把代理请求挂到每个编辑器实例上，保证 dialogs/ai 里 editor.getOpt('ai') 能拿到 driverRequest */
     (function () {

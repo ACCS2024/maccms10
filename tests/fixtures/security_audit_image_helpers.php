@@ -9,7 +9,8 @@ class ImageAuditRequest extends think\Request {
 }
 function imageAuditRequest(array $params = [], array $files = []): void {
     // UploadedFile(test=true) bypasses PHP's HTTP-only upload provenance, retaining its real move/error methods.
-    $request = (new ImageAuditRequest())->withServer(['REQUEST_METHOD'=>'POST', 'REQUEST_TIME'=>123456])->withPost($params);
+    $request = (new ImageAuditRequest())->withServer(['REQUEST_METHOD'=>'POST', 'REQUEST_TIME'=>123456])
+        ->withHeader(['X-CSRF-Token'=>'image-upload-csrf'])->withPost($params);
     $request->testFiles = $files;
     think\Container::getInstance()->instance('request', $request);
     $GLOBALS['image_request'] = $request;
@@ -17,6 +18,7 @@ function imageAuditRequest(array $params = [], array $files = []): void {
 function request() { return $GLOBALS['image_request']; }
 function lang($key) { return $key; }
 function config($key, $default = null) { return $GLOBALS['image_config'][$key] ?? $default; }
+function session($key) { return $key === '__csrf_token__' ? 'image-upload-csrf' : null; }
 function mac_mkdirss($path) { return mkdir($path, 0777, true); }
 function mac_is_safe_remote_url($url) { return true; }
 function mac_curl_get($url) { return $GLOBALS['image_download_fixture']; }

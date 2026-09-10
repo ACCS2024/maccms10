@@ -53,6 +53,20 @@ jobs:
           node --check template/default/asset/js/user-bind.js
           node --check static/js/user-unbind.js
           node tests/security_audit_order_price_js.js
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Browser upload protocols and mandatory CSRF
+        run: |
+          set -euo pipefail
+          npm ci --prefix tests/browser --ignore-scripts --no-audit --no-fund
+          browser_binary=''
+          for candidate in chromium chromium-browser google-chrome google-chrome-stable; do
+            if command -v "$candidate" >/dev/null 2>&1; then browser_binary=$(command -v "$candidate"); break; fi
+          done
+          test -n "$browser_binary"
+          "$browser_binary" --version
+          CHROMIUM_BINARY="$browser_binary" PHP_BINARY=php node tests/browser/upload_csrf.cjs
       - name: Prepare dedicated MySQL fixtures and verify InnoDB schema
         run: |
           set -euo pipefail
