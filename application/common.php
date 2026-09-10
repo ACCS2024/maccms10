@@ -2512,37 +2512,29 @@ function mac_play_list_one($url_one, $from_one, $server_one=''){
     return $url_list;
 }
 
-function mac_manga_list($manga_play_from,$manga_play_url,$manga_play_server,$manga_play_note)
+function mac_manga_list($manga_play_from,$manga_play_url,$manga_play_server='',$manga_play_note='')
 {
-    $manga_play_from_list = [];
-    $manga_play_url_list = [];
-    $manga_play_server_list = [];
-    $manga_play_note_list = [];
-
-    if(!empty($manga_play_from)) {
-        $manga_play_from_list = explode('$$$', $manga_play_from);
+    // Server/note are optional legacy fields and are absent from the installation schema.
+    if (!is_string($manga_play_from) || $manga_play_from === '') {
+        return [];
     }
-    if(!empty($manga_play_url)) {
-        $manga_play_url_list = explode('$$$', $manga_play_url);
-    }
-    if(!empty($manga_play_server)) {
-        $manga_play_server_list = explode('$$$', $manga_play_server);
-    }
-    if(!empty($manga_play_note)) {
-        $manga_play_note_list = explode('$$$', $manga_play_note);
-    }
+    $manga_play_from_list = explode('$$$', $manga_play_from);
+    $manga_play_url_list = is_string($manga_play_url) ? explode('$$$', $manga_play_url) : [];
+    $manga_play_server_list = is_string($manga_play_server) ? explode('$$$', $manga_play_server) : [];
+    $manga_play_note_list = is_string($manga_play_note) ? explode('$$$', $manga_play_note) : [];
 
     $res_list = [];
     foreach($manga_play_from_list as $k=>$v){
-        $server = (string)$manga_play_server_list[$k];
-        $urls = mac_play_list_one($manga_play_url_list[$k],$v);
+        $url = $manga_play_url_list[$k] ?? '';
+        $urls = mac_play_list_one($url,$v);
 
+        // Preserve original source and chapter keys, including holes in a chapter list.
         $res_list[$k + 1] = [
             'sid' => $k + 1,
             'from' => $v,
-            'url' => $manga_play_url_list[$k],
-            'server' => $server,
-            'note' => $manga_play_note_list[$k],
+            'url' => $url,
+            'server' => $manga_play_server_list[$k] ?? '',
+            'note' => $manga_play_note_list[$k] ?? '',
             'url_count' => count($urls),
             'urls' => $urls,
         ];

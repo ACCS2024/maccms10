@@ -490,7 +490,7 @@ class Manga extends Base {
             $info = $info->toArray();
             //内容
             if (!empty($info['manga_chapter_url'])) {
-                $info['manga_page_list'] = mac_manga_list($info['manga_chapter_from'], $info['manga_chapter_url'], $info['manga_play_server'], $info['manga_play_note']);
+                $info['manga_page_list'] = mac_manga_list($info['manga_chapter_from'], $info['manga_chapter_url'], $info['manga_play_server'] ?? '', $info['manga_play_note'] ?? '');
                 $info['manga_page_total'] = count($info['manga_page_list']);
             }
             if(!empty($info['manga_pic_screenshot'])){
