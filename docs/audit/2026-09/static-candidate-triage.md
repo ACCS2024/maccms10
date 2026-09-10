@@ -66,3 +66,11 @@
 相对 52f70b90 的 level 1，新增 ContentResource 的入口常量 MAC_PATH 提示、MangaResourceReader 的动态 Db::query 提示、LocalAttachment 的一处 manifest 控制流提示；CSV 改写后减少一处 empty($headers) 冗余提示。附件清单赋值早于 BEGIN/远端尝试；未知结果分支与标记具有关联前提，不能只凭局部未定义提示宣布已经存在未初始化读取。仍保留该诊断供跨路径核对，不以填充默认值掩盖事务状态。
 
 AiSearch 的 Collection 问题已经在 c84bc161 通过实际 MySQL 修复；不再把上一轮的“进入验证”当作当前状态。较严格级别新出现的连接接口方法提示继续结合实际 PDOConnection 与故障夹具核实。Import 的旧上传对象 API、XLSX 坐标范围及实际共享字符串警告均已有独立证据，按各自合同分批处理。
+
+## fc8c07ce 重扫
+
+见[阶段记录](phase-verification-fc8c07ce.md)。level 1 为 421 条、level 5 为 1,190 条，均无全局错误；PHPCompatibility 为 0 错误、8 警告，未隐藏候选。
+
+相对 91486040，level 1 的 Art/Manga 各减少一处可选字段警告，旧 BulkTableIo 解析器减少一处，新 XlsxTableReader 增加一处未使用闭包捕获。level 5 的 Art/Manga 各减少一处、BulkTableIo 减少两处、XlsxTableReader 新增 16 处。XLSX 的多处 null/不可达提示横跨 XMLReader 回调和捕获变量的状态变化；449 项实际解析/边界和 68 项普通文本回归已运行，但不能据此一笔勾销全部静态候选。未使用捕获、已知原生返回类型和更复杂状态推导分别复核，不为数字归零添加无效默认值。
+
+普通模型调查已把一部分候选变成实际证据：漫画和文章保存已独立修复，Vod 保存及重复目录的问题仍待处理，详见跨模块清单。PHPStan 的全局零错误表示分析器跑完，不表示应用没有问题。

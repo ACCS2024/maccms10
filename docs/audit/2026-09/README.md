@@ -23,4 +23,4 @@
 
 阶段分类入口：[框架与运行边界](framework.md)、[安全与账务](security.md)、[静态候选](static-candidate-triage.md)、[跨模块复审](cross-cutting-followups.md)。后续专项报告分别记录对应提交范围与验证限制；以每个提交的测试快照为准。
 
-最新固定快照记录：[91486040 阶段完整复验](phase-verification-91486040.md)，含双版本 5,387 文件编译、各 139 默认回归进程，以及 level 1 / level 5 静态分类和本轮发现的回归失败闭环。较早记录保留于 [52f70b90](phase-verification-52f70b90.md)、[cdc213f](phase-verification-cdc213f.md) 与 [1a36cb4](phase-verification-1a36cb4.md)；后续组独立验证和记账。
+最新固定快照记录：[fc8c07ce 阶段完整复验](phase-verification-fc8c07ce.md)，含双版本 5,392 文件编译、各 143 默认回归进程，以及未抑制的 level 1 / level 5 静态分类。较早记录保留于 [91486040](phase-verification-91486040.md)、[52f70b90](phase-verification-52f70b90.md)、[cdc213f](phase-verification-cdc213f.md) 与 [1a36cb4](phase-verification-1a36cb4.md)；后续批次独立验证和记账。
