@@ -812,11 +812,16 @@ class User extends Base
         $user_name = cookie('user_name');
         $user_check = cookie('user_check');
 
-        $user_id = htmlspecialchars(urldecode(trim($user_id)));
+        // Cookies may be absent or parsed as arrays. Reject malformed credentials before string operations.
+        if ((!is_string($user_id) && !is_int($user_id)) || !is_string($user_name) || !is_string($user_check)
+            || strlen((string)$user_id) > 128 || strlen($user_name) > 1024 || strlen($user_check) > 256) {
+            return ['code' => 1001, 'msg' => lang('model/user/not_login')];
+        }
+        $user_id = \app\common\util\PointsBalance::amount(urldecode(trim((string)$user_id)));
         $user_name = htmlspecialchars(urldecode(trim($user_name)));
-        $user_check = htmlspecialchars(urldecode(trim($user_check)));
+        $user_check = urldecode(trim($user_check));
 
-        if (empty($user_id) || empty($user_name) || empty($user_check)) {
+        if ($user_id === null || $user_name === '' || !preg_match('/^[a-f0-9]{32}$/D', $user_check)) {
             return ['code' => 1001, 'msg' => lang('model/user/not_login')];
         }
 
