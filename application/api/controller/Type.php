@@ -59,7 +59,7 @@ class Type extends Base
             $parentIds = array_column(is_array($list) ? $list : $list->toArray(), 'type_id');
             $childrenMap = [];
             if (!empty($parentIds)) {
-                $allChildren = Db::table('mac_type')
+                $allChildren = Db::name('Type')
                     ->whereIn('type_pid', $parentIds)
                     ->order('type_sort DESC')
                     ->select();
@@ -91,7 +91,7 @@ class Type extends Base
      */
     public function get_all_list()
     {
-        $list = Db::table('mac_type')->where(['type_pid'=> 0])->column('type_id,type_name,type_en');
+        $list = Db::name('Type')->where(['type_pid'=> 0])->column('type_id,type_name,type_en');
         // 返回
         return json([
             'code' => 1,
@@ -120,6 +120,10 @@ class Type extends Base
     public function get_nav_types(\think\Request $request)
     {
         $param = $request->param();
+        $validate = new \app\api\validate\Type();
+        if (!$validate->scene('get_nav_types')->check($param)) {
+            return json(['code' => 1001, 'msg' => '参数错误: ' . $validate->getError()]);
+        }
         $ids = isset($param['ids']) ? trim($param['ids']) : '';
         $num = isset($param['num']) ? (int)$param['num'] : 0;
         $mid = isset($param['mid']) ? (int)$param['mid'] : 0;
@@ -141,17 +145,17 @@ class Type extends Base
             $where['type_mid'] = $mid;
         }
 
-        $query = Db::table('mac_type')->where($where)->order('type_sort asc');
+        $query = Db::name('Type')->where($where)->order('type_sort asc');
         if ($num > 0) {
             $query = $query->limit($num);
         }
-        $list = $query->select();
+        $list = $query->select()->toArray();
 
         // 批量加载所有子分类（一次查询替代 N 次）
-        $parentIds = array_column(is_array($list) ? $list : (array)$list, 'type_id');
+        $parentIds = array_column($list, 'type_id');
         $childrenMap = [];
         if (!empty($parentIds)) {
-            $allChildren = Db::table('mac_type')
+            $allChildren = Db::name('Type')
                 ->whereIn('type_pid', $parentIds)
                 ->order('type_sort asc')
                 ->select();
@@ -203,6 +207,10 @@ class Type extends Base
     public function get_type_with_children(\think\Request $request)
     {
         $param = $request->param();
+        $validate = new \app\api\validate\Type();
+        if (!$validate->scene('get_type_with_children')->check($param)) {
+            return json(['code' => 1001, 'msg' => '参数错误: ' . $validate->getError()]);
+        }
         if (empty($param['type_id'])) {
             return json(['code' => 1001, 'msg' => '参数错误: type_id 必须']);
         }
@@ -210,7 +218,7 @@ class Type extends Base
         $num = isset($param['num']) ? (int)$param['num'] : 0;
 
         // 获取父分类
-        $parent = Db::table('mac_type')->where(['type_id' => $typeId])->find();
+        $parent = Db::name('Type')->where(['type_id' => $typeId])->find();
         if (empty($parent)) {
             return json(['code' => 1002, 'msg' => '分类不存在']);
         }
@@ -222,13 +230,13 @@ class Type extends Base
         $parent['type_link'] = mac_url_type($parent);
 
         // 获取子分类
-        $childQuery = Db::table('mac_type')
+        $childQuery = Db::name('Type')
             ->where(['type_pid' => $typeId])
             ->order('type_sort asc');
         if ($num > 0) {
             $childQuery = $childQuery->limit($num);
         }
-        $children = $childQuery->select();
+        $children = $childQuery->select()->toArray();
         foreach ($children as &$child) {
             $child['type_link'] = mac_url_type($child);
             if (!empty($child['type_extend'])) {
