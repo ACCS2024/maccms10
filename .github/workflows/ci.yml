@@ -4,157 +4,166 @@ on:
   push:
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
-  php-lint:
-    name: PHP Lint (8.2)
+  audit:
+    name: PHP ${{ matrix.php }} compatibility and integration
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.2'
-          coverage: none
-      - name: php -l on application/ + entry files
-        run: |
-          set -euo pipefail
-          fail=0
-          while IFS= read -r -d '' f; do
-            php -l "$f" >/dev/null || { echo "LINT FAIL: $f"; fail=1; }
-          done < <(find application -name '*.php' -print0)
-          for f in index.php api.php admin.php install.php security_check.php; do
-            [ -f "$f" ] && { php -l "$f" >/dev/null || { echo "LINT FAIL: $f"; fail=1; }; }
-          done
-          if [ "$fail" = 0 ]; then echo "All PHP lint OK"; else exit 1; fi
-
-  schema-load:
-    name: Schema loads on MySQL 5.7 (all InnoDB)
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.3', '8.4']
     services:
       mysql:
-        image: mysql:5.7
+        image: mysql:8.0
         env:
-          MYSQL_ROOT_PASSWORD: root
-          MYSQL_DATABASE: maccms
+          MYSQL_ROOT_PASSWORD: audit-fixture
+          MYSQL_DATABASE: maccms_audit_http
         ports:
           - 3306:3306
         options: >-
-          --health-cmd="mysqladmin ping -h localhost -proot"
-          --health-interval=5s --health-timeout=5s --health-retries=20
-    steps:
-      - uses: actions/checkout@v4
-      - name: Load install schema + initdata, assert InnoDB
-        run: |
-          set -euo pipefail
-          for i in $(seq 1 30); do mysql -h127.0.0.1 -uroot -proot -e "SELECT 1" >/dev/null 2>&1 && break; sleep 3; done
-          mysql -h127.0.0.1 -uroot -proot maccms < application/install/sql/install.sql
-          mysql -h127.0.0.1 -uroot -proot maccms < application/install/sql/initdata.sql
-          total=$(mysql -h127.0.0.1 -uroot -proot -N -e "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA='maccms'")
-          myisam=$(mysql -h127.0.0.1 -uroot -proot -N -e "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA='maccms' AND ENGINE='MyISAM'")
-          echo "tables=$total, MyISAM=$myisam"
-          if [ "$myisam" != "0" ]; then echo "ERROR: expected all InnoDB"; exit 1; fi
-
-  http-smoke:
-    name: HTTP smoke (PHP 8.2 + MySQL, assert non-5xx)
-    runs-on: ubuntu-latest
-    services:
-      mysql:
-        image: mysql:5.7
-        env:
-          MYSQL_ROOT_PASSWORD: root
-          MYSQL_DATABASE: maccms
-        ports:
-          - 3306:3306
-        options: >-
-          --health-cmd="mysqladmin ping -h localhost -proot"
+          --health-cmd="mysqladmin ping -h localhost -paudit-fixture"
           --health-interval=5s --health-timeout=5s --health-retries=20
     steps:
       - uses: actions/checkout@v4
       - uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.2'
-          extensions: pdo, pdo_mysql, mbstring, gd, curl, json, fileinfo, tokenizer
+          php-version: ${{ matrix.php }}
+          extensions: pdo_mysql, pdo_sqlite, mbstring, gd, curl, fileinfo, dom, xml, simplexml, zip, redis
           coverage: none
-      - name: composer install
-        run: composer install --no-interaction --no-progress --prefer-dist
-      - name: Load schema + seed minimal content
+          tools: composer:v2
+      - name: Compile all maintained PHP sources with diagnostics enabled
+        run: bash tests/lint.sh --json=/tmp/php-lint.json
+      - name: Install and verify locked dependencies
+        run: |
+          composer validate --strict --no-check-publish
+          composer install --no-dev --no-plugins --no-scripts --no-interaction --no-progress --prefer-dist
+          composer check-platform-reqs --no-dev
+          composer audit --locked --no-dev
+          composer --working-dir=extend/upyun audit --locked --no-dev
+      - name: Independent regression suites and SQLite models
+        run: php tests/run_audit.php --suite=unit,models,financial
+      - name: Prepare dedicated MySQL fixtures and verify InnoDB schema
         run: |
           set -euo pipefail
-          for i in $(seq 1 30); do mysql -h127.0.0.1 -uroot -proot -e "SELECT 1" >/dev/null 2>&1 && break; sleep 3; done
-          mysql -h127.0.0.1 -uroot -proot maccms < application/install/sql/install.sql
-          mysql -h127.0.0.1 -uroot -proot maccms < application/install/sql/initdata.sql
-          # 种最小内容(sql_mode 置空,缺省列回落默认),覆盖详情/播放页
-          mysql -h127.0.0.1 -uroot -proot maccms -e 'SET SESSION sql_mode="";
-            INSERT INTO mac_vod (vod_id,type_id,vod_name,vod_status,vod_time,vod_letter,vod_play_from,vod_play_url,vod_content) VALUES (1,6,"CI Smoke Vod",1,UNIX_TIMESTAMP(),"C","mac_test","01$http://example.com/1.m3u8","desc");
-            INSERT INTO mac_art (art_id,type_id,art_name,art_status,art_time,art_letter,art_content) VALUES (1,2,"CI Smoke Art",1,UNIX_TIMESTAMP(),"C","content");
-            INSERT INTO mac_actor (actor_id,type_id,actor_name,actor_status,actor_time,actor_letter,actor_content) VALUES (1,8,"CI Actor",1,UNIX_TIMESTAMP(),"C","bio");
-            INSERT INTO mac_topic (topic_id,topic_name,topic_status,topic_time,topic_en,topic_content) VALUES (1,"CI Topic",1,UNIX_TIMESTAMP(),"ci","content");
-            INSERT INTO mac_admin (admin_id,admin_name,admin_pwd,admin_status,admin_auth) VALUES (1,"admin",MD5("admin888"),1,"");'
-      - name: Configure .env + install lock
+          mysql --no-defaults --help > /tmp/mysql-help.txt
+          if grep -q -- 'ssl-mode' /tmp/mysql-help.txt; then tls=--ssl-mode=DISABLED; else tls=--skip-ssl; fi
+          # Only the disposable loopback MySQL service uses this TLS setting.
+          client=(mysql --default-character-set=utf8mb4 "$tls" -h127.0.0.1 -uroot -paudit-fixture)
+          "${client[@]}" -e 'CREATE DATABASE maccms_audit_models CHARACTER SET utf8mb4; CREATE DATABASE maccms_audit_install CHARACTER SET utf8mb4; CREATE DATABASE maccms_audit_membership CHARACTER SET utf8mb4;'
+          "${client[@]}" maccms_audit_http < application/install/sql/install.sql
+          "${client[@]}" maccms_audit_http < application/install/sql/initdata.sql
+          "${client[@]}" maccms_audit_http < tests/fixtures/http_seed.sql
+          tables=$("${client[@]}" -Nse "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA='maccms_audit_http'")
+          non_innodb=$("${client[@]}" -Nse "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA='maccms_audit_http' AND ENGINE <> 'InnoDB'")
+          test "$tables" -gt 0
+          test "$non_innodb" = 0
+          printf 'MAC_MYSQL=mysql --default-character-set=utf8mb4 %s -h127.0.0.1 -uroot -paudit-fixture maccms_audit_http\n' "$tls" >> "$GITHUB_ENV"
+      - name: MySQL model regressions
+        env:
+          FRAMEWORK_AUDIT_MYSQL: '1'
+          FRAMEWORK_AUDIT_HOST: 127.0.0.1
+          FRAMEWORK_AUDIT_PASSWORD: audit-fixture
+        run: php tests/run_audit.php --suite=models
+      - name: MySQL membership and referral ledgers
+        env:
+          MEMBERSHIP_AUDIT_MYSQL: '1'
+          MEMBERSHIP_AUDIT_HOST: 127.0.0.1
+          MEMBERSHIP_AUDIT_PASSWORD: audit-fixture
+        run: |
+          php tests/run_audit.php --suite=financial
+          php tests/security_audit_payment_schema.php
+      - name: Installer failure boundaries as the unprivileged runner
+        run: php tests/run_audit.php --suite=install
+      - name: Real MySQL installation through Web and CLI paths
+        env:
+          FRAMEWORK_AUDIT_MYSQL: '1'
+          FRAMEWORK_AUDIT_HOST: 127.0.0.1
+          FRAMEWORK_AUDIT_PASSWORD: audit-fixture
+        run: php tests/run_audit.php --suite=install
+      - name: Configure disposable HTTP site with strict PHP diagnostics
+        env:
+          MAC_AUDIT_FIXTURE: '1'
+          DB_NAME: maccms_audit_http
+          DB_HOST: 127.0.0.1
+          DB_USER: root
+          DB_PASS: audit-fixture
+        run: php tests/setup_http_fixture.php
+      - name: Frontend and real API action contracts
+        run: python3 tests/run_http_smoke.py
+      - name: Admin HTTP and persisted-write contracts
         run: |
           set -euo pipefail
-          printf 'APP_DEBUG = false\nDB_HOST = 127.0.0.1\nDB_NAME = maccms\nDB_USER = root\nDB_PASS = root\n' > .env
-          mkdir -p application/data/install
-          date '+%Y-%m-%d %H:%M:%S' > application/data/install/install.lock
-      - name: HTTP smoke (front + API, fail on any 5xx)
-        run: |
-          set -uo pipefail
-          fail=0
-          for u in \
-            "/" \
-            "/vod/type/id/6.html" \
-            "/vod/detail/id/1.html" \
-            "/vod/play/id/1/sid/1/nid/1.html" \
-            "/vod/search.html?wd=CI" \
-            "/art/detail/id/1.html" \
-            "/actor/detail/id/1.html" \
-            "/topic/detail/id/1.html" \
-            "/label/1.html" \
-            "/rss/index.html" \
-            "/user/index.html" \
-            "/map.html" \
-            "/comment/index/rid/1/tab/vod" \
-            "/gbook/index.html" ; do
-            php tests/http_smoke.php index "$u" || fail=1
-          done
-          for u in "/type" "/vod" "/provide/vod" ; do
-            php tests/http_smoke.php api "$u" || fail=1
-          done
-          if [ "$fail" = 0 ]; then echo "All HTTP smoke OK"; else echo "HTTP smoke FAILED"; exit 1; fi
-      - name: Admin HTTP smoke (login + assert non-5xx)
-        run: |
-          set -uo pipefail
-          # 关验证码(仅 CI 临时环境),以便脚本化登录
-          sed -i "s/'admin_login_verify' => '1'/'admin_login_verify' => '0'/" application/extra/maccms.php
-          # admin.php 自带改名守卫,复制为改名入口后启动后台服务器
           cp admin.php madmin_ci.php
           php -S 127.0.0.1:8813 madmin_ci.php >/tmp/admin_srv.log 2>&1 &
-          for i in $(seq 1 30); do curl -s -o /dev/null "http://127.0.0.1:8813/index/login" && break; sleep 1; done
-          bash tests/admin_smoke.sh "http://127.0.0.1:8813"
-      - name: Admin write smoke (CRUD 写入真正生效)
-        env:
-          MAC_MYSQL: "mysql -h127.0.0.1 -uroot -proot maccms"
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          ready=0
+          for ((attempt=0; attempt<30; attempt++)); do
+            if curl --silent --fail --max-time 3 -o /dev/null http://127.0.0.1:8813/index/login; then ready=1; break; fi
+            sleep 1
+          done
+          test "$ready" = 1
+          bash tests/admin_smoke.sh http://127.0.0.1:8813
+          python3 tests/admin_write_smoke.py http://127.0.0.1:8813
+      - name: Preserve diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: php-${{ matrix.php }}-diagnostics
+          path: |
+            /tmp/php-lint.json
+            /tmp/admin_srv.log
+            runtime/*/log/
+            runtime/log/
+          if-no-files-found: ignore
+
+  hits-buffer:
+    name: PHP ${{ matrix.php }} Redis and MySQL concurrency
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.3', '8.4']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: pdo_mysql, mbstring, gd, curl, fileinfo, dom, xml, simplexml, zip
+          coverage: none
+          tools: composer:v2
+      - name: Install application dependencies
+        run: composer install --no-dev --no-plugins --no-scripts --no-interaction --no-progress --prefer-dist
+      - name: Build and test the production PHP image
         run: |
-          set -uo pipefail
-          # 复用上一步启动的后台服务器(:8813),验证字段切换/保存/删除/配置保存
-          # 经 CSRF 与会话真正写入数据库(含 CSRF 负例)。
-          python3 tests/admin_write_smoke.py "http://127.0.0.1:8813"
+          docker build --build-arg PHP_VERSION=${{ matrix.php }} -t maccms-ci:${{ matrix.php }} docker
+          docker pull mysql:8.0
+          sudo apt-get update -qq
+          sudo apt-get install -y redis-server
+          python3 tests/run_hits_buffer_audit.py maccms-ci:${{ matrix.php }}
+          python3 tests/run_collection_audit.py maccms-ci:${{ matrix.php }}
+          python3 tests/run_baidu_urlsend_audit.py maccms-ci:${{ matrix.php }}
+      - name: Decode generated QR images with an independent implementation
+        run: |
+          python3 -m venv /tmp/maccms-qr-venv
+          /tmp/maccms-qr-venv/bin/pip install -r tests/requirements-qr.txt
+          /tmp/maccms-qr-venv/bin/python tests/run_qrcode_audit.py maccms-ci:${{ matrix.php }}
 
   shellcheck:
-    name: ShellCheck (deploy/ + tests/ shell scripts)
+    name: ShellCheck
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: Install shellcheck
         run: sudo apt-get update -qq && sudo apt-get install -y shellcheck
-      - name: Run shellcheck on *.sh under deploy/ and tests/
+      - name: Check deploy and test shell scripts
         run: |
           set -euo pipefail
           fail=0
-          found=0
-          while IFS= read -r -d '' f; do
-            found=1
-            echo "shellcheck $f"
-            shellcheck "$f" || fail=1
-          done < <(find deploy tests -name '*.sh' -print0 2>/dev/null)
-          if [ "$found" = 0 ]; then echo "no shell scripts found"; fi
-          if [ "$fail" = 0 ]; then echo "All shellcheck OK"; else exit 1; fi
+          while IFS= read -r -d '' file; do
+            shellcheck "$file" || fail=1
+          done < <(find deploy tests -name '*.sh' -print0)
+          exit "$fail"

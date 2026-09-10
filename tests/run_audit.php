@@ -1,0 +1,98 @@
+<?php
+/** Explicit regression inventory. Each test gets its own process and a bounded runtime. */
+declare(strict_types=1);
+if (PHP_VERSION_ID < 80300 || PHP_VERSION_ID >= 80500) {
+    fwrite(STDERR, "Audit runtime must be PHP 8.3 or 8.4.\n");
+    exit(2);
+}
+$groups = [
+    'unit' => [
+        ['core_audit_helpers.php'],
+        ['extensions_audit_addons.php'], ['extensions_audit_aws.php'], ['extensions_audit_discovery.php'],
+        ['extensions_audit_collection.php'],
+        ['extensions_audit_lifecycle.php'], ['extensions_audit_oauth_sdk.php'],
+        ['extensions_audit_qiniu_sdk.php'], ['extensions_audit_qrcode.php'],
+        ['extensions_audit_qrcode_http.php'], ['extensions_audit_upyun.php'],
+        ['extensions_audit_upyun.php', 'embedded-first'], ['extensions_audit_upload_adapters.php'],
+        ['framework_audit_cli_failures.php'], ['framework_audit_collection_paging.php'],
+        ['framework_audit_csv.php'], ['framework_audit_request_injection.php'],
+        ['framework_audit_api_runtime.php'], ['framework_audit_api_validation.php'],
+        ['framework_audit_api_defaults.php'], ['framework_audit_detail_routes.php'],
+        ['framework_audit_user_lists.php'], ['security_audit_member_order_url.php'],
+        ['validator_audit_chatroom_danmaku.php'],
+        ['framework_audit_strict_errors.php', 'strict'], ['framework_audit_strict_errors.php', 'default'],
+        ['security_audit_admin.php'], ['security_audit_annex.php'], ['security_audit_api.php'],
+        ['security_audit_bulk_forms.php'], ['security_audit_cj.php'], ['security_audit_crypto.php'],
+        ['security_audit_csrf.php'], ['security_audit_config_preservation.php'], ['security_audit_dir.php'], ['security_audit_http.php'],
+        ['security_audit_jwt.php'], ['security_audit_logging.php'], ['security_audit_make.php'],
+        ['security_audit_oauth.php'], ['security_audit_oauth_profiles.php'], ['security_audit_paths.php'], ['security_audit_safety.php'],
+        ['security_audit_sms.php'], ['security_audit_tls.php'], ['security_audit_urlsend.php'],
+        ['security_audit_wechat.php'], ['security_audit_xml.php'],
+        ['security_audit_pay_weixin.php'], ['security_audit_pay_alipay.php'],
+        ['security_audit_pay_epay.php'], ['security_audit_pay_codepay.php'],
+        ['security_audit_pay_zhapay.php'], ['security_audit_pay_jeepay.php'],
+        ['ppvod_legacy_compat.php'],
+    ],
+    // Default: SQLite. FRAMEWORK_AUDIT_MYSQL=1 selects only the dedicated audit database.
+    'models' => [
+        ['framework_audit_lists.php'], ['framework_audit_collection_nodes.php'],
+        ['framework_audit_queries.php'], ['framework_audit_payment.php'],
+        ['framework_audit_cash.php'], ['framework_audit_admin_session.php'],
+        ['framework_audit_checkout.php'], ['framework_audit_ulog_users.php'], ['framework_audit_type_navigation.php'],
+    ],
+    // Separate environment: MEMBERSHIP_AUDIT_MYSQL selects the financial installation schema.
+    'financial' => [['security_audit_membership.php']],
+    // Execute as an unprivileged account so denied-write cases are meaningful.
+    'install' => [['framework_audit_install.php']],
+];
+$selected = ['unit', 'models', 'financial'];
+$listOnly = false;
+foreach (array_slice($argv, 1) as $arg) {
+    if (str_starts_with($arg, '--suite=')) {
+        $value = substr($arg, 8);
+        $selected = $value === 'all' ? array_keys($groups) : explode(',', $value);
+    } elseif ($arg === '--list') {
+        $listOnly = true;
+    } else {
+        fwrite(STDERR, "Unknown option: {$arg}\n"); exit(2);
+    }
+}
+$commands = [];
+foreach (array_unique($selected) as $suite) {
+    if (!isset($groups[$suite])) { fwrite(STDERR, "Unknown suite: {$suite}\n"); exit(2); }
+    foreach ($groups[$suite] as $args) {
+        $file = __DIR__ . '/' . array_shift($args);
+        if (!is_file($file)) { fwrite(STDERR, "Missing regression: {$file}\n"); exit(2); }
+        $commands[] = [PHP_BINARY, '-d', 'error_reporting=-1', '-d', 'display_errors=1', $file, ...$args];
+    }
+}
+if ($commands === []) { fwrite(STDERR, "No regression tests selected.\n"); exit(2); }
+if ($listOnly) { echo json_encode($commands, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n"; exit(0); }
+if (in_array('install', $selected, true) && function_exists('posix_geteuid') && posix_geteuid() === 0) {
+    fwrite(STDERR, "Installer permission regressions must run as an unprivileged user.\n"); exit(2);
+}
+$failures = 0;
+foreach ($commands as $command) {
+    $process = proc_open($command, [0 => ['file', '/dev/null', 'r'], 1 => STDOUT, 2 => STDERR], $pipes, dirname(__DIR__));
+    if (!is_resource($process)) { fwrite(STDERR, "Cannot start regression process.\n"); exit(2); }
+    $deadline = microtime(true) + 180;
+    do {
+        $state = proc_get_status($process);
+        if (!$state['running']) { break; }
+        usleep(20000);
+    } while (microtime(true) < $deadline);
+    if ($state['running']) {
+        proc_terminate($process, 9);
+        $status = 124;
+    } else {
+        $status = $state['exitcode'];
+    }
+    $closed = proc_close($process);
+    if ($status < 0) { $status = $closed >= 0 ? $closed : 255; }
+    if ($status !== 0) {
+        ++$failures;
+        fwrite(STDERR, 'FAIL ' . basename($command[5]) . ' (exit ' . $status . ")\n");
+    }
+}
+printf("Audit: %d processes, %d failures on PHP %s.\n", count($commands), $failures, PHP_VERSION);
+exit($failures === 0 ? 0 : 1);
