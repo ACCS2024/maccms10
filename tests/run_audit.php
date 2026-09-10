@@ -41,7 +41,7 @@ $groups = [
         ['framework_audit_user_binding.php'], ['framework_audit_user_messages.php'], ['framework_audit_password_reset.php'], ['framework_audit_password_changes.php'], ['framework_audit_lists.php'], ['framework_audit_collection_nodes.php'],
         ['framework_audit_queries.php'], ['framework_audit_payment.php'],
         ['framework_audit_cash.php'], ['framework_audit_admin_session.php'], ['framework_audit_member_session.php'],
-        ['framework_audit_checkout.php'], ['security_audit_user_log_delete.php'], ['framework_audit_ulog_users.php'], ['framework_audit_ledger_usernames.php'], ['framework_audit_type_navigation.php'], ['framework_audit_vod_home.php'],
+        ['framework_audit_checkout.php'], ['security_audit_user_log_delete.php'], ['framework_audit_ulog_users.php'], ['framework_audit_ulog_writes.php'], ['framework_audit_ledger_usernames.php'], ['framework_audit_type_navigation.php'], ['framework_audit_vod_home.php'],
     ],
     // Separate environment: MEMBERSHIP_AUDIT_MYSQL selects the financial installation schema.
     'financial' => [['security_audit_task_retention.php'], ['security_audit_visit_retention.php'], ['security_audit_visit_rewards.php'], ['security_audit_visit_redirect.php'], ['security_audit_cash_refund.php'], ['security_audit_membership.php'], ['security_audit_points_overflow.php'], ['security_audit_card_credit.php'], ['security_audit_task_rewards.php'], ['security_audit_task_eligibility.php'], ['security_audit_comment_submission.php'], ['framework_audit_gbook_normal.php'], ['security_audit_comment_provenance.php'], ['security_audit_ledger_retention.php'], ['security_audit_order_create.php']],

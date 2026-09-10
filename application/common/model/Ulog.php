@@ -148,34 +148,52 @@ class Ulog extends Base {
         return ['code'=>1,'msg'=>lang('obtain_ok'),'info'=>$info];
     }
 
+    /** Append a record for the identity already verified by the caller; never read browser credentials here. */
     public function saveData($data)
     {
-        $data['user_id'] = intval(cookie('user_id'));
-        $data['ulog_time'] = time();
-
-        $validate = mac_validate('Ulog');
-        if(!$validate->check($data)){
-            return ['code'=>1001,'msg'=>lang('param_err').'：'.$validate->getError() ];
+        if (!is_array($data) || array_key_exists('ulog_id', $data)) {
+            return ['code'=>1001, 'msg'=>lang('param_err')];
         }
-
-        if($data['user_id']==0 || !in_array($data['ulog_mid'],['1','2','3','8','12']) || !in_array($data['ulog_type'],['1','2','3','4','5']) ) {
-            return ['code'=>1002,'msg'=>lang('param_err')];
+        $fields = [];
+        foreach (['user_id', 'ulog_mid', 'ulog_type', 'ulog_rid', 'ulog_sid', 'ulog_nid', 'ulog_points'] as $field) {
+            $optional = in_array($field, ['ulog_sid', 'ulog_nid', 'ulog_points'], true);
+            $value = array_key_exists($field, $data) ? $data[$field] : ($optional ? 0 : null);
+            $fields[$field] = \app\common\util\PointsBalance::amount($value, $optional);
+            if ($fields[$field] === null) { return ['code'=>1001, 'msg'=>lang('param_err')]; }
         }
-
-        if(!empty($data['ulog_id'])){
-            $where=[];
-            $where['ulog_id'] = $data['ulog_id'];
-            $data = $this->filterFields($data);
-            $res = $this->where($where)->update($data);
+        $types = [1=>[2,3,4,5], 2=>[1,2,3], 3=>[2,3], 8=>[2,3], 12=>[1,2,3]];
+        if (!isset($types[$fields['ulog_mid']]) || !in_array($fields['ulog_type'], $types[$fields['ulog_mid']], true)
+            || $fields['ulog_sid'] > 255 || $fields['ulog_nid'] > 65535 || $fields['ulog_points'] > 65535) {
+            return ['code'=>1002, 'msg'=>lang('param_err')];
         }
-        else{
-            $data = $this->filterFields($data);
-            $res = $this->insert($data);
+        $fields['ulog_time'] = \app\common\util\PointsBalance::amount(time());
+        if ($fields['ulog_time'] === null) { return ['code'=>1002, 'msg'=>lang('param_err')]; }
+        $started = false;
+        try {
+            $connection = Db::connect();
+            $type = $connection->getConfig('type');
+            if ($type === 'mysql') {
+                $rows = Db::query('SELECT ENGINE AS engine FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=?', [$this->getTable()], true);
+                if (count($rows) !== 1 || strtoupper((string)$rows[0]['engine']) !== 'INNODB') {
+                    throw new \RuntimeException('Usage records require transactional storage');
+                }
+            } elseif ($type !== 'sqlite') { throw new \RuntimeException('Unsupported usage record storage'); }
+            Db::startTrans(); $started = true;
+            if (!Db::name('User')->master()->where('user_id', $fields['user_id'])->where('user_status', 1)->find()
+                || $this->insert($fields) !== 1) { throw new \RuntimeException('Usage record insert failed'); }
+            $id = \app\common\util\PointsBalance::amount($this->getLastInsID());
+            $stored = $id === null ? null : Db::name('Ulog')->master()->where('ulog_id', $id)->find();
+            foreach ($fields as $field=>$value) {
+                if (!$stored || (string)$stored[$field] !== (string)$value) {
+                    throw new \RuntimeException('Usage record was not stored exactly');
+                }
+            }
+            Db::commit(); $started = false;
+            return ['code'=>1, 'msg'=>lang('save_ok')];
+        } catch (\Throwable $error) {
+            if ($started) { Db::rollback(); }
+            return ['code'=>1004, 'msg'=>lang('save_err')];
         }
-        if(false === $res){
-            return ['code'=>1004,'msg'=>lang('save_err').'：'.$this->getError() ];
-        }
-        return ['code'=>1,'msg'=>lang('save_ok')];
     }
 
     public function delData($where)
