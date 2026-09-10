@@ -417,6 +417,15 @@ class Vod extends Base
         ]);
     }
 
+    private function homeVideoQuery()
+    {
+        $query = Db::name('Vod')->where('vod_status', 1);
+        if (in_array('vod_recycle_time', $query->getTableFields(), true)) {
+            $query->where('vod_recycle_time', 0);
+        }
+        return $query;
+    }
+
     private function homeListParameters(array $input, int $defaultCount, string $defaultLevel = ''): ?array
     {
         $result = [];
@@ -467,10 +476,9 @@ class Vod extends Base
         $num = $param['num']; $start = $param['start'];
 
         $where = [];
-        $where['vod_status'] = 1;
         if ($param['levels']) { $where[] = ['vod_level', 'in', $param['levels']]; }
 
-        $list = Db::name('Vod')
+        $list = $this->homeVideoQuery()
             ->field('vod_id,vod_name,vod_sub,vod_pic,vod_pic_slide,vod_actor,vod_director,vod_score,vod_content,vod_blurb,vod_remarks,vod_year,vod_area,vod_class,vod_points_play,type_id,type_id_1')
             ->where($where)
             ->order('vod_time desc')
@@ -490,6 +498,7 @@ class Vod extends Base
                 $favRows = (new \app\common\model\Ulog())->where([
                     'user_id' => $userId,
                     'ulog_type' => 2,
+                    'ulog_mid' => 1,
                     'ulog_rid' => array_values(array_unique($vodIds)),
                 ])->column('ulog_id', 'ulog_rid');
                 if (is_array($favRows)) {
@@ -546,7 +555,6 @@ class Vod extends Base
         $num = $param['num']; $start = $param['start']; $typeId = $param['type_id']; $by = $param['by'];
 
         $where = [];
-        $where['vod_status'] = 1;
         if ($typeId > 0) {
             // 同时匹配 type_id 和 type_id_1（父分类）
             $where[] = function($q) use ($typeId) {
@@ -555,7 +563,7 @@ class Vod extends Base
         }
         if ($param['levels']) { $where[] = ['vod_level', 'in', $param['levels']]; }
 
-        $list = Db::name('Vod')
+        $list = $this->homeVideoQuery()
             ->field('vod_id,vod_name,vod_sub,vod_pic,vod_actor,vod_director,vod_score,vod_remarks,vod_year,vod_area,vod_class,vod_blurb,vod_time,vod_hits_month,type_id,type_id_1')
             ->where($where)
             ->order('vod_' . $by . ' desc')
@@ -612,7 +620,7 @@ class Vod extends Base
         $cacheTime = (int)($GLOBALS['config']['app']['cache_time'] ?? 0);
         $idsForKey = $typeIds;
         sort($idsForKey, SORT_NUMERIC);
-        $cacheKey = $cacheFlag . '_api_vod_latest_by_type_' . md5($typeId . '_' . $num . '_' . $start . '_' . implode(',', $idsForKey) . '_' . date('Y-m-d'));
+        $cacheKey = $cacheFlag . '_api_vod_latest_by_type_v2_' . md5($typeId . '_' . $num . '_' . $start . '_' . implode(',', $idsForKey) . '_' . date('Y-m-d'));
         if (!empty($GLOBALS['config']['app']['cache_core']) && $cacheTime > 0) {
             $cached = Cache::get($cacheKey);
             if (is_array($cached) && isset($cached['code'])) {
@@ -623,9 +631,8 @@ class Vod extends Base
         // 仅列表所需字段；去掉 vod_director、vod_trysee 等，减轻行缓冲与 IO
         $fields = 'vod_id,vod_name,vod_sub,vod_pic,vod_actor,vod_score,vod_remarks,vod_year,vod_area,vod_class,vod_blurb,vod_time,vod_isend,vod_points_play,type_id,type_id_1';
 
-        $list = Db::name('Vod')
+        $list = $this->homeVideoQuery()
             ->field($fields)
-            ->where('vod_status', 1)
             ->where('type_id', 'in', $typeIds)
             ->order('vod_time', 'desc')
             ->limit($start, $num)
@@ -641,8 +648,7 @@ class Vod extends Base
 
         $dayStart = (int)strtotime('today');
         $dayEnd = (int)strtotime('tomorrow');
-        $todayNewCount = (int)Db::name('Vod')
-            ->where('vod_status', 1)
+        $todayNewCount = (int)$this->homeVideoQuery()
             ->where('type_id', 'in', $typeIds)
             ->where(function ($query) use ($dayStart, $dayEnd) {
                 $query->where(function ($q) use ($dayStart, $dayEnd) {
@@ -688,14 +694,13 @@ class Vod extends Base
         $typeId = $param['type_id']; $num = $param['num']; $start = $param['start']; $by = $param['by'];
 
         $where = [];
-        $where['vod_status'] = 1;
         if ($typeId > 0) {
             $where[] = function($q) use ($typeId) {
                 $q->where('type_id', $typeId)->whereOr('type_id_1', $typeId);
             };
         }
 
-        $list = Db::name('Vod')
+        $list = $this->homeVideoQuery()
             ->field('vod_id,vod_name,vod_pic,vod_score,vod_remarks,vod_hits,vod_hits_day,vod_hits_week,vod_hits_month,vod_year,vod_area,vod_class,vod_isend,vod_points_play,type_id,type_id_1')
             ->where($where)
             ->order('vod_' . $by . ' desc')

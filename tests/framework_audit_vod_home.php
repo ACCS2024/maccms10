@@ -32,7 +32,7 @@ $columns=['vod_id INTEGER PRIMARY KEY'];
 foreach (['vod_name','vod_sub','vod_pic','vod_pic_slide','vod_actor','vod_director','vod_content','vod_blurb','vod_remarks','vod_year','vod_area','vod_class'] as $column) {
     $columns[]=$column." VARCHAR(255) NOT NULL DEFAULT ''";
 }
-foreach (['vod_status','vod_level','vod_score','vod_points_play','type_id','type_id_1','vod_time','vod_time_add','vod_hits','vod_hits_day','vod_hits_week','vod_hits_month','vod_isend'] as $column) {
+foreach (['vod_recycle_time','vod_status','vod_level','vod_score','vod_points_play','type_id','type_id_1','vod_time','vod_time_add','vod_hits','vod_hits_day','vod_hits_week','vod_hits_month','vod_isend'] as $column) {
     $columns[]=$column.' INTEGER NOT NULL DEFAULT 0';
 }
 function homeCall(string $action,array $parameters=[]): array {
@@ -52,6 +52,7 @@ try {
             'type_id'=>$type,'type_id_1'=>$parent,'vod_time'=>$now-$id,'vod_time_add'=>$now,
             'vod_hits_month'=>100-$id]);
     }
+    Db::name('Vod')->insert(['vod_id'=>90,'vod_status'=>1,'vod_level'=>9,'type_id'=>10,'vod_recycle_time'=>time(), 'vod_time'=>$now,'vod_time_add'=>$now,'vod_hits_month'=>999]);
     foreach (['get_banner'=>[],'get_hot'=>[],'get_latest_by_type'=>['type_id'=>10],'get_rank'=>[]] as $action=>$parameters) {
         $result=homeCall($action,$parameters);$rows=$result['info']['rows'];
         check($result['code']===1 && is_array($rows) && array_column($rows,'vod_id')===[1,2],$action.' must return real visible rows from the configured prefix');
@@ -70,6 +71,7 @@ try {
     Db::name('Ulog')->insertAll([
         ['ulog_id'=>7,'user_id'=>4,'ulog_rid'=>1,'ulog_mid'=>1,'ulog_type'=>2],
         ['ulog_id'=>8,'user_id'=>5,'ulog_rid'=>2,'ulog_mid'=>1,'ulog_type'=>2],
+        ['ulog_id'=>9,'user_id'=>4,'ulog_rid'=>2,'ulog_mid'=>2,'ulog_type'=>2],
     ]);
     $rows=homeCall('get_banner')['info']['rows'];
     check([$rows[0]['is_fav'],$rows[0]['fav_uid'],$rows[1]['is_fav']]===[1,7,0],'Banner must keep current-user favorites with real query rows');
@@ -94,6 +96,12 @@ try {
     }
     foreach (['get_banner'=>[],'get_hot'=>[],'get_latest_by_type'=>['type_id'=>10],'get_rank'=>[]] as $action=>$defaults) {
         check(homeCall($action,['num'=>999]+$defaults)['info']['total']===60,$action.' must enforce the 60-row cap on a populated result');
+    }
+    Db::name('Vod')->where('vod_id',90)->delete();
+    Db::execute('ALTER TABLE audit_home_vod DROP COLUMN vod_recycle_time');
+    Db::connect()->getSchemaInfo('audit_home_vod',true);
+    foreach (['get_banner'=>[],'get_hot'=>[],'get_latest_by_type'=>['type_id'=>10],'get_rank'=>[]] as $action=>$defaults) {
+        check(homeCall($action,$defaults)['code']===1,$action.' must also read old schemas without a recycle column');
     }
     echo 'framework_audit_vod_home: '.$checks.' checks passed on PHP '.PHP_VERSION.' / '.($mysql?'MySQL':'SQLite').PHP_EOL;
 } finally {
