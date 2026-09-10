@@ -36,6 +36,7 @@ $groups = [
     ],
     // Default: SQLite. FRAMEWORK_AUDIT_MYSQL=1 selects only the dedicated audit database.
     'models' => [
+        ['framework_audit_ai_task.php'], ['framework_audit_ai_task.php', 'default-prefix'],
         ['framework_audit_user_registration.php'],
         ['framework_audit_user_binding.php'], ['framework_audit_user_messages.php'], ['framework_audit_password_reset.php'], ['framework_audit_password_changes.php'], ['framework_audit_lists.php'], ['framework_audit_collection_nodes.php'],
         ['framework_audit_queries.php'], ['framework_audit_payment.php'],

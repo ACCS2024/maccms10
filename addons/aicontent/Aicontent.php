@@ -23,20 +23,20 @@ class Aicontent extends Addons
 
     /**
      * Called on plugin installation.
-     * Creates the mac_ai_task database table and deploys static assets.
+     * Creates the configured-prefix ai_task table and deploys static assets.
      */
     public function install(): bool
     {
         $sqlFile = $this->addons_path . 'install.sql';
-        if (is_file($sqlFile)) {
-            $sql = file_get_contents($sqlFile);
-            $statements = array_filter(array_map('trim', explode(';', $sql)));
-            foreach ($statements as $statement) {
-                if ($statement) {
-                    \think\facade\Db::execute($statement);
-                }
-            }
+        if (!is_file($sqlFile) || !is_readable($sqlFile)) {
+            throw new \RuntimeException('AI task installation schema is unavailable');
         }
+        $sql = file_get_contents($sqlFile);
+        if (!is_string($sql) || substr_count($sql, '`mac_ai_task`') !== 1) {
+            throw new \RuntimeException('Unexpected AI task installation schema');
+        }
+        $sql = str_replace('`mac_ai_task`', $this->taskTableIdentifier(), $sql);
+        \think\facade\Db::execute($sql);
         $this->deployAssets();
         return true;
     }
@@ -141,11 +141,11 @@ class Aicontent extends Addons
 
     /**
      * Called on plugin uninstallation.
-     * Drops the mac_ai_task table and removes deployed static assets.
+     * Drops only the configured-prefix ai_task table and removes deployed static assets.
      */
     public function uninstall(): bool
     {
-        \think\facade\Db::execute('DROP TABLE IF EXISTS `mac_ai_task`');
+        \think\facade\Db::execute('DROP TABLE IF EXISTS ' . $this->taskTableIdentifier());
 
         $target = ROOT_PATH . 'static' . DS . 'addons' . DS . 'aicontent';
         if (is_link($target)) {
@@ -155,6 +155,17 @@ class Aicontent extends Addons
         }
 
         return true;
+    }
+
+    /** Match the model's resolved table; never interpolate an unchecked configured identifier. */
+    private function taskTableIdentifier(): string
+    {
+        // Constructing a Model before CREATE would inspect and cache a missing schema.
+        $table = \think\facade\Db::name(\addons\aicontent\model\AiTask::TABLE_NAME)->getTable();
+        if (!is_string($table) || !preg_match('/^[A-Za-z0-9_]{1,64}$/D', $table)) {
+            throw new \RuntimeException('Invalid AI task table identifier');
+        }
+        return '`' . $table . '`';
     }
 
     /**

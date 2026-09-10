@@ -79,3 +79,5 @@ PHPStan / PHPCompatibility 的锁文件、范围、命令及诊断解释见 [审
 公开内容详情、目录与密码模板专项：`python3 tests/run_api_content_view_audit.py <PHP镜像>...`。使用一次性 MySQL 与真实模板，并以返回数据运行默认主题 JavaScript；需要 Docker、Node.js 和已安装的锁定 PHP 依赖。此组检查公开字段投影，资源授权另有后续专项。
 
 上传身份与编辑器：`php tests/run_audit.php --suite=upload` 同时执行前后台返回格式；`UPLOAD_AUDIT_MYSQL=1`、`UPLOAD_AUDIT_HOST/PASSWORD` 指向独立 `maccms_audit_upload` 测试库，其他模型库不复用。CI 包含 SQLite 和 MySQL。
+
+AI 插件任务表生命周期已纳入 models：默认/自定义前缀各执行 `framework_audit_ai_task.php`，真实安装、状态写回、历史和卸载均检查其他前缀表未被改动；MySQL使用独立models测试库。

@@ -5,14 +5,17 @@ namespace addons\aicontent\model;
 use think\Model;
 
 /**
- * Model for the mac_ai_task table.
+ * Model for the configured-prefix ai_task table.
  * Tracks every AI generation request (single or batch).
  */
 class AiTask extends Model
 {
-    protected $table      = 'mac_ai_task';
-    protected $pk         = 'id';
-    protected $autoWriteTimestamp = false; // We manage timestamps manually
+    public const TABLE_NAME = 'ai_task';
+
+    protected function getOptions(): array
+    {
+        return ['name'=>self::TABLE_NAME, 'pk'=>'id', 'autoWriteTimestamp'=>false];
+    }
 
     // Task status constants
     const STATUS_PENDING = 0;
