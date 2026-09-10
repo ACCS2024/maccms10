@@ -11,6 +11,7 @@ use think\facade\Cache;
  */
 class Seacms extends Base
 {
+    use PublicApi { check_config as private; }
     /** @var array */
     private $_param;
 
@@ -58,10 +59,7 @@ class Seacms extends Base
 
             // t 参数：分类 id
             if (!empty($this->_param['t'] ?? null)) {
-                if (
-                    empty($GLOBALS['config']['api']['vod']['typefilter']) ||
-                    strpos($GLOBALS['config']['api']['vod']['typefilter'], (string)($this->_param['t'])) !== false
-                ) {
+                if (self::categoryIsAllowed($this->_param['t'], $GLOBALS['config']['api']['vod']['typefilter'])) {
                     $where['type_id'] = $this->_param['t'];
                 }
             }

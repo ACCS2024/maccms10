@@ -6,6 +6,18 @@ class Provide extends Base
 {
     var $_param;
 
+    private static function yearFilter($value): ?array
+    {
+        if ((!is_string($value) && !is_int($value)) || !preg_match('/^(\d{4})(?:-(\d{4}))?$/D', trim((string)$value), $matches)) {
+            return null;
+        }
+        $first = (int)$matches[1];
+        $last = isset($matches[2]) ? (int)$matches[2] : $first;
+        $start = max(1900, min($first, $last));
+        $end = min((int)date('Y') + 3, max($first, $last));
+        return $start <= $end ? range($start, $end) : null;
+    }
+
     public function __construct()
     {
         parent::__construct();
@@ -49,7 +61,7 @@ class Provide extends Base
             }
 
             if (!empty(($this->_param['t'] ?? null))) {
-                if (empty($GLOBALS['config']['api']['vod']['typefilter']) || strpos($GLOBALS['config']['api']['vod']['typefilter'], ($this->_param['t'] ?? null)) !== false) {
+                if (self::categoryIsAllowed($this->_param['t'] ?? null, $GLOBALS['config']['api']['vod']['typefilter'])) {
                     $where['type_id'] = ($this->_param['t'] ?? null);
                 }
             }
@@ -72,26 +84,11 @@ class Provide extends Base
             }
             // 增加年份筛选 https://github.com/magicblack/maccms10/issues/815
             if (!empty(($this->_param['year'] ?? null))) {
-                $param_year = trim(($this->_param['year'] ?? null));
-                if (strlen($param_year) == 4) {
-                    $year = intval($param_year);
-                } elseif (strlen($param_year) == 9) {
-                    $start = (int)substr($param_year, 0, 4);
-                    $end = (int)substr($param_year, 5, 4);
-                    if ($start > $end) {
-                        $tmp_num = $end;
-                        $end = $start;
-                        $start = $tmp_num;
-                    }
-                    $tmp_arr = [];
-                    $start = max($start, 1900);
-                    $end = min($end, date('Y') + 3);
-                    for ($i = $start; $i <= $end; $i++) {
-                        $tmp_arr[] = $i;
-                    }
-                    $year = join(',', $tmp_arr);
+                $years = self::yearFilter($this->_param['year']);
+                if ($years === null) {
+                    return json(['code' => 1001, 'msg' => lang('param_err')], 400);
                 }
-                $where['vod_year'] = explode(',', $year);
+                $where['vod_year'] = $years;
             }
             if (empty($GLOBALS['config']['api']['vod']['from']) && !empty(($this->_param['from'] ?? null)) && strlen(($this->_param['from'] ?? null)) >= 2) {
                 $GLOBALS['config']['api']['vod']['from'] = ($this->_param['from'] ?? null);
@@ -382,7 +379,7 @@ class Provide extends Base
                 $where['art_id'] = ($this->_param['ids'] ?? null);
             }
             if (!empty(($this->_param['t'] ?? null))) {
-                if (empty($GLOBALS['config']['api']['art']['typefilter']) || strpos($GLOBALS['config']['api']['art']['typefilter'], ($this->_param['t'] ?? null)) !== false) {
+                if (self::categoryIsAllowed($this->_param['t'] ?? null, $GLOBALS['config']['api']['art']['typefilter'])) {
                     $where['type_id'] = ($this->_param['t'] ?? null);
                 }
             }
@@ -508,7 +505,7 @@ class Provide extends Base
                 $where['actor_id'] = ($this->_param['ids'] ?? null);
             }
             if (!empty(($this->_param['t'] ?? null))) {
-                if (empty($GLOBALS['config']['api']['actor']['typefilter']) || strpos($GLOBALS['config']['api']['actor']['typefilter'], ($this->_param['t'] ?? null)) !== false) {
+                if (self::categoryIsAllowed($this->_param['t'] ?? null, $GLOBALS['config']['api']['actor']['typefilter'])) {
                     $where['type_id'] = ($this->_param['t'] ?? null);
                 }
             }
@@ -621,7 +618,7 @@ class Provide extends Base
                 $where['role_id'] = ($this->_param['ids'] ?? null);
             }
             if (!empty(($this->_param['t'] ?? null))) {
-                if (empty($GLOBALS['config']['api']['role']['typefilter']) || strpos($GLOBALS['config']['api']['role']['typefilter'], ($this->_param['t'] ?? null)) !== false) {
+                if (self::categoryIsAllowed($this->_param['t'] ?? null, $GLOBALS['config']['api']['role']['typefilter'])) {
                     $where['type_id'] = ($this->_param['t'] ?? null);
                 }
             }
@@ -727,7 +724,7 @@ class Provide extends Base
             }
 
             if (!empty(($this->_param['t'] ?? null))) {
-                if (empty($GLOBALS['config']['api']['manga']['typefilter']) || strpos($GLOBALS['config']['api']['manga']['typefilter'], ($this->_param['t'] ?? null)) !== false) {
+                if (self::categoryIsAllowed($this->_param['t'] ?? null, $GLOBALS['config']['api']['manga']['typefilter'])) {
                     $where['type_id'] = ($this->_param['t'] ?? null);
                 }
             }
@@ -916,7 +913,7 @@ class Provide extends Base
                 $where['website_id'] = ($this->_param['ids'] ?? null);
             }
             if (!empty(($this->_param['t'] ?? null))) {
-                if (empty($GLOBALS['config']['api']['website']['typefilter']) || strpos($GLOBALS['config']['api']['website']['typefilter'], ($this->_param['t'] ?? null)) !== false) {
+                if (self::categoryIsAllowed($this->_param['t'] ?? null, $GLOBALS['config']['api']['website']['typefilter'])) {
                     $where['type_id'] = ($this->_param['t'] ?? null);
                 }
             }

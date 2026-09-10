@@ -6,6 +6,25 @@ use app\common\util\ApiMeilisearchSuggest;
 
 class Base extends All
 {
+    /** Category restrictions compare complete numeric IDs, never substrings of the allowlist. */
+    protected static function categoryIsAllowed($requested, $configured): bool
+    {
+        if ((!is_string($requested) && !is_int($requested)) || !ctype_digit((string)$requested) || (int)$requested < 1
+            || (!is_string($configured) && !is_int($configured) && $configured !== null)) {
+            return false;
+        }
+        if ($configured === null || trim((string)$configured) === '') {
+            return true;
+        }
+        foreach (explode(',', (string)$configured) as $id) {
+            $id = trim($id);
+            if (ctype_digit($id) && (int)$id === (int)$requested) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public function __construct()
     {
         parent::__construct();
