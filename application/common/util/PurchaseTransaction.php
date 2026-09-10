@@ -4,7 +4,7 @@ namespace app\common\util;
 
 use think\facade\Db;
 
-/** One transaction-owned purchase. Caller-owned savepoints use a separate contract. */
+/** Own the outer transaction, or explicitly isolate the legacy caller scope with a private savepoint. */
 final class PurchaseTransaction
 {
     private static ?\WeakMap $uncertainRequests = null;
@@ -18,10 +18,16 @@ final class PurchaseTransaction
     private object $request;
     private string $reference;
     private string $uncertainMessage;
+    private string $failureMessage;
+    private ?int $callerDepth = null;
+    private string $savepoint;
+    private bool $savepointConfirmed = false;
 
     private static function requestContext(): object
     {
-        return \think\Container::getInstance()->make('request');
+        $container = \think\Container::getInstance();
+        // Plain ORM/CLI clients have no HTTP binding; retain their fence for the container lifetime.
+        return $container->has('request') ? $container->make('request') : $container;
     }
 
     /** An uncertain payment must not be automatically repeated within the same request. */
@@ -34,21 +40,33 @@ final class PurchaseTransaction
         return $previous;
     }
 
-    public function __construct(int $userId, int $resourceMid)
+    public function __construct(int $userId, int $resourceMid, bool $allowCaller = false)
     {
         $this->context = ['user_id'=>$userId, 'ulog_mid'=>$resourceMid];
         $this->request = self::requestContext();
         // Prepare the diagnostic identity and translation before any financial transaction begins.
         $this->reference = bin2hex(random_bytes(12));
         $this->uncertainMessage = lang('index/buy_popedom_outcome_unknown', [$this->reference]);
+        $this->failureMessage = lang('index/buy_popedom2');
+        $this->savepoint = 'mac_purchase_' . $this->reference;
         $connection = Db::connect();
         if (!$connection instanceof \think\db\PDOConnection || $connection->getConfig('break_reconnect')) {
             throw new \RuntimeException('Purchase owner requires a PDO connection without automatic reconnect');
         }
         $connection->query('SELECT 1', [], true);
         $pdo = $connection->getPdo();
-        if (!$pdo instanceof \PDO || $pdo->inTransaction()) {
+        if (!$pdo instanceof \PDO) {
             throw new \RuntimeException('Purchase must own its original writer transaction');
+        }
+        $depth = (new \ReflectionProperty(\think\db\PDOConnection::class, 'transTimes'))->getValue($connection);
+        if ($pdo->inTransaction()) {
+            if (!$allowCaller || !is_int($depth) || $depth < 1
+                || !in_array($connection->getConfig('type'), ['mysql', 'sqlite'], true)) {
+                throw new \RuntimeException('Purchase requires a managed caller transaction');
+            }
+            $this->callerDepth = $depth;
+        } elseif ($depth !== 0) {
+            throw new \RuntimeException('Purchase writer has stale transaction nesting');
         }
         $this->connection = $connection;
         $this->pdo = $pdo;
@@ -57,6 +75,11 @@ final class PurchaseTransaction
     public function begin(): void
     {
         $this->beginAttempted = true;
+        if ($this->callerDepth !== null) {
+            // This private target survives the ORM's nesting-counter changes on acknowledgement faults.
+            $this->savepointCommand('SAVEPOINT');
+            $this->savepointConfirmed = true;
+        }
         $this->connection->startTrans();
         $this->beginConfirmed = true;
         $this->assertActive();
@@ -80,6 +103,9 @@ final class PurchaseTransaction
     {
         try { $active = $this->sameConnection() && $this->pdo->inTransaction(); }
         catch (\Throwable $error) { $active = false; }
+        if ($active && $this->callerDepth !== null) {
+            $active = $this->depth() === $this->callerDepth + 1;
+        }
         if (!$active) {
             $this->integrityLost = true;
             throw new \RuntimeException('Purchase transaction identity changed');
@@ -89,6 +115,7 @@ final class PurchaseTransaction
     public function rollback(array $result): array
     {
         if ($this->result !== null) { return $this->result; }
+        if ($this->callerDepth !== null) { return $this->rollbackCaller($result); }
         if (!$this->beginAttempted) { return $this->result = $result; }
         $repair = false;
         $ended = false;
@@ -114,6 +141,7 @@ final class PurchaseTransaction
     public function commit(array $result): array
     {
         if ($this->result !== null) { return $this->result; }
+        if ($this->callerDepth !== null) { return $this->commitCaller($result); }
         $this->assertActive();
         try {
             $this->connection->commit();
@@ -137,6 +165,63 @@ final class PurchaseTransaction
         } catch (\Throwable $error) { return false; }
     }
 
+    private function depth(): int
+    {
+        return (new \ReflectionProperty(\think\db\PDOConnection::class, 'transTimes'))->getValue($this->connection);
+    }
+
+    private function callerActive(): bool
+    {
+        try { return $this->sameConnection() && $this->pdo->inTransaction(); }
+        catch (\Throwable $error) { return false; }
+    }
+
+    private function savepointCommand(string $command): void
+    {
+        if ($this->pdo->exec($command . ' ' . $this->savepoint) === false) {
+            throw new \RuntimeException('Purchase savepoint command was not acknowledged');
+        }
+    }
+
+    private function rollbackCaller(array $result): array
+    {
+        if (!$this->beginAttempted) { return $this->result = $result; }
+        if (!$this->callerActive()) { return $this->result = $this->unknown('caller_transaction_changed'); }
+        if (!$this->savepointConfirmed) {
+            // No business operation or ORM BEGIN ran before the private SAVEPOINT was acknowledged.
+            return $this->result = $this->depth() === $this->callerDepth ? $result : $this->unknown('caller_cleanup_unknown');
+        }
+        try {
+            // Never invoke ORM rollback or full PDO rollback for a transaction owned by somebody else.
+            $this->savepointCommand('ROLLBACK TO SAVEPOINT');
+            if (!$this->callerActive()) { throw new \RuntimeException('Caller changed during savepoint rollback'); }
+            // Only an acknowledged rollback of our entire scope permits restoring its nesting metadata.
+            (new \ReflectionProperty(\think\db\PDOConnection::class, 'transTimes'))->setValue($this->connection, $this->callerDepth);
+            try { $this->savepointCommand('RELEASE SAVEPOINT'); }
+            catch (\Throwable $releaseError) { /* Retained private savepoint has no financial effects after confirmed rollback. */ }
+            if (!$this->callerActive()) { throw new \RuntimeException('Caller changed during savepoint release'); }
+            return $this->result = $result;
+        } catch (\Throwable $error) {
+            return $this->result = $this->unknown('caller_cleanup_unknown');
+        }
+    }
+
+    private function commitCaller(array $result): array
+    {
+        try {
+            $this->assertActive();
+            $this->connection->commit(); // Nested ORM completion only; the caller still owns the physical commit.
+            if (!$this->callerActive() || $this->depth() !== $this->callerDepth) {
+                throw new \RuntimeException('Caller nesting completion was not confirmed');
+            }
+            $this->savepointCommand('RELEASE SAVEPOINT');
+            if (!$this->callerActive()) { throw new \RuntimeException('Caller changed during savepoint release'); }
+            return $this->result = $result;
+        } catch (\Throwable $error) {
+            return $this->rollbackCaller(['code'=>2003, 'msg'=>$this->failureMessage]);
+        }
+    }
+
     private function discardOriginalConnection(): void
     {
         // close resets the damaged connector depth; it does not prove a retained external PDO was rolled back.
@@ -150,6 +235,7 @@ final class PurchaseTransaction
         $result = ['code'=>$outcome === 'commit_unknown' ? 2004 : 2005,
             'msg'=>$this->uncertainMessage,
             'info'=>['outcome'=>$outcome, 'retryable'=>false, 'reference'=>$this->reference]];
+        if ($this->callerDepth !== null) { $result['info']['caller_rollback_required'] = true; }
         self::$uncertainRequests ??= new \WeakMap();
         self::$uncertainRequests[$this->request] = $result;
         try {

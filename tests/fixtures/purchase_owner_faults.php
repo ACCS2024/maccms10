@@ -25,6 +25,15 @@ class PurchaseOwnerFault
 }
 class PurchaseOwnerPdo extends PDO
 {
+    public function exec(string $statement): int|false
+    {
+        foreach (['ROLLBACK TO SAVEPOINT'=>'caller_rollback', 'RELEASE SAVEPOINT'=>'caller_release', 'SAVEPOINT'=>'caller_savepoint'] as $prefix=>$stage) {
+            if (str_starts_with($statement, $prefix . ' mac_purchase_')) {
+                return PurchaseOwnerFault::wrap($stage, fn()=>parent::exec($statement));
+            }
+        }
+        return parent::exec($statement);
+    }
     public function beginTransaction(): bool { return PurchaseOwnerFault::wrap('pdo_begin', fn()=>parent::beginTransaction()); }
     public function commit(): bool { return PurchaseOwnerFault::wrap('pdo_commit', fn()=>parent::commit()); }
     public function rollBack(): bool { return PurchaseOwnerFault::wrap('pdo_rollback', fn()=>parent::rollBack()); }
