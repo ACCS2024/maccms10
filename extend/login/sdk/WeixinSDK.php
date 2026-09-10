@@ -88,7 +88,7 @@ class WeixinSDK extends ThinkOauth
             $data['openid'] = $this->openid();
             return $data;
         } else
-            throw new \think\Exception("获取微信 ACCESS_TOKEN 出错：{$result}");
+            throw new \think\Exception('获取微信 ACCESS_TOKEN 失败');
     }
 
     /**
@@ -97,10 +97,10 @@ class WeixinSDK extends ThinkOauth
     public function openid()
     {
         $data = $this->Token;
-        if (!empty($data['openid']))
+        if (is_array($data) && is_string($data['openid'] ?? null) && $data['openid'] !== '') {
             return $data['openid'];
-        else
-            exit('没有获取到微信用户ID！');
+        }
+        throw new \think\Exception('没有获取到微信用户ID');
     }
 }
 

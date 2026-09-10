@@ -1,41 +1,49 @@
 <?php
 namespace app\index\event;
+
 use login\ThinkOauth;
 
 class LoginEvent
 {
-    //登录成功，获取腾讯QQ用户信息
     public function qq($token)
     {
-        $qq = ThinkOauth::getInstance('qq', $token);
-        $data = $qq->call('user/get_user_info');
-        if ($data['ret'] == 0) {
-            $userInfo['type'] = 'QQ';
-            $userInfo['name'] = $data['nickname'];
-            $userInfo['nick'] = $data['nickname'];
-            $userInfo['head'] = $data['figureurl_2'];
-            $userInfo['openid'] = $qq->openid();
-            return ['code'=>1,'msg'=>'ok','info'=>$userInfo];
-        } else {
-            return ['code'=>0,'msg'=>"获取腾讯QQ用户信息失败：{$data['msg']}"];
-        }
+        return $this->profile('qq', $token);
     }
 
-    //登录成功，获取微信用户信息
     public function weixin($token)
     {
-        $weixin = ThinkOauth::getInstance('weixin', $token);
-        $data = $weixin->call('sns/userinfo');
-        if ($data['errcode'] == 0) {
-            $userInfo['type'] = 'WEIXIN';
-            $userInfo['name'] = $data['nickname'];
-            $userInfo['nick'] = $data['nickname'];
-            $userInfo['head'] = $data['headimgurl'];
-            $userInfo['openid'] = $weixin->openid();
-            return ['code'=>1,'msg'=>'ok','info'=>$userInfo];
-        } else {
-            return ['code'=>0,'msg'=>"获取微信用户信息失败：{$data['errmsg']}"];
-        }
+        return $this->profile('weixin', $token);
     }
 
+    /** Normalize provider responses before any identity can reach local login/registration. */
+    private function profile(string $provider, $token): array
+    {
+        $failure = ['code' => 0, 'msg' => $provider === 'qq' ? '获取腾讯QQ用户信息失败' : '获取微信用户信息失败'];
+        try {
+            if (!is_array($token) || !is_string($token['access_token'] ?? null) || $token['access_token'] === '') {
+                return $failure;
+            }
+            $sdk = ThinkOauth::getInstance($provider, $token);
+            $data = $sdk->call($provider === 'qq' ? 'user/get_user_info' : 'sns/userinfo');
+            if (!is_array($data)) { return $failure; }
+            // QQ has an explicit ret; WeChat successful userinfo can omit errcode.
+            $status = $provider === 'qq' ? ($data['ret'] ?? null) : ($data['errcode'] ?? 0);
+            if (!in_array($status, [0, '0'], true) || !is_string($data['nickname'] ?? null)) {
+                return $failure;
+            }
+            $openid = $sdk->openid();
+            if (!is_string($openid) || $openid === ''
+                || (isset($data['openid']) && $data['openid'] !== $openid)) {
+                return $failure;
+            }
+            $head = $data[$provider === 'qq' ? 'figureurl_2' : 'headimgurl'] ?? '';
+            if (!is_string($head)) { return $failure; }
+            return ['code' => 1, 'msg' => 'ok', 'info' => [
+                'type' => strtoupper($provider), 'name' => $data['nickname'], 'nick' => $data['nickname'],
+                'head' => $head, 'openid' => $openid,
+            ]];
+        } catch (\Throwable $e) {
+            return $failure;
+        }
+    }
 }

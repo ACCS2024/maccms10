@@ -62,7 +62,7 @@ class QqSDK extends ThinkOauth
             $data['openid'] = $this->openid();
             return $data;
         } else
-            throw new \think\Exception("获取腾讯QQ ACCESS_TOKEN 出错：{$result}");
+            throw new \think\Exception('获取腾讯QQ ACCESS_TOKEN 失败');
     }
 
     /**
