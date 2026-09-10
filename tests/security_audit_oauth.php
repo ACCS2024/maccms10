@@ -31,6 +31,7 @@ namespace {
         throw new ErrorException($message, 0, $severity, $file, $line);
     });
     require dirname(__DIR__) . '/application/common/util/OAuthState.php';
+    require dirname(__DIR__) . '/application/common/util/PointsBalance.php';
     require dirname(__DIR__) . '/application/common/model/User.php';
     $model = new \app\common\model\User();
     foreach ([[], ['col' => 'user_openid_qq', 'openid' => 'victim-id'],

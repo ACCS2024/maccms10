@@ -211,11 +211,33 @@ class User extends Base
         if (!is_array($param)) {
             return ['code' => 1001, 'msg' => lang('param_err')];
         }
-        foreach (['user_name', 'user_pwd', 'user_pwd2', 'verify', 'uid', 'user_openid_qq', 'user_openid_weixin'] as $key) {
-            if (isset($param[$key]) && !is_scalar($param[$key])) {
+        foreach (['user_name', 'user_pwd', 'user_pwd2', 'verify', 'ac', 'to', 'code', 'invite_code',
+            'user_openid_qq', 'user_openid_weixin'] as $key) {
+            if (array_key_exists($key, $param) && !is_string($param[$key])) {
                 return ['code' => 1001, 'msg' => lang('param_err')];
             }
-            $param[$key] = (string) ($param[$key] ?? '');
+            $param[$key] = $param[$key] ?? '';
+            if (!in_array($key, ['user_pwd', 'user_pwd2'], true)
+                && (!mb_check_encoding($param[$key], 'UTF-8') || str_contains($param[$key], "\0"))) {
+                return ['code'=>1001, 'msg'=>lang('param_err')];
+            }
+        }
+        $rawUid = array_key_exists('uid', $param) ? $param['uid'] : '';
+        if (array_key_exists('uid', $param) && !is_int($rawUid) && !is_string($rawUid)) {
+            return ['code'=>1001, 'msg'=>lang('param_err')];
+        }
+        $rawUid = is_string($rawUid) ? trim($rawUid) : $rawUid;
+        $uid = \app\common\util\PointsBalance::amount($rawUid === '' ? 0 : $rawUid, true);
+        $invite_code_param = trim($param['invite_code']);
+        if ($uid === null || !preg_match('/^[A-Za-z0-9]{0,20}$/D', $invite_code_param)) {
+            return ['code'=>1001, 'msg'=>lang('param_err')];
+        }
+        foreach (['verify'=>255, 'ac'=>5, 'to'=>30, 'code'=>6, 'user_openid_qq'=>40, 'user_openid_weixin'=>40] as $key=>$limit) {
+            $value = in_array($key, ['ac','to','code'], true) ? trim($param[$key]) : $param[$key];
+            if (strlen($value) > $limit || (str_starts_with($key, 'user_openid_')
+                && preg_match('/[\x{10000}-\x{10ffff}]/u', $value))) {
+                return ['code'=>1001, 'msg'=>lang('param_err')];
+            }
         }
         // Only the server-side callback, after verifying state and the provider token,
         // may register an OAuth identity or bypass normal registration challenges.
@@ -228,14 +250,21 @@ class User extends Base
             return ['code' => 1429, 'msg' => lang('frequently')];
         }
         $config = config('maccms');
+        if (!is_array($config) || !is_array($config['user'] ?? null)) {
+            return ['code'=>1001, 'msg'=>lang('param_err')];
+        }
+        foreach (['status', 'reg_open', 'reg_verify'] as $key) {
+            if (!in_array($config['user'][$key] ?? null, [0, 1, '0', '1'], true)) {
+                return ['code'=>1001, 'msg'=>lang('param_err')];
+            }
+        }
 
         $data = [];
         $password_raw = trim($param['user_pwd']);
         $data['user_name'] = htmlspecialchars(urldecode(trim($param['user_name'])));
-        $data['user_pwd'] = htmlspecialchars(urldecode(trim($param['user_pwd'])));
-        $data['user_pwd2'] = htmlspecialchars(urldecode(trim($param['user_pwd2'])));
+        $data['user_pwd'] = $password_raw;
+        $data['user_pwd2'] = trim($param['user_pwd2']);
         $data['verify'] = $param['verify'];
-        $uid = $param['uid'];
         $is_from_3rdparty = !empty($param['user_openid_qq']) || !empty($param['user_openid_weixin']);
 
 
@@ -248,9 +277,14 @@ class User extends Base
         if (!$is_from_3rdparty && !captcha_check((string)($data['verify'] ?? '')) && $config['user']['reg_verify'] == 1) {
             return ['code' => 1003, 'msg' => lang('verify_err')];
         }
-        if ($data['user_pwd'] != $data['user_pwd2']) {
+        if ($data['user_pwd'] !== $data['user_pwd2']) {
             return ['code' => 1004, 'msg' => lang('model/user/pass_not_pass2')];
         }
+        if (strlen($password_raw) < 6 || strlen($password_raw) > 72
+            || str_contains($param['user_pwd'], "\0") || str_contains($param['user_pwd2'], "\0")) {
+            return ['code'=>1007, 'msg'=>lang('model/user/pass_length_err')];
+        }
+        if (strlen($data['user_name']) > 30) { return ['code'=>1006, 'msg'=>lang('model/user/name_contain')]; }
         $row = $this->where('user_name', $data['user_name'])->find();
         if (!empty($row)) {
             return ['code' => 1005, 'msg' => lang('model/user/haved_reg')];
@@ -264,7 +298,21 @@ class User extends Base
             return ['code' => 1007, 'msg' => lang('param_err').'：' . $validate->getError()];
         }
 
-        $filter = $GLOBALS['config']['user']['filter_words'];
+        foreach (['reg_status', 'reg_phone_sms', 'reg_email_sms'] as $key) {
+            if (!in_array($config['user'][$key] ?? null, [0, 1, '0', '1'], true)) {
+                return ['code'=>1001, 'msg'=>lang('param_err')];
+            }
+        }
+        foreach (['reg_points', 'reg_num', 'invite_reg_points', 'invite_reg_num'] as $key) {
+            $value = array_key_exists($key, $config['user']) ? $config['user'][$key] : (str_starts_with($key, 'invite_reg_') ? 0 : null);
+            $config['user'][$key] = \app\common\util\PointsBalance::amount($value, true);
+            if ($config['user'][$key] === null) { return ['code'=>1001, 'msg'=>lang('param_err')]; }
+        }
+        $group = \app\common\util\PointsBalance::amount($this->_def_group, true);
+        $filter = array_key_exists('filter_words', $config['user']) ? $config['user']['filter_words'] : '';
+        if ($group === null || $group < 1 || $group > 65535 || !is_string($filter) || !mb_check_encoding($filter, 'UTF-8')) {
+            return ['code'=>1001, 'msg'=>lang('param_err')];
+        }
         if(!empty($filter)) {
             $filter_arr = explode(',', $filter);
             $f_name = str_replace($filter_arr, '', $data['user_name']);
@@ -273,24 +321,31 @@ class User extends Base
             }
         }
 
-        $ip = mac_get_ip_long();
-        if( $GLOBALS['config']['user']['reg_num'] > 0){
+        $ip = \app\common\util\PointsBalance::amount(mac_get_ip_long(), true);
+        $registeredAt = \app\common\util\PointsBalance::amount(time(), true);
+        if ($ip === null || $registeredAt === null) { return ['code'=>1001, 'msg'=>lang('param_err')]; }
+        if( $config['user']['reg_num'] > 0){
             $where2=[];
             $where2['user_reg_ip'] = $ip;
             $where2[] = ['user_reg_time', '>', strtotime('today')];
             $cc = $this->where($where2)->count();
-            if($cc >= $GLOBALS['config']['user']['reg_num']){
-                return ['code' => 1009, 'msg' => lang('model/user/ip_limit',[$GLOBALS['config']['user']['reg_num']])];
+            if($cc >= $config['user']['reg_num']){
+                return ['code' => 1009, 'msg' => lang('model/user/ip_limit',[$config['user']['reg_num']])];
             }
         }
 
         $fields = [];
         $fields['user_name'] = $data['user_name'];
-        $fields['user_pwd'] = mac_password_hash($password_raw);
-        $fields['group_id'] = $this->_def_group;
-        $fields['user_points'] = intval($config['user']['reg_points']);
+        try {
+            $fields['user_pwd'] = mac_password_hash($password_raw);
+            $fields['user_random'] = bin2hex(random_bytes(16));
+        } catch (\Throwable $error) {
+            return ['code'=>1010, 'msg'=>lang('model/user/reg_err')];
+        }
+        $fields['group_id'] = (string)$group;
+        $fields['user_points'] = $config['user']['reg_points'];
         $fields['user_status'] = intval($config['user']['reg_status']);
-        $fields['user_reg_time'] = time();
+        $fields['user_reg_time'] = $registeredAt;
         $fields['user_reg_ip'] = $ip;
         $fields['user_openid_qq'] = (string)$param['user_openid_qq'];
         $fields['user_openid_weixin'] = (string)$param['user_openid_weixin'];
@@ -349,9 +404,6 @@ class User extends Base
         
         $invite_code = $this->generateUniqueInviteCode($nid);
         $this->where('user_id', $nid)->update(['user_invite_code' => $invite_code]);
-        
-        $invite_code_param = trim($param['invite_code'] ?? '');
-        $uid = intval($uid);
         
         if (!empty($invite_code_param)) {
             $uid = $this->getUserIdByInviteCode($invite_code_param);
