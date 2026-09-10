@@ -304,7 +304,7 @@ class Dir implements \IteratorAggregate {
 
     /**
      * 删除目录（包括下面的文件）
-     * @return void
+     * @return bool
      */
     public static function delDir($directory, $subdir = true) {
         if (is_link($directory)) {
