@@ -1,4 +1,4 @@
-{extend name="admin@public/base" /}
+{extend name="admin/base" /}
 
 {block name="title"}{:lang('AI Content Assistant - Generate Content')}{/block}
 
@@ -153,14 +153,14 @@
 <!-- Pass models map and translations from PHP to JS -->
 <script>var AI_MODELS_MAP = {$modelsMap|raw};</script>
 <script>window.AI_LANG = {$jsLang|raw};</script>
-<script src="/static/addons/aicontent/js/aicontent.js"></script>
+<script src="{$addonRoot|htmlspecialchars}/static/addons/aicontent/js/aicontent.js"></script>
 <script>
 AiContent.initGeneratePage({
     generateUrl : '{:addon_url("aicontent/api/generate")}',
     testKeyUrl  : '{:addon_url("aicontent/api/testkey")}',
     modelsUrl   : '{:addon_url("aicontent/api/models")}',
-    defaultProvider : '{$config.default_provider}',
-    defaultModel    : '{$config.default_model}',
+    defaultProvider : {$config.default_provider|json_encode|raw},
+    defaultModel    : {$config.default_model|json_encode|raw},
 });
 </script>
 {/block}

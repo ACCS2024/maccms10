@@ -6,6 +6,7 @@ use think\addons\Controller;
 use addons\aicontent\model\AiTask;
 use addons\aicontent\service\ModelFactory;
 use addons\aicontent\Aicontent;
+use addons\aicontent\service\AdminAccess;
 
 /**
  * Backend admin controller for the AI Content Assistant plugin.
@@ -16,7 +17,7 @@ class Admin extends Controller
     protected $noNeedLogin  = [];
     protected $noNeedRight  = [];
 
-    public function _initialize()
+    public function _initialize(): void
     {
         parent::_initialize();
 
@@ -26,19 +27,17 @@ class Admin extends Controller
         // and exposed as the JS global ADMIN_PATH — there is no cookie for it.
         // For non-AJAX requests we therefore return a plain JSON error + exit,
         // since we cannot reliably construct the login URL.
-        if (session('admin_auth') !== '1' || empty(session('admin_info'))) {
-            echo json_encode(['code' => 0, 'message' => lang('Session expired. Please log in to the admin panel and try again.')]);
-            exit;
-        }
+        AdminAccess::requireAny(AdminAccess::current(), ['addon/config']);
 
         if ($this->request->isPost()) {
             $token    = input('_csrf_token', '');
             $expected = Aicontent::generateCsrfToken();
-            if (!hash_equals($expected, $token)) {
+            if (!is_string($token) || !hash_equals($expected, $token)) {
                 echo json_encode(['code' => 0, 'message' => lang('Invalid request token.')]);
                 exit;
             }
         }
+        $this->assign('csrfToken', Aicontent::generateCsrfToken());
     }
 
     /**
@@ -98,7 +97,7 @@ class Admin extends Controller
     public function view()
     {
         $id   = (int) input('id');
-        $task = AiTask::get($id);
+        $task = AiTask::find($id);
 
         if (!$task) {
             $this->error(lang('Task not found'));
@@ -121,8 +120,11 @@ class Admin extends Controller
      */
     public function delete()
     {
+        if (!$this->request->isPost()) {
+            return json(['code' => 0, 'message' => lang('Invalid request token.')], 405);
+        }
         $id   = (int) input('id');
-        $task = AiTask::get($id);
+        $task = AiTask::find($id);
 
         if (!$task) {
             return json(['code' => 0, 'message' => lang('Task not found')]);

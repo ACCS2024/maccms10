@@ -15,7 +15,7 @@ class ContentGenerator
     /** @var array */
     private $config;
 
-    public function __construct(string $provider = null, string $modelName = null)
+    public function __construct(?string $provider = null, ?string $modelName = null)
     {
         $this->config = get_addon_config('aicontent');
         $this->model  = ModelFactory::create($provider, $modelName);
@@ -110,9 +110,9 @@ class ContentGenerator
 
         if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
             return [
-                'description' => $decoded['description'] ?? '',
+                'description' => is_scalar($decoded['description'] ?? null) ? (string) $decoded['description'] : '',
                 'tags'        => $this->normalizeTags($decoded['tags'] ?? []),
-                'seo_title'   => $decoded['seo_title']   ?? '',
+                'seo_title'   => is_scalar($decoded['seo_title'] ?? null) ? (string) $decoded['seo_title'] : '',
                 'raw'         => $raw,
             ];
         }
@@ -132,10 +132,11 @@ class ContentGenerator
     private function normalizeTags($tags): array
     {
         if (is_array($tags)) {
-            return array_values(array_filter(array_map('strval', $tags)));
+            $tags = array_filter($tags, 'is_scalar');
+            return array_values(array_filter(array_map('strval', $tags), static fn($tag) => $tag !== ''));
         }
         if (is_string($tags)) {
-            return array_filter(array_map('trim', explode(',', $tags)));
+            return array_values(array_filter(array_map('trim', explode(',', $tags)), static fn($tag) => $tag !== ''));
         }
         return [];
     }

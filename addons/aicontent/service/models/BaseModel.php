@@ -117,6 +117,9 @@ abstract class BaseModel
         if (json_last_error() !== JSON_ERROR_NONE) {
             throw new \RuntimeException('Invalid JSON response: ' . json_last_error_msg());
         }
+        if (!is_array($data)) {
+            throw new \RuntimeException('Expected a JSON object or array response.');
+        }
         return $data;
     }
 }

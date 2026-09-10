@@ -6,6 +6,7 @@ use think\addons\Controller;
 use addons\aicontent\model\AiTask;
 use addons\aicontent\service\ContentGenerator;
 use addons\aicontent\service\ModelFactory;
+use addons\aicontent\service\AdminAccess;
 
 /**
  * AJAX API controller for the AI Content Assistant plugin.
@@ -16,22 +17,20 @@ class Api extends Controller
 {
     protected $noNeedLogin = [];
     protected $noNeedRight = [];
+    private array $adminInfo = [];
 
-    public function _initialize()
+    public function _initialize(): void
     {
         parent::_initialize();
 
         // Verify MaCMS admin session — Api routes go through index.php which
         // does not run the built-in Begin behaviour that normally enforces login.
-        if (session('admin_auth') !== '1' || empty(session('admin_info'))) {
-            echo json_encode(['code' => 0, 'message' => lang('Unauthorized. Please log in to the admin panel.')]);
-            exit;
-        }
+        $this->adminInfo = AdminAccess::current();
 
         if ($this->request->isPost()) {
             $token    = input('_csrf_token', '');
             $expected = \addons\aicontent\Aicontent::generateCsrfToken();
-            if (!hash_equals($expected, $token)) {
+            if (!is_string($token) || !hash_equals($expected, $token)) {
                 echo json_encode(['code' => 0, 'message' => lang('Invalid request token.')]);
                 exit;
             }
@@ -52,6 +51,10 @@ class Api extends Controller
      */
     public function generate()
     {
+        if (!$this->request->isPost()) {
+            return $this->json(false, lang('Invalid request token.'))->code(405);
+        }
+        AdminAccess::requireAny($this->adminInfo, ['addon/config', AdminAccess::contentPermission(input('content_type', 'video'))]);
         if (!$this->rateLimit('generate', 20, 60)) {
             return $this->json(false, lang('Rate limit exceeded. Please wait a moment.'));
         }
@@ -119,6 +122,10 @@ class Api extends Controller
      */
     public function batch()
     {
+        if (!$this->request->isPost()) {
+            return $this->json(false, lang('Invalid request token.'))->code(405);
+        }
+        AdminAccess::requireAny($this->adminInfo, ['addon/config', AdminAccess::contentPermission(input('content_type', 'video'))]);
         if (!$this->rateLimit('batch', 5, 60)) {
             return $this->json(false, lang('Rate limit exceeded. Please wait a moment.'));
         }
@@ -160,7 +167,7 @@ class Api extends Controller
         $idCol  = $fields['id'];
 
         try {
-            $rows = \think\Db::table($table)
+            $rows = \think\facade\Db::table($table)
                 ->whereIn($idCol, $ids)
                 ->select();
         } catch (\Throwable $e) {
@@ -232,6 +239,10 @@ class Api extends Controller
      */
     public function enhance()
     {
+        if (!$this->request->isPost()) {
+            return $this->json(false, lang('Invalid request token.'))->code(405);
+        }
+        AdminAccess::requireAny($this->adminInfo, ['addon/config', AdminAccess::contentPermission(input('content_type', 'video'))]);
         if (!$this->rateLimit('enhance', 30, 60)) {
             return $this->json(false, lang('Rate limit exceeded. Please wait a moment.'));
         }
@@ -268,6 +279,10 @@ class Api extends Controller
      */
     public function testkey()
     {
+        if (!$this->request->isPost()) {
+            return $this->json(false, lang('Invalid request token.'))->code(405);
+        }
+        AdminAccess::requireAny($this->adminInfo, ['addon/config']);
         if (!$this->rateLimit('testkey', 3, 60)) {
             return $this->json(false, lang('Rate limit exceeded. Please wait a moment.'));
         }
@@ -294,6 +309,7 @@ class Api extends Controller
      */
     public function models()
     {
+        AdminAccess::requireAny($this->adminInfo, ['addon/config']);
         $provider = input('provider', '');
         $models   = ModelFactory::getModelsForProvider($provider);
         return $this->json(true, '', $models);
@@ -314,7 +330,7 @@ class Api extends Controller
             $fallback = lang('An unexpected error occurred. Please try again.');
         }
 
-        \think\Log::error('AiContent API error: ' . $e->getMessage() . "\n" . $e->getTraceAsString());
+        \think\facade\Log::error('AiContent API error: ' . $e->getMessage() . "\n" . $e->getTraceAsString());
 
         $msg = $e->getMessage();
 

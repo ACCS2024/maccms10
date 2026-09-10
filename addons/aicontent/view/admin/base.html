@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="{:lang('en')}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{block name="title"}AI Content Assistant{/block}</title>
+    <link rel="stylesheet" href="{$addonRoot|htmlspecialchars}/static/addons/aicontent/css/aicontent.css">
+    <style>
+        body { margin: 0; padding: 24px; background: #f6f7f9; color: #172033; font: 14px/1.6 system-ui, sans-serif; }
+        .panel { padding: 20px; margin-bottom: 20px; border: 1px solid #dfe3eb; border-radius: 10px; background: #fff; }
+        .form-group { margin: 16px 0; } .form-control { box-sizing: border-box; width: 100%; padding: 9px; border: 1px solid #ccd2dc; border-radius: 5px; }
+        .btn { display: inline-block; padding: 7px 12px; border: 1px solid #cbd3e0; border-radius: 5px; text-decoration: none; background: white; color: #164f9c; cursor: pointer; }
+        .btn-primary { background: #245bb3; color: white; } .disabled { pointer-events: none; opacity: .5; }
+        table { width: 100%; border-collapse: collapse; } td, th { padding: 10px; text-align: left; border-bottom: 1px solid #e5e7eb; }
+        .text-center { text-align: center; } .text-muted { color: #697386; } .pull-right { float: right; } .table-responsive { overflow-x: auto; }
+    </style>
+    <script>window.AI_CSRF_TOKEN = {$csrfToken|json_encode|raw};</script>
+</head>
+<body>
+{block name="content"}{/block}
+</body>
+</html>
