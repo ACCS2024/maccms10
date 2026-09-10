@@ -327,8 +327,8 @@ class Cj extends Base
     public function content_del()
     {
         $param = \think\facade\Request::param();
-        $ids = $param['ids'];
-        $all = $param['all'];
+        $ids = $param['ids'] ?? [];
+        $all = $param['all'] ?? '';
 
         if(!empty($ids)){
             $where=[];
@@ -343,13 +343,13 @@ class Cj extends Base
                 $urls[] = $md5;
             }
 
-            $where2=[];
-            $where2['md5'] = $md5;
-            Db::name('cj_history')->where($where2)->delete();
+            if ($urls !== []) {
+                Db::name('cj_history')->where('md5', 'in', $urls)->delete();
+            }
 
             $res = Db::name('cj_content')->where($where)->delete();
             if($res===false){
-                return $this->error(lang('del_err').''.$this->getError());
+                return $this->error(lang('del_err'));
             }
         }
         return $this->success(lang('del_ok'));
