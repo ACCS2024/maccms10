@@ -22,7 +22,7 @@
 // 由 session\driver\Cache 代理到缓存层 —— 这也正是后台那个选项写的
 // 「redis(复用上面缓存Redis,去文件锁)」的本意。
 $_f   = __DIR__ . '/../application/extra/maccms.php';
-$_m   = file_exists($_f) ? (include $_f) : [];
+$_m   = \app\common\util\DataConfig::read($_f);
 $_app = (is_array($_m) && isset($_m['app']) && is_array($_m['app'])) ? $_m['app'] : [];
 
 $_sessionType = strtolower(trim((string)($_app['session_type'] ?? '')));

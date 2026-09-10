@@ -1077,7 +1077,7 @@ class System extends Base
             } else {
                 // Read from latest config file to avoid accidental key loss when config cache is stale.
                 $cfgFile = APP_PATH . 'extra/maccms.php';
-                $latest = is_file($cfgFile) ? include $cfgFile : [];
+                $latest = \app\common\util\DataConfig::read($cfgFile);
                 if (isset($latest['ai_seo']['api_key']) && $latest['ai_seo']['api_key'] !== '') {
                     $row['api_key'] = (string)$latest['ai_seo']['api_key'];
                 } else {
@@ -1152,7 +1152,7 @@ class System extends Base
                 $row['api_key'] = $newKey;
             } else {
                 $cfgFile = APP_PATH . 'extra/maccms.php';
-                $latest = is_file($cfgFile) ? include $cfgFile : [];
+                $latest = \app\common\util\DataConfig::read($cfgFile);
                 if (isset($latest['ai_cover']['api_key']) && $latest['ai_cover']['api_key'] !== '') {
                     $row['api_key'] = (string) $latest['ai_cover']['api_key'];
                 } else {
@@ -1287,7 +1287,7 @@ class System extends Base
                 $row['api_key'] = $newKey;
             } else {
                 $cfgFile = APP_PATH . 'extra/maccms.php';
-                $latest = is_file($cfgFile) ? include $cfgFile : [];
+                $latest = \app\common\util\DataConfig::read($cfgFile);
                 if (isset($latest['ai_search']['api_key']) && $latest['ai_search']['api_key'] !== '') {
                     $row['api_key'] = (string)$latest['ai_search']['api_key'];
                 } else {
@@ -1299,7 +1299,7 @@ class System extends Base
                 $row['external_sources']['sources']['tmdb']['api_key'] = $newTmdbKey;
             } else {
                 $cfgFile = APP_PATH . 'extra/maccms.php';
-                $latest = is_file($cfgFile) ? include $cfgFile : [];
+                $latest = \app\common\util\DataConfig::read($cfgFile);
                 $oldTmdbKey = '';
                 if (isset($latest['ai_search']['external_sources']['sources']['tmdb']['api_key'])) {
                     $oldTmdbKey = (string)$latest['ai_search']['external_sources']['sources']['tmdb']['api_key'];
@@ -1313,7 +1313,7 @@ class System extends Base
                 $row['external_sources']['sources']['douban']['api_key'] = $newDoubanKey;
             } else {
                 $cfgFile = APP_PATH . 'extra/maccms.php';
-                $latest = is_file($cfgFile) ? include $cfgFile : [];
+                $latest = \app\common\util\DataConfig::read($cfgFile);
                 $oldDoubanKey = '';
                 if (isset($latest['ai_search']['external_sources']['sources']['douban']['api_key'])) {
                     $oldDoubanKey = (string)$latest['ai_search']['external_sources']['sources']['douban']['api_key'];
@@ -1327,7 +1327,7 @@ class System extends Base
                 $row['external_sources']['sources']['imdb']['api_key'] = $newImdbKey;
             } else {
                 $cfgFile = APP_PATH . 'extra/maccms.php';
-                $latest = is_file($cfgFile) ? include $cfgFile : [];
+                $latest = \app\common\util\DataConfig::read($cfgFile);
                 $oldImdbKey = '';
                 if (isset($latest['ai_search']['external_sources']['sources']['imdb']['api_key'])) {
                     $oldImdbKey = (string)$latest['ai_search']['external_sources']['sources']['imdb']['api_key'];
@@ -1341,7 +1341,7 @@ class System extends Base
                 $row['google_books_api_key'] = $newGoogleBooksKey;
             } else {
                 $cfgFile = APP_PATH . 'extra/maccms.php';
-                $latest = is_file($cfgFile) ? include $cfgFile : [];
+                $latest = \app\common\util\DataConfig::read($cfgFile);
                 $oldGb = '';
                 if (isset($latest['ai_search']['google_books_api_key']) && $latest['ai_search']['google_books_api_key'] !== '') {
                     $oldGb = (string)$latest['ai_search']['google_books_api_key'];
@@ -1568,7 +1568,7 @@ class System extends Base
                 $assistantRow['api_key'] = $newAsKey;
             } else {
                 $cfgFile = APP_PATH . 'extra/maccms.php';
-                $latest = is_file($cfgFile) ? include $cfgFile : [];
+                $latest = \app\common\util\DataConfig::read($cfgFile);
                 if (isset($latest['admin_assistant']['api_key']) && $latest['admin_assistant']['api_key'] !== '') {
                     $assistantRow['api_key'] = (string)$latest['admin_assistant']['api_key'];
                 } else {

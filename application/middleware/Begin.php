@@ -13,8 +13,8 @@ class Begin
 
     public function handle($request, \Closure $next)
     {
-        // Runtime configuration has already loaded before this middleware runs.
-        // These are review signals only: never delete evidence or overwrite valid plugin configuration.
+        // Config loaders parse literal arrays with DataConfig before this middleware runs.
+        // These additional inventory signals preserve evidence and never execute extra files.
         $extraDir = APP_PATH . 'extra' . DIRECTORY_SEPARATOR;
         if (is_dir($extraDir)) {
             $files = scandir($extraDir);

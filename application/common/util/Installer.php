@@ -209,7 +209,7 @@ class Installer
         $file = $this->appPath . 'extra/maccms.php';
         $content = "<?php\nreturn " . var_export($cfg, true) . ";\n";
         $this->writeValidatedFile($file, $content, static function ($temporary) use ($cfg) {
-            if ((include $temporary) !== $cfg) {
+            if (DataConfig::read($temporary) !== $cfg) {
                 throw new \RuntimeException('maccms.php 写入校验失败');
             }
         });

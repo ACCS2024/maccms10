@@ -175,7 +175,7 @@ class Rep extends Base
             return json(['code' => 0, 'msg' => '配置文件不可写']);
         }
         flock($fp, LOCK_EX);
-        $config  = include $configFile;
+        $config  = \app\common\util\DataConfig::parse((string)stream_get_contents($fp));
         $current = $config['rep']['enabled'] ?? '1';
         $config['rep']['enabled'] = ($current === '1') ? '0' : '1';
         $content = '<?php' . "\nreturn " . var_export($config, true) . ";\n";

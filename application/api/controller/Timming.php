@@ -143,7 +143,7 @@ class Timming extends Base
     private function restoreRuntime(string $taskName, int $startedAt, int $previousRuntime): void
     {
         $configFile = APP_PATH . 'extra/timming.php';
-        $list = is_file($configFile) ? include $configFile : [];
+        $list = \app\common\util\DataConfig::read($configFile);
         if (!is_array($list)) {
             return;
         }

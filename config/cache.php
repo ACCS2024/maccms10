@@ -18,7 +18,7 @@
 // 因此这里直接读 application/extra/maccms.php —— 与 config/maccms.php 的加载桩同一套路,
 // 在 App::load() 期完成,任何组件实例化之前就是最终值。
 $_f    = __DIR__ . '/../application/extra/maccms.php';
-$_m    = file_exists($_f) ? (include $_f) : [];
+$_m    = \app\common\util\DataConfig::read($_f);
 $_app  = (is_array($_m) && isset($_m['app']) && is_array($_m['app'])) ? $_m['app'] : [];
 
 // One contract serves production stores and the administrator connection probe.

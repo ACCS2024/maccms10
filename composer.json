@@ -16,6 +16,7 @@
         "ext-openssl": "*",
         "ext-pdo": "*",
         "ext-pdo_mysql": "*",
+        "ext-tokenizer": "*",
         "guzzlehttp/guzzle": "^7.15",
         "guzzlehttp/psr7": "^2.13",
         "intervention/image": "^4.3.2",

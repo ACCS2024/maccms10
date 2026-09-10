@@ -128,7 +128,7 @@ class Meilisearch extends Base
         if ($newKey !== '') {
             $row['api_key'] = $newKey;
         } else {
-            $latest = is_file(APP_PATH . 'extra/maccms.php') ? include APP_PATH . 'extra/maccms.php' : [];
+            $latest = \app\common\util\DataConfig::read(APP_PATH . 'extra/maccms.php');
             if (isset($latest['meilisearch']['api_key']) && trim((string)$latest['meilisearch']['api_key']) !== '') {
                 $row['api_key'] = (string)$latest['meilisearch']['api_key'];
             } else {

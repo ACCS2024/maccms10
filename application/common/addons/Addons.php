@@ -52,7 +52,7 @@ abstract class Addons
         $config = [];
         $file   = ADDON_PATH . $name . DS . 'config.php';
         if (is_file($file)) {
-            $cfg = include $file;
+            $cfg = \app\common\util\DataConfig::read($file);
             if (is_array($cfg)) {
                 foreach ($cfg as $item) {
                     if (isset($item['name'], $item['value'])) {
@@ -70,7 +70,24 @@ abstract class Addons
             $name = strtolower($this->getName());
         }
         $file = ADDON_PATH . $name . DS . 'config.php';
-        return is_file($file) ? (include $file ?: []) : [];
+        $config = \app\common\util\DataConfig::read($file);
+        // Labels are translated by application code, never by executing config.php.
+        foreach ($config as &$item) {
+            if (!is_array($item)) { continue; }
+            foreach (['title', 'tip', 'msg', 'ok'] as $key) {
+                if (isset($item[$key]) && is_string($item[$key]) && $item[$key] !== '') {
+                    $item[$key] = lang($item[$key]);
+                }
+            }
+            if (isset($item['content']) && is_array($item['content'])) {
+                foreach ($item['content'] as &$label) {
+                    if (is_string($label)) { $label = lang($label); }
+                }
+                unset($label);
+            }
+        }
+        unset($item);
+        return $config;
     }
 
     final public function setConfig(string $name = '', array $config = []): bool

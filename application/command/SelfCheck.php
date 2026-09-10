@@ -318,7 +318,7 @@ class SelfCheck extends Command
     // ------------------------------------------------------------------
     // 4. extra 加载桩
     //
-    // 本 fork 靠 config/<name>.php 去 include application/extra/<name>.php。
+    // 本 fork 由 config/<name>.php 用 DataConfig 解析 application/extra/<name>.php 纯数据。
     // 少一个桩,那份配置就永远不会被加载 —— 同样零报错。
     // 另外 middleware/Begin.php 有一份白名单,会记录不在名单内的 extra 文件供检查。
     // ------------------------------------------------------------------
