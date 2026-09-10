@@ -818,14 +818,12 @@ class Make extends Base
                 $_REQUEST['id'] = $v['art_id'];
                 echo mac_substring($v['art_name'],100) .'&nbsp;';
 
-                if(!empty($v['art_content'])) {
-                    $art_page_list = mac_art_list($v['art_title'], $v['art_note'], $v['art_content']);
-                    $art_page_total = count($art_page_list);
-                }
+                $art_page_list = mac_art_list($v['art_title'], $v['art_note'], $v['art_content']);
+                $art_page_total = count($art_page_list);
 
                 for($i=1;$i<=$art_page_total;$i++){
-                    $v['art_page_list'] = mac_art_list($v['art_title'], $v['art_note'], $v['art_content']);
-                    $v['art_page_total'] = count($v['art_page_list']);
+                    $v['art_page_list'] = $art_page_list;
+                    $v['art_page_total'] = $art_page_total;
                     $_REQUEST['page'] = $i;
 
                     $info = $this->label_art_detail($v,$GLOBALS['config']['view']['art_detail']);
