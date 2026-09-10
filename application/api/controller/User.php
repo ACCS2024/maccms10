@@ -225,7 +225,7 @@ class User extends Base
             $order = "user_reg_time DESC";
             // 安全加固(V8):公开列表不返回 user_phone 等PII,防止未授权批量导出
             $field = 'user_id,user_name,user_nick_name,user_reg_time';
-            if (strlen($param['orderby']) > 0) {
+            if (!empty($param['orderby'])) {
                 $order = 'user_' . $param['orderby'] . " DESC";
             }
             $list = (new \app\common\model\User())->getListByCond($offset, $limit, $where, $order, $field, []);

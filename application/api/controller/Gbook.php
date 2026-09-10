@@ -81,7 +81,7 @@ class Gbook extends Base
             // 排序
             $order = "gbook_time DESC";
             $field = '*';
-            if (strlen($param['orderby']) > 0) {
+            if (!empty($param['orderby'])) {
                 $order = 'gbook_' . $param['orderby'] . " DESC";
             }
             $list = (new \app\common\model\Gbook())->getListByCond($offset, $limit, $where, $order, $field, []);

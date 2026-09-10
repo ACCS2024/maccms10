@@ -74,7 +74,7 @@ class Link extends Base
             // 排序
             $order = "link_time DESC";
             $field = '*';
-            if (strlen($param['orderby']) > 0) {
+            if (!empty($param['orderby'])) {
                 $order = 'link_' . $param['orderby'] . " DESC";
             }
             $list = (new \app\common\model\Link())->getListByCond($offset, $limit, $where, $order, $field, []);

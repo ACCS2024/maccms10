@@ -23,7 +23,7 @@ class Manga extends Base
                 'msg'  => '参数错误: ' . $validate->getError(),
             ]);
         }
-        $param['page'] = intval($param['page']) < 1 ? 1 : intval($param['page']);
+        $param['page'] = max(1, (int)($param['page'] ?? 1));
         // limit 归一化到两档 {10,20}(防变参放大:任意 limit 收敛到极少数固定值,且每页≤20)
         $param['limit'] = mac_api_norm_limit($param['limit'] ?? 0);
 

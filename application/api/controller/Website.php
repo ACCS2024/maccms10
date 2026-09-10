@@ -96,7 +96,7 @@ class Website extends Base
         if ($total > 0) {
             // 排序
             $order = "website_time DESC";
-            if (strlen($param['orderby']) > 0) {
+            if (!empty($param['orderby'])) {
                 $order = 'website_' . $param['orderby'] . " DESC";
             }
             $field = '*';
