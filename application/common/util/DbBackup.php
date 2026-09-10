@@ -15,9 +15,11 @@ class DbBackup
     /** 列出当前库的表(可按前缀过滤) */
     public function listTables($prefix = '')
     {
+        if (!is_string($prefix)) { throw new \InvalidArgumentException('无效表前缀'); }
         $tables = [];
-        foreach (Db::query('SHOW TABLES') as $row) {
-            $name = current($row);
+        foreach (Db::query('SHOW FULL TABLES') as $row) {
+            if (end($row) !== 'BASE TABLE') { continue; }
+            $name = reset($row);
             if ($prefix === '' || strpos($name, $prefix) === 0) {
                 $tables[] = $name;
             }
@@ -26,73 +28,93 @@ class DbBackup
     }
 
     /**
-     * 导出指定表到 .sql 文件。
-     * @return array ['tables'=>int,'rows'=>int]
-     * @throws \RuntimeException
+     * Export selected base tables, publishing the complete file only after checked close.
+     * InnoDB rows share one repeatable-read snapshot; other engines require a maintenance window.
+     * @return array ['tables'=>int,'rows'=>int,'consistent_snapshot'=>bool]
      */
     public function export(array $tables, $file)
     {
-        $fh = @fopen($file, 'w');
-        if (!$fh) {
-            throw new \RuntimeException("无法写入文件:{$file}");
+        if (!is_string($file) || $file === '' || preg_match('/[\x00-\x1f\x7f]/', $file) || str_contains($file, '://')) {
+            throw new \RuntimeException('无效输出文件');
         }
-        // 预热连接后取 PDO 用于安全转义
-        Db::query('SELECT 1');
+        $parent = realpath(dirname($file));
+        if ($parent === false || !is_dir($parent) || basename($file) === '.' || basename($file) === '..') {
+            throw new \RuntimeException('输出目录不存在');
+        }
+        $file = $parent.DIRECTORY_SEPARATOR.basename($file);
+        if (is_link($file) || (file_exists($file) && !is_file($file))) { throw new \RuntimeException('输出必须为普通文件'); }
+        if (!$tables) { throw new \RuntimeException('没有可导出的表'); }
+        foreach ($tables as $table) {
+            if (!is_string($table) || $table === '' || str_contains($table, "\0")) { throw new \RuntimeException('无效表名'); }
+        }
+        $tables = array_values(array_unique($tables));
+        $metadata = array_column(Db::query('SHOW TABLE STATUS', [], true), null, 'Name');
+        $consistent = true;
+        foreach ($tables as $table) {
+            if (!isset($metadata[$table]) || empty($metadata[$table]['Engine'])) { throw new \RuntimeException('表不存在或不是普通表'); }
+            $consistent = $consistent && strtoupper($metadata[$table]['Engine']) === 'INNODB';
+        }
         $pdo = Db::connect()->getPdo();
-        if (!$pdo) {
-            fclose($fh);
-            throw new \RuntimeException('无法获取数据库连接');
-        }
-
-        fwrite($fh, "-- maccms-cli db:export " . date('Y-m-d H:i:s') . "\n");
-        fwrite($fh, "SET NAMES utf8mb4;\nSET FOREIGN_KEY_CHECKS=0;\n\n");
-
-        $rowCount = 0;
-        foreach ($tables as $t) {
-            $create = Db::query('SHOW CREATE TABLE ' . $this->q($t));
-            $ddl = $create[0]['Create Table'] ?? ($create[0]['Create View'] ?? '');
-            if ($ddl === '') {
-                continue;
+        if (!$pdo || $pdo->inTransaction()) { throw new \RuntimeException('导出需要独立数据库连接事务'); }
+        $directory = null; $codec = null; $input = null; $output = null; $transaction = false;
+        try {
+            // Use the ORM transaction counter too: routing/reconnect must not silently lose the snapshot.
+            Db::execute('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY');
+            Db::startTrans(); $transaction = true;
+            $directory = $parent.DIRECTORY_SEPARATOR.'.db-export-'.bin2hex(random_bytes(12));
+            if (!@mkdir($directory, 0700)) { throw new \RuntimeException('无法创建导出临时目录'); }
+            $codec = new Database(['name'=>date('Ymd-His'),'part'=>1], ['path'=>$directory,'part'=>PHP_INT_MAX,'compress'=>0]);
+            if (!$codec->create()) { throw new \RuntimeException('无法创建导出文件'); }
+            $rows = 0;
+            foreach ($tables as $table) {
+                // The first table SELECT establishes the snapshot shared by counts and all row pages.
+                $rows += (int)Db::query('SELECT COUNT(*) AS total FROM '.$this->q($table))[0]['total'];
+                $next = $codec->backup($table, 0);
+                while (is_array($next)) { $next = $codec->backup($table, $next[0]); }
+                if ($next !== 0) { throw new \RuntimeException('表导出失败'); }
             }
-            fwrite($fh, "DROP TABLE IF EXISTS " . $this->q($t) . ";\n" . $ddl . ";\n\n");
-
-            // 分页读取,避免一次性吃满内存
-            $page = 1;
-            $size = 2000;
-            while (true) {
-                // TP8 的 select() 返回 think\Collection(对象),empty() 对任何对象
-                // 恒为 false —— 翻到空页时循环不会退出,下一行 $rows[0] 直接
-                // "Undefined array key 0",在 CLI 下被 think\initializer\Error 抛成
-                // ErrorException,整条 db:export 中断。库里只要有一张空表就必然踩到
-                // (实测:全新安装即 100% 失败)。转成数组后 empty() 恢复原意。
-                $rows = Db::table($t)->page($page, $size)->select()->toArray();
-                if (empty($rows)) {
-                    break;
-                }
-                $cols = array_keys($rows[0]);
-                $colParts = [];
-                foreach ($cols as $c) {
-                    $colParts[] = $this->q($c);
-                }
-                $colList = implode(',', $colParts);
-                foreach ($rows as $row) {
-                    $vals = [];
-                    foreach ($row as $v) {
-                        $vals[] = ($v === null) ? 'NULL' : $pdo->quote((string)$v);
-                    }
-                    fwrite($fh, "INSERT INTO " . $this->q($t) . " ({$colList}) VALUES (" . implode(',', $vals) . ");\n");
-                    $rowCount++;
-                }
-                if (count($rows) < $size) {
-                    break;
-                }
-                $page++;
+            if (!$codec->close()) { throw new \RuntimeException('无法关闭导出文件'); }
+            Db::rollback(); $transaction = false;
+            $parts = $codec->createdFiles();
+            if (count($parts) !== 1) { throw new \RuntimeException('导出文件分卷异常'); }
+            $complete = $directory.DIRECTORY_SEPARATOR.'complete.sql';
+            $mask = umask(0077);
+            try { $output = @fopen($complete, 'xb'); }
+            finally { umask($mask); }
+            if ($output === false) { throw new \RuntimeException('无法写入导出文件'); }
+            $this->writeExport($output, "-- maccms-cli db:export\nSET @MACCMS_OLD_SQL_MODE=@@SESSION.SQL_MODE;\nSET @MACCMS_OLD_FOREIGN_KEY_CHECKS=@@SESSION.FOREIGN_KEY_CHECKS;\nSET SQL_MODE='NO_AUTO_VALUE_ON_ZERO';\n");
+            $input = @fopen($parts[0], 'rb');
+            if ($input === false || @stream_copy_to_stream($input, $output) !== filesize($parts[0])) { throw new \RuntimeException('无法完整复制导出数据'); }
+            fclose($input); $input = null;
+            $this->writeExport($output, "\nSET FOREIGN_KEY_CHECKS=@MACCMS_OLD_FOREIGN_KEY_CHECKS;\nSET SQL_MODE=@MACCMS_OLD_SQL_MODE;\n");
+            if (!@fflush($output) || (function_exists('fsync') && !@fsync($output))) { throw new \RuntimeException('无法刷新导出文件'); }
+            $closed = @fclose($output); $output = null;
+            if (!$closed || is_link($file) || (file_exists($file) && !is_file($file)) || !@rename($complete, $file)) {
+                throw new \RuntimeException('无法发布完整导出文件');
             }
-            fwrite($fh, "\n");
+            return ['tables'=>count($tables), 'rows'=>$rows, 'consistent_snapshot'=>$consistent];
+        } catch (\Throwable $error) {
+            throw new \RuntimeException('数据库导出失败: '.$error->getMessage(), 0, $error);
+        } finally {
+            if (is_resource($input)) { fclose($input); }
+            if (is_resource($output)) { fclose($output); }
+            if ($codec !== null) { $codec->close(); }
+            if ($directory !== null && is_dir($directory)) {
+                foreach ($codec !== null ? $codec->createdFiles() : [] as $part) { @unlink($part); }
+                if (is_file($directory.DIRECTORY_SEPARATOR.'complete.sql')) { @unlink($directory.DIRECTORY_SEPARATOR.'complete.sql'); }
+                @rmdir($directory);
+            }
+            if ($transaction) { Db::rollback(); }
         }
-        fwrite($fh, "SET FOREIGN_KEY_CHECKS=1;\n");
-        fclose($fh);
-        return ['tables' => count($tables), 'rows' => $rowCount];
+    }
+
+    private function writeExport($stream, string $bytes): void
+    {
+        for ($offset = 0, $length = strlen($bytes); $offset < $length;) {
+            $written = @fwrite($stream, substr($bytes, $offset));
+            if ($written === false || $written === 0) { throw new \RuntimeException('无法完整写入导出文件'); }
+            $offset += $written;
+        }
     }
 
     /**
