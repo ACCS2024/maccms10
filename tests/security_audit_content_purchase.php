@@ -118,9 +118,11 @@ if ($mysql) {
 }
 
 // Exercise both real controller methods against actual MySQL authentication and the coordinator.
-// This retains the non-video priced-record contract; actual video resources/policy have their own route suite.
+// Article now uses an actual resource row; the comprehensive real-route resource cases have their own suite.
 function request() { return \think\Container::getInstance()->make('request'); }
 function json($data) { return $data; }
+function session($name) { return null; }
+function mac_get_mid($type) { return ['art'=>2,'manga'=>12][$type]; }
 function mac_content_read_points_amount($type,$data) { return $data[$type.'_points_detail']; }
 class PurchaseContentFixture {
     public function infoData($where,...$args) {
@@ -129,15 +131,22 @@ class PurchaseContentFixture {
     }
 }
 if ($mysql) {
-    foreach (['Art','Manga'] as $model) { class_alias(PurchaseContentFixture::class,'app\\common\\model\\'.$model); }
+    foreach (['Manga'] as $model) { class_alias(PurchaseContentFixture::class,'app\\common\\model\\'.$model); }
+    if (!preg_match('/CREATE TABLE `mac_art` \([\s\S]*?\) ENGINE[^;]*;/',$ddl,$match)) { throw new RuntimeException('Missing article installation schema'); }
+    Db::execute('DROP TABLE IF EXISTS audit_art');Db::execute(str_replace('`mac_art`','`audit_art`',$match[0]));
+    Db::name('Art')->insert(['art_id'=>7,'art_name'=>'Fixture article','art_content'=>'Fixture chapter','type_id'=>1,
+        'art_status'=>1,'art_points'=>40,'art_points_detail'=>20]);
     $GLOBALS['config']['app'] += ['api_jwt_enabled'=>'1','api_jwt_secret'=>str_repeat('isolated-jwt-',4)];
-    $GLOBALS['config']['user'] += ['vod_points_type'=>'0','art_points_type'=>'0','manga_points_type'=>'0'];
+    $GLOBALS['config']['user'] += ['status'=>1,'vod_points_type'=>'0','art_points_type'=>'0','manga_points_type'=>'0'];
     foreach (['index','api'] as $entry) {
         purchaseSeed();
+        Db::execute('DELETE FROM audit_group');
+        Db::name('Group')->insert(['group_id'=>2,'group_name'=>'Registered','group_status'=>1,'group_type'=>'1,','group_popedom'=>json_encode([1=>[3=>1]])]);
+        $GLOBALS['member_groups'][2] += ['group_type'=>'1,','group_popedom'=>[1=>[3=>1]]];
         Db::name('User')->where('user_id',1)->update(['user_random'=>str_repeat('a',32)]);
         $token=\app\common\util\JwtService::encode(1,str_repeat('a',32));
         $request=(new \think\Request())->withServer(['REQUEST_METHOD'=>'POST'])->withHeader(['Authorization'=>'Bearer '.$token])
-            ->withPost(['mid'=>'2','type'=>'1','id'=>'7','sid'=>'1','nid'=>'2','ulog_points'=>'0','user_id'=>'999']);
+            ->withPost(['mid'=>'2','type'=>'1','id'=>'7','sid'=>'1','nid'=>'0','ulog_points'=>'0','user_id'=>'999']);
         \think\Container::getInstance()->instance('request',$request);
         $GLOBALS['user']=Db::name('User')->where('user_id',1)->find();
         if ($entry==='index') {

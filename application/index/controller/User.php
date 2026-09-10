@@ -118,6 +118,10 @@ class User extends Base
             return json(\app\common\util\VideoPurchase::buy($identity['info'], Request::post(),
                 fn(array $row, string $flag, array $coordinates): array => $this->check_vod_resource_access($row, $flag, $coordinates)));
         }
+        if ($param['mid'] === 2) {
+            return json(\app\common\util\ArtPurchase::buy($identity['info'], Request::post(),
+                fn(array $row, array $coordinates): array => $this->check_art_resource_access($row, $coordinates)));
+        }
         $data = [];
         $data['ulog_mid'] = intval($param['mid']) <=0 ? 1: intval($param['mid']);
         $data['ulog_rid'] = intval($param['id']);
@@ -140,19 +144,6 @@ class User extends Base
             }
             $data['ulog_points'] = mac_content_read_points_amount('manga', $res['info']);
             if($GLOBALS['config']['user']['manga_points_type']=='1'){
-                $data['ulog_sid']=0;
-                $data['ulog_nid']=0;
-            }
-        }
-        elseif($param['type']=='1'){
-            // 文章购买
-            $where['art_id'] = $data['ulog_rid'];
-            $res = (new \app\common\model\Art())->infoData($where);
-            if ($res['code'] > 1) {
-                return json($res);
-            }
-            $data['ulog_points'] = mac_content_read_points_amount('art', $res['info']);
-            if($GLOBALS['config']['user']['art_points_type']=='1'){
                 $data['ulog_sid']=0;
                 $data['ulog_nid']=0;
             }

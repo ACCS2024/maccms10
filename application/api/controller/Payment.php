@@ -386,33 +386,8 @@ class Payment extends Base
             return json($result);
         }
 
-        $data  = [];
-        $data['ulog_mid'] = intval($param['mid'] ?? 1) <= 0 ? 1 : intval($param['mid']);
-        $data['ulog_rid'] = intval($param['id'] ?? 0);
-        $data['ulog_sid'] = intval($param['sid'] ?? 0);
-        $data['ulog_nid'] = intval($param['nid'] ?? 0);
-
-        $data['ulog_type'] = intval($param['type']);
-        $data['user_id']   = $identity['info']['user_id'];
-
-        // 查询资源信息以获取所需积分
-        if ($param['type'] == '1') {
-            // 文章
-            $where = ['art_id' => $data['ulog_rid']];
-            $res = (new \app\common\model\Art())->infoData($where);
-            if ($res['code'] > 1) {
-                return json($res);
-            }
-            $col = 'art_points_detail';
-            if ($GLOBALS['config']['user']['art_points_type'] == '1') {
-                $col = 'art_points';
-                $data['ulog_sid'] = 0;
-                $data['ulog_nid'] = 0;
-            }
-        }
-        $data['ulog_points'] = intval($res['info'][$col]);
-
-        $result = \app\common\util\ContentPurchase::buy($identity['info']['user_id'], $data);
+        $result = \app\common\util\ArtPurchase::buy($identity['info'], $request->post(),
+            fn(array $row, array $coordinates): array => $this->check_art_resource_access($row, $coordinates));
         $result['code'] = [2001=>1001, 2002=>1005, 2003=>1006][$result['code']] ?? $result['code'];
         return json($result);
     }

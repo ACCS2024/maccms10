@@ -1,5 +1,5 @@
 <?php
-/** Real authentication/session/controllers/financial/video ORM. Only page decoration and Art/Manga metadata are fixtures. */
+/** Real authentication/session/controllers/financial/video/article ORM. Only page decoration and Manga metadata are fixtures. */
 declare(strict_types=1);
 require dirname(__DIR__,2).'/vendor/autoload.php';
 require dirname(__DIR__,2).'/application/common.php';
@@ -35,7 +35,7 @@ class PurchaseCsrfMetadata {
             'art_points'=>40,'art_points_detail'=>20,'manga_points'=>40,'manga_points_detail'=>20]];
     }
 }
-foreach(['Art','Manga'] as $name)class_alias(PurchaseCsrfMetadata::class,'app\\common\\model\\'.$name);
+foreach(['Manga'] as $name)class_alias(PurchaseCsrfMetadata::class,'app\\common\\model\\'.$name);
 class PurchaseCsrfRequest extends \app\Request {public function isCli():bool{return false;}}
 $purchaseHttp=defined('PURCHASE_CSRF_HTTP');
 $purchaseTemp=$purchaseHttp?getcwd():audit_temp_dir('purchase-csrf');
@@ -53,7 +53,7 @@ if($mysql){
 }
 $configuration=['default'=>'audit','auto_timestamp'=>false,'connections'=>['audit'=>$connection]];
 $app->config->set($configuration,'database');$manager=new \think\DbManager();$manager->setConfig($configuration);$app->instance('think\\DbManager',$manager);
-Db::listen(static function($sql):void{if(preg_match('/\bFROM\s+[`"]?audit_vod\b/i',$sql))$GLOBALS['purchase_resource_reads']++;});
+Db::listen(static function($sql):void{if(preg_match('/\bFROM\s+[`"]?audit_(?:vod|art)\b/i',$sql))$GLOBALS['purchase_resource_reads']++;});
 $app->config->set(['type'=>'file','name'=>'fixture_session','path'=>$purchaseTemp.'/sessions','expire'=>3600,'var_session_id'=>''],'session');
 $app->config->set(['default'=>'file','stores'=>['file'=>['type'=>'File','path'=>$purchaseTemp.'/cache/']]],'cache');
 $app->instance('log',new class{public function record(...$args){}public function error(...$args){}});
@@ -62,7 +62,7 @@ $app->bind(\app\index\controller\User::class,PurchaseCsrfIndex::class);$app->bin
 if($mysql)Db::execute("SET SESSION sql_mode=''");
 if(!defined('PURCHASE_CSRF_EXISTING_DB')&&(!$purchaseHttp||!is_file($purchaseTemp.'/schema.ready'))){
     $ddl=file_get_contents(dirname(__DIR__,2).'/application/install/sql/install.sql');
-    foreach(['user','group','plog','ulog','vod']as $table){
+    foreach(['user','group','plog','ulog','vod','art']as $table){
         if(!preg_match('/CREATE TABLE `mac_'.$table.'` \(([\s\S]*?)\) ENGINE[^;]*;/',$ddl,$match))throw new RuntimeException('Purchase install schema missing');
         Db::execute('DROP TABLE IF EXISTS audit_'.$table);
         if($mysql){Db::execute(str_replace('`mac_'.$table.'`','`audit_'.$table.'`',$match[0]));continue;}
@@ -110,13 +110,29 @@ function purchaseCsrfVod(array $changes=[]):array{
     return $changes+['vod_id'=>17,'vod_name'=>'Fixture video','vod_status'=>1,'type_id'=>1,'vod_points'=>40,'vod_points_play'=>20,'vod_points_down'=>30,
         'vod_play_from'=>'primary$$$secondary','vod_play_url'=>$urls.'$$$'.$urls,'vod_down_from'=>'primary$$$secondary','vod_down_url'=>$urls.'$$$'.$urls]+$defaults;
 }
+function purchaseCsrfArt(array $changes=[]):array{
+    static $defaults;
+    if($defaults===null){
+        $ddl=file_get_contents(dirname(__DIR__,2).'/application/install/sql/install.sql');
+        preg_match('/CREATE TABLE `mac_art` \(([\s\S]*?)\) ENGINE[^;]*;/',$ddl,$match);$defaults=[];
+        foreach(explode("\n",$match[1])as $line){
+            if(preg_match('/^\s*`([^`]+)`\s+([^ ]+)(.*)$/',$line,$field)){
+                if(preg_match("/DEFAULT ('([^']*)'|[0-9]+)/",$field[3],$value))$defaults[$field[1]]=str_starts_with($value[1],"'")?$value[2]:(int)$value[1];
+                else $defaults[$field[1]]=str_contains($field[2],'int')?0:'';
+            }
+        }
+    }
+    return $changes+['art_id'=>17,'art_name'=>'Fixture article','art_status'=>1,'type_id'=>1,'art_points'=>40,'art_points_detail'=>20,
+        'art_content'=>'CHAPTER-ONE$$$CHAPTER-TWO$$$CHAPTER-THREE','art_title'=>'One$$$Two$$$Three']+$defaults;
+}
 function purchaseCsrfSeed():void{
     purchaseCsrfConfig();
-    foreach(['ulog','plog','user','group','vod']as $table)Db::execute('DELETE FROM audit_'.$table);
+    foreach(['ulog','plog','user','group','vod','art']as $table)Db::execute('DELETE FROM audit_'.$table);
     $groups=[];
     foreach([1,2,3]as $id){$group=['group_id'=>$id,'group_name'=>'Fixture '.$id,'group_type'=>'1,','group_popedom'=>json_encode([1=>[3=>1,4=>1,5=>1]]),'group_status'=>1];Db::name('Group')->insert($group);$group['group_popedom']=json_decode($group['group_popedom'],true);$groups[$id]=$group;}
     \think\facade\Cache::set('purchase_csrf_group_list',$groups);
     Db::name('Vod')->insert(purchaseCsrfVod());
+    Db::name('Art')->insert(purchaseCsrfArt());
     foreach([1,2,3,4]as $id)Db::name('User')->insert(['user_id'=>$id,'user_name'=>'fixture'.$id,'user_random'=>str_repeat((string)$id,32),
         'user_pwd'=>password_hash('fixture-password',PASSWORD_BCRYPT,['cost'=>4]),'user_status'=>1,'group_id'=>2,'user_points'=>$id===1?100:0,
         'user_pid'=>$id===1?2:0,'user_pid_2'=>$id===1?3:0,'user_pid_3'=>$id===1?4:0]);

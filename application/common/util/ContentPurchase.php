@@ -35,7 +35,13 @@ final class ContentPurchase
     /** Internal server quote only: it runs after the owner lock and must return a priced record or a final response. */
     public static function buyVideo($userId, callable $quote): array
     {
-        return self::execute($userId, [], $quote);
+        return self::execute($userId, [], $quote, 1);
+    }
+
+    /** Article quotes resolve an actual chapter with the same transaction and receipt contract. */
+    public static function buyArt($userId, callable $quote): array
+    {
+        return self::execute($userId, [], $quote, 2);
     }
 
     private static function record(int $userId, array $pricedRecord): ?array
@@ -50,7 +56,7 @@ final class ContentPurchase
             'ulog_rid'=>$selection['id'],'ulog_sid'=>$selection['sid'],'ulog_nid'=>$selection['nid'],'ulog_points'=>$points];
     }
 
-    private static function execute($userId, array $pricedRecord, ?callable $quote = null): array
+    private static function execute($userId, array $pricedRecord, ?callable $quote = null, ?int $resourceMid = null): array
     {
         $userId=PointsBalance::amount($userId);
         $record=$userId!==null && $quote===null ? self::record($userId,$pricedRecord) : null;
@@ -58,9 +64,9 @@ final class ContentPurchase
         $started=false;
         try {
             if ($quote!==null && ($pdo=Db::connect()->getPdo()) && $pdo->inTransaction()) {
-                throw new \RuntimeException('A video purchase must own its transaction');
+                throw new \RuntimeException('A resolved content purchase must own its transaction');
             }
-            self::requireTransactionalStorage($quote!==null);
+            self::requireTransactionalStorage($resourceMid);
             Db::startTrans(); $started=true;
             // The same owner lock serializes all purchases before the authoritative receipt/balance reads.
             $user=Db::name('User')->master()->where('user_id',$userId)->lock(true)->find();
@@ -70,14 +76,14 @@ final class ContentPurchase
             }
             if ($quote!==null) {
                 $resolved=$quote($user);
-                if (!is_array($resolved) || !isset($resolved['code'])) { throw new \RuntimeException('Invalid video quote'); }
+                if (!is_array($resolved) || !isset($resolved['code'])) { throw new \RuntimeException('Invalid content quote'); }
                 if (!isset($resolved['record'])) {
                     Db::rollback(); $started=false;
                     return $resolved;
                 }
                 $record=self::record($userId,$resolved['record']);
-                if ($resolved['code']!==1 || $record===null || $record['ulog_mid']!==1 || $record['ulog_points']===0) {
-                    throw new \RuntimeException('Invalid video quote');
+                if ($resolved['code']!==1 || $record===null || $record['ulog_mid']!==$resourceMid || $record['ulog_points']===0) {
+                    throw new \RuntimeException('Invalid content quote');
                 }
             }
             $points=$record['ulog_points'];
@@ -118,13 +124,17 @@ final class ContentPurchase
         }
     }
 
-    private static function requireTransactionalStorage(bool $video = false): void
+    private static function requireTransactionalStorage(?int $resourceMid = null): void
     {
         $type=Db::connect()->getConfig('type');
         if ($type==='sqlite') { return; }
         if ($type!=='mysql') { throw new \RuntimeException('Unsupported purchase storage'); }
         $tables=[Db::name('User')->getTable(),Db::name('Plog')->getTable(),Db::name('Ulog')->getTable()];
-        if ($video) { $tables[]=Db::name('Vod')->getTable(); $tables[]=Db::name('Group')->getTable(); }
+        if ($resourceMid!==null) {
+            $resource=[1=>'Vod',2=>'Art'][$resourceMid]??null;
+            if ($resource===null) { throw new \RuntimeException('Unsupported purchase resource'); }
+            $tables[]=Db::name($resource)->getTable(); $tables[]=Db::name('Group')->getTable();
+        }
         $rows=Db::query('SELECT TABLE_NAME AS name, ENGINE AS engine FROM information_schema.TABLES '
             .'WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME IN ('.implode(',',array_fill(0,count($tables),'?')).')',$tables,true);
         foreach ($rows as $row) {
