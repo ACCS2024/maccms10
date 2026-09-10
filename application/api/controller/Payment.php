@@ -4,6 +4,7 @@ namespace app\api\controller;
 
 use think\facade\Db;
 use think\facade\Request;
+use app\common\util\OrderAmount;
 
 /**
  * 支付/充值 API
@@ -155,6 +156,10 @@ class Payment extends Base
     public function get_config(\think\Request $request)
     {
         $pay_config = config('maccms.pay');
+        $minimum = OrderAmount::minimum($pay_config['min'] ?? null);
+        if ($minimum === null || !OrderAmount::validRate($pay_config['scale'] ?? null)) {
+            return json(['code' => 1002, 'msg' => lang('param_err')]);
+        }
 
         $loginCheck = (new \app\common\model\User())->checkLogin();
         $isLogin    = (intval($loginCheck['code']) === 1) && intval($loginCheck['info']['user_id'] ?? 0) > 0;
@@ -172,8 +177,8 @@ class Payment extends Base
             'code' => 1,
             'msg'  => lang('obtain_ok'),
             'info' => [
-                'min'          => floatval($pay_config['min'] ?? 1),
-                'scale'        => intval($pay_config['scale'] ?? 1),
+                'min'          => OrderAmount::decimal($minimum),
+                'scale'        => $pay_config['scale'],
                 'methods'      => $methods,
                 'card_config'  => $card_config,
                 'is_login'     => $isLogin ? 1 : 0,

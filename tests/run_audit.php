@@ -18,7 +18,7 @@ $groups = [
         ['framework_audit_csv.php'], ['framework_audit_request_injection.php'],
         ['framework_audit_api_runtime.php'], ['framework_audit_api_validation.php'],
         ['framework_audit_api_defaults.php'], ['framework_audit_detail_routes.php'],
-        ['framework_audit_user_lists.php'], ['security_audit_member_order_url.php'],
+        ['framework_audit_user_lists.php'], ['security_audit_member_order_url.php'], ['security_audit_order_amount.php'], ['security_audit_order_price_template.php'],
         ['validator_audit_chatroom_danmaku.php'],
         ['framework_audit_strict_errors.php', 'strict'], ['framework_audit_strict_errors.php', 'default'],
         ['security_audit_admin.php'], ['security_audit_annex.php'], ['security_audit_api.php'],
@@ -41,7 +41,7 @@ $groups = [
         ['framework_audit_checkout.php'], ['framework_audit_ulog_users.php'], ['framework_audit_type_navigation.php'],
     ],
     // Separate environment: MEMBERSHIP_AUDIT_MYSQL selects the financial installation schema.
-    'financial' => [['security_audit_membership.php']],
+    'financial' => [['security_audit_membership.php'], ['security_audit_order_create.php']],
     // Execute as an unprivileged account so denied-write cases are meaningful.
     'install' => [['framework_audit_install.php']],
 ];

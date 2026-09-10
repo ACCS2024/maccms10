@@ -221,27 +221,8 @@ class Order extends Base {
     /** Canonical positive minor units for the order_price DECIMAL(12,2) column. */
     private static function amountMinorUnits($amount): ?string
     {
-        if (is_float($amount)) {
-            if (!is_finite($amount) || $amount <= 0 || $amount > 9999999999.99) {
-                return null;
-            }
-            // Preserve legacy numeric callers only when two decimal places round-trip
-            // to exactly the supplied float; never round away additional precision.
-            $decimal = number_format($amount, 2, '.', '');
-            if ((float)$decimal !== $amount) {
-                return null;
-            }
-            $amount = $decimal;
-        } elseif (is_int($amount)) {
-            $amount = (string)$amount;
-        } elseif (!is_string($amount)) {
-            return null;
-        }
-        if (!preg_match('/^([0-9]{1,10})(?:\.([0-9]{1,2}))?$/D', $amount, $parts)) {
-            return null;
-        }
-        $minor = ltrim($parts[1] . str_pad($parts[2] ?? '', 2, '0', STR_PAD_RIGHT), '0');
-        return $minor === '' ? null : $minor;
+        $minor = \app\common\util\OrderAmount::minorUnits($amount);
+        return $minor === null ? null : (string)$minor;
     }
 
 }

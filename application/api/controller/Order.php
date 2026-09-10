@@ -4,6 +4,7 @@ namespace app\api\controller;
 
 use think\facade\Db;
 use think\facade\Request;
+use app\common\util\OrderAmount;
 
 /**
  * 充值订单管理 API
@@ -49,6 +50,7 @@ class Order extends Base
      */
     public function create(\think\Request $request)
     {
+        if (!$request->isPost()) { return json(['code' => 1001, 'msg' => lang('param_err')]); }
         $auth = $this->_checkLogin();
         if (!$auth['ok']) return $auth['response'];
 
@@ -59,19 +61,26 @@ class Order extends Base
             return json(['code' => 1001, 'msg' => '参数错误: ' . $validate->getError()]);
         }
 
-        $price = floatval($param['price'] ?? 0);
-
         $pay_config = config('maccms.pay');
-        if (!empty($pay_config['min']) && $price < $pay_config['min']) {
+        $minor = OrderAmount::minorUnits($param['price'] ?? null);
+        $minimum = OrderAmount::minimum($pay_config['min'] ?? null);
+        if ($minor === null || $minimum === null) {
+            return json(['code' => 1001, 'msg' => lang('param_err')]);
+        }
+        if ($minor < $minimum) {
             return json(['code' => 1002, 'msg' => '最小充值金额不能低于' . $pay_config['min'] . '元']);
+        }
+        $quote = OrderAmount::recharge($param['price'], $pay_config['scale'] ?? null);
+        if ($quote === null) {
+            return json(['code' => 1003, 'msg' => '当前充值金额不可用，请调整金额或联系管理员']);
         }
 
         $data = [];
         $data['user_id']      = $auth['user_id'];
         $data['order_code']   = 'PAY' . mac_get_uniqid_code();
-        $data['order_price']  = $price;
+        $data['order_price']  = $quote['order_price'];
         $data['order_time']   = time();
-        $data['order_points'] = intval(($pay_config['scale'] ?? 1) * $price);
+        $data['order_points'] = $quote['order_points'];
 
         $res = (new \app\common\model\Order())->saveData($data);
         if ($res['code'] > 1) {

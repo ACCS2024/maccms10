@@ -481,20 +481,26 @@ class User extends Base
                 return json($res);
             } else {
                 $price = \think\facade\Request::param('price');
-                if (empty($price)) {
+                $minor = \app\common\util\OrderAmount::minorUnits($price);
+                $minimum = \app\common\util\OrderAmount::minimum($GLOBALS['config']['pay']['min'] ?? null);
+                if ($minor === null || $minimum === null) {
                     return json(['code' => 1001, 'msg' => lang('param_err')]);
                 }
 
-                if ($price < $GLOBALS['config']['pay']['min']) {
+                if ($minor < $minimum) {
                     return json(['code' => 1002, 'msg' =>lang('index/min_pay',[$GLOBALS['config']['pay']['min']])]);
+                }
+                $quote = \app\common\util\OrderAmount::recharge($price, $GLOBALS['config']['pay']['scale'] ?? null);
+                if ($quote === null) {
+                    return json(['code' => 1003, 'msg' => '当前充值金额不可用，请调整金额或联系管理员']);
                 }
 
                 $data = [];
                 $data['user_id'] = $GLOBALS['user']['user_id'];
                 $data['order_code'] = 'PAY' . mac_get_uniqid_code();
-                $data['order_price'] = $price;
+                $data['order_price'] = $quote['order_price'];
                 $data['order_time'] = time();
-                $data['order_points'] = intval($GLOBALS['config']['pay']['scale'] * $price);
+                $data['order_points'] = $quote['order_points'];
                 $res = (new \app\common\model\Order())->saveData($data);
                 if ($res['code'] == 1) {
                     $orderInfo = (new \app\common\model\Order())->infoData(['order_code' => $data['order_code'], 'user_id' => $data['user_id']]);

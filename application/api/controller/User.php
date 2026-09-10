@@ -4,6 +4,7 @@ namespace app\api\controller;
 
 use think\facade\Db;
 use think\facade\Request;
+use app\common\util\OrderAmount;
 
 class User extends Base
 {
@@ -774,7 +775,7 @@ class User extends Base
         }
 
         $group_list = (new \app\common\model\Group())->getCache();
-        $scale = max(1, intval($GLOBALS['config']['pay']['scale']));
+        $scale = $GLOBALS['config']['pay']['scale'] ?? null;
         $groups = [];
         foreach ($group_list as $vo) {
             if (!is_array($vo)) {
@@ -788,6 +789,12 @@ class User extends Base
             $pw = intval($vo['group_points_week']);
             $pm = intval($vo['group_points_month']);
             $py = intval($vo['group_points_year']);
+            $prices = [];
+            foreach (['day', 'week', 'month', 'year'] as $period) {
+                $quote = OrderAmount::membership($vo['group_points_' . $period] ?? null, $scale, true);
+                // Null means this period cannot be bought for cash; zero remains an explicit free plan.
+                $prices[$period] = $quote === null ? null : (float)$quote['order_price'];
+            }
             $groups[] = [
                 'group_id' => $gid,
                 'group_name' => (string)$vo['group_name'],
@@ -795,10 +802,10 @@ class User extends Base
                 'group_points_week' => $pw,
                 'group_points_month' => $pm,
                 'group_points_year' => $py,
-                'price_day' => round($pd / $scale, 2),
-                'price_week' => round($pw / $scale, 2),
-                'price_month' => round($pm / $scale, 2),
-                'price_year' => round($py / $scale, 2),
+                'price_day' => $prices['day'],
+                'price_week' => $prices['week'],
+                'price_month' => $prices['month'],
+                'price_year' => $prices['year'],
             ];
         }
 
@@ -854,8 +861,13 @@ class User extends Base
         }
 
         $param = $request->param();
-        $group_id = intval($param['group_id'] ?? 0);
-        $long = trim((string)($param['long'] ?? ''));
+        $rawGroup = $param['group_id'] ?? null;
+        if ((!is_int($rawGroup) && !is_string($rawGroup)) || !preg_match('/^[0-9]{1,10}$/D', (string)$rawGroup)
+            || !is_string($param['long'] ?? null)) {
+            return json(['code' => 1003, 'msg' => lang('param_err')]);
+        }
+        $group_id = (int)$rawGroup;
+        $long = $param['long'];
         $points_long = ['day' => 86400, 'week' => 86400 * 7, 'month' => 86400 * 30, 'year' => 86400 * 365];
         if (!array_key_exists($long, $points_long) || $group_id < 3) {
             return json(['code' => 1003, 'msg' => lang('param_err')]);
@@ -866,16 +878,16 @@ class User extends Base
             return json(['code' => 1004, 'msg' => lang('model/user/group_not_found')]);
         }
         $group_info = $group_list[$group_id];
-        if (empty($group_info) || intval($group_info['group_status']) !== 1) {
+        if (!is_array($group_info) || intval($group_info['group_status'] ?? 0) !== 1) {
             return json(['code' => 1004, 'msg' => lang('model/user/group_not_found')]);
         }
 
-        $point = intval($group_info['group_points_' . $long]);
-        if ($point < 1) {
+        $quote = OrderAmount::membership($group_info['group_points_' . $long] ?? null, $GLOBALS['config']['pay']['scale'] ?? null);
+        if ($quote === null) {
             return json(['code' => 1005, 'msg' => lang('api/plan_not_available')]);
         }
-        $scale = max(1, intval($GLOBALS['config']['pay']['scale']));
-        $price = round($point / $scale, 2);
+        $point = $quote['order_points'];
+        $price = $quote['order_price'];
 
         $remarks = [
             'biz' => 'member_upgrade',

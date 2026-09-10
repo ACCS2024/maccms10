@@ -44,7 +44,10 @@ jobs:
           composer audit --locked --no-dev
           composer --working-dir=extend/upyun audit --locked --no-dev
       - name: Independent regression suites and SQLite models
-        run: php tests/run_audit.php --suite=unit,models,financial
+        run: |
+          php tests/run_audit.php --suite=unit,models,financial
+          node --check template/default/asset/js/user-buy-upgrade-ajax.js
+          node tests/security_audit_order_price_js.js
       - name: Prepare dedicated MySQL fixtures and verify InnoDB schema
         run: |
           set -euo pipefail
