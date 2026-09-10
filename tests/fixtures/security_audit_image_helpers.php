@@ -87,6 +87,10 @@ function imageAuditRejected(callable $operation, string $message): void {
 
 // These fixtures only isolate metadata persistence; image decoding, rendering, requests and upload moves are real.
 class ImageAuditUserMetadata {
+    public function checkLogin() {
+        $user = $GLOBALS['image_upload_member'] ?? null;
+        return $user ? ['code'=>1, 'info'=>$user] : ['code'=>1001];
+    }
     public function where($where) { return $this; }
     public function update($data) { $GLOBALS['image_user_updates'][] = $data; return 1; }
 }
@@ -94,5 +98,12 @@ class ImageAuditAnnexMetadata {
     public function infoData($where) { return ['code'=>1]; }
     public function saveData($data) { return ['code'=>1]; }
 }
+class ImageAuditAdminIdentity {
+    public function checkLogin() {
+        $admin = $GLOBALS['image_upload_admin'] ?? null;
+        return $admin ? ['code'=>1, 'info'=>$admin] : ['code'=>1001];
+    }
+}
 class_alias(ImageAuditUserMetadata::class, 'app\\common\\model\\User');
 class_alias(ImageAuditAnnexMetadata::class, 'app\\common\\model\\Annex');
+class_alias(ImageAuditAdminIdentity::class, 'app\\common\\model\\Admin');

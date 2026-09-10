@@ -11,6 +11,9 @@ define('ROOT_PATH', $temp . '/');
 define('MAC_PATH','/');
 define('ENTRANCE','index');
 $GLOBALS['user'] = ['user_id'=>1];
+$GLOBALS['image_upload_member'] = ['user_id'=>1];
+$GLOBALS['image_upload_admin'] = ['admin_id'=>2, 'admin_auth'=>',upload/upload,'];
+$GLOBALS['config']['user']['portrait_status'] = '1';
 $GLOBALS['config']['user']['portrait_size'] = '30x20';
 $GLOBALS['image_config'] = ['maccms.site'=>['install_dir'=>'/'], 'maccms.upload'=>[
     'mode'=>'local','watermark'=>0,'thumb'=>1,'thumb_size'=>'30x30,90x90','thumb_type'=>1,
@@ -65,7 +68,7 @@ try {
         copy($source,'incoming.' . $extension);
         imageAuditRequest(['flag'=>'vod','thumb'=>1],['file'=>new UploadedFile($temp . '/incoming.' . $extension,
             'client.' . strtoupper($extension),null,UPLOAD_ERR_OK,true)]);
-        $result = (new Upload())->upload();
+        $result = (new Upload())->upload([], true);
         $path = ltrim(explode('?',$result['file'])[0],'/');
         check($result['code'] === 1 && is_file($path) && pathinfo($path,PATHINFO_EXTENSION) === $extension,
             'TP8 upload lost the selected date directory, suffix, or successful return path');
@@ -79,7 +82,7 @@ try {
         }
     }
     imageAuditRequest(['flag'=>'vod','thumb'=>1,'imgdata'=>'data:image/png;base64,' . base64_encode(file_get_contents('source.png'))]);
-    $result = (new Upload())->upload();
+    $result = (new Upload())->upload([], true);
     $path = ltrim(explode('?',$result['file'])[0],'/');
     check($result['code'] === 1 && pathinfo($path,PATHINFO_EXTENSION) === 'png' && is_file($path . '_90x90.png'),
         'Base64 image uploads lacked an extension, date directory, or image thumbnail handling');
@@ -89,7 +92,7 @@ try {
     $GLOBALS['image_config']['maccms.upload']['watermark'] = 1;
     $GLOBALS['image_config']['maccms.upload']['thumb_size'] = '120x60';
     imageAuditRequest(['flag'=>'vod','thumb'=>1,'imgdata'=>'data:image/png;base64,' . base64_encode(file_get_contents('source.png'))]);
-    $result = (new Upload())->upload();
+    $result = (new Upload())->upload([], true);
     $path = ltrim(explode('?',$result['file'])[0],'/');
     app\common\util\ImageProcessor::open($path)->thumb(120,60)->save('expected-upload.png');
     check($result['code'] === 1 && hash_file('sha256',$path . '_120x60.png') === hash_file('sha256','expected-upload.png'),
@@ -103,9 +106,9 @@ try {
 
     file_put_contents('bad.php','<?php echo 1;');
     imageAuditRequest(['flag'=>'vod'],['file'=>new UploadedFile($temp . '/bad.php','bad.php',null,UPLOAD_ERR_OK,true)]);
-    check((new Upload())->upload()['code'] !== 1, 'Disallowed upload extension was accepted during file API migration');
+    check((new Upload())->upload([], true)['code'] !== 1, 'Disallowed upload extension was accepted during file API migration');
     imageAuditRequest(['flag'=>'vod'],['file'=>new UploadedFile($temp . '/source.png','bad.png',null,UPLOAD_ERR_PARTIAL,true)]);
-    check((new Upload())->upload()['code'] !== 1, 'An incomplete uploaded file was accepted');
+    check((new Upload())->upload([], true)['code'] !== 1, 'An incomplete uploaded file was accepted');
     $request = (new think\Request())->withServer(['REQUEST_METHOD'=>'POST','REQUEST_TIME'=>123456])
         ->withPost(['flag'=>'user','user_id'=>1])->withFiles(['file'=>[
             'name'=>'failed.png','type'=>'image/png','tmp_name'=>$temp . '/source.png','error'=>UPLOAD_ERR_PARTIAL,'size'=>10,

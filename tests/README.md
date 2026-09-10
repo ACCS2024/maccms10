@@ -77,3 +77,5 @@ push / pull request 工作流分别在 PHP 8.3、8.4 执行编译、锁定依赖
 PHPStan / PHPCompatibility 的锁文件、范围、命令及诊断解释见 [审计工具](../tools/audit/README.md)。目前仍有需要分类的静态候选，工具没有忽略基线；报告条数不能作为漏洞数量。审计状态及分项报告见 [当前代码审计](../docs/audit/2026-09/README.md)。
 
 公开内容详情、目录与密码模板专项：`python3 tests/run_api_content_view_audit.py <PHP镜像>...`。使用一次性 MySQL 与真实模板，并以返回数据运行默认主题 JavaScript；需要 Docker、Node.js 和已安装的锁定 PHP 依赖。此组检查公开字段投影，资源授权另有后续专项。
+
+上传身份与编辑器：`php tests/run_audit.php --suite=upload` 同时执行前后台返回格式；`UPLOAD_AUDIT_MYSQL=1`、`UPLOAD_AUDIT_HOST/PASSWORD` 指向独立 `maccms_audit_upload` 测试库，其他模型库不复用。CI 包含 SQLite 和 MySQL。

@@ -46,24 +46,77 @@ class Upload {
         return str_replace(['http:','https:'],'mac:',$file_path);
     }
 
-    public function upload($p=[])
+    /** $adminContext is supplied only by the authenticated admin controller, never by request data. */
+    public function upload($p=[], bool $adminContext = false)
     {
         $param = \think\facade\Request::param();
-        if(!empty($p)){
-            $param = array_merge($param,$p);
+        if (!is_array($p)) {
+            return self::upload_return(lang('param_err'));
+        }
+        $param = array_merge($param, $p);
+        foreach (['from', 'input', 'flag', 'thumb', 'thumb_class', 'user_id', 'action', 'ueditor_theme'] as $key) {
+            if (isset($param[$key]) && !is_string($param[$key]) && !is_int($param[$key])) {
+                return self::upload_return(lang('param_err'));
+            }
+        }
+        $param['from'] = strtolower((string)($param['from'] ?? ''));
+        $param['input'] = (string)($param['input'] ?? 'file');
+        $param['flag'] = strtolower((string)($param['flag'] ?? ($adminContext ? 'vod' : 'user')));
+        $param['thumb'] = (string)($param['thumb'] ?? '0');
+        $param['thumb_class'] = (string)($param['thumb_class'] ?? '');
+        if ($param['input'] === '') { $param['input'] = 'file'; }
+        if ($param['flag'] === '') { $param['flag'] = $adminContext ? 'vod' : 'user'; }
+        if ($param['thumb'] === '') { $param['thumb'] = '0'; }
+        if (!preg_match('/^[a-z0-9_]{1,64}$/D', $param['flag'])
+            || !preg_match('/^[A-Za-z][A-Za-z0-9_]{0,63}$/D', $param['input'])
+            || !in_array($param['thumb'], ['0', '1'], true)
+            || strlen($param['thumb_class']) > 128
+            || !in_array($param['from'], ['', 'ueditor', 'umeditor', 'kindeditor', 'ckeditor', 'tinymce'], true)) {
+            return self::upload_return(lang('param_err'));
         }
 
-        $param['from'] = empty($param['from']) ? '' : $param['from'];
-        $param['input'] = empty($param['input']) ? 'file' : $param['input'];
-        $param['flag'] = empty($param['flag']) ? 'vod' : $param['flag'];
-        // 安全加固:flag 直接拼进上传目录($_upload_path = ROOT_PATH.'upload/'.flag.'/',且 move 时递归 mkdir),
-        // 原样取自请求且无 ../ 过滤 → 可目录穿越把文件写到 upload/ 之外。仅允许字母数字下划线,
-        // 合法 flag(vod/user/topic/actor/art/website...)全部满足,零回归。
-        $param['flag'] = preg_replace('/[^A-Za-z0-9_]/', '', (string)$param['flag']);
-        if ($param['flag'] === '') { $param['flag'] = 'vod'; }
-        $param['thumb'] = empty($param['thumb']) ? '0' : $param['thumb'];
-        $param['thumb_class'] = empty($param['thumb_class']) ? '' : $param['thumb_class'];
-        $param['user_id'] = empty($param['user_id']) ? '0' : $param['user_id'];
+        try {
+            if ($adminContext) {
+                $login = (new Admin())->checkLogin();
+                if (($login['code'] ?? null) !== 1 || !self::adminMayUpload($login['info'], 'upload/upload')) {
+                    return self::upload_return(lang('permission_denied'));
+                }
+                if ($param['flag'] === 'user') {
+                    $targetId = \app\common\util\PointsBalance::amount($param['user_id'] ?? null);
+                    if ($targetId === null || !self::adminMayUpload($login['info'], 'user/info')
+                        || !\think\facade\Db::name('User')->where('user_id', $targetId)->value('user_id')) {
+                        return self::upload_return(lang('permission_denied'));
+                    }
+                    $param['user_id'] = $targetId;
+                }
+            } else {
+                $login = (new User())->checkLogin();
+                $ownerId = ($login['code'] ?? null) === 1
+                    ? \app\common\util\PointsBalance::amount($login['info']['user_id'] ?? null) : null;
+                if ($ownerId === null) {
+                    return self::upload_return(lang('model/user/not_login'));
+                }
+                if (($GLOBALS['config']['user']['portrait_status'] ?? '0') != '1') {
+                    return self::upload_return(lang('index/portrait_tip1'));
+                }
+                $requestedId = $param['user_id'] ?? null;
+                if ($param['flag'] !== 'user' || $param['from'] !== ''
+                    || (!in_array($requestedId, [null, '', 0, '0'], true)
+                        && \app\common\util\PointsBalance::amount($requestedId) !== $ownerId)) {
+                    return self::upload_return(lang('permission_denied'));
+                }
+                $param['user_id'] = $ownerId;
+            }
+        } catch (\Throwable $error) {
+            return self::upload_return(lang('permission_denied'));
+        }
+
+        $editorConfig = $adminContext && request()->isGet()
+            && in_array($param['from'], ['ueditor', 'umeditor'], true) && ($param['action'] ?? '') === 'config';
+        if (!request()->isPost() && !$editorConfig) {
+            return self::upload_return(lang('illegal_request'));
+        }
+
         $base64_img = $param['imgdata'] ?? '';
         if (!is_string($base64_img) || strlen($base64_img) > 4 * (int)ceil(\app\common\util\ImageProcessor::MAX_BYTES / 3) + 128) {
             return self::upload_return(lang('admin/upload/upload_faild'), $param['from']);
@@ -244,7 +297,7 @@ class Upload {
             $update = [];
             $update['user_portrait'] = $new_file;
             $where = [];
-            $where['user_id'] = $GLOBALS['user']['user_id'];
+            $where['user_id'] = $param['user_id'];
             (new \app\common\model\User())->where($where)->update($update);
         }
         else {
@@ -325,6 +378,17 @@ class Upload {
         }
     }
 
+    private static function adminMayUpload(array $admin, string $permission): bool
+    {
+        if ((string)($admin['admin_id'] ?? '') === '1') { return true; }
+        foreach (explode(',', (string)($admin['admin_auth'] ?? '')) as $grant) {
+            if (!str_contains($grant, '/')) { continue; }
+            [$controller, $action] = explode('/', trim($grant), 2);
+            $key = strtolower(str_replace('_', '', $controller)).'/'.strtolower(explode('?', $action, 2)[0]);
+            if ($key === $permission) { return true; }
+        }
+        return false;
+    }
 
     private function upload_return($info='',$from='',$status=0,$data=[])
     {

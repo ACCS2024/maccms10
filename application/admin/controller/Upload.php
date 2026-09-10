@@ -37,7 +37,7 @@ class Upload extends Base
 
     public function upload($p=[])
     {
-		return (new \app\common\model\Upload())->upload($p);
+        return (new \app\common\model\Upload())->upload($p, true);
     }
 
     /**
