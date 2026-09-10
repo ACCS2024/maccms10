@@ -21,6 +21,7 @@ namespace app\common\util {
 }
 namespace {
     require __AUDIT_ROOT__ . '/vendor/autoload.php';
+    require __AUDIT_ROOT__ . '/vendor/topthink/framework/src/helper.php';
     error_reporting(E_ALL);
     set_error_handler(static function ($level, $message, $file, $line) {
         if (!(error_reporting() & $level)) { return false; }
@@ -34,7 +35,12 @@ namespace {
     ob_start();
     echo 'caller-owned-prefix';
     $depth = ob_get_level();
-    $response = (new \app\index\controller\Qrcode())->index();
+    if (($_GET['audit_target'] ?? '') === 'user') {
+        $controller = (new \ReflectionClass(\app\index\controller\User::class))->newInstanceWithoutConstructor();
+        $response = $controller->qrcode();
+    } else {
+        $response = (new \app\index\controller\Qrcode())->index();
+    }
     $bufferPreserved = ob_get_level() === $depth && ob_get_contents() === 'caller-owned-prefix';
     ob_end_clean();
     $headerPreserved = in_array('Content-Type: application/x-audit-before', headers_list(), true);
@@ -75,6 +81,12 @@ try {
         ['overall-capacity', ['url' => 'https://example.invalid/' . str_repeat('7', 7100)], 400],
         ['output-failure', ['url' => $url, 'audit_fault' => 'output'], 500],
         ['empty-output', ['url' => $url, 'audit_fault' => 'empty'], 500],
+        ['user-valid', ['audit_target' => 'user', 'data' => 'weixin://fixture'], 200],
+        ['user-missing', ['audit_target' => 'user'], 400],
+        ['user-array', ['audit_target' => 'user', 'data' => ['nested']], 400],
+        ['user-invalid', ['audit_target' => 'user', 'data' => 'weixin-other'], 400],
+        ['user-overflow', ['audit_target' => 'user', 'data' => 'weixin://' . str_repeat('x', 3000)], 400],
+        ['user-output-failure', ['audit_target' => 'user', 'data' => 'weixin://fixture', 'audit_fault' => 'output'], 500],
     ];
     foreach ($cases as [$name, $params, $expectedStatus]) {
         $headers = [];
@@ -90,13 +102,13 @@ try {
         $body = curl_exec($curl);
         $status = curl_getinfo($curl, CURLINFO_RESPONSE_CODE);
         curl_close($curl);
-        $check(is_string($body) && $status === $expectedStatus, $name . ' returns its expected HTTP status');
+        $check(is_string($body) && $status === $expectedStatus, $name . ' returns its expected HTTP status; actual=' . $status . ' body=' . substr((string)$body, 0, 800));
         $check(($headers['x-audit-buffer-preserved'] ?? '') === 'yes', $name . ' preserves caller buffers');
         $check(($headers['x-audit-header-preserved'] ?? '') === 'yes', $name . ' removes encoder Content-Type side effects');
         if ($expectedStatus === 200) {
             $check(($headers['content-type'] ?? '') === 'image/png' && str_starts_with($body, "\x89PNG\r\n\x1a\n"),
                 'Successful HTTP response contains a clean PNG');
-            file_put_contents($output . '/http-valid.png', $body);
+            file_put_contents($output . '/' . $name . '.png', $body);
         } else {
             $data = json_decode($body, true, 512, JSON_THROW_ON_ERROR);
             $check(str_starts_with($headers['content-type'] ?? '', 'application/json') && ($data['code'] ?? 0) > 1
@@ -105,7 +117,7 @@ try {
         }
     }
     file_put_contents($output . '/manifest.json', json_encode(['checks' => $checks, 'php' => PHP_VERSION,
-        'images' => [['file' => 'http-valid.png', 'text' => $url]]], JSON_THROW_ON_ERROR));
+        'images' => [['file' => 'valid.png', 'text' => $url], ['file' => 'user-valid.png', 'text' => 'weixin://fixture']]], JSON_THROW_ON_ERROR));
     echo "OK {$checks} Qrcode HTTP checks on PHP " . PHP_VERSION . "\n";
 } finally {
     proc_terminate($process);

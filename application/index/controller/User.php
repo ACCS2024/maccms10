@@ -4,7 +4,7 @@ use think\facade\Db;
 use think\facade\Request;
 use login\ThinkOauth;
 use app\index\event\LoginEvent;
-use app\common\util\Qrcode;
+use app\common\util\QrResponse;
 use app\common\util\OAuthState;
 
 class User extends Base
@@ -602,16 +602,11 @@ class User extends Base
 
     public function qrcode()
     {
-        ob_end_clean();
-        header('Content-Type:image/png;');
-        $param = \think\facade\Request::param();
-        $data = $param['data'];
-        if(substr($data, 0, 6) == "weixin") {
-            QRcode::png($data,false,QR_ECLEVEL_L,10);
+        $data = \think\facade\Request::param('data');
+        if (!is_string($data) || !str_starts_with($data, 'weixin://') || strlen($data) <= 9) {
+            return json(['code' => 1001, 'msg' => lang('param_err')], 400);
         }
-        else{
-            return $this->error(lang('param_err'));
-        }
+        return QrResponse::png($data, QrResponse::LOW, 10, 4);
     }
 
     public function upgrade()
