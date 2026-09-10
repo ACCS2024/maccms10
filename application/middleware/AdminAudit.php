@@ -57,10 +57,13 @@ class AdminAudit
                 $json = substr($json, 0, 16300) . '…(truncated)';
             }
             if (!empty($app['admin_audit_encrypt']) && (string)$app['admin_audit_encrypt'] === '1' && $json !== '') {
-                $enc = SensitiveDataCrypto::encryptString($json, $app);
-                if (SensitiveDataCrypto::isEncryptedPayload($enc)) {
-                    $json = $enc;
+                try {
+                    $enc = SensitiveDataCrypto::encryptString($json, $app);
+                } catch (\Throwable $error) {
+                    $enc = false;
                 }
+                $json = SensitiveDataCrypto::isEncryptedPayload($enc)
+                    ? $enc : '{"redacted":"audit encryption unavailable"}';
             }
         }
 
@@ -76,7 +79,8 @@ class AdminAudit
             'audit_ip'        => (string)mac_get_client_ip(),
             'audit_method'    => $method,
             'audit_route'     => $route,
-            'audit_uri'       => substr((string)$request->url(true), 0, 2048),
+            // Query parameters are recorded through the redacted payload above.
+            'audit_uri'       => substr(explode('?', (string)$request->url(true), 2)[0], 0, 2048),
             'audit_http_code' => $code,
             'audit_payload'   => $json,
         ]);

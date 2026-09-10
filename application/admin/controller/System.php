@@ -131,6 +131,10 @@ class System extends Base
                 && !SensitiveDataCrypto::supportsAes256Gcm()) {
                 return $this->ajaxErrorWithFreshToken(lang('admin/system/config/admin_audit_encrypt_gcm_required'));
             }
+            if ((string) ($config['app']['admin_audit_encrypt'] ?? '0') === '1'
+                && !SensitiveDataCrypto::hasStrongSecret($config['app'])) {
+                return $this->ajaxErrorWithFreshToken('审计日志加密需要至少 32 字节的独立密钥');
+            }
 
             if (!isset($config['app']['api_jwt_secret']) || trim((string)$config['app']['api_jwt_secret']) === '') {
                 if (isset($config_old_maccms['app']['api_jwt_secret'])) {

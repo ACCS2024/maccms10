@@ -3,9 +3,8 @@ namespace app\common\util;
 
 /**
  * 敏感字符串对称加密（AES-256-GCM），用于审计日志等落库场景。
- * 未设置独立密钥时从 cache_flag + 表前缀派生（生产环境请配置 admin_audit_crypto_secret）。
- *
- * 若运行环境不含 openssl 的 aes-256-gcm（通常需 PHP 7.1+），encryptString 会退回明文落库，须在后台配置页提示站长。
+ * 新写入必须配置独立强密钥；加密失败返回 false，不降级为明文。
+ * 旧版派生密钥仅保留用于读取历史日志。
  */
 class SensitiveDataCrypto
 {
@@ -16,6 +15,12 @@ class SensitiveDataCrypto
     const TAG_LEN = 16;
 
     const METHOD = 'aes-256-gcm';
+
+    public static function hasStrongSecret(array $app): bool
+    {
+        return is_string($app['admin_audit_crypto_secret'] ?? null)
+            && strlen(trim($app['admin_audit_crypto_secret'])) >= 32;
+    }
 
     /**
      * 当前环境是否可用 AES-256-GCM（与 encryptString 实际是否加密一致）。
@@ -52,7 +57,7 @@ class SensitiveDataCrypto
     }
 
     /**
-     * 加密为带版本前缀的 ASCII 串；失败或不可用则返回原文（与 supportsAes256Gcm() 为 false 时行为一致）。
+     * 加密为带版本前缀的 ASCII 串；配置不足或失败返回 false。
      */
     public static function encryptString($plaintext, ?array $app = null)
     {
@@ -62,15 +67,15 @@ class SensitiveDataCrypto
         $app = $app ?? (isset($GLOBALS['config']['app']) && is_array($GLOBALS['config']['app'])
             ? $GLOBALS['config']['app']
             : []);
-        if (!self::supportsAes256Gcm()) {
-            return $plaintext;
+        if (!self::hasStrongSecret($app) || !self::supportsAes256Gcm()) {
+            return false;
         }
         $key = self::deriveKeyFromApp($app);
         $iv = random_bytes(self::IV_LEN);
         $tag = '';
         $ct = @openssl_encrypt((string)$plaintext, self::METHOD, $key, OPENSSL_RAW_DATA, $iv, $tag, '', self::TAG_LEN);
         if ($ct === false || strlen($tag) !== self::TAG_LEN) {
-            return $plaintext;
+            return false;
         }
 
         return self::PREFIX_GCM . base64_encode($iv . $tag . $ct);
