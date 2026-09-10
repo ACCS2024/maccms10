@@ -2087,6 +2087,8 @@ https://www.baidu.com/123.jpg
     'admin/batch/io_ok'=>'成功 %s 条',
     'admin/batch/io_fail'=>'失败 %s 条',
     'admin/batch/io_row'=>'第 %s 行',
+    'admin/batch/io_unknown' => '第 %s 行保存结果未确认，导入已停止。请核对该行及已导入记录，勿重复导入整份文件。',
+    'admin/batch/io_pending' => '%s 行已保存，视频重复目录待更新。',
 
 
     'admin/template/title'=>'模板管理',

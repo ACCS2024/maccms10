@@ -1755,6 +1755,8 @@ https://www.baidu.com/123.jpg
   'admin/batch/io_ok' => '成功 %s 筆',
   'admin/batch/io_fail' => '失敗 %s 筆',
   'admin/batch/io_row' => '第 %s 列',
+    'admin/batch/io_unknown' => '第 %s 列儲存結果未確認，匯入已停止。請核對該列及已匯入記錄，勿重複匯入整份檔案。',
+    'admin/batch/io_pending' => '%s 列已儲存，影片重複目錄待更新。',
   'admin/template/title' => '模板管理',
   'admin/template/ads/title' => '廣告位管理',
   'admin/template/wizard/title' => '標簽向導管理',

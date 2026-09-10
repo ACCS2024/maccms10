@@ -505,7 +505,7 @@ class Vod extends Base
 
     public function importData()
     {
-        $this->base_import('vod');
+        return $this->base_import('vod');
     }
 
     public function info()

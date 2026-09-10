@@ -237,7 +237,7 @@ class Manga extends Base
 
     public function importData()
     {
-        $this->base_import('manga');
+        return $this->base_import('manga');
     }
 
     public function info()

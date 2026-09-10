@@ -243,7 +243,7 @@ class Art extends Base
 
     public function importData()
     {
-        $this->base_import('art');
+        return $this->base_import('art');
     }
 
     public function info()

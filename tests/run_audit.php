@@ -16,7 +16,7 @@ $groups = [
         ['extensions_audit_qrcode_http.php'], ['extensions_audit_upyun_blocks.php'], ['extensions_audit_upyun_secure_purge.php'], ['extensions_audit_upyun.php'],
         ['extensions_audit_upyun.php', 'embedded-first'], ['extensions_audit_upload_adapters.php'],
         ['framework_audit_cache_connection.php'], ['framework_audit_cli_failures.php'], ['framework_audit_collection_paging.php'],
-        ['framework_audit_csv.php'], ['framework_audit_csv_roundtrip.php'], ['framework_audit_import_row_numbers.php'], ['framework_audit_csv_budget.php'], ['framework_audit_bulk_export.php'], ['framework_audit_xlsx_text.php'], ['framework_audit_xlsx_budget.php'], ['framework_audit_request_injection.php'], ['framework_audit_request_method.php'], ['framework_audit_client_ip.php'], ['framework_audit_receive.php'], ['framework_audit_request_security.php'],
+        ['framework_audit_csv.php'], ['framework_audit_csv_roundtrip.php'], ['framework_audit_import_row_numbers.php'], ['framework_audit_import_upload.php'], ['framework_audit_csv_budget.php'], ['framework_audit_bulk_export.php'], ['framework_audit_xlsx_text.php'], ['framework_audit_xlsx_budget.php'], ['framework_audit_request_injection.php'], ['framework_audit_request_method.php'], ['framework_audit_client_ip.php'], ['framework_audit_receive.php'], ['framework_audit_request_security.php'],
         ['framework_audit_api_runtime.php'], ['framework_audit_api_validation.php'],
         ['framework_audit_api_defaults.php'], ['framework_audit_detail_routes.php'],
         ['framework_audit_user_forms.php'], ['framework_audit_auto_registration_views.php'], ['framework_audit_purchase_views.php'], ['framework_audit_user_lists.php'], ['framework_audit_ulog_template.php'], ['security_audit_member_order_url.php'], ['security_audit_order_amount.php'], ['security_audit_order_price_template.php'],
@@ -37,7 +37,7 @@ $groups = [
     // Default: SQLite. FRAMEWORK_AUDIT_MYSQL=1 selects only the dedicated audit database.
     'models' => [
         ['framework_audit_ai_task.php'], ['framework_audit_ai_task.php', 'default-prefix'],
-        ['framework_audit_manga_save.php'], ['framework_audit_art_save.php'], ['framework_audit_vod_save_input.php'],
+        ['framework_audit_manga_save.php'], ['framework_audit_art_save.php'], ['framework_audit_content_import.php', 'art'], ['framework_audit_content_import.php', 'manga'], ['framework_audit_vod_save_input.php'],
         ['framework_audit_user_registration.php'], ['framework_audit_registration_transactions.php'], ['framework_audit_auto_registration.php'],
         ['framework_audit_user_binding.php'], ['framework_audit_user_messages.php'], ['framework_audit_find_password.php'], ['framework_audit_password_reset.php'], ['framework_audit_password_changes.php'], ['framework_audit_lists.php'], ['framework_audit_collection_nodes.php'],
         ['framework_audit_queries.php'], ['framework_audit_payment.php'],

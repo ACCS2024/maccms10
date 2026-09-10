@@ -293,77 +293,119 @@ class Base extends All
 
     public function base_import($table)
     {
-        if (!request()->isPost()) {
+        if (!is_string($table) || !in_array($table, ['art', 'manga', 'vod'], true)
+            || !$this->request->isPost()) {
             return $this->error(lang('illegal_request'));
         }
-        $param = \think\facade\Request::post();
+        $param = $this->request->post();
         $validate = mac_validate('Token');
+        $validate->setRequest($this->request);
         if (!$validate->check($param)) {
-            return $this->error($validate->getError());
+            return $this->error(lang('token_err'));
         }
-        $file = $this->request->file('file');
-        if (!$file) {
-            return $this->error(lang('param_err'));
-        }
-        $info = $file->rule('uniqid')->validate(['size' => 20971520, 'ext' => 'csv,txt,xlsx']);
-        if (!$info) {
-            return $this->error($file->getError());
-        }
-        $path = $info->getPathname();
-        $ext = strtolower(pathinfo($info->getInfo('name'), PATHINFO_EXTENSION));
         try {
-            $parsed = BulkTableIo::parseFile($path, $ext);
-        } catch (\Exception $e) {
-            @unlink($path);
+            $upload = \app\common\util\ImportUpload::inspect($this->request->file('file'),
+                ['csv', 'txt', 'xlsx'], BulkTableIo::MAX_IMPORT_BYTES);
+            $parsed = BulkTableIo::parseFile($upload['path'], $upload['extension'], true);
+        } catch (\Throwable $error) {
             return $this->error(lang('import_err'));
         }
-        @unlink($path);
-        $fields = Db::name(ucfirst($table))->getTableFields();
-        $ok = 0;
-        $fail = 0;
-        $errLines = [];
-        $n = 0;
+        // PHP owns and removes its temporary upload. Never unlink a caller-provided pathname.
+        if ($parsed['rows'] === []) { return $this->error(lang('import_err')); }
+        try {
+            $fields = $this->importFields($table);
+        } catch (\Throwable $error) {
+            return $this->error(lang('save_err'));
+        }
+        $summary = ['total' => count($parsed['rows']), 'saved' => 0, 'failed' => 0,
+            'unknown' => 0, 'unprocessed' => 0, 'repeat_index_pending' => 0, 'errors' => []];
+        $unknownRow = null;
         foreach ($parsed['rows'] as $idx => $row) {
-            $n++;
-            if ($n > BulkTableIo::MAX_IMPORT_ROWS) {
-                break;
-            }
-            $data = BulkTableIo::filterRowKeys($row, $fields);
-            if (empty($data[$table.'_name']) || !isset($data['type_id']) || $data['type_id'] === '') {
-                $fail++;
-                if (count($errLines) < 15) {
-                    $errLines[] = lang('admin/batch/io_row', [$idx + 2]) . ' ' . lang('param_err');
+            $sourceRow = $parsed['row_numbers'][$idx];
+            try {
+                $data = BulkTableIo::filterRowKeys($row, $fields);
+                if (!is_string($data[$table . '_name'] ?? null) || trim($data[$table . '_name']) === '') {
+                    throw new \InvalidArgumentException('Missing content name');
+                }
+                $data = BulkTableIo::prepareGenericForSave($data, $table);
+            } catch (\InvalidArgumentException $error) {
+                $summary['failed']++;
+                if (count($summary['errors']) < 15) {
+                    $summary['errors'][] = ['row' => $sourceRow, 'reason' => 'param_err'];
                 }
                 continue;
             }
-            $data = BulkTableIo::prepareGenericForSave($data,$table);
-            $res = model(ucfirst($table))->saveData($data);
-            if ($res['code'] > 1) {
-                $fail++;
-                if (count($errLines) < 15) {
-                    $errLines[] = lang('admin/batch/io_row', [$idx + 2]) . ' ' . $res['msg'];
+            try {
+                $res = model(ucfirst($table))->saveData($data);
+                if (!is_array($res) || !isset($res['code']) || !in_array($res['code'], [1, 1001, 1002], true)) {
+                    throw new \UnexpectedValueException('Unconfirmed content save result');
                 }
-            } else {
-                $ok++;
-                if($table === 'vod'){
-                    Cache::delete('vod_repeat_table_created_time');
+            } catch (\Throwable $error) {
+                // saveData may have committed before a cache/search/connection failure. Do not retry or continue.
+                try {
+                    \think\facade\Log::error('Content import save unconfirmed: ' . json_encode([
+                        'module' => $table, 'row' => $sourceRow, 'exception' => get_class($error),
+                    ]));
+                } catch (\Throwable $loggingError) { /* Diagnostics must not replace the unknown-outcome response. */ }
+                $summary['unknown'] = 1;
+                $unknownRow = $sourceRow;
+                $summary['unprocessed'] = $summary['total'] - $idx - 1;
+                break;
+            }
+            if ($res['code'] !== 1) {
+                $summary['failed']++;
+                if (count($summary['errors']) < 15) {
+                    $summary['errors'][] = ['row' => $sourceRow, 'reason' => $res['code'] === 1001 ? 'param_err' : 'save_err'];
                 }
+                continue;
+            }
+            $summary['saved']++;
+            if ($table === 'vod') {
+                $pending = !is_array($res['info'] ?? null) || !empty($res['info']['repeat_index_pending']);
+                try { Cache::delete('vod_repeat_table_created_time'); }
+                catch (\Throwable $cacheError) { $pending = true; }
+                if ($pending) { $summary['repeat_index_pending']++; }
             }
         }
-        if ($ok === 0 && $fail === 0) {
-            return $this->error(lang('import_err'));
-        }
-        $msg = lang('admin/batch/io_ok', [$ok]);
-        if ($fail > 0) {
-            $msg .= ' ' . lang('admin/batch/io_fail', [$fail]);
-            if (!empty($errLines)) {
-                $msg .= ' — ' . implode('；', $errLines);
+        $summary['unknown_row'] = $unknownRow;
+        $summary['status'] = $unknownRow !== null ? 'unknown'
+            : ($summary['saved'] === 0 ? 'failed' : ($summary['failed'] > 0 ? 'partial' : 'completed'));
+        $msg = lang('admin/batch/io_ok', [$summary['saved']]);
+        if ($summary['failed'] > 0) {
+            $msg .= ' ' . lang('admin/batch/io_fail', [$summary['failed']]);
+            foreach ($summary['errors'] as $error) {
+                $msg .= '；' . lang('admin/batch/io_row', [$error['row']]) . ' ' . lang($error['reason']);
             }
         }
-        if ($ok === 0) {
-            return $this->error($msg);
+        if ($summary['repeat_index_pending'] > 0) {
+            $msg .= '；' . lang('admin/batch/io_pending', [$summary['repeat_index_pending']]);
         }
-        return $this->success($msg);
+        if ($unknownRow !== null) {
+            $msg .= '；' . lang('admin/batch/io_unknown', [$unknownRow]);
+            return $this->error($msg, null, $summary);
+        }
+        return $summary['saved'] > 0 ? $this->success($msg, null, $summary) : $this->error($msg, null, $summary);
+    }
+
+    /** Read current writer metadata; a query's master option does not cover getTableFields(). */
+    private function importFields(string $module): array
+    {
+        $query = Db::name(ucfirst($module));
+        $connection = $query->getConnection();
+        $table = $query->getTable();
+        if ($connection->getConfig('type') === 'mysql') {
+            $rows = $connection->query('SELECT COLUMN_NAME AS name FROM information_schema.COLUMNS '
+                . 'WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=? ORDER BY ORDINAL_POSITION', [$table], true);
+        } elseif ($connection->getConfig('type') === 'sqlite') {
+            $rows = $connection->query('PRAGMA table_info("' . str_replace('"', '""', $table) . '")', [], true);
+        } else {
+            throw new \RuntimeException('Unsupported content import storage');
+        }
+        $fields = array_column($rows, 'name');
+        foreach ([$module . '_id', $module . '_name', 'type_id'] as $required) {
+            if (!in_array($required, $fields, true)) { throw new \RuntimeException('Missing import schema'); }
+        }
+        return $fields;
     }
 
 }

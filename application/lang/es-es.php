@@ -1756,6 +1756,8 @@ Nota: Si se especifican listas negras y blancas, ambas se aplicarán simultánea
   'admin/batch/io_ok' => 'Correcto: %s filas',
   'admin/batch/io_fail' => 'Fallido: %s filas',
   'admin/batch/io_row' => 'Fila %s',
+    'admin/batch/io_unknown' => 'No se ha confirmado el guardado de la fila %s. Importación detenida. Revise esta fila y los registros importados; no vuelva a importar todo el archivo.',
+    'admin/batch/io_pending' => 'Se guardaron %s filas; falta actualizar el catálogo de vídeos duplicados.',
 
   'admin/template/title' => 'Gestión de Plantillas',
   'admin/template/ads/title' => 'Gestión de Espacios Publicitarios',

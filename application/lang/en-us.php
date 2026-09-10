@@ -1904,6 +1904,8 @@ Note: If both black and white lists are filled, both policies will take effect.'
   'admin/batch/io_ok' => 'OK: %s rows',
   'admin/batch/io_fail' => 'Failed: %s rows',
   'admin/batch/io_row' => 'Line %s',
+    'admin/batch/io_unknown' => 'The save outcome for row %s is unconfirmed. Import stopped. Check this row and existing imported records before continuing; do not reimport the entire file.',
+    'admin/batch/io_pending' => '%s rows were saved; the video duplicate catalog needs updating.',
   
   'admin/template/title' => 'Template Management',
   'admin/template/ads/title' => 'Ad Space Management',

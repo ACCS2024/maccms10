@@ -1752,6 +1752,8 @@ https://www.baidu.com/123.jpg
   'admin/batch/io_ok' => '성공 %s건',
   'admin/batch/io_fail' => '실패 %s건',
   'admin/batch/io_row' => '%s번째 행',
+    'admin/batch/io_unknown' => '%s 행의 저장 결과가 확인되지 않아 가져오기를 중단했습니다. 해당 행과 이미 가져온 기록을 확인하세요. 파일 전체를 다시 가져오지 마세요.',
+    'admin/batch/io_pending' => '%s 행을 저장했습니다. 중복 동영상 목록을 갱신해야 합니다.',
 
   'admin/template/title' => '템플릿 관리',
   'admin/template/ads/title' => '광고 공간 관리',

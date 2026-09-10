@@ -1754,6 +1754,8 @@ https://www.baidu.com/123.jpg
   'admin/batch/io_ok' => '成功 %s 件',
   'admin/batch/io_fail' => '失敗 %s 件',
   'admin/batch/io_row' => '%s 行目',
+    'admin/batch/io_unknown' => '%s 行目の保存結果を確認できないため、インポートを停止しました。この行と取込済みデータを確認してください。ファイル全体を再インポートしないでください。',
+    'admin/batch/io_pending' => '%s 行を保存しました。動画重複一覧の更新が必要です。',
 
   'admin/template/title' => 'テンプレート管理',
   'admin/template/ads/title' => '広告スペース管理',
