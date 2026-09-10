@@ -132,57 +132,57 @@ class Card extends Base {
         }
         $card_no = (string)$card_no;
         $card_pwd = (string)$card_pwd;
-        if ($card_no === '' || $card_pwd === '' || !mb_check_encoding($card_no, 'UTF-8') || !mb_check_encoding($card_pwd, 'UTF-8')
+        if ($card_no === '' || $card_pwd === '' || strlen($card_no) > 64 || strlen($card_pwd) > 32 || !mb_check_encoding($card_no, 'UTF-8') || !mb_check_encoding($card_pwd, 'UTF-8')
             || mb_strlen($card_no, 'UTF-8') > 16 || mb_strlen($card_pwd, 'UTF-8') > 8) {
             return ['code' => 1001, 'msg'=>lang('param_err')];
         }
 
-        Db::startTrans();
+        $failure = ['code'=>1004, 'msg'=>lang('model/card/update_card_status_err')];
+        $notFound = ['code'=>1002, 'msg'=>lang('model/card/not_found')];
+        if (($blocked = \app\common\util\CardTransaction::blockedResult()) !== null) { return $blocked; }
+        $scope = null;
         try {
-            // Lock the current face value; old schemas permit duplicate credentials,
-            // which must be reconciled instead of consuming an arbitrary/all matching card.
-            $matches = $this->where(['card_no'=>$card_no, 'card_pwd'=>$card_pwd])->lock(true)->limit(2)->select();
-            if (count($matches) !== 1 || (int)$matches[0]['card_use_status'] !== 0) {
-                Db::rollback();
-                return ['code'=>1002, 'msg'=>lang('model/card/not_found')];
+            \app\common\util\FinancialTransaction::requireTables([$this->getTable(), Db::name('User')->getTable(), Db::name('Plog')->getTable()]);
+            $scope = new \app\common\util\CardTransaction($user_id);
+            $scope->begin();
+            $matches = $this->master()->where(['card_no'=>$card_no, 'card_pwd'=>$card_pwd])->lock(true)->limit(2)->select();
+            if (count($matches) !== 1 || !in_array($matches[0]['card_use_status'], [0, '0'], true)) {
+                return $scope->rollback($notFound);
             }
-            $info = $matches[0];
+            $info = $matches[0]->toArray();
+            $cardId = \app\common\util\PointsBalance::amount($info['card_id']);
             $points = \app\common\util\PointsBalance::amount($info['card_points']);
-            if ($points === null) { throw new \RuntimeException('invalid card points'); }
-
-            $claim = $this->where([
-                'card_id'         => $info['card_id'],
-                'card_use_status' => 0,
-            ])->update([
-                'card_sale_status' => 1,
-                'card_use_status'  => 1,
-                'card_use_time'    => time(),
-                'user_id'          => $user_id,
-            ]);
-            if ($claim !== 1) {
-                // 0 行:已被(并发的)其它请求兑换
-                Db::rollback();
-                return ['code' => 1002, 'msg' => lang('model/card/not_found')];
+            $user = Db::name('User')->master()->where('user_id', $user_id)->lock(true)->find();
+            $balance = $user ? \app\common\util\PointsBalance::amount($user['user_points'] ?? null, true) : null;
+            if ($cardId === null || $points === null || $balance === null
+                || $balance > \app\common\util\PointsBalance::MAX - $points) { throw new \RuntimeException('Card credit rejected'); }
+            $scope->record($cardId, $points);
+            $success = ['code'=>1, 'msg'=>lang('model/card/used_card_ok', [$points])];
+            $update = ['card_sale_status'=>1, 'card_use_status'=>1, 'card_use_time'=>time(), 'user_id'=>$user_id];
+            if ($this->where('card_id', $cardId)->where('card_use_status', 0)->update($update) !== 1) {
+                return $scope->rollback($notFound);
             }
-
-            // 认领成功后再加积分
-            if (!\app\common\util\PointsBalance::credit($user_id, $points)) {
-                throw new \RuntimeException('card credit rejected');
+            $scope->assertActive();
+            if (!\app\common\util\PointsBalance::credit($user_id, $points)) { throw new \RuntimeException('Card credit rejected'); }
+            $ledger = new \app\common\model\Plog();
+            $expected = ['user_id'=>$user_id, 'plog_type'=>1, 'plog_points'=>$points, 'plog_remarks'=>''];
+            if (($ledger->saveData($expected)['code'] ?? null) !== 1) { throw new \RuntimeException('Card ledger rejected'); }
+            $scope->assertActive();
+            $stored = Db::name('Plog')->master()->where('plog_id', $ledger->getLastInsID())->find();
+            foreach ($expected as $field=>$value) {
+                if (!$stored || (string)$stored[$field] !== (string)$value) { throw new \RuntimeException('Card ledger was not stored exactly'); }
             }
-
-            //积分日志
-            $log = (new \app\common\model\Plog())->saveData([
-                'user_id'     => $user_id,
-                'plog_type'   => 1,
-                'plog_points' => $points,
-            ]);
-            if (($log['code'] ?? null) !== 1) { throw new \RuntimeException('card ledger rejected'); }
-
-            Db::commit();
-            return ['code' => 1, 'msg' => lang('model/card/used_card_ok',[$info['card_points']])];
-        } catch (\Throwable $e) {
-            Db::rollback();
-            return ['code' => 1004, 'msg' => lang('model/card/update_card_status_err')];
+            $stored = $this->master()->where('card_id', $cardId)->find();
+            foreach (array_merge(array_intersect_key($info, array_flip(['card_id','card_no','card_pwd','card_points','card_money'])), $update) as $field=>$value) {
+                if (!$stored || (string)$stored[$field] !== (string)$value) { throw new \RuntimeException('Card claim was not stored exactly'); }
+            }
+            if ((string)Db::name('User')->master()->where('user_id', $user_id)->value('user_points') !== (string)($balance + $points)) {
+                throw new \RuntimeException('Card balance was not stored exactly');
+            }
+            $scope->assertActive();
+            return $scope->commit($success);
+        } catch (\Throwable $error) {
+            return $scope !== null ? $scope->rollback($failure) : $failure;
         }
     }
 }

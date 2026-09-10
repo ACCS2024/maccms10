@@ -1,5 +1,7 @@
 <?php
 /** Card claim, balance and ledger must succeed or roll back together. */
+require __DIR__ . '/fixtures/financial_before_begin.php';
+define('MEMBERSHIP_AUDIT_CONNECTION_CLASS', getenv('MEMBERSHIP_AUDIT_MYSQL') === '1' ? FinancialBeforeBeginMysql::class : FinancialBeforeBeginSqlite::class);
 require __DIR__ . '/fixtures/security_audit_card_db.php';
 use think\facade\Db;
 use app\common\model\Card;
@@ -37,7 +39,7 @@ foreach (['validation','throwable'] as $failure) {
 
 // A concurrent winner can claim the card for another user, never once per caller.
 cardSeed();
-$manager->beforeStart = static function (): void {
+$GLOBALS['financial_before_begin'] = static function (): void {
     check(redeemCard(memberRow(2))['code'] === 1, 'Concurrent card winner failed');
     $GLOBALS['card_winner_state'] = cardState();
 };
