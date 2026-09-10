@@ -1268,50 +1268,12 @@ function mac_password_need_rehash($hash)
  */
 function mac_ip_is_public($ip)
 {
-    return filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) !== false;
+    return \app\common\util\PublicHttpClient::isPublicIp($ip);
 }
 
 function mac_is_safe_remote_url($url)
 {
-    $url = trim((string)$url);
-    if ($url === '') {
-        return false;
-    }
-    $p = @parse_url($url);
-    if (!$p || empty($p['scheme']) || empty($p['host'])) {
-        return false;
-    }
-    if (!in_array(strtolower($p['scheme']), ['http', 'https'], true)) {
-        return false;
-    }
-    $host = trim($p['host'], '[]');
-    $ips = [];
-    if (filter_var($host, FILTER_VALIDATE_IP)) {
-        $ips[] = $host;
-    } else {
-        if (function_exists('dns_get_record')) {
-            $recs = @dns_get_record($host, DNS_A | DNS_AAAA);
-            if (is_array($recs)) {
-                foreach ($recs as $r) {
-                    if (!empty($r['ip']))   { $ips[] = $r['ip']; }
-                    if (!empty($r['ipv6'])) { $ips[] = $r['ipv6']; }
-                }
-            }
-        }
-        if (!$ips) {
-            $ip4 = @gethostbyname($host);
-            if ($ip4 && $ip4 !== $host) { $ips[] = $ip4; }
-        }
-    }
-    if (!$ips) {
-        return false;
-    }
-    foreach ($ips as $ip) {
-        if (!mac_ip_is_public($ip)) {
-            return false;
-        }
-    }
-    return true;
+    return \app\common\util\PublicHttpClient::resolve($url) !== null;
 }
 
 function mac_check_back_link($url)
@@ -1509,88 +1471,15 @@ function mac_is_official_url($url)
 
 function mac_curl_post($url,$data,$heads=array(),$cookie='',$timeout=10)
 {
-    // 安全加固:切断与官方服务器的通信(防止下发病毒)
-    if (mac_is_official_url($url)) { return ''; }
-    $timeout = max(1, (int)$timeout);
-    $ch = @curl_init();
-    curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/45.0.2454.101 Safari/537.36');
-    curl_setopt($ch, CURLOPT_URL, $url);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
-    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, min(5, $timeout));  // 连接超时 ≤5s
-    curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
-    curl_setopt($ch, CURLOPT_HEADER,0);
-    curl_setopt($ch, CURLOPT_REFERER, $url);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
-
-    curl_setopt($ch, CURLOPT_POST, 1);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
-    if(!empty($cookie)){
-        curl_setopt($ch, CURLOPT_COOKIE, $cookie);
-    }
-    if(count($heads)>0){
-        curl_setopt ($ch, CURLOPT_HTTPHEADER , $heads );
-    }
-    $response = @curl_exec($ch);
-    if(curl_errno($ch)){//出错则显示错误信息
-        //print curl_error($ch);
-    }
-    curl_close($ch); //关闭curl链接
-    return $response;//显示返回信息
+    if (is_string($url) && mac_is_official_url($url)) { return ''; }
+    return \app\common\util\PublicHttpClient::request($url, 'POST', $data, $heads, $cookie, $timeout);
 }
 // CurlPOST数据提交-----------------------------------------
-/**
- * SSRF 防护说明(已评审并接受残留):
- * 调用方在所有受源控制的取数点(Image::down_exec 图片下载、Collect 全部 fetch 经 checkCjUrl、
- * 外链检测)前置调用 mac_is_safe_remote_url(),解析 A/AAAA 并以 FILTER_FLAG_NO_PRIV_RANGE|
- * NO_RES_RANGE 拒绝字面内网/保留/回环/链路本地(含云元数据 169.254.169.254)IP 与内网域名;
- * 本函数另限定 http/https 协议并限制重定向跳数。
- * 已知残留(接受并记录):公网域名 302 跳转到内网、DNS-rebinding 可绕过"预检→连接"间隙——
- * 属高级且为盲打(响应不回显给请求方)。彻底封堵需连接期校验(CURLOPT_OPENSOCKETFUNCTION),
- * 但该常量在部分 PHP 构建缺失,且本函数被支付/推送/上传/采集广泛调用,改动爆炸半径大,
- * 故暂不在此公共函数实施;如需收口,优先在 Image/Collect 处做"关闭自动重定向 + 逐跳重校验"。
- */
+/** Public HTTP only: DNS pinning, per-hop validation, verified TLS, bounded response and timeout. */
 function mac_curl_get($url,$heads=array(),$cookie='',$timeout=10)
 {
-    // 安全加固:切断与官方服务器的通信(防止下发病毒)
-    if (mac_is_official_url($url)) { return ''; }
-    $timeout = max(1, (int)$timeout);
-    $ch = @curl_init();
-    curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/45.0.2454.101 Safari/537.36');
-
-    curl_setopt($ch, CURLOPT_URL, $url);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
-    // 安全加固(V1/SSRF):仅允许 http/https 协议,限制重定向次数,防止 302 跳转到 file://gopher://dict:// 等内部协议
-    if (defined('CURLPROTO_HTTP')) {
-        curl_setopt($ch, CURLOPT_PROTOCOLS, CURLPROTO_HTTP | CURLPROTO_HTTPS);
-        curl_setopt($ch, CURLOPT_REDIR_PROTOCOLS, CURLPROTO_HTTP | CURLPROTO_HTTPS);
-    }
-    curl_setopt($ch, CURLOPT_MAXREDIRS, 5);
-    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, min(5, $timeout));  // 连接超时 ≤5s
-    curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
-    curl_setopt($ch, CURLOPT_HEADER,0);
-    curl_setopt($ch, CURLOPT_REFERER, $url);
-    curl_setopt($ch, CURLOPT_POST, 0);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-    // VERIFYHOST 只接受 0 或 2：值 1 在 PHP 8 会抛
-    // "no longer accepts the value 1"，被本项目的错误处理器转成 ErrorException，
-    // 于是任何 https 采集源直接崩掉（http 源不触发，所以长期没暴露）。
-    // 取 2 与同文件的 mac_curl_post() 一致（两者同为 VERIFYPEER=0）。
-    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
-    if(!empty($cookie)){
-        curl_setopt($ch, CURLOPT_COOKIE, $cookie);
-    }
-    if(count($heads)>0){
-        curl_setopt ($ch, CURLOPT_HTTPHEADER , $heads );
-    }
-    $response = @curl_exec($ch);
-    if(curl_errno($ch)){//出错则显示错误信息
-        //print curl_error($ch);die;
-    }
-    curl_close($ch); //关闭curl链接
-    return $response;//显示返回信息
+    if (is_string($url) && mac_is_official_url($url)) { return ''; }
+    return \app\common\util\PublicHttpClient::request($url, 'GET', null, $heads, $cookie, $timeout);
 }
 
 

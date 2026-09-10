@@ -379,69 +379,8 @@ class VodAiCover
      */
     private static function isSafePublicHttpsImageUrl($url)
     {
-        $url = trim((string) $url);
-        if ($url === '' || strncasecmp($url, 'https://', 8) !== 0) {
-            return false;
-        }
-        $parts = parse_url($url);
-        if (empty($parts['host']) || !is_string($parts['host'])) {
-            return false;
-        }
-        if (!empty($parts['user']) || !empty($parts['pass'])) {
-            return false;
-        }
-        $host = strtolower($parts['host']);
-        if ($host !== '' && $host[0] === '[' && substr($host, -1) === ']') {
-            $host = substr($host, 1, -1);
-        }
-        if (filter_var($host, FILTER_VALIDATE_IP)) {
-            return self::ipIsPublicInternet($host);
-        }
-        $ips = [];
-        if (function_exists('dns_get_record')) {
-            $a = @dns_get_record($host, DNS_A);
-            if (is_array($a)) {
-                foreach ($a as $rec) {
-                    if (!empty($rec['ip'])) {
-                        $ips[] = $rec['ip'];
-                    }
-                }
-            }
-            $aaaa = @dns_get_record($host, DNS_AAAA);
-            if (is_array($aaaa)) {
-                foreach ($aaaa as $rec) {
-                    if (!empty($rec['ipv6'])) {
-                        $ips[] = $rec['ipv6'];
-                    }
-                }
-            }
-        }
-        if ($ips === []) {
-            $v4 = @gethostbynamel($host);
-            if (is_array($v4)) {
-                $ips = $v4;
-            }
-        }
-        if ($ips === []) {
-            return false;
-        }
-        foreach ($ips as $ip) {
-            if (!self::ipIsPublicInternet((string) $ip)) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    private static function ipIsPublicInternet($ip)
-    {
-        if (!filter_var($ip, FILTER_VALIDATE_IP)) {
-            return false;
-        }
-        $flags = FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE;
-
-        return filter_var($ip, FILTER_VALIDATE_IP, $flags) !== false;
+        $target = PublicHttpClient::resolve($url);
+        return $target !== null && $target['scheme'] === 'https';
     }
 
     private static function allocateSavePath($vodId, $ext)
@@ -515,17 +454,10 @@ class VodAiCover
      */
     private static function curlGetBinary($url, $timeout)
     {
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $url);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 0);
-        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, min(30, $timeout));
-        curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-        $out = curl_exec($ch);
-        curl_close($ch);
-
-        return $out === false ? null : (string) $out;
+        if (!is_string($url) || strncasecmp($url, 'https://', 8) !== 0) {
+            return null;
+        }
+        $out = PublicHttpClient::request($url, 'GET', null, [], '', $timeout);
+        return $out === false ? null : $out;
     }
 }
