@@ -47,7 +47,9 @@ def main():
                      'template/audit/settings.php', 'template/audit/settings.json', 'template/audit/html/view.html',
                      'addons/audit/config.php', 'addons/audit/info.ini', 'addons/audit/view/private.html',
                      'static_new/app.js.bak', 'upload/leak.sql', 'upload/shell.php.jpg',
-                     'template/audit/assets/source.php.css', 'template/audit/assets/source.sql.css', 'upload/secret.ini.txt']:
+                     'template/audit/assets/source.php.css', 'template/audit/assets/source.sql.css', 'upload/secret.ini.txt',
+                     'template/audit/asset/language/private.properties', 'template/audit/asset/language/strings_zh.properties.bak',
+                     'template/audit/asset/language/strings_zh.properties.php', 'template/audit/settings.properties', 'upload/strings_zh.properties']:
             write(name, 'PRIVATE_FIXTURE_SENTINEL')
         for extension in ['php', 'PHP', 'php8', 'phtml', 'phar', 'phps', 'cgi', 'shtml']:
             write('upload/payload.' + extension, SCRIPT)
@@ -69,6 +71,10 @@ def main():
             write(name, 'PUBLIC_TEXT_FIXTURE')
         for name in ['upload/help/mac10.zip', 'upload/docs/manual.pdf', 'upload/docs/sheet.xlsx', 'upload/video/movie.mkv']:
             write(name, 'PUBLIC_DOWNLOAD_FIXTURE')
+        for language in ['en', 'zh']:
+            write('template/audit/asset/language/strings_' + language + '.properties', 'PUBLIC_LANGUAGE_FIXTURE')
+        (directory / 'template/linked/asset/language').mkdir(parents=True)
+        (directory / 'template/linked/asset/language/strings_zh.properties').symlink_to('/var/www/html/.env')
         (directory / 'static_new/empty').mkdir()
         # Container-visible targets are intentional; Apache must reject both file and directory symlinks.
         (directory / 'upload/linked-env.jpg').symlink_to('/var/www/html/.env')

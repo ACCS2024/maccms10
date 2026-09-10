@@ -57,7 +57,10 @@ foreach (['/.env', '/%2eenv', '/.env.backup', '/.git/config', '/.git/HEAD', '/.%
     '/upload/payload.phtml', '/upload/payload.phar', '/upload/payload.phps', '/upload/payload.cgi', '/upload/payload.shtml',
     '/upload/payload.php/anything.jpg', '/upload/payload.php%2fanything.jpg', '/upload/../application/fixture.txt',
     '/upload/%2e%2e/application/fixture.txt', '/upload/linked-env.jpg', '/static_new/linked-internal/fixture.txt',
-    '/upload/override/.htaccess', '/static_new/empty/', '/template/audit/assets/source.php.css', '/template/audit/assets/source.sql.css', '/upload/secret.ini.txt'] as $path) {
+    '/upload/override/.htaccess', '/static_new/empty/', '/template/audit/assets/source.php.css', '/template/audit/assets/source.sql.css', '/upload/secret.ini.txt',
+    '/template/audit/asset/language/private.properties', '/template/audit/asset/language/strings_zh.properties.bak',
+    '/template/audit/asset/language/strings_zh.properties.php', '/template/audit/settings.properties', '/upload/strings_zh.properties',
+    '/template/linked/asset/language/strings_zh.properties', '/template/audit/asset/language/strings_zh.properties/path'] as $path) {
     [$status, $body] = $request($path);
     $check(in_array($status, [403, 404], true), 'Private/source path must be rejected: ' . $path . ' status=' . $status . ' body=' . substr($body, 0, 500));
     $check(!str_contains($body, 'PRIVATE_FIXTURE_SENTINEL') && !str_contains($body, 'UPLOAD_EXECUTED'),
@@ -69,6 +72,8 @@ $check($status === 200 && str_contains($body, '<?php') && !str_contains($body, '
 $check(!is_file('/tmp/apache-audit-executed'), 'No uploaded execution sentinel was created');
 
 foreach ([
+    ['/template/audit/asset/language/strings_zh.properties', 'PUBLIC_LANGUAGE_FIXTURE'],
+    ['/template/audit/asset/language/strings_en.properties', 'PUBLIC_LANGUAGE_FIXTURE'],
     ['/static_new/js/app.js', 'PUBLIC_SCRIPT_FIXTURE'], ['/static/addons/aicontent/js/aicontent.js', 'PUBLIC_SCRIPT_FIXTURE'],
     ['/template/audit/asset/js/theme.js', 'PUBLIC_SCRIPT_FIXTURE'], ['/template/audit/vendor/jquery/jquery.js', 'PUBLIC_SCRIPT_FIXTURE'],
     ['/addons/audit/assets/plugin.js', 'PUBLIC_SCRIPT_FIXTURE'], ['/template/audit/asset/css/theme.css', 'PUBLIC_STYLE_FIXTURE'],

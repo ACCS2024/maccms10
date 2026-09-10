@@ -18,6 +18,8 @@
 - 已存在的公开 HTML、robots、sitemap、站点验证文本和规范 ACME challenge 路径保持可访问。缺失资源返回 404；空目录不能靠 DirectoryIndex 子请求误进入应用并返回成功。
 - 不存在的业务路径重写至 `index.php`，通过 ThinkPHP 的 `s` 兼容参数传入解码后的路由；转义后追加在查询末尾，保留中文、空格、原查询、POST 和认证头。使用 `NS` 避免目录索引的内部子请求被重写。
 
+后续完整应用联调发现通用 `.properties` 拒绝规则同时拦截了默认模板的中英文语言包。现在仅放行 `/template/<规范目录名>/asset/language/strings_en.properties` 和 `strings_zh.properties`，以纯文本返回；其他 properties、备份/脚本双扩展、PATH_INFO 和链接到私有文件的符号链接仍拒绝。正向 Location 例外与精确 rewrite 规则配套，文件系统的脚本禁用、点路径拒绝和不跟随符号链接继续生效。
+
 Apache 的覆盖范围和段合并顺序参见 [AllowOverride](https://httpd.apache.org/docs/2.4/mod/core.html#allowoverride)、[配置段合并](https://httpd.apache.org/docs/2.4/sections.html)；rewrite 转义及子请求行为参见 [rewrite flags](https://httpd.apache.org/docs/2.4/rewrite/flags.html)。保护文件和资源放行规则必须一起审查，不能只依赖一个后缀拒绝清单。
 
 ## 验证
@@ -29,9 +31,11 @@ python3 tests/run_apache_boundary_audit.py \
   maccms-audit-apache83:20260910 maccms-audit-apache84:20260910
 ```
 
-两版最终镜像各通过 185 项 HTTP 断言，PHP 分别为 8.3.33、8.4.25；两版 `apache2ctl -t` 和 PHP 测试文件 lint 均通过，Python harness 语法检查通过。最终测试直接使用镜像内的默认配置，不额外挂载配置文件，以验证 Dockerfile 的安装步骤。
+两版最终镜像各通过 201 项 HTTP 断言，PHP 分别为 8.3.33、8.4.25；两版 `apache2ctl -t` 和 PHP 测试文件 lint 均通过，Python harness 语法检查通过。最终测试直接使用镜像内的默认配置，不额外挂载配置文件，以验证 Dockerfile 的安装步骤。
 
 假站点入口仅加载仓库的 Composer autoloader 和真实 ThinkPHP 8 `Request`，使用全新临时 `App` 路径，不初始化真实项目。验证根入口、改名后台入口、API/PATH_INFO、安装入口、前台漂亮 URL、插件虚拟路由、中文/空格路由，以及查询参数、POST、Authorization 的保持；同时验证点路径编码、双扩展名、上传 handler 覆盖、目录符号链接和公开资源。
+
+另在可丢弃的真实应用副本中，PHP 8.3/8.4 新镜像各通过 19 条前台/API 内容契约、两个实际语言包、37 项真实会员/管理员账变 HTTP 断言和 32 个后台页面。使用专用 MySQL 与严格 PHP 诊断，未读取或部署实际站点。这层补充验证用于发现人工假站点未覆盖的业务资产。
 
 旧镜像基线可独立复现（镜像必须是修复前构建）：
 
