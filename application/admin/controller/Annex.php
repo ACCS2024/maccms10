@@ -191,10 +191,10 @@ class Annex extends Base
         mac_echo('<style type="text/css">body{font-size:12px;color: #333333;line-height:21px;}span{font-weight:bold;color:#FF0000}</style>');
 
         $param = \think\facade\Request::param();
-        $num = intval($param['num']);
-        $start = intval($param['start']);
-        $page_count = intval($param['page_count']);
-        $data_count = intval($param['data_count']);
+        $num = intval($param['num'] ?? 0);
+        $start = intval($param['start'] ?? 1);
+        $page_count = intval($param['page_count'] ?? 1);
+        $data_count = intval($param['data_count'] ?? 0);
         if($start<1){
             $start=1;
         }
@@ -202,15 +202,19 @@ class Annex extends Base
             $page_count=1;
         }
         $page_size = 500;
+        $where = [];
         if(empty($data_count)){
             $where=[];
             $data_count = (new \app\common\model\Annex())->countData($where);
-            $page_count = ceil($data_count / $page_size);
+            $page_count = (int)ceil($data_count / $page_size);
 
             $param['data_count'] = $data_count;
             $param['page_count'] = $page_count;
             $param['page_size'] = $page_size;
         }
+        $param['data_count'] = $data_count;
+        $param['page_count'] = $page_count;
+        $param['page_size'] = $page_size;
 
         if($start > $page_count){
             mac_echo(lang('admin/annex/check_complete'));
@@ -220,7 +224,7 @@ class Annex extends Base
         mac_echo(lang('admin/annex/info_tip',[$param['data_count'],$param['page_count'],$param['page_size'],$start]));
         $offset = ($page_size * ($page_count-$start));
 
-        $list = Db::name('Annex')->field('*')->where($where)->limit($offset, $limit)->orderRaw('annex_time desc')->select();
+        $list = Db::name('Annex')->field('*')->where($where)->limit($offset, $page_size)->orderRaw('annex_time desc')->select();
         foreach ($list as $k3 => $v3) {
             $tmp = $v3['annex_file'];
             if(!file_exists('./'.$tmp)){
@@ -239,10 +243,10 @@ class Annex extends Base
     {
         $param = \think\facade\Request::param();
 
-        if($param['ck']){
+        if(!empty($param['ck'])){
             mac_echo('<style type="text/css">body{font-size:12px;color: #333333;line-height:21px;}span{font-weight:bold;color:#FF0000}</style>');
 
-            $start = intval($param['start']);
+            $start = intval($param['start'] ?? 1);
             if($start<1){
                 $start=1;
             }
@@ -254,7 +258,7 @@ class Annex extends Base
                 $col_list[$v['TABLE_NAME']][$v['COLUMN_NAME']] = $v;
             }
             $tables = ['actor', 'art', 'topic', 'type', 'vod', 'website' ,'actor', 'role'];
-            $param['tbi'] = intval($param['tbi']);
+            $param['tbi'] = max(0, intval($param['tbi'] ?? 0));
             if ($param['tbi'] >= count($tables)) {
                 mac_echo(lang('admin/annex/check_ok'));
                 die;
@@ -264,7 +268,7 @@ class Annex extends Base
             $where=[];
             $page_size = 500;
             $data_count = model($tab)->countData($where);
-            $page_count = ceil($data_count / $page_size);
+            $page_count = (int)ceil($data_count / $page_size);
 
             if($start > $page_count){
                 mac_echo(lang('admin/annex/check_jump',[$tab]));
@@ -284,7 +288,7 @@ class Annex extends Base
                     continue;
                 }
                 $offset = ($page_size * ($page_count-$start));
-                $list = Db::name($pre_tb)->field('*')->limit($offset, $limit)->select();
+                $list = Db::name($pre_tb)->field('*')->limit($offset, $page_size)->select();
 
                 $adds = [];
                 foreach ($list as $k3 => $v3) {
@@ -354,6 +358,8 @@ class Annex extends Base
                             }
                         }
                         mac_echo($v['name'] . '...' . $des);
+                    }
+                    if ($insert !== []) {
                         (new \app\common\model\Annex())->insertAll($insert);
                     }
                 }
@@ -362,7 +368,7 @@ class Annex extends Base
             $param['start']++;
             $url = url('annex/init') . '?' . http_build_query($param);
             mac_jump($url, 3);
-            exit;
+            return;
         }
         return $this->fetch('admin@annex/init');
     }
