@@ -83,6 +83,21 @@ final class OrderAmount
         return ['order_price'=>self::decimal($minor), 'order_points'=>$points];
     }
 
+    /** Withdrawal debits round up: fractional points cannot fund an extra cash payment. */
+    public static function withdrawal($price, $scale): ?array
+    {
+        $minor = self::minorUnits($price);
+        $rate = self::rate($scale);
+        if ($minor === null || $rate === null) { return null; }
+        [$numerator, $denominator] = $rate;
+        $divisor = 100 * $denominator;
+        $ceiling = self::MAX_POINTS * $divisor;
+        if ($numerator > intdiv($ceiling, $minor)) { return null; }
+        $product = $minor * $numerator;
+        $points = intdiv($product, $divisor) + ($product % $divisor === 0 ? 0 : 1);
+        return ['order_price'=>self::decimal($minor), 'order_points'=>$points];
+    }
+
     /** Membership keeps its configured point snapshot; cash is round-half-up to cents. */
     public static function membership($points, $scale, bool $allowFree = false): ?array
     {

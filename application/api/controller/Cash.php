@@ -125,7 +125,7 @@ class Cash extends Base
      * 说明：
      * - 提现需后台开启提现功能（cash_status=1）
      * - 提现金额不能低于后台设置的最小提现金额（cash_min）
-     * - 提现所需积分 = 提现金额 × 提现兑换比例（cash_ratio）
+     * - 提现所需积分 = 提现金额 × 提现兑换比例（cash_ratio），不足一个积分向上取整
      * - 提现后对应积分会冻结，待管理员审核后正式扣除
      */
     public function create(\think\Request $request)

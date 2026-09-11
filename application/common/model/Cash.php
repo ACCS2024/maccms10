@@ -163,7 +163,7 @@ class Cash extends Base {
         if (!is_array($settings) || !in_array($settings['cash_status'] ?? '0', [1, '1'], true)) {
             return ['code'=>1005, 'msg'=>lang('model/cash/not_open')];
         }
-        $quote = OrderAmount::recharge($money, $settings['cash_ratio'] ?? null);
+        $quote = OrderAmount::withdrawal($money, $settings['cash_ratio'] ?? null);
         $minimum = OrderAmount::minimum($settings['cash_min'] ?? null);
         if ($quote === null || $minimum === null || $quote['order_points'] > 65535) {
             return ['code'=>1001, 'msg'=>lang('param_err')];

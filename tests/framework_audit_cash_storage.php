@@ -8,7 +8,8 @@ if ($mysql && getenv('CASH_AUDIT_STRICT') === '1') { Db::execute("SET SESSION sq
 function cashStorageCreate($amount,array $changes=[]): array {
     return (new Cash())->saveData(array_replace(['cash_money'=>$amount,'cash_bank_name'=>'Bank + branch','cash_bank_no'=>'001234+567','cash_payee_name'=>"Ordinary O'Name"],$changes));
 }
-foreach([['0.29',100,29],['0.01',100,1],['655.35',100,65535],['20.00','0.5',10],[0.29,100,29]] as [$amount,$rate,$points]) {
+foreach([['0.29',100,29],['0.01',100,1],['655.35',100,65535],['20.00','0.5',10],[0.29,100,29],
+    ['1.01',1,2],['0.01','0.5',1],['0.29',3,1],['10.01','0.33333333',4]] as [$amount,$rate,$points]) {
     cashOwnerSeed('reserve');Db::name('User')->where('user_id',1)->update(['user_points'=>100000]);
     $GLOBALS['config']['user']['cash_ratio']=$rate;$GLOBALS['config']['user']['cash_min']='0.01';
     check(cashStorageCreate($amount)['code']===1,'Exact decimal withdrawal rejected');
@@ -16,6 +17,8 @@ foreach([['0.29',100,29],['0.01',100,1],['655.35',100,65535],['20.00','0.5',10],
     check((int)$row['cash_points']===$points&&(int)$user['user_points']===100000-$points&&(int)$user['user_points_froze']===$points,'Floating-point multiplication changed the actual reserved points');
     check($row['cash_bank_name']==='Bank + branch'&&$row['cash_bank_no']==='001234+567'&&$row['cash_payee_name']==='Ordinary O&#039;Name','Decoded form value was decoded again or stored differently');
 }
+cashOwnerSeed('reserve');Db::name('User')->where('user_id',1)->update(['user_points'=>100000]);$before=cashRefundState();
+check(cashStorageCreate('65535.01')['code']!==1&&cashRefundState()===$before,'Rounding up beyond the stored cash-point capacity must reject the reservation');
 foreach(['1e2','20.001','20,00','-1','',true,[],INF,'10000000000.00'] as $amount) {
     cashOwnerSeed('reserve');$before=cashRefundState();
     check(cashStorageCreate($amount)['code']!==1&&cashRefundState()===$before,'Invalid monetary representation changed the reservation');
