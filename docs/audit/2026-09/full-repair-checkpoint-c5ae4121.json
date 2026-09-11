@@ -1,0 +1,154 @@
+{
+  "source_commit": "c5ae4121",
+  "source_tree": "bba3d811b943ed3b6c8089aefae4b3fc224b76ba",
+  "php_images": {
+    "8.3": "maccms-audit-image83:20260910",
+    "8.4": "maccms-audit-image84:20260910"
+  },
+  "checks": {
+    "php83": {
+      "version": "8.3.33",
+      "compiled_files": 5479,
+      "compilation_failures": 0,
+      "default_processes": 182,
+      "default_failures": 0
+    },
+    "php84": {
+      "version": "8.4.25",
+      "compiled_files": 5479,
+      "compilation_failures": 0,
+      "default_processes": 182,
+      "default_failures": 0
+    },
+    "phpstan_level1": {
+      "errors": 0,
+      "file_errors": 49
+    },
+    "phpstan_level5": {
+      "errors": 0,
+      "file_errors": 686
+    },
+    "phpcompatibility": {
+      "errors": 0,
+      "warnings": 1,
+      "fixable": 0
+    },
+    "source_policy": {
+      "profile": "source",
+      "findings": 0,
+      "hashed_files": 6428,
+      "includes_clean_production_vendor": true
+    }
+  },
+  "phpstan_level5_identifiers": {
+    "argument.type": 47,
+    "arrayFilter.same": 9,
+    "arrayValues.empty": 1,
+    "assign.propertyType": 3,
+    "binaryOp.invalid": 2,
+    "booleanAnd.alwaysFalse": 15,
+    "booleanAnd.leftAlwaysTrue": 1,
+    "booleanAnd.rightAlwaysFalse": 1,
+    "booleanAnd.rightAlwaysTrue": 14,
+    "booleanNot.alwaysFalse": 5,
+    "booleanNot.alwaysTrue": 2,
+    "booleanOr.alwaysTrue": 6,
+    "booleanOr.leftAlwaysFalse": 1,
+    "booleanOr.rightAlwaysFalse": 1,
+    "class.notFound": 13,
+    "closure.unusedUse": 1,
+    "constructor.unusedParameter": 1,
+    "deadCode.unreachable": 25,
+    "empty.expr": 1,
+    "empty.offset": 2,
+    "empty.variable": 13,
+    "equal.alwaysFalse": 42,
+    "equal.alwaysTrue": 6,
+    "foreach.nonIterable": 1,
+    "function.alreadyNarrowedType": 47,
+    "function.impossibleType": 13,
+    "greater.alwaysFalse": 3,
+    "greater.alwaysTrue": 12,
+    "greaterOrEqual.alwaysTrue": 2,
+    "identical.alwaysFalse": 91,
+    "identical.alwaysTrue": 4,
+    "if.alwaysFalse": 4,
+    "if.alwaysTrue": 14,
+    "instanceof.alwaysTrue": 1,
+    "isset.offset": 22,
+    "isset.variable": 1,
+    "method.notFound": 98,
+    "method.unused": 7,
+    "notEqual.alwaysFalse": 3,
+    "notEqual.alwaysTrue": 2,
+    "notIdentical.alwaysFalse": 8,
+    "notIdentical.alwaysTrue": 18,
+    "nullCoalesce.expr": 2,
+    "nullCoalesce.offset": 34,
+    "offsetAccess.invalidOffset": 3,
+    "offsetAccess.notFound": 6,
+    "parameter.defaultValue": 3,
+    "property.defaultValue": 2,
+    "property.notFound": 6,
+    "property.onlyWritten": 1,
+    "property.phpDocType": 1,
+    "property.protected": 1,
+    "return.phpDocType": 1,
+    "return.type": 14,
+    "return.void": 6,
+    "smaller.alwaysFalse": 1,
+    "staticMethod.resultUnused": 2,
+    "throws.notThrowable": 7,
+    "unset.variable": 4,
+    "variable.undefined": 29
+  },
+  "artifacts": {
+    "tree.txt": {
+      "sha256": "b9d2432c08c2de047493048a82c12e0e3f4d3ad2a20919b3cf89fe38cfb72c12"
+    },
+    "lint-83.json": {
+      "sha256": "2b8eb71fb689f7ef44fc5e1b82875220ca5193bb50cec40ae16d55e624b1f8d9"
+    },
+    "lint-84.json": {
+      "sha256": "95423c298536525ccb1b4abbcc6334cc210454987c17f1e4c4aec8f2c1318a36"
+    },
+    "level1.json": {
+      "sha256": "0513b22b8567c94d4b457dafc034c9ffce3f5bd8bb1096006581d2b222017d48"
+    },
+    "level5.json": {
+      "sha256": "229c671060ac3356ed50999c086656c7f1a1f62f0a194b47c5f1db67b7fb08f4"
+    },
+    "phpcompatibility.json": {
+      "sha256": "8eb6ea5eedf860f813af94f6c75cd30f5d6558f3b8f0886f6c1171250e7ad215"
+    },
+    "source-audit.json": {
+      "sha256": "a31ea02cd70683b95586325a57e81b924df67a9a9d95d7899285476a7db7b30a"
+    },
+    "source-manifest.json": {
+      "sha256": "98757835621bf8db62af70a03bda241d4662eed0e004612a7f8573f386a0d908"
+    },
+    "summary.json": {
+      "sha256": "7cd26bf490a95748d31c30b8d0920f172392e728bfbcf90ff4b90822bac17865"
+    },
+    "default-83.log": {
+      "sha256": "c2465e55726e0281f3e19130fe5175b47ed4024a54a7afe58977a42baeaa7e4f"
+    },
+    "default-84.log": {
+      "sha256": "31340d7150526811fb62c176f5aef0e5179db84642bb094a6dd6805579b6611e"
+    },
+    "cash-member-reads-phase.log": {
+      "sha256": "0af58e4b0b84f80b8b88e683c1ae37eb7702844cb78899c53d42957c5d903aba"
+    }
+  },
+  "evidence_archive": {
+    "file": "evidence/checkpoint-c5ae4121.tar.gz",
+    "sha256": "c87bb7f1f831aa97e8b13c5f851d56f9c56411da2f1fb2a7e5de5b8c6aae4a20",
+    "bytes": 408056
+  },
+  "limitations": [
+    "No production database, deployment, push or external payment reconciliation.",
+    "Static diagnostics are candidates, not confirmed vulnerabilities.",
+    "Known-dependency advisory scan was not repeated; prior lockfile evidence remains separately dated.",
+    "DNS and native Windows/BSD runtime constraints remain open."
+  ]
+}

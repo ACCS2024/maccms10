@@ -4,6 +4,6 @@
 
 Linux 优先只读 `/proc/meminfo`、`/proc/stat`，明确 MB、可用内存、CPU 采样差及 iowait/guest 语义；FreeBSD 的 sysctl、free、Windows 的 WMIC 输出先验证形状与数字再计算。所有数值必须有限且非负，比例必须在 0–100。探测不可用时沿用完整的零值降级合同。
 
-外部探测只接受代码内固定的 argv，不经过 shell；单次进程 500 ms、stdout/stderr 合计 64 KiB，失败/超量/超时丢弃局部结果并终止、回收原子进程。文件读取也有限额。去掉了可能无限等待的 COM、shell_exec/top 探测；Windows 无可用 WMIC 时 CPU/内存返回不可用的零值，本批未在真实 Windows/FreeBSD 主机执行，跨平台仅验证普通输出解析。零值不等于主机真实空闲，后续可增加显式可用性显示。
+外部探测只接受代码内固定的 argv，不经过 shell；单次进程 500 ms、stdout/stderr 合计 64 KiB，失败/超量/超时丢弃局部结果并终止、回收已启动的进程。文件读取也有限额。去掉了可能无限等待的 COM、shell_exec/top 探测；Windows 无可用 WMIC 时 CPU/内存返回不可用的零值，本批未在真实 Windows/FreeBSD 主机执行，跨平台仅验证普通输出解析。零值不等于主机真实空闲，后续可增加显式可用性显示。
 
 回归包含真实 Linux 文件探测和后台 JSON、异常数字/命令文本、小磁盘、全满磁盘、CPU 重置/无采样差、子进程退出/超时/超量和实际禁用函数子进程。没有使用站点配置、外部地址或生产凭据。旧 OpenCC 等其它模块的命令资源边界需独立处理，不能套用本批结论。
