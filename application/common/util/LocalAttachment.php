@@ -16,6 +16,9 @@ final class LocalAttachment
 
     public static function assertRequestReady(): void
     {
+        if (($blocked = StorageTransaction::blockedResult()) !== null) {
+            throw new StorageOutcomeUnknown($blocked['info']);
+        }
         if (isset((self::$uncertainRequests ??= new \WeakMap())[request()])) {
             throw new \RuntimeException('A previous attachment outcome in this request requires inspection');
         }
@@ -233,6 +236,10 @@ final class LocalAttachment
             if ($cover !== null) { $data['_cover'] = $coverData; }
             return $data;
         } catch (\Throwable $error) {
+            if ($error instanceof StorageOutcomeUnknown) {
+                $transactionUncertain = true;
+                $manifest['storage_transaction'] = $error->details;
+            }
             if ($beginAttempted && !$committed && $connection !== null && $pdo !== null) {
                 $cleaned = self::rollbackOriginalTransaction($connection, $pdo, $transaction);
                 $transactionUncertain = $transactionUncertain || !$cleaned;
@@ -245,6 +252,9 @@ final class LocalAttachment
                 // Do not delete files referenced by a COMMIT whose acknowledgement may have been lost.
                 try { self::manifest($stage, array_merge($manifest, ['state'=>'commit_outcome_unknown'])); } catch (\Throwable $manifestError) {}
                 error_log('Upload commit outcome unknown; inspect private manifest: ' . $stage . '/manifest.json');
+            } elseif ($error instanceof StorageOutcomeUnknown && $stage !== null) {
+                try { self::manifest($stage, array_merge($manifest, ['state'=>'storage_outcome_unknown'])); } catch (\Throwable $manifestError) {}
+                error_log('Storage transaction outcome unknown; inspect private manifest: ' . $stage . '/manifest.json');
             } elseif ($transactionUncertain && $stage !== null) {
                 try { self::manifest($stage, array_merge($manifest, ['state'=>'rollback_outcome_unknown',
                     'begin_attempted'=>$beginAttempted, 'begin_confirmed'=>$transaction])); } catch (\Throwable $manifestError) {}

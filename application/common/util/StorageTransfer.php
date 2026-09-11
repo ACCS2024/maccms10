@@ -29,7 +29,9 @@ final class StorageTransfer
             // The independent pre-call record remains inspectable, even if the database is now unavailable.
             // A returned random object URL may be unknown after a crash/outage: never invent a remote rollback.
             error_log('Storage result not durably recorded; inspect intent '.$id);
-            return ['intent_id'=>$id,'outcome'=>'unrecorded','file'=>$localAvailable?$row['local_path']:null,'remote_confirmed'=>false];
+            $result = ['intent_id'=>$id,'outcome'=>'unrecorded','file'=>$localAvailable?$row['local_path']:null,'remote_confirmed'=>false];
+            if ($error instanceof StorageOutcomeUnknown) { $result['transaction'] = $error->details; }
+            return $result;
         }
         return ['intent_id'=>$id,'outcome'=>!$localAvailable?'unavailable':($remote!==null?'remote':'local_fallback'),
             'file'=>!$localAvailable?null:($remote??$row['local_path']),'remote_confirmed'=>$localAvailable&&$saved['transfer_state']==='remote_confirmed'];

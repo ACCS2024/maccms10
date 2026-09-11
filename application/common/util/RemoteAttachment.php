@@ -44,6 +44,9 @@ final class RemoteAttachment
                 $scope = $this->coverOwner !== null ? 'ai_cover' : ($this->download ? 'download' : ($this->owner === null ? 'attachment' : 'avatar'));
                 $this->intents[$path] = StorageIntent::prepare($path, $policy, $scope, $this->coverOwner ?? $this->owner ?? 0);
             }
+        } catch (StorageOutcomeUnknown $error) {
+            $journal($this->evidence());
+            throw $error;
         } catch (\Throwable $error) {
             $journal($this->evidence());
             return;
@@ -56,6 +59,7 @@ final class RemoteAttachment
             $result = StorageTransfer::attempt($intent['intent_id']);
             $this->results[$path] = $result;
             $journal($this->evidence());
+            if (isset($result['transaction'])) { throw new StorageOutcomeUnknown($result['transaction']); }
             if (!in_array($result['outcome'] ?? null, ['remote','local_fallback'], true)
                 || !is_string($result['file'] ?? null)) {
                 // Do not commit business references when their transfer receipt is unavailable or ambiguous.

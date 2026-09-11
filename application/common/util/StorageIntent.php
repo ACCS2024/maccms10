@@ -20,7 +20,7 @@ final class StorageIntent
             'local_path'=>$path,'source_bytes'=>$source['bytes'],'source_sha256'=>$source['sha256'],
             'expected_url'=>$policy->expected($path),'remote_url'=>'','transfer_state'=>'prepared',
             'reference_state'=>'pending','annex_id'=>0,'result_code'=>'','created_at'=>time(),'updated_at'=>time()];
-        return self::independent(static function () use($row): array {
+        return self::independent('prepare', $row['intent_id'], static function () use($row): array {
             if (Db::name('StorageIntent')->insert($row)!==1) { throw new \RuntimeException('Storage intent was not inserted'); }
             return self::exact($row['intent_id'],$row);
         });
@@ -38,7 +38,7 @@ final class StorageIntent
     public static function claim(string $id, StoragePublicUrl $policy): array
     {
         self::id($id);
-        return self::independent(static function () use($id,$policy): array {
+        return self::independent('claim', $id, static function () use($id,$policy): array {
             $row=Db::name('StorageIntent')->master()->where('intent_id',$id)->lock(true)->find();
             if (!$row || $row['transfer_state']!=='prepared' || $row['reference_state']!=='pending'
                 || $row['provider']!==$policy->provider || !hash_equals($row['destination_hash'],$policy->fingerprint)
@@ -60,7 +60,7 @@ final class StorageIntent
         if (!in_array($reason,['remote_confirmed','local_fallback','provider_exception','invalid_result','invalid_url','source_changed'],true)) {
             throw new \InvalidArgumentException('Invalid transfer result code');
         }
-        return self::independent(static function () use($id,$policy,$remoteUrl,$reason): array {
+        return self::independent('finish', $id, static function () use($id,$policy,$remoteUrl,$reason): array {
             $row=Db::name('StorageIntent')->master()->where('intent_id',$id)->lock(true)->find();
             if (!$row || $row['transfer_state']!=='attempting' || $row['reference_state']!=='pending'
                 || $row['provider']!==$policy->provider || !hash_equals($row['destination_hash'],$policy->fingerprint)
@@ -174,8 +174,11 @@ final class StorageIntent
         }
     }
 
-    private static function independent(callable $operation): array
+    private static function independent(string $phase, string $id, callable $operation): array
     {
+        if (($blocked = StorageTransaction::blockedResult()) !== null) {
+            throw new StorageOutcomeUnknown($blocked['info'] + ['phase'=>$phase, 'intent_id'=>$id]);
+        }
         $connection=Db::connect();$current=$connection->getPdo();
         // Check the current handle and the actual master, including raw PDO transactions outside ORM counters.
         if (($current instanceof \PDO && $current->inTransaction()) || self::masterPdo($connection)->inTransaction()) {
@@ -183,8 +186,22 @@ final class StorageIntent
         }
         Db::name('StorageIntent')->getTableFields();
         self::transactionalTables($connection,['StorageIntent']);
-        $connection->startTrans();
-        try {$result=$operation();$connection->commit();return $result;}
-        catch (\Throwable $error) {try {$connection->rollback();}catch(\Throwable $ignored){}throw $error;}
+        $transaction = new StorageTransaction($phase, $id);
+        try {
+            $transaction->begin();
+            $data = $operation();
+            $transaction->assertActive();
+            $result = $transaction->commit(['code'=>1, 'data'=>$data]);
+        } catch (\Throwable $error) {
+            $result = $transaction->rollback(['code'=>0]);
+            if (isset($result['info'])) {
+                throw new StorageOutcomeUnknown($result['info'] + ['phase'=>$phase, 'intent_id'=>$id], $error);
+            }
+            throw $error;
+        }
+        if ($result['code'] !== 1) {
+            throw new StorageOutcomeUnknown($result['info'] + ['phase'=>$phase, 'intent_id'=>$id]);
+        }
+        return $result['data'];
     }
 }

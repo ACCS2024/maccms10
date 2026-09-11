@@ -175,6 +175,8 @@ class Upload {
             unset($data['_portrait_path']);
             if ($param['from'] !== '' && !preg_match('~^https?://~D', $data['file'])) { $data['file'] = $pre . $data['file']; }
             return self::uploadResult(lang('admin/upload/upload_success'), 1, $data);
+        } catch (\app\common\util\StorageOutcomeUnknown $error) {
+            return self::uploadResult(lang('model/financial/outcome_unknown', [$error->details['reference']]), 2005, $error->details);
         } catch (\Throwable $error) {
             return self::uploadResult(lang('admin/upload/upload_faild'));
         }
@@ -207,6 +209,7 @@ class Upload {
             $arr['code'] = $status;
             $arr['file'] = isset($data['file'])
                 ? (preg_match('~^https?://~D', $data['file']) ? $data['file'] : MAC_PATH . $data['file']) . '?'. mt_rand(1000, 9999) : '';
+            if (($data['retryable'] ?? null) === false) { $arr['data'] = $data; }
         }
         else{
             $arr['msg'] = $info;

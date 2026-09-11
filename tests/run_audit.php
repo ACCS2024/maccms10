@@ -49,7 +49,7 @@ $groups = [
     // Separate upload schema; both response formats use the same identity guard.
     'upload' => [['security_audit_avatar_consistency.php'], ['security_audit_local_attachment.php'], ['framework_audit_attachment_owner.php'], ['security_audit_upload_identity.php'], ['security_audit_upload_identity.php', 'admin'], ['security_audit_upload_csrf.php'], ['security_audit_upload_csrf.php', 'admin']],
     // Separate storage intent schema; SDK fixtures stay on loopback.
-    'storage' => [['security_audit_storage_intents.php'], ['security_audit_storage_sdk.php']],
+    'storage' => [['security_audit_storage_intents.php'], ['security_audit_storage_sdk.php'], ['framework_audit_storage_owner.php'], ['framework_audit_storage_attachment.php']],
     // Dedicated remote object and reader fixture; no real cloud credentials.
     'remote_upload' => [['security_audit_remote_upload.php'], ['framework_audit_download_asset.php'], ['framework_audit_vod_cover.php']],
     // Execute as an unprivileged account so denied-write cases are meaningful.
