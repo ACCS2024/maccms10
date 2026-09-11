@@ -5,7 +5,7 @@ namespace app\common\util {
     function curl_setopt($handle, $option, $value) { return \audit_tls_option($handle, $option, $value); }
     function curl_setopt_array($handle, $options) { foreach ($options as $option => $value) { \audit_tls_option($handle, $option, $value); } return true; }
     function curl_exec($handle) { return \audit_tls_exec($handle); }
-    function curl_getinfo($handle, $option) { return $GLOBALS['tls_failure'] ? 0 : 200; }
+    function curl_getinfo($handle, $option) { return $option === CURLINFO_PRIMARY_IP ? '1.1.1.1' : ($GLOBALS['tls_failure'] ? 0 : 200); }
     function curl_error($handle) { return $GLOBALS['tls_failure'] ? 'fixture certificate failure https://fixture.invalid/private' : ''; }
     function curl_close($handle) {}
 }
@@ -28,6 +28,7 @@ namespace app\api\controller {
 namespace {
     require __DIR__ . '/fixtures/security_audit_test_helpers.php';
     require dirname(__DIR__) . '/application/common/util/UeditorAiProxy.php';
+    require dirname(__DIR__) . '/application/common/util/PublicHttpClient.php';
     require dirname(__DIR__) . '/application/common/util/VodAiCover.php';
     require dirname(__DIR__) . '/application/admin/controller/Meilisearch.php';
     require dirname(__DIR__) . '/application/api/controller/Ppvod.php';
@@ -42,7 +43,15 @@ namespace {
         return $handle;
     }
     function audit_tls_option($handle, $option, $value) { $handle->options[$option] = $value; return true; }
-    function audit_tls_exec($handle) { return $GLOBALS['tls_failure'] ? false : '{"tag_name":"v1.2.3"}'; }
+    function audit_tls_exec($handle) {
+        if ($GLOBALS['tls_failure']) { return false; }
+        $body = '{"tag_name":"v1.2.3"}';
+        if (isset($handle->options[CURLOPT_WRITEFUNCTION])) {
+            $handle->options[CURLOPT_HEADERFUNCTION]($handle, "HTTP/1.1 200 OK\r\n");
+            return $handle->options[CURLOPT_WRITEFUNCTION]($handle, $body) === strlen($body);
+        }
+        return $body;
+    }
     function audit_tls_verified(): void {
         $handle = $GLOBALS['tls_handles'][array_key_last($GLOBALS['tls_handles'])];
         check(($handle->options[CURLOPT_SSL_VERIFYPEER] ?? null) === true, 'Client disabled certificate chain verification');
@@ -62,9 +71,9 @@ namespace {
             audit_tls_verified();
             check($result['status'] === ($failure ? 0 : 200), 'Editor HTTP status contract changed');
             check(!$failure || $result['body'] === '' && !str_contains($result['curl_error'], 'https://'), 'Editor transport failure returned a body or unredacted URL');
-            $result = $cover->invoke(null, 'https://fixture.invalid/', '{}', [], 10);
+            $result = $cover->invoke(null, 'https://1.1.1.1/', '{}', [], 10);
             audit_tls_verified();
-            check($failure ? $result === false : is_string($result), 'Cover transport failure contract changed');
+            check($result === ($failure ? false : '{"tag_name":"v1.2.3"}'), 'Cover transport failure/bounded response contract changed');
             $result = $version->invoke($meili);
             audit_tls_verified();
             check($result === ($failure ? '' : '1.2.3'), 'Version check did not handle the transport result');
