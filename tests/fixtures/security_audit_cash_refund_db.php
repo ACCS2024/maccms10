@@ -1,6 +1,23 @@
 <?php
 /** Isolated cash ledger using the installation DDL, never an application connection. */
 declare(strict_types=1);
+require dirname(__DIR__,2).'/vendor/autoload.php';
+/** Invoke the ordinary competing operation immediately before the actual connector BEGIN. */
+trait CashRefundBeforeBegin
+{
+    public function startTrans(): void
+    {
+        $hook = $GLOBALS['manager']->beforeStart ?? null;
+        $GLOBALS['manager']->beforeStart = null;
+        if ($hook) { $hook(); }
+        parent::startTrans();
+    }
+}
+class CashRefundSqlite extends \think\db\connector\Sqlite { use CashRefundBeforeBegin; }
+class CashRefundMysql extends \think\db\connector\Mysql { use CashRefundBeforeBegin; }
+if (!defined('MEMBERSHIP_AUDIT_CONNECTION_CLASS')) {
+    define('MEMBERSHIP_AUDIT_CONNECTION_CLASS', getenv('MEMBERSHIP_AUDIT_MYSQL') === '1' ? CashRefundMysql::class : CashRefundSqlite::class);
+}
 require __DIR__ . '/security_audit_membership_db.php';
 use think\facade\Db;
 

@@ -1,6 +1,7 @@
 <?php
 namespace app\common\model;
 use app\common\util\PointsBalance;
+use app\common\util\CashTransaction;
 use think\facade\Db;
 
 class Cash extends Base {
@@ -64,6 +65,8 @@ class Cash extends Base {
 
     public function saveData($param)
     {
+        if (($blocked = CashTransaction::blockedResult()) !== null) { return $blocked; }
+        if (!is_array($param)) { return ['code'=>1001, 'msg'=>lang('param_err')]; }
         $settings = $GLOBALS['config']['user'] ?? [];
         if (($settings['cash_status'] ?? '0') != '1') {
             return ['code'=>1005,'msg'=>lang('model/cash/not_open')];
@@ -112,52 +115,58 @@ class Cash extends Base {
             return ['code'=>1001,'msg'=>lang('param_err').'：'.$validate->getError()];
         }
 
-        Db::startTrans();
+        $scope = null;
+        $failure = ['code'=>1004,'msg'=>lang('save_err')];
         try {
-            $user = Db::name('User')->where('user_id', $userId)->lock(true)->find();
+            CashTransaction::requireTables(array_map(static fn(string $name): string => Db::name($name)->getTable(), ['Cash','User']));
+            $scope = new CashTransaction('reserve', $userId, $failure);
+            $scope->begin();
+            $user = Db::name('User')->master()->where('user_id', $userId)->lock(true)->find();
             if (!$user || (int)$user['user_points'] < $points) {
-                Db::rollback();
-                return ['code'=>1007,'msg'=>lang('model/cash/mush_money_err')];
+                return $scope->rollback(['code'=>1007,'msg'=>lang('model/cash/mush_money_err')]);
             }
             // 余额在数据库内检查并转为冻结积分，不能用请求开始时的全局快照覆盖。
-            $changed = Db::name('User')->where('user_id', $userId)
+            $changed = Db::name('User')->master()->where('user_id', $userId)
                 ->where('user_points', '>=', $points)
                 ->dec('user_points', $points)->inc('user_points_froze', $points)->update();
             if ($changed !== 1) {
-                Db::rollback();
-                return ['code'=>1007,'msg'=>lang('model/cash/mush_money_err')];
+                return $scope->rollback(['code'=>1007,'msg'=>lang('model/cash/mush_money_err')]);
             }
-            $cashId = $this->insertGetId($this->filterFields($data));
+            $cashId = Db::name('Cash')->insertGetId($data);
             if ((int)$cashId < 1) {
                 throw new \RuntimeException('cash insert failed');
             }
             // 老库 cash_points 是 SMALLINT，且连接允许 MySQL 静默截断。
             // 回读核实记账数值；兼容已扩容的库，并避免扣全额却只记录部分积分。
-            $stored = $this->where('cash_id', $cashId)->find();
-            $reserved = Db::name('User')->where('user_id', $userId)->find();
+            $stored = Db::name('Cash')->master()->where('cash_id', $cashId)->find();
+            $reserved = Db::name('User')->master()->where('user_id', $userId)->find();
             if (!$stored || !$reserved || (int)$stored['cash_points'] !== $points
                 || round((float)$stored['cash_money'], 2) !== $money
                 || (int)$reserved['user_points'] !== (int)$user['user_points'] - $points
                 || (int)$reserved['user_points_froze'] !== (int)$user['user_points_froze'] + $points) {
                 throw new \RuntimeException('cash ledger values were truncated');
             }
-            Db::commit();
+            $scope->assertActive();
+            return $scope->commit(['code'=>1,'msg'=>lang('save_ok')]);
         } catch (\Throwable $e) {
-            Db::rollback();
-            return ['code'=>1004,'msg'=>lang('save_err')];
+            return $scope !== null ? $scope->rollback($failure) : $failure;
         }
-        return ['code'=>1,'msg'=>lang('save_ok')];
     }
 
     public function delData($where)
     {
+        if (($blocked = CashTransaction::blockedResult()) !== null) { return $blocked; }
         if (empty($where) || !is_array($where)) {
             return ['code'=>1001,'msg'=>lang('param_err')];
         }
-        Db::startTrans();
+        $scope = null;
+        $failure = ['code'=>1005,'msg'=>lang('del_err')];
         try {
+            CashTransaction::requireTables(array_map(static fn(string $name): string => Db::name($name)->getTable(), ['Cash','User']));
+            $scope = new CashTransaction('refund', null, $failure);
+            $scope->begin();
             // 与审核使用相同的行锁顺序；退款、删除不可被另一个审核/删除请求穿插。
-            $list = $this->where($where)->order('cash_id')->lock(true)->select()->toArray();
+            $list = Db::name('Cash')->master()->where($where)->order('cash_id')->lock(true)->select()->toArray();
             foreach ($list as $row) {
                 $status = (int)$row['cash_status'];
                 if ($status !== 0 && $status !== 1) {
@@ -169,7 +178,7 @@ class Cash extends Base {
                         throw new \RuntimeException('invalid frozen points');
                     }
                     // 与解冻在同一 UPDATE 检查余额容量，避免非严格 MySQL 截断退款。
-                    $changed = Db::name('User')->where('user_id', $row['user_id'])
+                    $changed = Db::name('User')->master()->where('user_id', $row['user_id'])
                         ->where('user_points_froze', '>=', $points)
                         ->where('user_points', '<=', PointsBalance::MAX - $points)
                         ->inc('user_points', $points)->dec('user_points_froze', $points)->update();
@@ -177,16 +186,15 @@ class Cash extends Base {
                         throw new \RuntimeException('cash refund failed');
                     }
                 }
-                if ($this->where('cash_id', $row['cash_id'])->delete() !== 1) {
+                if (Db::name('Cash')->master()->where('cash_id', $row['cash_id'])->delete() !== 1) {
                     throw new \RuntimeException('cash delete failed');
                 }
             }
-            Db::commit();
+            $scope->assertActive();
+            return $scope->commit(['code'=>1,'msg'=>lang('del_ok')]);
         } catch (\Throwable $e) {
-            Db::rollback();
-            return ['code'=>1005,'msg'=>lang('del_err')];
+            return $scope !== null ? $scope->rollback($failure) : $failure;
         }
-        return ['code'=>1,'msg'=>lang('del_ok')];
     }
 
     public function fieldData($where,$col,$val)
@@ -206,26 +214,31 @@ class Cash extends Base {
 
     public function auditData($where)
     {
+        if (($blocked = CashTransaction::blockedResult()) !== null) { return $blocked; }
         if (empty($where) || !is_array($where)) {
             return ['code'=>1001,'msg'=>lang('param_err')];
         }
-        Db::startTrans();
+        $scope = null;
+        $failure = ['code'=>1005,'msg'=>lang('save_err')];
         try {
-            $list = $this->where($where)->where('cash_status', 0)
+            CashTransaction::requireTables(array_map(static fn(string $name): string => Db::name($name)->getTable(), ['Cash','User','Plog']));
+            $scope = new CashTransaction('settle', null, $failure);
+            $scope->begin();
+            $list = Db::name('Cash')->master()->where($where)->where('cash_status', 0)
                 ->order('cash_id')->lock(true)->select()->toArray();
             foreach ($list as $row) {
                 $points = (int)$row['cash_points'];
                 if ($points < 1) {
                     throw new \RuntimeException('invalid frozen points');
                 }
-                $changed = $this->where('cash_id', $row['cash_id'])->where('cash_status', 0)->update([
+                $changed = Db::name('Cash')->master()->where('cash_id', $row['cash_id'])->where('cash_status', 0)->update([
                     'cash_status' => 1,
                     'cash_time_audit' => time(),
                 ]);
                 if ($changed !== 1) {
                     throw new \RuntimeException('cash state changed');
                 }
-                $changed = Db::name('User')->where('user_id', $row['user_id'])
+                $changed = Db::name('User')->master()->where('user_id', $row['user_id'])
                     ->where('user_points_froze', '>=', $points)->setDec('user_points_froze', $points);
                 if ($changed !== 1) {
                     throw new \RuntimeException('cash settlement failed');
@@ -239,12 +252,11 @@ class Cash extends Base {
                     throw new \RuntimeException('cash points log failed');
                 }
             }
-            Db::commit();
+            $scope->assertActive();
+            return $scope->commit(['code'=>1,'msg'=>'审核成功']);
         } catch (\Throwable $e) {
-            Db::rollback();
-            return ['code'=>1005,'msg'=>lang('save_err')];
+            return $scope !== null ? $scope->rollback($failure) : $failure;
         }
-        return ['code'=>1,'msg'=>'审核成功'];
     }
 
 }
