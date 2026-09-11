@@ -490,7 +490,6 @@ https://www.baidu.com/123.jpg
   'menu/meilisearch_selfcheck' => 'Meilisearch一鍵自檢',
   'menu/meilisearch_sync' => 'Meilisearch全量同步',
   'menu/meilisearch_setup' => 'Meilisearch一鍵初始化',
-  'menu/configuser' => '會員參數配置',
   'menu/configuser' => '會員互動',
   'menu/configcomment' => '評論留言配置',
   'menu/configupload' => '資源、連結與播放',

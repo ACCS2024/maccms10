@@ -490,7 +490,6 @@ https://www.baidu.com/123.jpg
   'menu/meilisearch_selfcheck' => 'Autoverificação do Meilisearch',
   'menu/meilisearch_sync' => 'Sincronização completa do Meilisearch',
   'menu/meilisearch_setup' => 'Inicialização Meilisearch com um clique',
-  'menu/configuser' => 'Configuração de parâmetros de membro',
   'menu/configuser' => 'Interação de membros',
   'menu/configcomment' => 'Configuração de comentários e mensagens',
   'menu/configupload' => 'Recursos, ligações e reprodução',
