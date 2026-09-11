@@ -20,7 +20,17 @@ parameters:
             - ../../extend/upyun/vendor
     bootstrapFiles:
         - ../../vendor/autoload.php
+    stubFiles:
+        - think-facades.stub
+    dynamicConstantNames:
+        MAC_PATH: string
+        MAC_PAGE_SP: string
+        MAC_PLAYER_SORT: mixed
+        MAC_MOB: 0|1
+        MAC_START_TIME: float
+        THIRD_LOGIN_CALLBACK: string
     scanFiles:
+        - runtime-constants.php
         - ../../vendor/topthink/framework/src/helper.php
         - ../../vendor/topthink/think-helper/src/helper.php
         - ../../vendor/topthink/think-captcha/src/helper.php

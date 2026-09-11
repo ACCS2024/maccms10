@@ -11,7 +11,9 @@ python3 tools/audit/run.py --output=/tmp/maccms-static-report
 
 PHPStan level 1 扫描业务、框架适配层、扩展、配置、入口、CLI、部署及迁移脚本；引导仅加载 Composer 自动加载器，补充扫描当前框架 helper 定义。内嵌 Upyun vendor 由独立 Composer 审计、原生 lint 和真实传输回归负责。PHPCompatibility 指定 8.3–8.4，规则集为 alpha 版本，结果必须结合原生解释器和实际调用核实。
 
-PHPStan 无 baseline/ignoreErrors。框架动态门面、运行期常量、被 include 的迁移片段和语言键覆盖需要人工分类，不能把工具条数当作漏洞数，也不能仅为归零而改业务行为。依赖版本升级后应重新校准这些结论。
+PHPStan 无 baseline/ignoreErrors。`think-facades.stub` 声明锁定 ORM 经 DbManager 转发的 query/execute 原生参数与返回合同；不会为任意未知方法放行。`runtime-constants.php` 仅通过 scanFiles 读取，不执行；常量类型对应维护中的前台入口、AppInit 与 User OAuth 初始化，dynamicConstantNames 避免代表值把条件分支误判为常量。没有经过这些初始化的独立入口仍需单独验证。AiTask 的属性声明对应已测试的实际 ORM 列。依赖、入口或表结构升级后应重新校准这些声明。
+
+其余动态调用、控制流和语言键覆盖继续保留诊断并逐项分类。声明已存在的运行时合同不等于修复漏洞，不能把诊断条数直接作为漏洞数，也不能仅为归零而改变业务行为。
 
 全量原生编译和独立行为回归见 `tests/README.md`。临时报告可能包含本地文件路径和诊断内容，分享前检查；不要提交站点配置、凭据、数据库导出或运行日志。
 

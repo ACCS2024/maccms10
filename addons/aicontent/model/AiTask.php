@@ -7,6 +7,12 @@ use think\Model;
 /**
  * Model for the configured-prefix ai_task table.
  * Tracks every AI generation request (single or batch).
+ *
+ * These are ORM attributes backed by the installation schema, not PHP dynamic object properties.
+ * @property int $status
+ * @property string|null $result
+ * @property string|null $error_msg
+ * @property string|null $updated_at
  */
 class AiTask extends Model
 {

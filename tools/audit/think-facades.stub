@@ -1,0 +1,17 @@
+<?php
+namespace think;
+
+// Stub validation resolves referenced class names independently of the application's autoloader.
+abstract class Facade {}
+class DbManager {}
+
+namespace think\facade;
+
+/**
+ * DbManager::__call forwards these two methods to the configured PDOConnection.
+ * Signatures match the locked think-orm implementation; other methods retain DbManager's mixin.
+ * @mixin \think\DbManager
+ * @method static array<mixed> query(string $sql, array<mixed> $bind = [], bool $master = false)
+ * @method static int execute(string $sql, array<mixed> $bind = [])
+ */
+class Db extends \think\Facade {}
