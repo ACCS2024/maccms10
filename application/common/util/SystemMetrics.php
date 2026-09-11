@@ -174,35 +174,6 @@ final class SystemMetrics
     /** Only fixed internal argv lists call this; no shell, inherited request arguments or unbounded output. */
     private static function command(array $argv): ?string
     {
-        foreach (['proc_open', 'proc_get_status', 'proc_terminate', 'proc_close'] as $function) {
-            if (!function_exists($function)) { return null; }
-        }
-        $process = null; $pipes = [];
-        try {
-            $process = @proc_open($argv, [0=>['pipe','r'], 1=>['pipe','w'], 2=>['pipe','w']], $pipes, null, null, ['bypass_shell'=>true]);
-            if (!is_resource($process)) { return null; }
-            fclose($pipes[0]); unset($pipes[0]);
-            stream_set_blocking($pipes[1], false); stream_set_blocking($pipes[2], false);
-            $output = ''; $size = 0; $deadline = hrtime(true) + 500000000;
-            do {
-                $chunk = stream_get_contents($pipes[1], 8192); $errors = stream_get_contents($pipes[2], 8192);
-                if ($chunk === false || $errors === false) { return null; }
-                $output .= $chunk; $size += strlen($chunk) + strlen($errors);
-                if ($size > self::OUTPUT_LIMIT || hrtime(true) >= $deadline) { return null; }
-                $state = proc_get_status($process);
-                if (!$state['running'] && feof($pipes[1]) && feof($pipes[2])) {
-                    return $state['exitcode'] === 0 ? $output : null;
-                }
-                usleep(5000);
-            } while (true);
-        } catch (\Throwable $error) { return null; }
-        finally {
-            if (is_resource($process)) {
-                $state = proc_get_status($process);
-                if ($state['running']) { @proc_terminate($process, 9); }
-            }
-            foreach ($pipes as $pipe) { if (is_resource($pipe)) { fclose($pipe); } }
-            if (is_resource($process)) { @proc_close($process); }
-        }
+        return LocalProcess::capture($argv);
     }
 }
