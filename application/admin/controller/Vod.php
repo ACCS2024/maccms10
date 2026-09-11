@@ -536,7 +536,7 @@ class Vod extends Base
             }
         }
         $this->assign('seo_ai_status', $seoAiStatus);
-        $this->assign('vod_ai_cover_can_revert', !empty($info['vod_pic_original']));
+        $this->assign('vod_ai_cover_can_revert', isset($info['vod_pic_thumb_original']));
 
         //分类
         $type_tree = (new \app\common\model\Type())->getCache('type_tree');
@@ -592,8 +592,8 @@ class Vod extends Base
         if (!Request()->isPost()) {
             return json(['code' => 0, 'msg' => lang('illegal_request'), 'data' => []]);
         }
-        $id = intval(\think\facade\Request::post("id"));
-        if ($id <= 0) {
+        $id = \app\common\util\PointsBalance::amount(\think\facade\Request::post("id"));
+        if ($id === null) {
             return json(['code' => 0, 'msg' => lang('param_err'), 'data' => []]);
         }
         $adminId = intval($this->_admin['admin_id'] ?? 0);
@@ -606,9 +606,9 @@ class Vod extends Base
         }
         try {
             $res = \app\common\util\VodAiCover::generateByVodId($id, $extraPrompt);
-        } catch (\Exception $e) {
-            \think\facade\Log::error('AI cover generate failed (vod_id=' . $id . '): ' . $e->getMessage());
-            return json(['code' => 0, 'msg' => $e->getMessage(), 'data' => []]);
+        } catch (\Throwable $e) {
+            \app\common\util\VodAiCover::logFailure('generate', $id, $e);
+            return json(['code' => 0, 'msg' => lang('save_err'), 'data' => []]);
         }
         if (empty($res['code']) || intval($res['code']) !== 1) {
             return json(['code' => 0, 'msg' => isset($res['msg']) ? $res['msg'] : lang('save_err'), 'data' => isset($res['data']) ? $res['data'] : []]);
@@ -621,15 +621,15 @@ class Vod extends Base
         if (!Request()->isPost()) {
             return json(['code' => 0, 'msg' => lang('illegal_request'), 'data' => []]);
         }
-        $id = intval(\think\facade\Request::post("id"));
-        if ($id <= 0) {
+        $id = \app\common\util\PointsBalance::amount(\think\facade\Request::post("id"));
+        if ($id === null) {
             return json(['code' => 0, 'msg' => lang('param_err'), 'data' => []]);
         }
         try {
             $res = \app\common\util\VodAiCover::revertByVodId($id);
-        } catch (\Exception $e) {
-            \think\facade\Log::error('AI cover revert failed (vod_id=' . $id . '): ' . $e->getMessage());
-            return json(['code' => 0, 'msg' => $e->getMessage(), 'data' => []]);
+        } catch (\Throwable $e) {
+            \app\common\util\VodAiCover::logFailure('revert', $id, $e);
+            return json(['code' => 0, 'msg' => lang('save_err'), 'data' => []]);
         }
         if (empty($res['code']) || intval($res['code']) !== 1) {
             return json(['code' => 0, 'msg' => isset($res['msg']) ? $res['msg'] : lang('save_err'), 'data' => isset($res['data']) ? $res['data'] : []]);

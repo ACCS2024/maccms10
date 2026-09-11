@@ -37,15 +37,8 @@ $response = $upload->ueditorAi();
 check($response['data']['code'] === 0 && $response['data']['data']['text'] === 'fixture answer', 'Successful upstream response failed during logging');
 check(count($logger->events) === 1 && $logger->events[0][0] === 'log', 'Successful upstream response did not reach Log::write');
 
-Db::execute('CREATE TABLE audit_vod (vod_id INTEGER PRIMARY KEY, vod_pic TEXT, vod_pic_original TEXT, vod_pic_thumb TEXT)');
-$vod = ['vod_id' => 1, 'vod_pic' => 'original.jpg', 'vod_pic_original' => '', 'vod_pic_thumb' => ''];
-Db::name('vod')->insert($vod);
-$GLOBALS['runtime_config']['maccms.upload'] = ['watermark' => 1, 'thumb' => 1, 'mode' => 'fixture'];
 $logger->events = [];
-$finish = new ReflectionMethod(app\common\util\VodAiCover::class, 'finalizeAndUpdateVod');
-$response = $finish->invoke(null, $vod, 'upload/vod/fixture.jpg');
-check($response['code'] === 1, 'Recoverable image-processing failures escaped through logging');
-check(count($logger->events) === 3 && array_column($logger->events, 0) === ['error', 'error', 'error'], 'Watermark, thumbnail and storage failures were not all logged');
-$stored = Db::name('vod')->find(1);
-check($stored['vod_pic'] === 'upload/vod/fixture.jpg' && $stored['vod_pic_original'] === 'original.jpg', 'Logging interrupted the cover update or original backup');
+app\common\util\VodAiCover::logFailure('generate', 1, new RuntimeException('fixture private credential'));
+check(count($logger->events) === 1 && $logger->events[0][0] === 'error', 'Cover diagnostics did not reach Log facade');
+check(!str_contains($logger->events[0][1], 'fixture private credential') && str_contains($logger->events[0][1], 'vod_id=1'), 'Cover diagnostics exposed exception details or lost operation identity');
 echo 'Log facade regressions: ' . $checks . " assertions passed\n";

@@ -8,6 +8,8 @@ final class VodSaveInput
     public static function normalize($data): ?array
     {
         if (!is_array($data) || count($data) > 256) { return null; }
+        // Original cover evidence is written only by the owned cover transaction, never by an edit form/import.
+        unset($data['vod_pic_original'], $data['vod_pic_thumb_original']);
         $id = $data['vod_id'] ?? '';
         $id = $id === '' ? 0 : PointsBalance::amount($id, true);
         $type = PointsBalance::amount($data['type_id'] ?? null);

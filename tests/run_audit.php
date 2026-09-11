@@ -51,7 +51,7 @@ $groups = [
     // Separate storage intent schema; SDK fixtures stay on loopback.
     'storage' => [['security_audit_storage_intents.php'], ['security_audit_storage_sdk.php']],
     // Dedicated remote object and reader fixture; no real cloud credentials.
-    'remote_upload' => [['security_audit_remote_upload.php'], ['framework_audit_download_asset.php']],
+    'remote_upload' => [['security_audit_remote_upload.php'], ['framework_audit_download_asset.php'], ['framework_audit_vod_cover.php']],
     // Execute as an unprivileged account so denied-write cases are meaningful.
     'install' => [['framework_audit_install.php']],
 ];

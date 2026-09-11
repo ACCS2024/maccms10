@@ -612,13 +612,9 @@
             $.post("{:url('vod/aiCoverGenerate')}", { id: vid, extra_prompt: $('#ai_cover_extra_prompt').val() }, function (r) {
                 layer.closeAll('loading');
                 if (r && r.code == 1 && r.data) {
-                    if (r.data.vod_pic) {
-                        $('#vod_pic').val(r.data.vod_pic);
-                    }
-                    if (r.data.vod_pic_thumb) {
-                        $('#vod_pic_thumb').val(r.data.vod_pic_thumb);
-                    }
-                    $('#btn_ai_cover_revert').prop('disabled', false);
+                    $('#vod_pic').val(r.data.vod_pic);
+                    $('#vod_pic_thumb').val(r.data.vod_pic_thumb);
+                    $('#btn_ai_cover_revert').prop('disabled', r.data.vod_pic_thumb_original == null);
                     layer.msg(AI_COVER_LANG.done);
                 } else {
                     layer.msg((r && r.msg) ? r.msg : AI_COVER_LANG.fail);
@@ -636,8 +632,9 @@
             layer.load(2, { shade: 0.25, time: 120000 });
             $.post("{:url('vod/aiCoverRevert')}", { id: vid }, function (r) {
                 layer.closeAll('loading');
-                if (r && r.code == 1 && r.data && r.data.vod_pic) {
+                if (r && r.code == 1 && r.data) {
                     $('#vod_pic').val(r.data.vod_pic);
+                    $('#vod_pic_thumb').val(r.data.vod_pic_thumb);
                     $('#btn_ai_cover_revert').prop('disabled', true);
                     layer.msg(AI_COVER_LANG.revert_ok);
                 } else {

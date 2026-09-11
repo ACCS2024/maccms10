@@ -14,6 +14,13 @@ final class LocalAttachment
     private const MEDIA = ['rm','rmvb','avi','mkv','mp4','mp3'];
     private static ?\WeakMap $uncertainRequests = null;
 
+    public static function assertRequestReady(): void
+    {
+        if (isset((self::$uncertainRequests ??= new \WeakMap())[request()])) {
+            throw new \RuntimeException('A previous attachment outcome in this request requires inspection');
+        }
+    }
+
     public static function store(array $parameters, array $config): array
     {
         return self::process($parameters, $config, null, false);
@@ -26,6 +33,13 @@ final class LocalAttachment
             'thumb_class'=>''], $config, null, false, $bytes);
     }
 
+    /** Only a server-created video snapshot can bind a cover; request flags cannot select an owner. */
+    public static function storeVodCover(string $bytes, array $config, VodCoverBinding $binding): array
+    {
+        return self::process(['flag'=>'vod', 'thumb'=>($config['thumb'] ?? 0) == 1 ? '1' : '0',
+            'thumb_class'=>''], $config, null, false, $bytes, $binding);
+    }
+
     /** The upload controller/model supplies the verified owner and server-selected admin context. */
     public static function storeAvatar(array $parameters, array $config, int $owner, bool $requireActiveOwner): array
     {
@@ -35,7 +49,7 @@ final class LocalAttachment
         return self::process($parameters, $config, $owner, $requireActiveOwner);
     }
 
-    private static function process(array $parameters, array $config, ?int $owner, bool $requireActiveOwner, ?string $download = null): array
+    private static function process(array $parameters, array $config, ?int $owner, bool $requireActiveOwner, ?string $download = null, ?VodCoverBinding $cover = null): array
     {
         if (!isset($parameters['flag']) || !is_string($parameters['flag'])
             || ($owner === null && $parameters['flag'] === 'user')
@@ -43,9 +57,7 @@ final class LocalAttachment
             throw new \InvalidArgumentException('Invalid local attachment flag');
         }
         $request = request();
-        if (isset((self::$uncertainRequests ??= new \WeakMap())[$request])) {
-            throw new \RuntimeException('A previous attachment outcome in this request requires inspection');
-        }
+        self::assertRequestReady();
         $stage = null; $published = []; $directories = []; $remote = null;
         $connection = null; $transaction = false; $committed = false; $commitStarted = false;
         $pdo = null; $beginAttempted = false; $transactionUncertain = false;
@@ -86,6 +98,12 @@ final class LocalAttachment
                 'metadata_table'=>Db::name('Annex')->getTable(), 'files'=>$records];
             if ($owner !== null) { $manifest['avatar_owner'] = $owner; $manifest['owner_table'] = Db::name('User')->getTable(); }
             if ($download !== null) { $manifest['scope'] = 'download'; $manifest['resource_url_limit'] = 1024; }
+            if ($cover !== null) {
+                $manifest['scope'] = 'ai_cover'; $manifest['owner_id'] = $cover->owner();
+                $manifest['owner_table'] = Db::name('Vod')->getTable();
+                $manifest['original_cover'] = array_intersect_key($cover->snapshot(), array_flip([
+                    'vod_pic','vod_pic_thumb','vod_pic_original','vod_pic_thumb_original']));
+            }
             self::manifest($stage, $manifest);
             $connection = Db::connect();
             if ($connection->getConfig('break_reconnect')) {
@@ -93,6 +111,7 @@ final class LocalAttachment
             }
             Db::name('Annex')->getTableFields();
             if ($owner !== null) { Db::name('User')->getTableFields(); }
+            if ($cover !== null) { Db::name('Vod')->getTableFields(); }
             if ($connection->getPdo() && $connection->getPdo()->inTransaction()) {
                 throw new \RuntimeException('Upload must own its transaction');
             }
@@ -100,7 +119,7 @@ final class LocalAttachment
             if ($connection->getPdo()->inTransaction()) { throw new \RuntimeException('Upload must own its master transaction'); }
             $pdo = $connection->getPdo();
             if ($connection->getPdo()->getAttribute(\PDO::ATTR_DRIVER_NAME) === 'mysql') {
-                foreach ($owner === null ? ['Annex'] : ['Annex', 'User'] as $model) {
+                foreach ($cover !== null ? ['Annex', 'Vod'] : ($owner === null ? ['Annex'] : ['Annex', 'User']) as $model) {
                     $engines = $connection->query('SELECT ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?', [Db::name($model)->getTable()], true);
                     if (count($engines) !== 1 || strtolower((string)$engines[0]['ENGINE']) !== 'innodb') {
                         throw new \RuntimeException('Attachment metadata requires transactional storage');
@@ -113,7 +132,7 @@ final class LocalAttachment
                 foreach ($prepared as $index => $file) {
                     self::publish($file, ROOT_PATH . $records[$index]['annex_file'], $records[$index]['annex_size'], $published);
                 }
-                $remote = new RemoteAttachment($provider, $owner, $download !== null);
+                $remote = new RemoteAttachment($provider, $owner, $download !== null, $cover?->owner());
                 $remote->transfer($records, static function (array $evidence) use ($stage, &$manifest): void {
                     $manifest['remote'] = $evidence;
                     self::manifest($stage, $manifest);
@@ -176,6 +195,20 @@ final class LocalAttachment
                     throw new \RuntimeException('Avatar pointer did not persist exactly');
                 }
             }
+            $selected = $descriptors;
+            if ($remote !== null) {
+                foreach ($selected as &$descriptor) { $descriptor['file'] = $remote->url($descriptor['file']); }
+                unset($descriptor);
+            }
+            if ($cover !== null) {
+                if (!self::originalTransaction($connection, $pdo, true)) {
+                    $transactionUncertain = true;
+                    throw new \RuntimeException('Cover binding left its original transaction');
+                }
+                $coverData = $cover->bind($selected);
+                $manifest['selected_cover'] = $coverData;
+                self::manifest($stage, $manifest);
+            }
             if ($remote !== null) { $remote->recordReferences($annexIds); }
             if (!self::originalTransaction($connection, $pdo, true)) {
                 $transactionUncertain = true;
@@ -197,6 +230,7 @@ final class LocalAttachment
             if ($owner !== null) { $data['_portrait_path'] = $records[0]['annex_file']; }
             $data['thumb_class'] = $parameters['thumb_class'];
             $data['thumb'] = array_slice($descriptors, 1);
+            if ($cover !== null) { $data['_cover'] = $coverData; }
             return $data;
         } catch (\Throwable $error) {
             if ($beginAttempted && !$committed && $connection !== null && $pdo !== null) {
@@ -218,6 +252,9 @@ final class LocalAttachment
             } elseif ($remote !== null && $remote->hasAttempt() && $stage !== null) {
                 try { self::manifest($stage, array_merge($manifest, ['state'=>'remote_reference_failed'])); } catch (\Throwable $manifestError) {}
                 error_log('Remote upload reference failed; inspect private manifest: ' . $stage . '/manifest.json');
+            }
+            if ($cover !== null && !$committed && ($commitStarted || $transactionUncertain)) {
+                throw new VodCoverOutcomeUnknown(basename((string)$stage), $error);
             }
             throw $error;
         } finally {

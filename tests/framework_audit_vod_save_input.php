@@ -7,6 +7,8 @@ use app\common\util\VodSaveInput;
 
 $base=['vod_id'=>7,'vod_name'=>'Ordinary video','type_id'=>1];
 $data=VodSaveInput::normalize($base);
+check(VodSaveInput::normalize($base+['vod_pic_original'=>'form-value','vod_pic_thumb_original'=>'form-thumb'])===$data,
+    'Ordinary edit/import must not rewrite original cover evidence');
 foreach(['vod_play_from','vod_down_from','vod_content']as $field)check($data!==null && !array_key_exists($field,$data),'Omitted patch column stays omitted: '.$field);
 foreach(['omitted','',null,0,'0','000']as $id){
  $input=['vod_name'=>'New video','type_id'=>1];if($id!=='omitted')$input['vod_id']=$id;

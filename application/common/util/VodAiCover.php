@@ -50,19 +50,24 @@ class VodAiCover
      */
     public static function generateByVodId($vodId, $extraPrompt = '')
     {
-        $vodId = intval($vodId);
-        if ($vodId <= 0) {
-            return ['code' => 0, 'msg' => lang('param_err')];
+        $vodId = PointsBalance::amount($vodId);
+        if ($vodId === null || !is_string($extraPrompt)) {
+            return ['code'=>0, 'msg'=>lang('param_err')];
         }
-
-        $res = (new \app\common\model\Vod())->infoData(['vod_id' => $vodId], '*', 0);
-        if ($res['code'] !== 1 || empty($res['info'])) {
-            return ['code' => 0, 'msg' => lang('obtain_err')];
+        if (($blocked = VodCoverTransaction::blockedResult()) !== null) {
+            $blocked['data'] = $blocked['info'];
+            return $blocked;
         }
-        $vod = $res['info'];
+        $binding = VodCoverBinding::capture($vodId);
+        $vod = $binding->snapshot();
 
         $config = config('maccms');
         $ai = isset($config['ai_cover']) && is_array($config['ai_cover']) ? $config['ai_cover'] : [];
+        foreach (['enabled','api_key','provider','api_base','model','timeout','size','quality','prompt_suffix'] as $field) {
+            if (isset($ai[$field]) && !is_string($ai[$field]) && !is_int($ai[$field])) {
+                return ['code'=>0, 'msg'=>lang('param_err')];
+            }
+        }
         $enabled = isset($ai['enabled']) ? (string) $ai['enabled'] : '0';
         if ($enabled !== '1') {
             return ['code' => 0, 'msg' => lang('admin/ai_cover/msg_disabled')];
@@ -76,9 +81,9 @@ class VodAiCover
             return ['code' => 0, 'msg' => lang('admin/ai_cover/msg_provider')];
         }
 
-        $apiBase = !empty($ai['api_base']) ? rtrim($ai['api_base'], '/') : 'https://api.openai.com/v1';
+        $apiBase = !empty($ai['api_base']) ? rtrim((string)$ai['api_base'], '/') : 'https://api.openai.com/v1';
         $model = !empty($ai['model']) ? trim((string) $ai['model']) : 'gpt-image-1';
-        $timeout = max(30, intval(isset($ai['timeout']) ? $ai['timeout'] : 120));
+        $timeout = max(30, min(300, intval($ai['timeout'] ?? 120)));
         $size = self::sanitizeSize(isset($ai['size']) ? $ai['size'] : '1024x1536');
         $qRaw = isset($ai['quality']) ? strtolower(trim((string) $ai['quality'])) : 'medium';
         $quality = self::sanitizeQualityForModel($model, $qRaw);
@@ -89,8 +94,7 @@ class VodAiCover
             $extraPrompt
         );
         $url = $apiBase . '/images/generations';
-        // Omit response_format: many OpenAI-compatible proxies error with
-        // "unknown format: response_format"; official API defaults to URL anyway.
+        // Preserve the configured gateway's response format; validate either supported envelope below.
         $post = [
             'model' => $model,
             'prompt' => $prompt,
@@ -113,150 +117,97 @@ class VodAiCover
         if (!is_array($json)) {
             return ['code' => 0, 'msg' => lang('admin/ai_cover/msg_bad_json')];
         }
-        if (!empty($json['error']['message'])) {
-            return ['code' => 0, 'msg' => (string) $json['error']['message']];
+        if (isset($json['error'])) {
+            return ['code'=>0, 'msg'=>lang('admin/ai_cover/msg_upstream_fail')];
         }
-        $imageUrl = '';
-        if (!empty($json['data'][0]['url'])) {
-            $imageUrl = (string) $json['data'][0]['url'];
-        } elseif (!empty($json['data'][0]['b64_json'])) {
-            $raw = base64_decode((string) $json['data'][0]['b64_json'], true);
-            if ($raw === false) {
-                return ['code' => 0, 'msg' => lang('admin/ai_cover/msg_decode_fail')];
+        $data = is_array($json['data'] ?? null) ? ($json['data'][0] ?? null) : null;
+        if (!is_array($data)) {
+            return ['code'=>0, 'msg'=>lang('admin/ai_cover/msg_bad_json')];
+        }
+        if (is_string($data['url'] ?? null) && $data['url'] !== '') {
+            if (!self::isSafePublicHttpsImageUrl($data['url'])) {
+                return ['code'=>0, 'msg'=>lang('admin/ai_cover/msg_bad_image_url')];
             }
-            $saveRel = self::allocateSavePath($vodId, 'png');
-            $full = ROOT_PATH . $saveRel;
-            if (!self::ensureDir(dirname($full)) || file_put_contents($full, $raw) === false) {
-                return ['code' => 0, 'msg' => lang('admin/ai_cover/msg_save_fail')];
+            $bytes = self::curlGetBinary($data['url'], min(120, $timeout));
+            if ($bytes === null || $bytes === '') {
+                return ['code'=>0, 'msg'=>lang('admin/ai_cover/msg_download_fail')];
             }
-
-            return self::finalizeAndUpdateVod($vod, $saveRel);
+        } elseif (is_string($data['b64_json'] ?? null) && strlen($data['b64_json']) <= 27962028) {
+            $bytes = base64_decode($data['b64_json'], true);
+            if ($bytes === false || $bytes === '' || strlen($bytes) > ImageProcessor::MAX_BYTES) {
+                return ['code'=>0, 'msg'=>lang('admin/ai_cover/msg_decode_fail')];
+            }
+        } else {
+            return ['code'=>0, 'msg'=>lang('admin/ai_cover/msg_no_image_url')];
         }
-        if ($imageUrl === '') {
-            return ['code' => 0, 'msg' => lang('admin/ai_cover/msg_no_image_url')];
-        }
-
-        if (!self::isSafePublicHttpsImageUrl($imageUrl)) {
-            return ['code' => 0, 'msg' => lang('admin/ai_cover/msg_bad_image_url')];
-        }
-
-        $bin = self::curlGetBinary($imageUrl, min(120, $timeout));
-        if ($bin === null || $bin === '') {
-            return ['code' => 0, 'msg' => lang('admin/ai_cover/msg_download_fail')];
-        }
-        $saveRel = self::allocateSavePath($vodId, 'png');
-        $full = ROOT_PATH . $saveRel;
-        if (!self::ensureDir(dirname($full)) || file_put_contents($full, $bin) === false) {
-            return ['code' => 0, 'msg' => lang('admin/ai_cover/msg_save_fail')];
-        }
-
-        return self::finalizeAndUpdateVod($vod, $saveRel);
+        // Decoding, optional processing, Annex, cover backups and transfer references form one operation.
+        return self::finalizeAndUpdateVod($vod, $bytes);
     }
 
-    /**
-     * @return array{code:int,msg:string,data?:array}
-     */
     public static function revertByVodId($vodId)
     {
-        $vodId = intval($vodId);
-        if ($vodId <= 0) {
-            return ['code' => 0, 'msg' => lang('param_err')];
+        $vodId = PointsBalance::amount($vodId);
+        if ($vodId === null) { return ['code'=>0, 'msg'=>lang('param_err')]; }
+        if (($blocked = VodCoverTransaction::blockedResult()) !== null) {
+            $blocked['data'] = $blocked['info'];
+            return $blocked;
         }
-        $row = Db::name('vod')->where('vod_id', $vodId)->field('vod_pic,vod_pic_original,vod_pic_thumb,vod_en')->find();
-        if (empty($row)) {
-            return ['code' => 0, 'msg' => lang('obtain_err')];
+        $binding = VodCoverBinding::capture($vodId);
+        $row = $binding->snapshot();
+        if ($row['vod_pic_thumb_original'] === null) {
+            return ['code'=>0, 'msg'=>lang($row['vod_pic_original'] === ''
+                ? 'admin/ai_cover/msg_no_backup' : 'admin/ai_cover/msg_incomplete_backup')];
         }
-        $orig = trim((string) $row['vod_pic_original']);
-        if ($orig === '') {
-            return ['code' => 0, 'msg' => lang('admin/ai_cover/msg_no_backup')];
-        }
-        $up = [
-            'vod_pic' => $orig,
-            'vod_pic_original' => '',
-        ];
-        $res = Db::name('vod')->where('vod_id', $vodId)->update($up);
-        if ($res === false) {
-            return ['code' => 0, 'msg' => lang('save_err')];
-        }
+        $transaction = new VodCoverTransaction($vodId);
         try {
-            \app\common\util\MeilisearchSync::afterVodSave($vodId);
-        } catch (\Throwable $e) {
+            $transaction->begin();
+            $data = $binding->restore();
+            $transaction->assertActive();
+            $result = $transaction->commit(['code'=>1, 'msg'=>lang('save_ok'), 'data'=>$data]);
+        } catch (\Throwable $error) {
+            self::logFailure('restore', $vodId, $error);
+            $result = $transaction->rollback(['code'=>0, 'msg'=>lang('save_err')]);
         }
-        self::bustVodDetailCache($vodId, isset($row['vod_en']) ? (string) $row['vod_en'] : '');
-
-        return ['code' => 1, 'msg' => lang('save_ok'), 'data' => ['vod_pic' => $orig, 'vod_pic_thumb' => $row['vod_pic_thumb']]];
+        if ($result['code'] === 1) {
+            self::afterCommit($vodId, $row['vod_en'], $result);
+        } elseif (isset($result['info'])) {
+            $result['data'] = $result['info'];
+        }
+        return $result;
     }
 
-    private static function finalizeAndUpdateVod(array $vod, $relativePath)
+    private static function finalizeAndUpdateVod(array $vod, string $bytes): array
     {
-        $uploadCfg = (array) config('maccms.upload');
-        $relativePath = str_replace('\\', '/', $relativePath);
-
-        $watermarked = false;
-        if (!empty($uploadCfg['watermark']) && (string) $uploadCfg['watermark'] === '1') {
-            try {
-                $watermarked = (new \app\common\model\Image())->watermark($relativePath, $uploadCfg, 'vod');
-            } catch (\Throwable $e) {
-                Log::error('VodAiCover watermark: ' . $e->getMessage());
-            }
-        }
-
-        $thumbPath = '';
-        if (!empty($uploadCfg['thumb']) && (string) $uploadCfg['thumb'] === '1') {
-            try {
-                $dd = (new \app\common\model\Image())->makethumb($relativePath, $uploadCfg, 'vod', 1, $watermarked);
-                if (!empty($dd['thumb'][0]['file'])) {
-                    $thumbPath = (string) $dd['thumb'][0]['file'];
-                }
-            } catch (\Throwable $e) {
-                Log::error('VodAiCover makethumb: ' . $e->getMessage());
-            }
-        }
-
-        if (!in_array(strtolower((string) $uploadCfg['mode']), ['local', 'remote'], true)) {
-            try {
-                $relativePath = (new \app\common\model\Upload())->api($relativePath, $uploadCfg);
-                if ($thumbPath !== '') {
-                    $thumbPath = (new \app\common\model\Upload())->api($thumbPath, $uploadCfg);
-                }
-            } catch (\Throwable $e) {
-                Log::error('VodAiCover remote upload: ' . $e->getMessage());
-            }
-        }
-
-        $vodId = intval($vod['vod_id']);
-        $currentPic = trim((string) $vod['vod_pic']);
-        $existingBackup = trim((string) (isset($vod['vod_pic_original']) ? $vod['vod_pic_original'] : ''));
-
-        $update = ['vod_pic' => $relativePath];
-        if ($thumbPath !== '') {
-            $update['vod_pic_thumb'] = $thumbPath;
-        }
-        if ($existingBackup === '' && $currentPic !== '') {
-            $update['vod_pic_original'] = $currentPic;
-        }
-
-        $ok = Db::name('vod')->where('vod_id', $vodId)->update($update);
-        if ($ok === false) {
-            return ['code' => 0, 'msg' => lang('save_err')];
-        }
-
+        $binding = new VodCoverBinding($vod);
         try {
-            \app\common\util\MeilisearchSync::afterVodSave($vodId);
-        } catch (\Throwable $e) {
+            $saved = LocalAttachment::storeVodCover($bytes, (array)config('maccms.upload'), $binding);
+        } catch (VodCoverOutcomeUnknown $error) {
+            return ['code'=>2005, 'msg'=>lang('admin/ai_cover/msg_outcome_unknown', [$error->reference]),
+                'data'=>['outcome'=>'transaction_unknown','retryable'=>false,'reference'=>$error->reference]];
         }
+        $result = ['code'=>1, 'msg'=>lang('save_ok'), 'data'=>$saved['_cover']];
+        self::afterCommit($binding->owner(), (string)$vod['vod_en'], $result);
+        return $result;
+    }
 
-        self::bustVodDetailCache($vodId, isset($vod['vod_en']) ? (string) $vod['vod_en'] : '');
+    /** A confirmed write remains successful when derived caches/indexes need maintenance. */
+    private static function afterCommit(int $id, string $name, array &$result): void
+    {
+        foreach (['index', 'cache'] as $operation) {
+            try {
+                if ($operation === 'index') { MeilisearchSync::afterVodSave($id); }
+                else { self::bustVodDetailCache($id, $name); }
+            } catch (\Throwable $error) {
+                $result['data']['maintenance_pending'] = true;
+                self::logFailure($operation, $id, $error);
+            }
+        }
+    }
 
-        return [
-            'code' => 1,
-            'msg' => lang('save_ok'),
-            'data' => [
-                'vod_pic' => $relativePath,
-                'vod_pic_thumb' => $thumbPath !== '' ? $thumbPath : (isset($vod['vod_pic_thumb']) ? $vod['vod_pic_thumb'] : ''),
-                'vod_pic_original' => isset($update['vod_pic_original']) ? $update['vod_pic_original'] : $existingBackup,
-            ],
-        ];
+    public static function logFailure(string $operation, int $id, \Throwable $error): void
+    {
+        try { Log::error('VodAiCover ' . $operation . ' failed (vod_id=' . $id . ', type=' . get_class($error) . ')'); }
+        catch (\Throwable $loggingError) { /* Diagnostics cannot change the operation outcome. */ }
     }
 
     private static function buildPrompt(array $vod, $suffix, $perVideoExtra = '')
@@ -384,39 +335,6 @@ class VodAiCover
         return $target !== null && $target['scheme'] === 'https';
     }
 
-    private static function allocateSavePath($vodId, $ext)
-    {
-        $ext = preg_replace('/[^a-z0-9]/i', '', $ext) ?: 'png';
-        $_upload_path = ROOT_PATH . 'upload/vod/';
-        $_save_path = 'upload/vod/';
-        $ymd = date('Ymd');
-        $n_dir = $ymd;
-        for ($i = 1; $i <= 100; $i++) {
-            $n_dir = $ymd . '-' . $i;
-            $path1 = $_upload_path . $n_dir . '/';
-            if (file_exists($path1)) {
-                $farr = glob($path1 . '*.*');
-                if ($farr && count($farr) > 999) {
-                    continue;
-                }
-                break;
-            }
-            break;
-        }
-        $base = $n_dir . '/' . md5(microtime(true) . '_' . $vodId) . '.' . strtolower($ext);
-
-        return $_save_path . $base;
-    }
-
-    private static function ensureDir($dir)
-    {
-        if (is_dir($dir)) {
-            return true;
-        }
-
-        return @mkdir($dir, 0777, true);
-    }
-
     private static function bustVodDetailCache($vodId, $vodEn)
     {
         $vodId = intval($vodId);
@@ -434,20 +352,9 @@ class VodAiCover
 
     private static function curlPostJson($url, $body, array $headers, $timeout)
     {
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $url);
-        curl_setopt($ch, CURLOPT_POST, 1);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, min(30, $timeout));
-        curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-        $out = curl_exec($ch);
-        curl_close($ch);
-
-        return $out;
+        if (!is_string($url) || strncasecmp($url, 'https://', 8) !== 0 || !is_string($body)) { return false; }
+        // Bounded decoded response, public pinned addresses, verified TLS, and controlled redirects.
+        return PublicHttpClient::request($url, 'POST', $body, $headers, '', $timeout, 29360128);
     }
 
     /**

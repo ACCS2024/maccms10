@@ -10,9 +10,12 @@ final class RemoteAttachment
     private bool $attempted = false;
     private bool $ready = false;
 
-    public function __construct(private string $provider, private ?int $owner, private bool $download = false)
+    public function __construct(private string $provider, private ?int $owner, private bool $download = false, private ?int $coverOwner = null)
     {
         if ($download && $owner !== null) { throw new \InvalidArgumentException('Downloaded assets cannot be avatars'); }
+        if ($coverOwner !== null && (!$download || $owner !== null || PointsBalance::amount($coverOwner) === null)) {
+            throw new \InvalidArgumentException('Invalid cover transfer owner');
+        }
     }
 
     public static function provider(array $config): ?string
@@ -38,8 +41,8 @@ final class RemoteAttachment
             }
             foreach ($records as $record) {
                 $path = $record['annex_file'];
-                $scope = $this->download ? 'download' : ($this->owner === null ? 'attachment' : 'avatar');
-                $this->intents[$path] = StorageIntent::prepare($path, $policy, $scope, $this->owner ?? 0);
+                $scope = $this->coverOwner !== null ? 'ai_cover' : ($this->download ? 'download' : ($this->owner === null ? 'attachment' : 'avatar'));
+                $this->intents[$path] = StorageIntent::prepare($path, $policy, $scope, $this->coverOwner ?? $this->owner ?? 0);
             }
         } catch (\Throwable $error) {
             $journal($this->evidence());
@@ -66,7 +69,8 @@ final class RemoteAttachment
         $evidence = ['ready'=>$this->ready,'attempted'=>$this->attempted,
             'intents'=>array_map(static fn($row)=>$row['intent_id'], $this->intents), 'results'=>$this->results];
         if ($this->download) {
-            $evidence['scope'] = 'download';
+            $evidence['scope'] = $this->coverOwner !== null ? 'ai_cover' : 'download';
+            if ($this->coverOwner !== null) { $evidence['owner_id'] = $this->coverOwner; }
             $evidence['selected_urls'] = [];
             foreach ($this->results as $path => $result) { $evidence['selected_urls'][$path] = $this->url($path); }
         }
