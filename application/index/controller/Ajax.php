@@ -143,7 +143,7 @@ class Ajax extends Base
             ]);
         }
 
-        $ip = request()->ip(0, true);
+        $ip = request()->ip();
         $uid = intval($GLOBALS['user']['user_id'] ?? 0);
         $sessionKey = (string)request()->cookie(session_name(), '');
         $visitorSeed = $uid > 0 ? ('u:' . $uid) : ('s:' . $sessionKey);

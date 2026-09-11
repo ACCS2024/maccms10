@@ -46,7 +46,7 @@ function addons_boot(): void
                 foreach ($v['rule'] as $m => $n) {
                     [$addonN, $ctrlN, $actN] = explode('/', $n);
                     $drules[$m] = function () use ($addonN, $ctrlN, $actN) {
-                        return (new \think\addons\Route())->execute($addonN, $ctrlN, $actN, true);
+                        return (new \think\addons\Route())->execute($addonN, $ctrlN, $actN);
                     };
                 }
                 \think\facade\Route::domain($domain, function () use ($drules, $addon) {

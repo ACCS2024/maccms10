@@ -225,7 +225,7 @@ class Analytics extends Base
     private function guardAnalyticsWrite($action, $payload)
     {
         $policy = $this->analyticsRatePolicy();
-        if (!$this->consumeAnalyticsRate($action, 'ip', request()->ip(0, true), intval($policy['ip_limit']), intval($policy['window_sec']))) {
+        if (!$this->consumeAnalyticsRate($action, 'ip', request()->ip(), intval($policy['ip_limit']), intval($policy['window_sec']))) {
             return $this->jsonError('rate limit exceeded');
         }
 
