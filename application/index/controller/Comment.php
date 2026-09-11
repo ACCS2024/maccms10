@@ -9,8 +9,7 @@ class Comment extends Base
         parent::__construct();
         //关闭中
         if($GLOBALS['config']['comment']['status'] == 0){
-            echo 'comment is close';
-            exit;
+            throw new \think\exception\HttpResponseException(\think\Response::create('comment is close'));
         }
     }
 

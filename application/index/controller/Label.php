@@ -80,12 +80,14 @@ class Label extends Base
         $file = (string) request()->action();
         if ($file !== '') {
             $param = mac_param_url();
-            if (!empty($param['file'])) {
+            if (array_key_exists('file', $param) && $param['file'] !== '') {
                 $file = $param['file'];
             }
-            $file = str_replace('\\', '/', $file);
-            if (!file_exists($GLOBALS['MAC_ROOT_TEMPLATE'] . 'label/' . $file . '.html') || strpos($file, '/') !== false) {
-                return $this->error(lang('illegal_request'));
+            // Validate the original shape before string operations or filesystem access.
+            if (!is_string($file) || $file === '' || strlen($file) > 128
+                || preg_match('~[\\\\/\x00-\x1f\x7f]~', $file)
+                || !is_file($GLOBALS['MAC_ROOT_TEMPLATE'] . 'label/' . $file . '.html')) {
+                throw new \think\exception\HttpResponseException($this->error(lang('illegal_request')));
             }
             if ($file === 'rank') {
                 $types = $this->labelRankTypesForPage();
@@ -107,9 +109,9 @@ class Label extends Base
                     'rank_title_suffix' => $rankTitleSuffix,
                 ]);
             }
-            echo $this->label_fetch('label/' . $file);
+            throw new \think\exception\HttpResponseException(\think\Response::create($this->label_fetch('label/' . $file)));
         }
-        exit;
+        throw new \think\exception\HttpResponseException(\think\Response::create(''));
     }
 
     public function index()

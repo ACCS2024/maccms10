@@ -10,13 +10,11 @@ class Index extends \app\common\controller\All
     {
         // 仅安装脚本可进入
         if (!defined('BIND_MODULE') || BIND_MODULE != 'install') {
-            header('HTTP/1.1 403 Forbidden');
-            exit();
+            throw new \think\exception\HttpResponseException(\think\Response::create('', 'html', 403));
         }
         // 安全加固(V10):控制器层也校验安装锁,防止锁存在时仍能重装/覆盖配置(不止依赖入口文件)
         if (is_file(APP_PATH . 'data/install/install.lock')) {
-            header('HTTP/1.1 403 Forbidden');
-            exit('already installed');
+            throw new \think\exception\HttpResponseException(\think\Response::create('already installed', 'html', 403));
         }
         parent::__construct();
     }

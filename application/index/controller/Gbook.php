@@ -9,8 +9,7 @@ class Gbook extends Base
         parent::__construct();
         //关闭中
         if($GLOBALS['config']['gbook']['status'] == 0){
-            echo 'gbook is close';
-            exit;
+            throw new \think\exception\HttpResponseException(\think\Response::create('gbook is close'));
         }
     }
 

@@ -21,7 +21,7 @@ class Base extends All
             $update_file = APP_PATH . 'admin/controller/Update.php';
             $expected_hash = config('version.update_hash');
             if (!empty($expected_hash) && is_file($update_file) && md5_file($update_file) !== $expected_hash) {
-                exit(lang('admin/update/core_file_error'));
+                throw new \think\exception\HttpResponseException(\think\Response::create(lang('admin/update/core_file_error')));
             }
         }
 

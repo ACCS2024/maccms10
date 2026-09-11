@@ -37,8 +37,7 @@ class User extends Base
         } else {
             if ($GLOBALS['user']['user_id'] < 1) {
                 (new \app\common\model\User())->logout();
-                redirect(url('user/login'))->send();
-                exit;
+                throw new \think\exception\HttpResponseException(redirect((string) url('user/login')));
             }
             $this->assign('obj', $templateUser);
         }
