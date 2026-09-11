@@ -12,6 +12,7 @@
 <div id="mac-user-cash-root"
 	class="member-wrap member-wrap-bg"
 	data-api-base="{:rtrim($maccms.path,'/').'/api.php'}"
+	data-write-token-url="{:url('user/write_token')}"
 	data-url-login="{:url('user/login')}">
 <div id="member" class="fn-clear">
 	<div id="left">
@@ -89,6 +90,7 @@
 </div>
 </div>
 <script src="{$maccms.path_tpl}/asset/js/mac-member-list-utils.js"></script>
+<script src="{$maccms.path}static/js/cash-write.js"></script>
 <script src="{$maccms.path_tpl}/asset/js/user-cash.js"></script>
 {include file="public/foot" /}
 </body>

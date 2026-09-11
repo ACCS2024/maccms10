@@ -84,78 +84,38 @@
 		</div>
     </div>
 </div>
+<script src="{$maccms.path}static/js/cash-write.js"></script>
 <script>
-	function delData(ids,all){
-		var msg ='删除';
-		if(all==1){
-			msg='清空';
-		}
-		if(confirm('确定要'+msg+'记录吗')){
-			$.post("{:url('user/cash_del')}",{ids:ids,all:all},function(data) {
-				if (data.code == '1') {
-					alert('删除成功');
-					location.reload();
-				}else {
-					alert('删除失败：' + data.msg);
-				}
-			}, 'json')
-		}
-	}
-	$("#btnClear").click(function(){
-		delData('',1);
-	});
-	$("#btnDel").click(function(){
-		var ids = MAC.CheckBox.Ids('ids[]');
-		if(ids==''){
-			alert("请至少选择一个数据");
-			return;
-		}
-		delData(ids,0);
-	});
-    $("#btn_submit").click(function() {
-        var cash_bank_name = $('input[name="cash_bank_name"]').val();
-        if(cash_bank_name==''){
-            alert('请输入银行名称');
-            return;
+    var cashWrite = MacCashWrite({tokenUrl: "{:url('user/write_token')}"}), cashAccepted = false;
+    function cashResult(result) {
+        alert(result.msg);
+        if (cashWrite.blocked()) { $("#btn_submit").prop("disabled", true); }
+        if (result.code === 1) { location.reload(); }
+    }
+    function delData(ids, all) {
+        if (confirm('确定要删除记录吗？')) {
+            cashWrite.submit("{:url('user/cash_del')}", {ids: String(ids), all: String(all)}).then(cashResult);
         }
-        var cash_bank_no = $('input[name="cash_bank_no"]').val();
-        if(cash_bank_no==''){
-            alert('请输入银行账户');
-            return;
-        }
-        var cash_payee_name = $('input[name="cash_payee_name"]').val();
-        if(cash_payee_name==''){
-            alert('请输入收款人姓名');
-            return;
-        }
-        var cash_money = $('input[name="cash_money"]').val();
-        if(cash_money==''){
-            alert('请输入提现金额');
-            return;
-        }
-
-        var data = $("#fm").serialize();
-        $.ajax({
-            url: "{:url('user/cash')}",
-            type: "post",
-            dataType: "json",
-            data: data,
-            beforeSend: function () {
-                //开启loading
-                //$(".loading_box").css("display","block");
-                $("#btn_submit").css("background","#fd6a6a").val("loading...");
-            },
-            success: function (r) {
-                alert(r.msg);
-                if(r.code==1){
-                    location.href="{:url('user/cash')}";
-                }
-            },
-            complete: function () {
-                //结束loading
-                //$(".loading_box").css("display","none");
-                $("#btn_submit").css("background","#fa4646").val("提交");
-            }
+    }
+    $("#btnClear").click(function () { delData('', 1); });
+    $("#btnDel").click(function () {
+        var ids = MAC.CheckBox.Ids('ids[]');
+        if (!ids) { alert('请至少选择一条记录'); return; }
+        delData(ids, 0);
+    });
+    $("#btn_submit").click(function () {
+        if (cashAccepted || cashWrite.blocked()) { return; }
+        var fields = {}, valid = true, button = $(this);
+        ['cash_bank_name', 'cash_bank_no', 'cash_payee_name', 'cash_money'].forEach(function (key) {
+            fields[key] = $('#fm input[name="' + key + '"]').val();
+            if (!fields[key]) { valid = false; }
+        });
+        if (!valid) { alert('请完整填写提现信息'); return; }
+        button.prop('disabled', true).val('正在提交');
+        cashWrite.submit("{:url('user/cash')}", fields).then(function (result) {
+            cashAccepted = result.code === 1;
+            cashResult(result);
+            button.prop('disabled', cashAccepted || cashWrite.blocked()).val('提交');
         });
     });
 </script>

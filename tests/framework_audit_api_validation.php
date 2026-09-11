@@ -53,9 +53,9 @@ namespace {
         ++$checks;
         if (!$condition) { throw new RuntimeException($message); }
     }
-    function validationCall(string $name, string $action, array $params): array {
+    function validationCall(string $name, string $action, array $params, ?string $method = null): array {
         $request = (new think\Request())->setController($name)->setAction($action);
-        $request = $name === 'Order' && $action === 'create'
+        $request = $method === 'POST' || ($name === 'Order' && $action === 'create')
             ? $request->withServer(['REQUEST_METHOD'=>'POST'])->withPost($params)
             : $request->withServer(['REQUEST_METHOD'=>'GET'])->withGet($params);
         $container = think\Container::getInstance();
@@ -132,7 +132,7 @@ namespace {
         }
         $GLOBALS['api_audit_logged_in'] = false;
         foreach (['Cash'=>'create','Order'=>'create','Payment'=>'gopay'] as $name=>$action) {
-            validationExpect(validationCall($name,$action,[])['code'] === 1401, 'Authentication must continue preceding validation for ' . $name);
+            validationExpect(validationCall($name,$action,[],'POST')['code'] === 1401, 'A permitted HTTP method must authenticate before validating fields for ' . $name);
         }
         echo 'framework_audit_api_validation: ' . $checks . ' checks passed (41 controller actions) on PHP ' . PHP_VERSION . PHP_EOL;
     } catch (Throwable $error) {

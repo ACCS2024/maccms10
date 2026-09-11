@@ -17,6 +17,7 @@ class Cash extends Base
 
     public function __construct()
     {
+        $this->persistExpiredMemberGroup = false;
         parent::__construct();
         $this->check_config();
     }
@@ -128,22 +129,13 @@ class Cash extends Base
      */
     public function create(\think\Request $request)
     {
+        $identity = \app\common\util\MemberWrite::authorize($request);
+        if ($identity['code'] !== 1) { return json($identity); }
         // 安全加固:按 IP 温和限流(默认开启),防刷提现请求垃圾/CPU 打满
         if (!mac_fe_write_throttle('fe_cash', 120, 10)) {
             return json(['code' => 1005, 'msg' => lang('frequently')]);
         }
-        $auth = $this->_checkLogin();
-        if (!$auth['ok']) return $auth['response'];
-
-        $param = $request->param();
-
-        $validate = new \app\api\validate\Cash();
-        if (!$validate->scene($request->action())->check($param)) {
-            return json(['code' => 1001, 'msg' => '参数错误: ' . $validate->getError()]);
-        }
-
-        $param['user_id'] = $auth['user_id'];
-        $res = (new \app\common\model\Cash())->saveData($param);
+        $res = (new \app\common\model\Cash())->saveForUser($identity['info']['user_id'], $request->post());
         return json($res);
     }
 
@@ -161,35 +153,13 @@ class Cash extends Base
      */
     public function del(\think\Request $request)
     {
-        $auth = $this->_checkLogin();
-        if (!$auth['ok']) return $auth['response'];
-
-        $param = $request->param();
-
-        $validate = new \app\api\validate\Cash();
-        if (!$validate->scene($request->action())->check($param)) {
-            return json(['code' => 1001, 'msg' => '参数错误: ' . $validate->getError()]);
-        }
-
-        $ids   = htmlspecialchars(urldecode(trim($param['ids'] ?? '')));
-        $all   = $param['all'] ?? '';
-
-        if (empty($ids) && $all != '1') {
-            return json(['code' => 1001, 'msg' => '参数错误: ids 或 all=1 必须']);
-        }
-
-        $where = ['user_id' => $auth['user_id']];
-
-        if ($all != '1') {
-            $arr = array_filter(array_map('intval', explode(',', $ids)));
-            if (empty($arr)) {
-                return json(['code' => 1001, 'msg' => '参数错误: ids 格式不正确']);
-            }
-            $where['cash_id'] = array_values($arr);
-        }
-
-        $res = (new \app\common\model\Cash())->delData($where);
-        return json($res);
+        $identity = \app\common\util\MemberWrite::authorize($request);
+        if ($identity['code'] !== 1) { return json($identity); }
+        $ids = \app\common\util\LogSelection::ids($request->post());
+        if ($ids === null) { return json(['code'=>1001, 'msg'=>lang('param_err')]); }
+        $where = ['user_id'=>$identity['info']['user_id']];
+        if ($ids !== []) { $where['cash_id'] = $ids; }
+        return json((new \app\common\model\Cash())->delData($where));
     }
 
     /**

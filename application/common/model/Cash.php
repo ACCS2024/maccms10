@@ -66,6 +66,12 @@ class Cash extends Base {
 
     public function saveData($param)
     {
+        return $this->saveForUser($GLOBALS['user']['user_id'] ?? null, $param);
+    }
+
+    /** The controller supplies its verified identity, independently of request fields and globals. */
+    public function saveForUser($ownerId, $param)
+    {
         if (($blocked = CashTransaction::blockedResult()) !== null) { return $blocked; }
         if (!is_array($param)) { return ['code'=>1001, 'msg'=>lang('param_err')]; }
         $settings = $GLOBALS['config']['user'] ?? [];
@@ -82,7 +88,7 @@ class Cash extends Base {
         if (OrderAmount::minorUnits($money) < $minimum) {
             return ['code'=>1006,'msg'=>lang('model/cash/min_money_err').'：'.OrderAmount::decimal($minimum)];
         }
-        $userId = PointsBalance::amount($GLOBALS['user']['user_id'] ?? null);
+        $userId = PointsBalance::amount($ownerId);
         if ($userId === null) { return ['code'=>1002,'msg'=>lang('param_err')]; }
         $data = [
             'cash_money' => $money,

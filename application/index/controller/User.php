@@ -11,7 +11,7 @@ class User extends Base
 {
     public function __construct()
     {
-        if (in_array(strtolower(request()->action()), ['write_token', 'ajax_buy_popedom'], true)) {
+        if (in_array(strtolower(request()->action()), ['write_token', 'ajax_buy_popedom', 'cash', 'cash_del'], true)) {
             $this->persistExpiredMemberGroup = false;
         }
         parent::__construct();
@@ -31,6 +31,9 @@ class User extends Base
         $ac = request()->action();
         $guestAllowedActions = ['login', 'logout', 'ajax_login', 'reg', 'regcheck', 'findpass', 'findpass_msg', 'findpass_reset', 'reg_msg', 'oauth', 'logincallback', 'visit', 'index', 'ajax_upgrade', 'write_token', 'ajax_buy_popedom'];
         $guestAllowedGetActions = ['buy', 'plays', 'upgrade', 'checkin'];
+        if ($ac === 'cash_del' || ($ac === 'cash' && (request()->method(true) !== 'GET' || request()->method() !== 'GET'))) {
+            $guestAllowedActions[] = $ac;
+        }
         if (in_array($ac, $guestAllowedActions) || (in_array($ac, $guestAllowedGetActions) && !Request()->isPost())) {
             // 游客可访问的页面也注入 obj，避免模板判断分支缺少变量
             $this->assign('obj', $templateUser);
@@ -841,13 +844,13 @@ class User extends Base
 
     public function cash()
     {
-        $param = \think\facade\Request::param();
-        if (Request()->isPost()) {
-            $param['user_id'] = $GLOBALS['user']['user_id'];
-            $res = (new \app\common\model\Cash())->saveData($param);
-            return json($res);
+        if (request()->method(true) !== 'GET' || request()->method() !== 'GET') {
+            $identity = \app\common\util\MemberWrite::authorize(request());
+            if ($identity['code'] !== 1) { return json($identity); }
+            return json((new \app\common\model\Cash())->saveForUser($identity['info']['user_id'], Request::post()));
         }
 
+        $param = Request::get();
         $param['page'] = intval($param['page'] ?? 1) < 1 ? 1 : intval($param['page'] ?? 1);
         $param['limit'] = intval($param['limit'] ?? 20) < 20 ? 20 : intval($param['limit'] ?? 20);
 
@@ -865,29 +868,13 @@ class User extends Base
 
     public function cash_del()
     {
-        $param = \think\facade\Request::param();
-        $ids = htmlspecialchars(urldecode(trim($param['ids'])));
-        $type = $param['type'];
-        $all = $param['all'];
-
-        if (empty($ids) && empty($all)) {
-            return json(['code' => 1001, 'msg' => lang('param_err')]);
-        }
-
-        $arr = [];
-        $ids = explode(',', $ids);
-        foreach ($ids as $k => $v) {
-            $v = abs(intval($v));
-            $arr[$v] = $v;
-        }
-
-        $where = [];
-        $where['user_id'] = $GLOBALS['user']['user_id'];
-        if ($all != '1') {
-            $where['cash_id'] = array('in', array_values($arr));
-        }
-        $return = (new \app\common\model\Cash())->delData($where);
-        return json($return);
+        $identity = \app\common\util\MemberWrite::authorize(request());
+        if ($identity['code'] !== 1) { return json($identity); }
+        $ids = \app\common\util\LogSelection::ids(Request::post());
+        if ($ids === null) { return json(['code'=>1001, 'msg'=>lang('param_err')]); }
+        $where = ['user_id'=>$identity['info']['user_id']];
+        if ($ids !== []) { $where['cash_id'] = $ids; }
+        return json((new \app\common\model\Cash())->delData($where));
     }
 
     public function reward()
