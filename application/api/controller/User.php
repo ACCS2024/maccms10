@@ -755,10 +755,10 @@ class User extends Base
      * 获取分销推广下线列表
      * GET api.php/user/get_reward_list?level=1&page=1&limit=20
      *
-     * @param  level  int  可选，下线层级：1=一级(默认), 2=二级, 3=三级
-     * @param  page   int  可选，页码，默认1
-     * @param  limit  int  可选，每页条数，默认20，最大100
-     * @return JSON   {code:1, msg:'获取成功', info:{page, pagecount, limit, total, list:[...]}}
+     * 请求字段：  level  int  可选，下线层级：1=一级(默认), 2=二级, 3=三级
+     * 请求字段：  page   int  可选，页码，默认1
+     * 请求字段：  limit  int  可选，每页条数，默认20，最大100
+     * 响应 JSON：{code:1, msg:'获取成功', info:{page, pagecount, limit, total, list:[...]}}
      */
     public function get_reward_list(\think\Request $request)
     {

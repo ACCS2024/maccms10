@@ -237,8 +237,8 @@ abstract class ThinkOauth
     /**
      * 合并默认参数和额外参数
      * @param array $params 默认参数
-     * @param array /string $param 额外参数
-     * @return array:
+     * @param array|string $param 额外参数
+     * @return array
      */
     protected function param($params, $param)
     {

@@ -590,9 +590,9 @@ use Exception;
         
         /** --------------------------------------------------------------------
          * Put an alignment marker.
-         * @param frame
-         * @param width
-         * @param ox,oy center coordinate of the pattern
+         * @param array<int, string> $frame
+         * @param int $ox Center x coordinate
+         * @param int $oy Center y coordinate
          */
         public static function putAlignmentMarker(array &$frame, $ox, $oy)
         {
@@ -702,9 +702,9 @@ use Exception;
 
         /** --------------------------------------------------------------------
          * Put a finder pattern.
-         * @param frame
-         * @param width
-         * @param ox,oy upper-left coordinate of the pattern
+         * @param array<int, string> $frame
+         * @param int $ox Upper-left x coordinate
+         * @param int $oy Upper-left y coordinate
          */
         public static function putFinderPattern(&$frame, $ox, $oy)
         {

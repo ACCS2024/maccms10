@@ -80,7 +80,7 @@ class Task extends Base
     /**
      * 领取签到里程碑奖励
      * POST /api.php/Task/claim_sign_milestone
-     * @param milestone_id 里程碑ID
+     * 请求字段： milestone_id 里程碑ID
      */
     public function claim_sign_milestone(\think\Request $request)
     {
@@ -108,7 +108,7 @@ class Task extends Base
     /**
      * 领取任务奖励
      * POST /api.php/Task/claim_reward
-     * @param task_id 任务ID
+     * 请求字段： task_id 任务ID
      */
     public function claim_reward(\think\Request $request)
     {
@@ -132,7 +132,7 @@ class Task extends Base
     /**
      * 兼容旧客户端的任务刷新入口；不接受客户端自报的完成次数
      * POST /api.php/Task/report_progress
-     * @param task_action 任务动作标识 (watch_vod/share_vod/post_comment)
+     * 请求字段： task_action 任务动作标识 (watch_vod/share_vod/post_comment)
      */
     public function report_progress(\think\Request $request)
     {

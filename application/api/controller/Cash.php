@@ -44,10 +44,10 @@ class Cash extends Base
      * 获取提现列表
      * GET /api.php/cash/get_list?page=1&limit=20
      *
-     * @param  page    int  可选，页码，默认1
-     * @param  limit   int  可选，每页条数，默认20，最大100
-     * @param  status  int  可选，提现状态筛选（0=待审核，1=已审核）
-     * @return JSON    {code:1, msg:'获取成功', info:{page, pagecount, limit, total, list:[...]}}
+     * 请求字段：  page    int  可选，页码，默认1
+     * 请求字段：  limit   int  可选，每页条数，默认20，最大100
+     * 请求字段：  status  int  可选，提现状态筛选（0=待审核，1=已审核）
+     * 响应 JSON：{code:1, msg:'获取成功', info:{page, pagecount, limit, total, list:[...]}}
      */
     public function get_list(\think\Request $request)
     {
@@ -84,8 +84,8 @@ class Cash extends Base
      * 获取提现详情
      * GET /api.php/cash/get_detail?cash_id=1
      *
-     * @param  cash_id  int  必填，提现记录ID
-     * @return JSON     {code:1, msg:'获取成功', info:{...}}
+     * 请求字段：  cash_id  int  必填，提现记录ID
+     * 响应 JSON：{code:1, msg:'获取成功', info:{...}}
      */
     public function get_detail(\think\Request $request)
     {
@@ -114,11 +114,11 @@ class Cash extends Base
      * 提交提现申请
      * POST /api.php/cash/create
      *
-     * @param  cash_money      float   必填，提现金额（单位：元）
-     * @param  cash_bank_name  string  必填，银行名称
-     * @param  cash_bank_no    string  必填，银行账号
-     * @param  cash_payee_name string  必填，收款人姓名
-     * @return JSON            {code:1, msg:'保存成功'}
+     * 请求字段：  cash_money      float   必填，提现金额（单位：元）
+     * 请求字段：  cash_bank_name  string  必填，银行名称
+     * 请求字段：  cash_bank_no    string  必填，银行账号
+     * 请求字段：  cash_payee_name string  必填，收款人姓名
+     * 响应 JSON：{code:1, msg:'保存成功'}
      *
      * 说明：
      * - 提现需后台开启提现功能（cash_status=1）
@@ -151,9 +151,9 @@ class Cash extends Base
      * 删除提现记录
      * POST /api.php/cash/del
      *
-     * @param  ids  string  可选，提现记录ID列表，逗号分隔（与 all 二选一）
-     * @param  all  string  可选，传 "1" 表示删除全部
-     * @return JSON {code:1, msg:'删除成功'}
+     * 请求字段：  ids  string  可选，提现记录ID列表，逗号分隔（与 all 二选一）
+     * 请求字段：  all  string  可选，传 "1" 表示删除全部
+     * 响应 JSON：{code:1, msg:'删除成功'}
      *
      * 说明：
      * - 仅能删除当前登录用户的提现记录
@@ -196,7 +196,7 @@ class Cash extends Base
      * 获取提现配置信息
      * GET /api.php/cash/get_config
      *
-     * @return JSON  {code:1, msg:'获取成功', info:{cash_status, cash_min, cash_ratio}}
+     * 响应 JSON：{code:1, msg:'获取成功', info:{cash_status, cash_min, cash_ratio}}
      *
      * 说明：
      * - cash_status: 提现功能开关（0=关闭, 1=开启）

@@ -246,7 +246,7 @@ if (!defined('QINIU_FUNCTIONS_VERSION')) {
      *  从uptoken解析accessKey和bucket
      *
      * @param $upToken
-     * @return array(ak,bucket,err=null)
+     * @return array{0: string|null, 1: string|null, 2: string|null} Access key, bucket and error
      */
     function explodeUpToken($upToken)
     {

@@ -45,8 +45,8 @@ class Order extends Base
      * 创建充值订单
      * POST /api.php/order/create
      *
-     * @param  price  float  必填，充值金额（单位：元）
-     * @return JSON   {code:1, msg:'订单创建成功', info:{order_code, order_price, order_points, order_time}}
+     * 请求字段：  price  float  必填，充值金额（单位：元）
+     * 响应 JSON：{code:1, msg:'订单创建成功', info:{order_code, order_price, order_points, order_time}}
      */
     public function create(\think\Request $request)
     {
@@ -103,10 +103,10 @@ class Order extends Base
      * 获取用户订单列表
      * GET /api.php/order/get_list?page=1&limit=20&status=
      *
-     * @param  page    int     可选，页码，默认1
-     * @param  limit   int     可选，每页条数，默认20，最大100
-     * @param  status  int     可选，订单状态筛选（0=未支付，1=已支付）
-     * @return JSON    {code:1, msg:'获取成功', info:{page, pagecount, limit, total, list:[...]}}
+     * 请求字段：  page    int     可选，页码，默认1
+     * 请求字段：  limit   int     可选，每页条数，默认20，最大100
+     * 请求字段：  status  int     可选，订单状态筛选（0=未支付，1=已支付）
+     * 响应 JSON：{code:1, msg:'获取成功', info:{page, pagecount, limit, total, list:[...]}}
      */
     public function get_list(\think\Request $request)
     {
@@ -144,9 +144,9 @@ class Order extends Base
      * 获取订单详情
      * GET /api.php/order/get_detail?order_id=1  或 ?order_code=PAYxxx
      *
-     * @param  order_id    int     可选，订单ID（与 order_code 二选一）
-     * @param  order_code  string  可选，订单号
-     * @return JSON        {code:1, msg:'获取成功', info:{...}}
+     * 请求字段：  order_id    int     可选，订单ID（与 order_code 二选一）
+     * 请求字段：  order_code  string  可选，订单号
+     * 响应 JSON：{code:1, msg:'获取成功', info:{...}}
      */
     public function get_detail(\think\Request $request)
     {
@@ -179,8 +179,8 @@ class Order extends Base
      * 查询订单支付状态
      * GET /api.php/order/check_status?order_code=PAYxxx
      *
-     * @param  order_code  string  必填，订单号
-     * @return JSON        {code:1, msg:'...', info:{order_code, order_status, order_status_text, order_pay_type, order_pay_time}}
+     * 请求字段：  order_code  string  必填，订单号
+     * 响应 JSON：{code:1, msg:'...', info:{order_code, order_status, order_status_text, order_pay_type, order_pay_time}}
      */
     public function check_status(\think\Request $request)
     {

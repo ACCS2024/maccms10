@@ -154,7 +154,7 @@ class Payment extends Base
      * 获取支付配置（可用支付方式列表）
      * GET /api.php/payment/get_config
      *
-     * @return JSON  {code:1, msg:'获取成功', info:{min, scale, methods, card_config, is_login, user_points}}
+     * 响应 JSON：{code:1, msg:'获取成功', info:{min, scale, methods, card_config, is_login, user_points}}
      */
     public function get_config(\think\Request $request)
     {
@@ -193,10 +193,10 @@ class Payment extends Base
      * 发起支付（跳转第三方支付）
      * POST /api.php/payment/gopay
      *
-     * @param  order_code  string  必填，订单号
-     * @param  order_id    int     必填，订单ID
-     * @param  payment     string  必填，支付方式（alipay/weixin/codepay/epay/zhapay 等）
-     * @return JSON        {code:1, msg:'...', info:{payment, payment_data:{...}}}
+     * 请求字段：  order_code  string  必填，订单号
+     * 请求字段：  order_id    int     必填，订单ID
+     * 请求字段：  payment     string  必填，支付方式（alipay/weixin/codepay/epay/zhapay 等）
+     * 响应 JSON：{code:1, msg:'...', info:{payment, payment_data:{...}}}
      *
      * 说明：
      * - 微信支付返回 code_url（用于生成二维码）
@@ -367,12 +367,12 @@ class Payment extends Base
      * 积分购买内容权限（观看/下载/阅读付费内容）
      * POST /api.php/payment/buy_popedom
      *
-     * @param  mid   int  必填，模型（1=视频, 2=文章）
-     * @param  id    int  必填，资源ID（vod_id 或 art_id）
-     * @param  type  int  必填，操作类型（1=文章阅读, 4=播放, 5=下载）
-     * @param  sid   int  可选，播放源编号
-     * @param  nid   int  可选，集编号
-     * @return JSON  {code:1, msg:'购买成功'}
+     * 请求字段：  mid   int  必填，模型（1=视频, 2=文章）
+     * 请求字段：  id    int  必填，资源ID（vod_id 或 art_id）
+     * 请求字段：  type  int  必填，操作类型（1=文章阅读, 4=播放, 5=下载）
+     * 请求字段：  sid   int  可选，播放源编号
+     * 请求字段：  nid   int  可选，集编号
+     * 响应 JSON：{code:1, msg:'购买成功'}
      */
     public function buy_popedom(\think\Request $request)
     {
@@ -398,9 +398,9 @@ class Payment extends Base
      * 会员升级（用积分升级用户组/VIP）
      * POST /api.php/payment/upgrade
      *
-     * @param  group_id  int     必填，目标用户组ID（>=3）
-     * @param  long      string  必填，时长周期（day|week|month|year）
-     * @return JSON      {code:1, msg:'升级成功'}
+     * 请求字段：  group_id  int     必填，目标用户组ID（>=3）
+     * 请求字段：  long      string  必填，时长周期（day|week|month|year）
+     * 响应 JSON：{code:1, msg:'升级成功'}
      *
      * 说明：
      * - 积分 = 对应用户组的 group_points_{long} 字段值
@@ -427,7 +427,7 @@ class Payment extends Base
      * 获取可升级的用户组列表（含积分价格）
      * GET /api.php/payment/get_groups
      *
-     * @return JSON  {code:1, msg:'获取成功', info:[{group_id, group_name, group_points_day, ...}]}
+     * 响应 JSON：{code:1, msg:'获取成功', info:[{group_id, group_name, group_points_day, ...}]}
      */
     public function get_groups(\think\Request $request)
     {
@@ -461,9 +461,9 @@ class Payment extends Base
      * 获取用户充值卡使用记录
      * GET /api.php/payment/get_cards?page=1&limit=20
      *
-     * @param  page   int  可选，页码，默认1
-     * @param  limit  int  可选，每页条数，默认20，最大100
-     * @return JSON   {code:1, msg:'获取成功', info:{page, pagecount, limit, total, list:[...]}}
+     * 请求字段：  page   int  可选，页码，默认1
+     * 请求字段：  limit  int  可选，每页条数，默认20，最大100
+     * 响应 JSON：{code:1, msg:'获取成功', info:{page, pagecount, limit, total, list:[...]}}
      */
     public function get_cards(\think\Request $request)
     {
