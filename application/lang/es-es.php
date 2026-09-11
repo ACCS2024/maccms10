@@ -3224,4 +3224,6 @@ Nota: Si se especifican listas negras y blancas, ambas se aplicarán simultánea
     'validate/danmaku_type_in'=>'Tipo invalido','validate/danmaku_id_require'=>'ID danmaku requerido',
     'validate/danmaku_id_number'=>'ID debe ser numero',
     'model/cash/request_conflict' => 'This request ID belongs to another withdrawal. Check the original request before submitting again.',
+    'model/cash/rounding_hint' => 'Withdrawal points are rounded up to the next whole point.',
+    'model/cash/maximum_money' => 'Maximum amount per withdrawal',
 );

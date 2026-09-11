@@ -3225,4 +3225,6 @@ Note: Si les listes noires et blanches sont remplies, les stratégies s\'appliqu
     'validate/danmaku_type_in'=>'Type invalide','validate/danmaku_id_require'=>'ID danmaku requis',
     'validate/danmaku_id_number'=>'ID doit etre un nombre',
     'model/cash/request_conflict' => 'This request ID belongs to another withdrawal. Check the original request before submitting again.',
+    'model/cash/rounding_hint' => 'Withdrawal points are rounded up to the next whole point.',
+    'model/cash/maximum_money' => 'Maximum amount per withdrawal',
 );

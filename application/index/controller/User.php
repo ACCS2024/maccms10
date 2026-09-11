@@ -859,6 +859,7 @@ class User extends Base
         $order = 'cash_id desc';
         $res = (new \app\common\model\Cash())->listData($where, $order, $param['page'], $param['limit']);
 
+        $this->assign('cash_view', \app\common\util\CashView::data($GLOBALS['config']['user'] ?? null, $GLOBALS['user'] ?? null));
         $this->assign('param', array_merge(mac_param_url(), $param));
         $this->assign('list', $res['list']);
         $pages = mac_page_param($res['total'], $param['limit'], $param['page'], url('user/cash', ['page' => 'PAGELINK']));

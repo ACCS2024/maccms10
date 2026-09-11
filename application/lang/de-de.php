@@ -3215,4 +3215,6 @@ Hinweis: Wenn sowohl Blacklist als auch Whitelist ausgefüllt sind, werden beide
     'validate/danmaku_id_number'=>'Danmaku-ID muss Zahl sein',
 
     'model/cash/request_conflict' => 'This request ID belongs to another withdrawal. Check the original request before submitting again.',
+    'model/cash/rounding_hint' => 'Withdrawal points are rounded up to the next whole point.',
+    'model/cash/maximum_money' => 'Maximum amount per withdrawal',
 );

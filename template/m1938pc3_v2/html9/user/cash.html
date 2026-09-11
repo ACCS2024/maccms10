@@ -31,8 +31,9 @@
 			<!-- 修改信息 -->
 			<div class="cur" style="border-color: red;    border-radius: 3px;">
 				<form id="fm" name="fm" method="post" action="" >
-					<p><span class="xiang">1元等于{$GLOBALS['config']['user']['cash_ratio']}积分，最低提现金额：{$GLOBALS['config']['user']['cash_min']}元</span></p>
-					<p><span class="xiang">剩余{$GLOBALS['user']['user_points']}积分，相当于{$GLOBALS['user']['user_points']/$GLOBALS['config']['user']['cash_ratio']}元；冻结{$GLOBALS['user']['user_points_froze']}积分，相当于{$GLOBALS['user']['user_points_froze']/$GLOBALS['config']['user']['cash_ratio']}元；</span></p>
+					<p><span class="xiang">1元等于{$cash_view.rate|default='--'}积分，最低提现金额：{$cash_view.minimum|default='--'}元</span></p>
+                    <p><span class="xiang">剩余{$cash_view.available|default='--'}积分；冻结{$cash_view.frozen|default='--'}积分。</span></p>
+                    <p><span class="xiang">{:lang('model/cash/maximum_money')}：{$cash_view.maximum|default='--'}元。{:lang('model/cash/rounding_hint')}</span></p>
 					<p><span class="xiang"></span></p>
 					<p><span class="xiang">银行名称：</span><input type="text" name="cash_bank_name" class="member-input" placeholder="请输入开户行名称或支付宝微信" value="">银行账号：</span><input type="text" name="cash_bank_no" class="member-input" placeholder="请输入银行卡号或支付宝微信账号"  value=""></p>
 					<p><span class="xiang">收款姓名：</span><input type="text" name="cash_payee_name" class="member-input" placeholder="请输入收款人姓名与上方账户对应"  value="">提现金额：</span><input type="text" name="cash_money" class="member-input" placeholder="请输入提现金额"  value=""></p>

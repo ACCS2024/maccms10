@@ -7,6 +7,7 @@ use app\common\util\CashRequest;
 use think\facade\Db;
 
 class Cash extends Base {
+    public const MAX_POINTS = 65535;
     // 设置数据表（不含前缀）
     protected $name = 'cash';
 
@@ -165,7 +166,7 @@ class Cash extends Base {
         }
         $quote = OrderAmount::withdrawal($money, $settings['cash_ratio'] ?? null);
         $minimum = OrderAmount::minimum($settings['cash_min'] ?? null);
-        if ($quote === null || $minimum === null || $quote['order_points'] > 65535) {
+        if ($quote === null || $minimum === null || $quote['order_points'] > self::MAX_POINTS) {
             return ['code'=>1001, 'msg'=>lang('param_err')];
         }
         if (OrderAmount::minorUnits($money) < $minimum) {

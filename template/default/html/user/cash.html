@@ -61,18 +61,14 @@
 						</p>
 						<p class="hui">
 							<span data-lang="user_sm1">说明：1元等于</span>
-							{$GLOBALS['config']['user']['cash_ratio']}
+							{$cash_view.rate|default='--'}
 							<span data-lang="user_sm2">金币，最低提现金额：</span>
-							{$GLOBALS['config']['user']['cash_min']}
+							{$cash_view.minimum|default='--'}
 							<span data-lang="user_sm3">元，剩余</span>
-							{$GLOBALS['user']['user_points']}
-							<span data-lang="user_sm4">金币，相当于</span>
-							{$GLOBALS['user']['user_points']/$GLOBALS['config']['user']['cash_ratio']}
-							<span data-lang="user_sm5">元；冻结</span>
-							{$GLOBALS['user']['user_points_froze']}
-							<span data-lang="user_sm4">金币，相当于</span>
-							{$GLOBALS['user']['user_points_froze']/$GLOBALS['config']['user']['cash_ratio']}
-							<span data-lang="user_sm6">元；</span>
+							{$cash_view.available|default='--'}
+                            <span>积分；冻结</span>{$cash_view.frozen|default='--'}<span>积分。</span>
+                            <span>{:lang('model/cash/maximum_money')}：</span>{$cash_view.maximum|default='--'}<span>元。</span>
+                            <span>{:lang('model/cash/rounding_hint')}</span>
 						</p>
 						<p style="text-align: center;"><input type="button" data-value="user_tjsq" id="btn_submit" class="search-button" value="提交申请"></p>
 					</form>
