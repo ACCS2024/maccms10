@@ -302,11 +302,39 @@ class Dir implements \IteratorAggregate {
         return $dir;
     }
 
-    /**
-     * 删除目录（包括下面的文件）
-     * @return bool
-     */
-    public static function delDir($directory, $subdir = true) {
+    /** Validate path syntax without resolving away symbolic links or touching directory contents. */
+    private static function cleanupDirectoryPath($directory): ?string {
+        if (!is_string($directory) || $directory === '' || str_contains($directory, "\0") || str_contains($directory, '://')) {
+            return null;
+        }
+        if (DIRECTORY_SEPARATOR === '\\') {
+            if (str_starts_with($directory, '\\\\') || str_starts_with($directory, '//')) { return null; }
+            $directory = str_replace('\\', '/', $directory);
+        }
+        // is_link("link/") follows the directory target on POSIX. Inspect the entry itself.
+        $directory = rtrim($directory, '/');
+        while (strlen($directory) > 1 && str_ends_with($directory, '/.')) {
+            $directory = rtrim(substr($directory, 0, -2), '/');
+        }
+        if ($directory === '' || $directory === '.' || in_array('..', explode('/', $directory), true)
+            || (DIRECTORY_SEPARATOR === '\\' && preg_match('/^[a-z]:$/iD', $directory))) { return null; }
+        return $directory;
+    }
+
+    /** Delete the selected directory; symbolic links are removed as entries, never traversed. */
+    public static function delDir($directory, $subdir = true): bool {
+        $directory = self::cleanupDirectoryPath($directory);
+        if ($directory === null) { return false; }
+        // A linked parent can redirect the requested subtree even when its final entry is ordinary.
+        $parent = dirname($directory);
+        while (true) {
+            clearstatcache(true, $parent);
+            if (is_link($parent)) { return false; }
+            $next = dirname($parent);
+            if ($next === $parent) { break; }
+            $parent = $next;
+        }
+        clearstatcache(true, $directory);
         if (is_link($directory)) {
             return @unlink($directory);
         }

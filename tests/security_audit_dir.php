@@ -25,6 +25,25 @@ check(file_get_contents($temp . '/outside/sentinel') === 'preserved', 'Recursive
 symlink($temp . '/outside', $temp . '/linked-root');
 check(\app\common\util\Dir::delDir($temp . '/linked-root'), 'Root symlink cleanup failed');
 check(file_get_contents($temp . '/outside/sentinel') === 'preserved', 'Root symlink cleanup deleted target');
+foreach (['/', '///', '/.', '/./'] as $suffix) {
+    symlink($temp.'/outside', $temp.'/linked-root');
+    check(\app\common\util\Dir::delDir($temp.'/linked-root'.$suffix), 'Root symlink with directory suffix must remove only the link');
+    check(!is_link($temp.'/linked-root') && file_get_contents($temp.'/outside/sentinel') === 'preserved', 'Trailing directory notation must never expose the symlink target to recursive deletion');
+}
+symlink($temp.'/outside', $temp.'/parent-link');
+mkdir($temp.'/outside/child');file_put_contents($temp.'/outside/child/sentinel','preserved');
+check(!\app\common\util\Dir::delDir($temp.'/parent-link/child/'), 'Linked ancestor must not redirect cleanup into an external subtree');
+check(file_get_contents($temp.'/outside/child/sentinel')==='preserved', 'Refused linked ancestor cleanup must preserve the entire external subtree');
+symlink($temp.'/absent-target',$temp.'/broken-root');
+check(\app\common\util\Dir::delDir($temp.'/broken-root/')&&!is_link($temp.'/broken-root'),'Broken root links must also be removable without following their target');
+foreach ([null,[],true,'',$temp.'/outside/../outside',$temp."/bad\0path",'file://'.$temp.'/outside'] as $invalid) {
+    check(!\app\common\util\Dir::delDir($invalid) && file_get_contents($temp.'/outside/sentinel')==='preserved', 'Malformed, root or parent traversal cleanup paths must fail before removal');
+}
+// Test system-root rejection through the pure path validator; never hand a real root to deletion code.
+$normalize=new ReflectionMethod(\app\common\util\Dir::class,'cleanupDirectoryPath');
+foreach (['/','///','.','./','/.','/./'] as $root) { check($normalize->invoke(null,$root)===null, 'Filesystem/current roots must be rejected before any filesystem operation'); }
+mkdir($temp.'/ordinary');file_put_contents($temp.'/ordinary/file','fixture');
+check(\app\common\util\Dir::delDir($temp.'/ordinary/')&&!file_exists($temp.'/ordinary'), 'Ordinary runtime directory cleanup must retain trailing-slash compatibility');
 
 echo 'Directory regressions: ' . $checks . " assertions passed\n";
 } finally { audit_remove_temp($temp); }
