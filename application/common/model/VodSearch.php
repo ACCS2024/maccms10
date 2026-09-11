@@ -208,9 +208,19 @@ class VodSearch extends Base {
         return $minutes;
     }
 
-    /**
-     * 清理老的数据
-     */
+    /** Administrative cache reset includes recent rows and actor lookups, without a throttle marker. */
+    public function clearAllResults(): bool
+    {
+        try {
+            $this->whereRaw('1 = 1')->delete();
+            self::$getResultIdListMemo = [];
+            return true;
+        } catch (\Throwable $error) {
+            return false;
+        }
+    }
+
+    /** 清理过期数据，供采集的周期维护调用。 */
     public function clearOldResult($force = false) 
     {
         // 清理多久前的

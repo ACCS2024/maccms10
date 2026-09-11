@@ -186,13 +186,17 @@ class Index extends Base
 
     public function clear()
     {
-        $res = $this->_cache_clear();
-        //运行缓存
-        if (!$res) {
-            $this->error(lang('admin/index/clear_err'));
+        if (request()->method(true) !== 'POST' || request()->method() !== 'POST') {
+            return $this->error(lang('illegal_request'));
         }
-        // 搜索缓存结果清理
-        (new \app\common\model\VodSearch())->clearOldResult(true);
+        $auth = (new \app\common\model\Admin())->checkLogin();
+        if (($auth['code'] ?? null) !== 1) { return $this->error(lang('model/admin/not_login')); }
+        $this->_admin = $auth['info'];
+        if (!$this->check_auth('index', 'clear')) { return $this->error(lang('permission_denied')); }
+        if (!\app\common\util\SessionCsrf::validate(request())) { return $this->error(lang('token_err')); }
+        if (!$this->_cache_clear() || !(new \app\common\model\VodSearch())->clearAllResults()) {
+            return $this->error(lang('admin/index/clear_err'));
+        }
         return $this->success(lang('admin/index/clear_ok'));
     }
 

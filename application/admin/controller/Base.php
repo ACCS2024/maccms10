@@ -198,19 +198,22 @@ class Base extends All
         return $resolved;
     }
 
-    public function _cache_clear()
+    protected function _cache_clear(): bool
     {
-        if (ENTRANCE === 'admin' && !\app\common\util\PlayerConfigCache::refresh(
-            ROOT_PATH, config('vodplayer'), config('voddowner'), config('vodserver')
-        )) { return false; }
-
-        Dir::delDir(RUNTIME_PATH.'cache/');
-        Dir::delDir(RUNTIME_PATH.'log/');
-        Dir::delDir(RUNTIME_PATH.'temp/');
-
-        Cache::clear();
-
-        return true;
+        try {
+            if (ENTRANCE === 'admin' && !\app\common\util\PlayerConfigCache::refresh(
+                ROOT_PATH, config('vodplayer'), config('voddowner'), config('vodserver')
+            )) { return false; }
+        } catch (\Throwable $error) { return false; }
+        $complete = true;
+        foreach (['cache','temp'] as $name) {
+            try { $removed = Dir::clearDirectory(RUNTIME_PATH . $name . '/'); }
+            catch (\Throwable $error) { $removed = false; }
+            $complete = $removed && $complete;
+        }
+        try { $cleared = Cache::clear() === true; }
+        catch (\Throwable $error) { $cleared = false; }
+        return $complete && $cleared;
     }
 
     public function batch_replace($field,$model,$search,$replace,$type='vod')

@@ -20,7 +20,7 @@
 | 提现与归档 | 原 PDO 收尾、精确向上取整、会员/API/管理 POST 与 CSRF、持久请求编号、原始记录与操作者同事务归档均已提交；后台只读归档及会员/API 查询边界见[读取报告](cash-member-api-reads.md)；`c5ae4121` 双版各 182 默认进程通过 | 历史收款字段编码、付款外部对账、未知结果核对界面、生产迁移/恢复仍待处理；不能把内部审核状态当作外部付款凭证 |
 | 提前响应与页面缓存 | `945a98b7` 构造响应、`360f9fbd` 前台守卫、`2ffc8792` 缓存/404 响应；真实中间件、回环 HTTP，双版 MySQL 身份缓存 index 247 / api 191 项 | 资源权限和采集直接输出、缓存锁归属/失败释放、JSON 未命中合同继续检查，见[响应报告](page-cache-response-lifecycle.md) |
 | 公共 API / 采集入口 | `fc40a808` 统一开关与 IP 授权、503/403 框架响应、可信代理及内部动作 404；双版各 183 默认进程，见[报告](api-access-gates.md) | 域名授权解析的总耗时/缓存、采集成功输出、XML 及筛选仍待处理 |
-| 目录清理 | `81ad7699` 修复尾斜杠导致删除根链接目标、拒绝祖先链接/根目录/父级跳转；双版各 35 项，见[报告](directory-cleanup-boundary.md) | 调用方假成功、缓存锁归属与清理范围、原生 Windows 和并发目录替换仍待处理 |
+| 目录与缓存清理 | `81ad7699` 目录边界、`fc2b6cf2` CLI 返回值、`b9a32dfe` 文件/Redis 驱动、`4cee5b03` 采集结果、`39326ca8` 播放器完整替换；后台请求授权及搜索重置见[后台报告](admin-cache-results.md)；驱动批双版各 185 默认进程 | 缓存锁归属、共享会话/业务缓存隔离、周期搜索维护、原生 Windows 和并发目录替换仍待处理；各批证据见 [CLI](cache-flush-results.md)、[驱动](cache-driver-clear.md)、[采集](collector-cache-results.md)、[播放器](player-config-cache.md) |
 | 本机命令与可选能力 | `3f7250f4` 数值监控、`96f998ff` 有界进程、`2420aa98` OpenCC 真实 CLI/失败恢复及缓存字节上限；双版 native OpenCC 17 项 | 原生 Windows/BSD 管道、真实 PHP OpenCC 扩展、其它命令调用及显式“不可用”显示另审，见[OpenCC 报告](opencc-process-recovery.md) |
 | 旧数据库返回值 | level 5 多处 int 返回值与 false 比较；AI 封面零影响行伪成功已有真实证据 | 分清插入失败、对象删除、合法幂等更新与异常抛出；不全局将 `=== false` 改成 `=== 0` |
 | 网页中的隐式 DDL | 新 Manga 读取不经 infoData/cache/自动加列，并区分实际缺少可选列与查询失败 | 遗留 infoData 和后台初始化仍有自动迁移入口；需要显式升级前置条件、迁移和缺列受控行为 |

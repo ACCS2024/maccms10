@@ -44,7 +44,7 @@ if(!defined('MAC_PATH'))define('MAC_PATH','/fixture/');
 if(!$purchaseHttp)register_shutdown_function(static function()use($purchaseTemp):void{audit_remove_temp($purchaseTemp);});
 $app=new \think\App($purchaseTemp.'/app');
 $mysql=getenv('PURCHASE_CSRF_MYSQL')==='1';
-$purchaseDatabase=defined('CASH_ADMIN_AUDIT')?'maccms_audit_cash_admin':(defined('CASH_WRITE_AUDIT')?'maccms_audit_cash_write':(getenv('MANGA_PURCHASE_AUDIT')==='1'?'maccms_audit_manga_purchase':'maccms_audit_purchase_csrf'));
+$purchaseDatabase=defined('ADMIN_CACHE_AUDIT')?'maccms_audit_admin_cache':(defined('CASH_ADMIN_AUDIT')?'maccms_audit_cash_admin':(defined('CASH_WRITE_AUDIT')?'maccms_audit_cash_write':(getenv('MANGA_PURCHASE_AUDIT')==='1'?'maccms_audit_manga_purchase':'maccms_audit_purchase_csrf')));
 $connection=['type'=>$mysql?'mysql':'sqlite','database'=>$mysql?$purchaseDatabase:($purchaseHttp?$purchaseTemp.'/purchase.sqlite':':memory:'),
     'prefix'=>'audit_','trigger_sql'=>true,'fields_cache'=>false,'charset'=>'utf8mb4',
     'hostname'=>getenv('FRAMEWORK_AUDIT_HOST')?:'127.0.0.1','username'=>'root','password'=>getenv('FRAMEWORK_AUDIT_PASSWORD')?:''];
@@ -63,7 +63,7 @@ $app->bind(\app\index\controller\User::class,PurchaseCsrfIndex::class);$app->bin
 if($mysql)Db::execute("SET SESSION sql_mode=''");
 if(!defined('PURCHASE_CSRF_EXISTING_DB')&&(!$purchaseHttp||!is_file($purchaseTemp.'/schema.ready'))){
     $ddl=file_get_contents(dirname(__DIR__,2).'/application/install/sql/install.sql');
-    foreach(array_merge(['user','group','plog','ulog','vod','art'],getenv('MANGA_PURCHASE_AUDIT')==='1'?['manga']:[],defined('CASH_WRITE_AUDIT')?['cash','cash_request','cash_history']:[],defined('CASH_ADMIN_AUDIT')?['admin']:[])as $table){
+    foreach(array_merge(['user','group','plog','ulog','vod','art'],getenv('MANGA_PURCHASE_AUDIT')==='1'?['manga']:[],defined('CASH_WRITE_AUDIT')?['cash','cash_request','cash_history']:[],defined('CASH_ADMIN_AUDIT')||defined('ADMIN_CACHE_AUDIT')?['admin']:[],defined('ADMIN_CACHE_AUDIT')?['vod_search']:[])as $table){
         if(!preg_match('/CREATE TABLE `mac_'.$table.'` \(([\s\S]*?)\) ENGINE[^;]*;/',$ddl,$match))throw new RuntimeException('Purchase install schema missing');
         Db::execute('DROP TABLE IF EXISTS audit_'.$table);
         if($mysql){Db::execute(str_replace('`mac_'.$table.'`','`audit_'.$table.'`',$match[0]));continue;}
@@ -85,6 +85,7 @@ if(!defined('PURCHASE_CSRF_EXISTING_DB')&&(!$purchaseHttp||!is_file($purchaseTem
         Db::execute('CREATE TABLE audit_'.$table.' ('.implode(',',$columns).')');
     }
     if(defined('CASH_WRITE_AUDIT')&&!$mysql){Db::execute('CREATE UNIQUE INDEX cash_request_owner_key ON audit_cash_request(user_id,request_id)');Db::execute('CREATE UNIQUE INDEX cash_history_identity ON audit_cash_history(cash_id)');}
+    if(defined('ADMIN_CACHE_AUDIT')&&!$mysql){Db::execute('CREATE UNIQUE INDEX search_identity ON audit_vod_search(search_key)');}
     if($purchaseHttp)file_put_contents($purchaseTemp.'/schema.ready','ready');
 }
 function purchaseCsrfConfig():void{
