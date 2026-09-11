@@ -16,7 +16,7 @@ register_shutdown_function(static fn()=>audit_remove_temp($cashOwnerDirectory));
 function cashOwnerSeed(string $operation): void {
     think\Container::getInstance()->instance('request',new think\Request());
     PurchaseOwnerFault::reset();cashRefundSeed();
-    $GLOBALS['config']['user']+=['cash_status'=>'1','cash_ratio'=>'1','cash_min'=>'1'];
+    $GLOBALS['config']['user']=array_replace($GLOBALS['config']['user'],['cash_status'=>'1','cash_ratio'=>'1','cash_min'=>'1']);
     if($operation==='reserve') {
         think\facade\Db::name('Cash')->delete(true);
         think\facade\Db::name('User')->where('user_id',1)->update(['user_points'=>100,'user_points_froze'=>0]);

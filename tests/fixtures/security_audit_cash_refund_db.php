@@ -31,6 +31,7 @@ if ($mysql) {
     Db::execute('DROP TABLE IF EXISTS audit_cash');
     Db::execute(str_replace('`mac_cash`', '`audit_cash`', $match[0]));
 } else {
+    Db::execute('ALTER TABLE audit_user ADD user_status INTEGER NOT NULL DEFAULT 1');
     Db::execute('ALTER TABLE audit_user ADD user_points_froze INTEGER NOT NULL DEFAULT 0
         CHECK(user_points_froze BETWEEN 0 AND 4294967295)');
     Db::execute('CREATE TABLE audit_cash (cash_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -44,7 +45,7 @@ if ($mysql) {
 function cashRefundSeed(int $available = 80, int $frozen = 20, int $points = 20, int $status = 0): void {
     Db::execute('DELETE FROM audit_cash');
     membershipSeed($available);
-    Db::name('User')->where('user_id', 1)->update(['user_points_froze'=>$frozen]);
+    Db::name('User')->where('user_id', 1)->update(['user_points_froze'=>$frozen, 'user_status'=>1]);
     Db::name('Cash')->insert(['cash_id'=>1, 'user_id'=>1, 'cash_status'=>$status,
         'cash_points'=>$points, 'cash_money'=>'20.00', 'cash_time'=>123]);
 }

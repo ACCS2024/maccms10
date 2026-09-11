@@ -12,7 +12,6 @@ function cookie($key, $value = null, $options = []) {
 }
 function request() { return $GLOBALS['member_session_request']; }
 $GLOBALS['member_session_request'] = new think\Request();
-Db::execute('ALTER TABLE audit_user ADD COLUMN user_status INTEGER DEFAULT 1');
 Db::execute('ALTER TABLE audit_user ADD COLUMN user_random VARCHAR(64)');
 Db::name('User')->insert(['user_id'=>1,'user_name'=>'member','user_random'=>md5('fixture-session')]);
 $valid = ['user_id'=>'1','user_name'=>'member','user_check'=>md5(md5('fixture-session').'-member-1-')];

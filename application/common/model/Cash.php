@@ -2,6 +2,7 @@
 namespace app\common\model;
 use app\common\util\PointsBalance;
 use app\common\util\CashTransaction;
+use app\common\util\OrderAmount;
 use think\facade\Db;
 
 class Cash extends Base {
@@ -68,47 +69,40 @@ class Cash extends Base {
         if (($blocked = CashTransaction::blockedResult()) !== null) { return $blocked; }
         if (!is_array($param)) { return ['code'=>1001, 'msg'=>lang('param_err')]; }
         $settings = $GLOBALS['config']['user'] ?? [];
-        if (($settings['cash_status'] ?? '0') != '1') {
+        if (!is_array($settings) || !in_array($settings['cash_status'] ?? '0', [1, '1'], true)) {
             return ['code'=>1005,'msg'=>lang('model/cash/not_open')];
         }
-        $money = $param['cash_money'] ?? null;
-        $ratio = $settings['cash_ratio'] ?? null;
-        if (!is_numeric($money) || !is_finite((float)$money) || (float)$money <= 0
-            || !is_numeric($ratio) || !is_finite((float)$ratio) || (float)$ratio <= 0) {
+        $quote = OrderAmount::recharge($param['cash_money'] ?? null, $settings['cash_ratio'] ?? null);
+        $minimum = OrderAmount::minimum($settings['cash_min'] ?? null);
+        if ($quote === null || $minimum === null || $quote['order_points'] > 65535) {
             return ['code'=>1001,'msg'=>lang('param_err')];
         }
-        // 数据库金额保留两位小数；按实际可存储金额计算积分。
-        $money = round((float)$money, 2);
-        if ($money <= 0) {
-            return ['code'=>1001,'msg'=>lang('param_err')];
+        $money = $quote['order_price'];
+        $points = $quote['order_points'];
+        if (OrderAmount::minorUnits($money) < $minimum) {
+            return ['code'=>1006,'msg'=>lang('model/cash/min_money_err').'：'.OrderAmount::decimal($minimum)];
         }
-        if ($money < (float)($settings['cash_min'] ?? 0)) {
-            return ['code'=>1006,'msg'=>lang('model/cash/min_money_err').'：'.($settings['cash_min'] ?? 0)];
-        }
-        $rawPoints = $money * (float)$ratio;
-        if (!is_finite($rawPoints) || $rawPoints >= PHP_INT_MAX || $rawPoints < 1) {
-            return ['code'=>1001,'msg'=>lang('param_err')];
-        }
-        $points = (int)$rawPoints;
-        if ($points > 65535) {
-            return ['code'=>1001,'msg'=>lang('param_err')];
-        }
-        $userId = (int)($GLOBALS['user']['user_id'] ?? 0);
-        if ($userId < 1) {
-            return ['code'=>1002,'msg'=>lang('param_err')];
-        }
+        $userId = PointsBalance::amount($GLOBALS['user']['user_id'] ?? null);
+        if ($userId === null) { return ['code'=>1002,'msg'=>lang('param_err')]; }
         $data = [
             'cash_money' => $money,
             'user_id' => $userId,
             'cash_points' => $points,
             'cash_time' => time(),
             'cash_status' => 0,
+            'cash_time_audit' => 0,
         ];
-        foreach (['cash_bank_name', 'cash_bank_no', 'cash_payee_name'] as $field) {
-            if (!isset($param[$field]) || !is_scalar($param[$field])) {
+        foreach (['cash_bank_name'=>60, 'cash_bank_no'=>30, 'cash_payee_name'=>30] as $field=>$limit) {
+            $value = $param[$field] ?? null;
+            if ((!is_string($value) && !is_int($value)) || strlen((string)$value) > $limit * 4
+                || !mb_check_encoding((string)$value, 'UTF-8') || preg_match('/[\x00-\x1f\x7f]/', (string)$value)) {
                 return ['code'=>1001,'msg'=>lang('param_err')];
             }
-            $data[$field] = htmlspecialchars(urldecode(trim((string)$param[$field])));
+            // Request parsing has already decoded form fields. Preserve literal plus and percent characters.
+            $data[$field] = htmlspecialchars(trim((string)$value), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+            if ($data[$field] === '' || mb_strlen($data[$field], 'UTF-8') > $limit) {
+                return ['code'=>1001,'msg'=>lang('param_err')];
+            }
         }
         $validate = mac_validate('Cash');
         if (!$validate->check($data)) {
@@ -122,30 +116,22 @@ class Cash extends Base {
             $scope = new CashTransaction('reserve', $userId, $failure);
             $scope->begin();
             $user = Db::name('User')->master()->where('user_id', $userId)->lock(true)->find();
-            if (!$user || (int)$user['user_points'] < $points) {
+            if (!$user || (string)($user['user_status'] ?? '') !== '1') {
                 return $scope->rollback(['code'=>1007,'msg'=>lang('model/cash/mush_money_err')]);
             }
-            // 余额在数据库内检查并转为冻结积分，不能用请求开始时的全局快照覆盖。
-            $changed = Db::name('User')->master()->where('user_id', $userId)
-                ->where('user_points', '>=', $points)
+            [$available, $frozen] = self::balances($user);
+            if ($available < $points || $frozen > PointsBalance::MAX - $points) {
+                return $scope->rollback(['code'=>1007,'msg'=>lang('model/cash/mush_money_err')]);
+            }
+            $scope->assertActive();
+            $changed = Db::name('User')->where('user_id', $userId)->where('user_status', 1)
+                ->where('user_points', $available)->where('user_points_froze', $frozen)
                 ->dec('user_points', $points)->inc('user_points_froze', $points)->update();
-            if ($changed !== 1) {
-                return $scope->rollback(['code'=>1007,'msg'=>lang('model/cash/mush_money_err')]);
-            }
-            $cashId = Db::name('Cash')->insertGetId($data);
-            if ((int)$cashId < 1) {
-                throw new \RuntimeException('cash insert failed');
-            }
-            // 老库 cash_points 是 SMALLINT，且连接允许 MySQL 静默截断。
-            // 回读核实记账数值；兼容已扩容的库，并避免扣全额却只记录部分积分。
-            $stored = Db::name('Cash')->master()->where('cash_id', $cashId)->find();
-            $reserved = Db::name('User')->master()->where('user_id', $userId)->find();
-            if (!$stored || !$reserved || (int)$stored['cash_points'] !== $points
-                || round((float)$stored['cash_money'], 2) !== $money
-                || (int)$reserved['user_points'] !== (int)$user['user_points'] - $points
-                || (int)$reserved['user_points_froze'] !== (int)$user['user_points_froze'] + $points) {
-                throw new \RuntimeException('cash ledger values were truncated');
-            }
+            if ($changed !== 1) { throw new \RuntimeException('Cash reservation changed'); }
+            $cashId = PointsBalance::amount(Db::name('Cash')->insertGetId($data));
+            if ($cashId === null) { throw new \RuntimeException('Cash identity was not stored'); }
+            self::assertCash($cashId, $data + ['cash_id'=>$cashId]);
+            self::assertBalances($userId, $available - $points, $frozen + $points);
             $scope->assertActive();
             return $scope->commit(['code'=>1,'msg'=>lang('save_ok')]);
         } catch (\Throwable $e) {
@@ -177,16 +163,23 @@ class Cash extends Base {
                     if ($points === null) {
                         throw new \RuntimeException('invalid frozen points');
                     }
-                    // 与解冻在同一 UPDATE 检查余额容量，避免非严格 MySQL 截断退款。
-                    $changed = Db::name('User')->master()->where('user_id', $row['user_id'])
-                        ->where('user_points_froze', '>=', $points)
-                        ->where('user_points', '<=', PointsBalance::MAX - $points)
-                        ->inc('user_points', $points)->dec('user_points_froze', $points)->update();
-                    if ($changed !== 1) {
-                        throw new \RuntimeException('cash refund failed');
+                    $userId = PointsBalance::amount($row['user_id']);
+                    if ($userId === null) { throw new \RuntimeException('Invalid cash owner'); }
+                    $user = Db::name('User')->master()->where('user_id', $userId)->lock(true)->find();
+                    [$available, $frozen] = self::balances($user);
+                    if ($frozen < $points || $available > PointsBalance::MAX - $points) {
+                        throw new \RuntimeException('Cash refund exceeds available capacity');
                     }
+                    $scope->assertActive();
+                    $changed = Db::name('User')->where('user_id', $userId)
+                        ->where('user_points', $available)->where('user_points_froze', $frozen)
+                        ->inc('user_points', $points)->dec('user_points_froze', $points)->update();
+                    if ($changed !== 1) { throw new \RuntimeException('Cash refund changed'); }
+                    self::assertBalances($userId, $available + $points, $frozen - $points);
+                    self::assertCash((int)$row['cash_id'], $row);
                 }
-                if (Db::name('Cash')->master()->where('cash_id', $row['cash_id'])->delete() !== 1) {
+                if (Db::name('Cash')->where('cash_id', $row['cash_id'])->delete() !== 1
+                    || Db::name('Cash')->master()->where('cash_id', $row['cash_id'])->find() !== null) {
                     throw new \RuntimeException('cash delete failed');
                 }
             }
@@ -199,17 +192,7 @@ class Cash extends Base {
 
     public function fieldData($where,$col,$val)
     {
-        if(!isset($col) || !isset($val)){
-            return ['code'=>1001,'msg'=>lang('param_err')];
-        }
-
-        $data = [];
-        $data[$col] = $val;
-        $res = $this->where($where)->update($data);
-        if($res===false){
-            return ['code'=>1001,'msg'=>lang('set_err').'：'.$this->getError() ];
-        }
-        return ['code'=>1,'msg'=>lang('set_ok')];
+        return ['code'=>1001, 'msg'=>lang('param_err')];
     }
 
     public function auditData($where)
@@ -227,35 +210,68 @@ class Cash extends Base {
             $list = Db::name('Cash')->master()->where($where)->where('cash_status', 0)
                 ->order('cash_id')->lock(true)->select()->toArray();
             foreach ($list as $row) {
-                $points = (int)$row['cash_points'];
-                if ($points < 1) {
-                    throw new \RuntimeException('invalid frozen points');
+                $points = PointsBalance::amount($row['cash_points']);
+                $userId = PointsBalance::amount($row['user_id']);
+                if ($points === null || $userId === null) { throw new \RuntimeException('Invalid cash reservation'); }
+                $user = Db::name('User')->master()->where('user_id', $userId)->lock(true)->find();
+                [$available, $frozen] = self::balances($user);
+                if ($frozen < $points) { throw new \RuntimeException('Missing frozen reservation'); }
+                $update = ['cash_status'=>1, 'cash_time_audit'=>time()];
+                $scope->assertActive();
+                if (Db::name('Cash')->where('cash_id', $row['cash_id'])->where('cash_status', 0)->update($update) !== 1) {
+                    throw new \RuntimeException('Cash state changed');
                 }
-                $changed = Db::name('Cash')->master()->where('cash_id', $row['cash_id'])->where('cash_status', 0)->update([
-                    'cash_status' => 1,
-                    'cash_time_audit' => time(),
-                ]);
-                if ($changed !== 1) {
-                    throw new \RuntimeException('cash state changed');
+                if (Db::name('User')->where('user_id', $userId)->where('user_points', $available)
+                    ->where('user_points_froze', $frozen)->dec('user_points_froze', $points)->update() !== 1) {
+                    throw new \RuntimeException('Cash settlement changed');
                 }
-                $changed = Db::name('User')->master()->where('user_id', $row['user_id'])
-                    ->where('user_points_froze', '>=', $points)->setDec('user_points_froze', $points);
-                if ($changed !== 1) {
-                    throw new \RuntimeException('cash settlement failed');
+                $expected = ['user_id'=>$userId, 'plog_type'=>9, 'plog_points'=>$points];
+                $ledger = new \app\common\model\Plog();
+                $started = time();
+                if (($ledger->saveData($expected)['code'] ?? null) !== 1) { throw new \RuntimeException('Cash ledger rejected'); }
+                $scope->assertActive();
+                $ledgerId = PointsBalance::amount($ledger->getLastInsID());
+                $stored = $ledgerId === null ? null : Db::name('Plog')->master()->where('plog_id', $ledgerId)->find();
+                foreach ($expected as $field=>$value) {
+                    if (!$stored || PointsBalance::amount($stored[$field] ?? null) !== $value) {
+                        throw new \RuntimeException('Cash ledger was not stored exactly');
+                    }
                 }
-                $log = (new \app\common\model\Plog())->saveData([
-                    'user_id' => $row['user_id'],
-                    'plog_type' => 9,
-                    'plog_points' => $points,
-                ]);
-                if ((int)($log['code'] ?? 0) !== 1) {
-                    throw new \RuntimeException('cash points log failed');
-                }
+                $storedTime = PointsBalance::amount($stored['plog_time'] ?? null);
+                if ($storedTime === null || $storedTime < $started || $storedTime > time()) { throw new \RuntimeException('Cash ledger time changed'); }
+                self::assertCash((int)$row['cash_id'], array_replace($row, $update));
+                self::assertBalances($userId, $available, $frozen - $points);
             }
             $scope->assertActive();
             return $scope->commit(['code'=>1,'msg'=>'审核成功']);
         } catch (\Throwable $e) {
             return $scope !== null ? $scope->rollback($failure) : $failure;
+        }
+    }
+
+    private static function balances(?array $user): array
+    {
+        $available = PointsBalance::amount($user['user_points'] ?? null, true);
+        $frozen = PointsBalance::amount($user['user_points_froze'] ?? null, true);
+        if ($available === null || $frozen === null) { throw new \RuntimeException('Invalid cash owner balances'); }
+        return [$available, $frozen];
+    }
+
+    private static function assertBalances(int $id, int $available, int $frozen): void
+    {
+        if (self::balances(Db::name('User')->master()->where('user_id', $id)->find()) !== [$available, $frozen]) {
+            throw new \RuntimeException('Cash balances were not stored exactly');
+        }
+    }
+
+    private static function assertCash(int $id, array $expected): void
+    {
+        $row = Db::name('Cash')->master()->where('cash_id', $id)->find();
+        foreach ($expected as $field=>$value) {
+            if (!$row || !array_key_exists($field, $row)) { throw new \RuntimeException('Cash record disappeared'); }
+            $equal = $field === 'cash_money' ? OrderAmount::minorUnits($row[$field], true) === OrderAmount::minorUnits($value, true)
+                : (is_int($value) ? PointsBalance::amount($row[$field], true) === $value : $row[$field] === $value);
+            if (!$equal) { throw new \RuntimeException('Cash record was not stored exactly'); }
         }
     }
 

@@ -108,9 +108,9 @@ $allAuditSchemas = [
     'group' => 'group_id INTEGER PRIMARY KEY, group_name TEXT',
     'cj_node' => 'nodeid INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, lastdate INTEGER, urlpage TEXT, page_base TEXT, sourcecharset TEXT, customize_config TEXT, program_config TEXT',
     'admin' => 'admin_id INTEGER PRIMARY KEY, admin_name TEXT, admin_pwd TEXT, admin_status INTEGER, admin_auth TEXT, admin_random TEXT, admin_login_ip INTEGER DEFAULT 0, admin_login_time INTEGER DEFAULT 0, admin_login_num INTEGER DEFAULT 0, admin_last_login_time INTEGER DEFAULT 0, admin_last_login_ip INTEGER DEFAULT 0',
-    'user' => 'user_id INTEGER PRIMARY KEY, user_name TEXT, group_id TEXT DEFAULT "1", user_points INTEGER DEFAULT 0, user_points_froze INTEGER DEFAULT 0',
+    'user' => 'user_id INTEGER PRIMARY KEY, user_name TEXT, user_status INTEGER DEFAULT 1, group_id TEXT DEFAULT "1", user_points INTEGER DEFAULT 0, user_points_froze INTEGER DEFAULT 0',
     'order' => 'order_id INTEGER PRIMARY KEY, order_code TEXT, order_status INTEGER DEFAULT 0, order_price REAL, order_points INTEGER, user_id INTEGER, order_pay_time INTEGER, order_pay_type TEXT, order_remarks TEXT DEFAULT ""',
-    'cash' => 'cash_id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, cash_money REAL, cash_points INTEGER, cash_time INTEGER, cash_status INTEGER DEFAULT 0, cash_time_audit INTEGER, cash_bank_name TEXT, cash_bank_no TEXT, cash_payee_name TEXT',
+    'cash' => 'cash_id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, cash_money REAL, cash_points INTEGER, cash_time INTEGER, cash_status INTEGER DEFAULT 0, cash_time_audit INTEGER DEFAULT 0, cash_bank_name TEXT, cash_bank_no TEXT, cash_payee_name TEXT',
     'plog' => 'plog_id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, plog_type INTEGER, plog_points INTEGER, plog_time INTEGER',
 ];
 foreach (array_intersect_key($allAuditSchemas, array_flip($frameworkAuditTables)) as $table => $columns) {
