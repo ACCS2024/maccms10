@@ -3545,4 +3545,5 @@ https://www.baidu.com/123.jpg
     'model/cash/request_conflict' => '该请求编号已用于另一份提现申请，请先核对原申请，确认前请勿重复提交。',
     'model/cash/rounding_hint' => '提现所需积分向上取整，不足一个积分按一个计。',
     'model/cash/maximum_money' => '单笔最多可申请金额',
+    'model/cash/batch_limit' => '每批最多处理 1000 条提现记录，请分批选择。',
 ];

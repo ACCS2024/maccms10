@@ -14,7 +14,7 @@ class AdminCashFixture extends \app\admin\controller\Cash {
 }
 $app->bind(\app\admin\controller\Cash::class,AdminCashFixture::class);
 function adminCashState():array {
-    return purchaseCsrfState()+['cash'=>Db::name('Cash')->order('cash_id')->select()->toArray(),
+    return purchaseCsrfState()+['CashHistory'=>Db::name('CashHistory')->order('cash_id')->select()->toArray(),'cash'=>Db::name('Cash')->order('cash_id')->select()->toArray(),
         'requests'=>Db::name('CashRequest')->order('user_id,request_id')->select()->toArray()];
 }
 function adminCashSeed():array {

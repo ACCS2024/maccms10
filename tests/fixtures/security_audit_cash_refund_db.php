@@ -42,7 +42,11 @@ if ($mysql) {
         cash_time INTEGER NOT NULL DEFAULT 0, cash_time_audit INTEGER NOT NULL DEFAULT 0)');
 }
 
+require __DIR__.'/cash_history_schema.php';
+cashHistorySchema($mysql);
+
 function cashRefundSeed(int $available = 80, int $frozen = 20, int $points = 20, int $status = 0): void {
+    Db::execute('DELETE FROM audit_cash_history');
     Db::execute('DELETE FROM audit_cash');
     membershipSeed($available);
     Db::name('User')->where('user_id', 1)->update(['user_points_froze'=>$frozen, 'user_status'=>1]);
@@ -52,7 +56,8 @@ function cashRefundSeed(int $available = 80, int $frozen = 20, int $points = 20,
 function cashRefundState(): array {
     return [Db::name('User')->order('user_id')->select()->toArray(),
         Db::name('Cash')->order('cash_id')->select()->toArray(),
-        Db::name('Plog')->order('plog_id')->select()->toArray()];
+        Db::name('Plog')->order('plog_id')->select()->toArray(),
+        Db::name('CashHistory')->order('cash_id')->select()->toArray()];
 }
 function cashRefundSecondUser(int $available = 70, int $frozen = 30): void {
     Db::name('User')->where('user_id', 2)->update(['user_points'=>$available, 'user_points_froze'=>$frozen]);

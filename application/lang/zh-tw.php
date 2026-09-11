@@ -3237,4 +3237,5 @@ https://www.baidu.com/123.jpg
     'model/cash/request_conflict' => '此請求編號已用於另一份提款申請，請先核對原申請，確認前請勿重複提交。',
     'model/cash/rounding_hint' => '提款所需積分向上取整，不足一個積分按一個計。',
     'model/cash/maximum_money' => '單筆最多可申請金額',
+    'model/cash/batch_limit' => '每批最多處理 1000 筆提款記錄，請分批選擇。',
 );

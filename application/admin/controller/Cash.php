@@ -48,7 +48,7 @@ class Cash extends Base
         $ids = $this->cashSelection(true);
         if ($ids === null) { return json(['code'=>1001, 'msg'=>lang('param_err')]); }
         $where = $ids === [] ? [['cash_id', '>', 0]] : ['cash_id'=>$ids];
-        return json((new \app\common\model\Cash())->delData($where));
+        return json((new \app\common\model\Cash())->delData($where, ['type'=>'admin', 'id'=>$this->_admin['admin_id']]));
     }
 
     public function audit()

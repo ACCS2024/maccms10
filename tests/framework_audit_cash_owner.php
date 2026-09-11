@@ -6,7 +6,7 @@ use app\common\model\Cash;
 $observer=$mysql?new PDO('mysql:host='.(getenv('MEMBERSHIP_AUDIT_HOST')?:'127.0.0.1').';dbname='.MEMBERSHIP_AUDIT_DATABASE.';charset=utf8mb4','root',getenv('MEMBERSHIP_AUDIT_PASSWORD')?:''):new PDO('sqlite:'.MEMBERSHIP_AUDIT_DATABASE);
 $observer->setAttribute(PDO::ATTR_ERRMODE,PDO::ERRMODE_EXCEPTION);
 function cashOwnerObserve(PDO $pdo): array {
-    $result=[];foreach(['user','cash','plog'] as $table)$result[]=$pdo->query('SELECT * FROM audit_'.$table.' ORDER BY '.$table.'_id')->fetchAll(PDO::FETCH_ASSOC);return $result;
+    $result=[];foreach(['user','cash','plog','cash_history'] as $table)$result[]=$pdo->query('SELECT * FROM audit_'.$table.' ORDER BY '.($table==='cash_history'?'cash_id':$table.'_id'))->fetchAll(PDO::FETCH_ASSOC);return $result;
 }
 $cases=['normal','orm_begin_before','pdo_begin_before','pdo_begin_after','orm_begin_after',
     'orm_rollback_before','pdo_rollback_before','pdo_rollback_after','orm_rollback_after',
@@ -43,6 +43,7 @@ foreach(['reserve','refund','settle'] as $operation)foreach($cases as $case) {
             $user=$state[0][0];
             check((int)$user['user_points']===($operation==='refund'?100:80)&&(int)$user['user_points_froze']===($operation==='reserve'?20:0),'Observer found partially committed cash balances');
             check(count($state[1])===($operation==='refund'?0:1)&&count($state[2])===($operation==='settle'?1:0),'Observer found partially committed cash/ledger rows');
+            check(count($state[3])===($operation==='refund'?1:0),'Archive must share the independently observed cash transaction outcome');
             if($operation==='settle')check((int)$state[1][0]['cash_status']===1&&(int)$state[2][0]['plog_points']===20,'Cash settlement state/receipt incomplete');
         } else {check($state===$before,'Failed cash transition changed independently visible data');}
         check(!str_contains(json_encode($result),'123456')&&!str_contains(json_encode($result),'ordinary name'),'Cash outcome leaked payee information');
@@ -51,7 +52,7 @@ foreach(['reserve','refund','settle'] as $operation)foreach($cases as $case) {
         if($rollback)Db::execute('DROP TRIGGER cash_owner_reject');
     }
 }
-if($mysql)foreach(['reserve','refund','settle'] as $operation)foreach($operation==='settle'?['cash','user','plog']:['cash','user'] as $table) {
+if($mysql)foreach(['reserve','refund','settle'] as $operation)foreach($operation==='settle'?['cash','user','plog']:($operation==='refund'?['cash','user','cash_history']:['cash','user']) as $table) {
     cashOwnerSeed($operation);Db::execute('ALTER TABLE audit_'.$table.' ENGINE=MyISAM');$before=cashOwnerObserve($observer);PurchaseOwnerFault::reset();
     try{check(cashOwnerRun($operation)['code']!==1&&cashOwnerObserve($observer)===$before&&PurchaseOwnerFault::$calls===[],'Cash started on nontransactional '.$table);}
     finally{Db::execute('ALTER TABLE audit_'.$table.' ENGINE=InnoDB');}

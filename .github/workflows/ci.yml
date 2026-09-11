@@ -123,6 +123,7 @@ jobs:
         run: |
           php tests/run_audit.php --suite=models
           php tests/framework_audit_cash_request_schema.php
+          php tests/framework_audit_cash_archive_schema.php
       - name: MySQL upload ownership and editor contracts
         env:
           UPLOAD_AUDIT_MYSQL: '1'

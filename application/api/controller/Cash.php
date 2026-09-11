@@ -160,7 +160,7 @@ class Cash extends Base
         if ($ids === null) { return json(['code'=>1001, 'msg'=>lang('param_err')]); }
         $where = ['user_id'=>$identity['info']['user_id']];
         if ($ids !== []) { $where['cash_id'] = $ids; }
-        return json((new \app\common\model\Cash())->delData($where));
+        return json((new \app\common\model\Cash())->delData($where, ['type'=>'user', 'id'=>$identity['info']['user_id']]));
     }
 
     /**

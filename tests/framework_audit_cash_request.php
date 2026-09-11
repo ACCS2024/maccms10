@@ -15,7 +15,7 @@ function receiptBody(array $changes=[]):array {
 }
 function receiptSeed():void { purchaseCsrfSeed();receiptConfig(); }
 function receiptState():array {
-    return purchaseCsrfState()+['cash'=>Db::name('Cash')->order('cash_id')->select()->toArray(),
+    return purchaseCsrfState()+['CashHistory'=>Db::name('CashHistory')->order('cash_id')->select()->toArray(),'cash'=>Db::name('Cash')->order('cash_id')->select()->toArray(),
         'receipts'=>Db::name('CashRequest')->order('user_id,request_id')->select()->toArray()];
 }
 receiptConfig();

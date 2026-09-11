@@ -4,10 +4,12 @@ use app\common\util\PointsBalance;
 use app\common\util\CashTransaction;
 use app\common\util\OrderAmount;
 use app\common\util\CashRequest;
+use app\common\util\CashArchive;
 use think\facade\Db;
 
 class Cash extends Base {
     public const MAX_POINTS = 65535;
+    public const MAX_BATCH = 1000;
     // 设置数据表（不含前缀）
     protected $name = 'cash';
 
@@ -175,34 +177,49 @@ class Cash extends Base {
         return ['code'=>1, 'points'=>$quote['order_points']];
     }
 
-    public function delData($where)
+    public function delData($where, $actor = null)
     {
         if (($blocked = CashTransaction::blockedResult()) !== null) { return $blocked; }
-        if (empty($where) || !is_array($where)) {
+        if (empty($where) || !is_array($where) || ($actor = CashArchive::actor($actor)) === null) {
             return ['code'=>1001,'msg'=>lang('param_err')];
         }
         $scope = null;
         $failure = ['code'=>1005,'msg'=>lang('del_err')];
         try {
-            CashTransaction::requireTables(array_map(static fn(string $name): string => Db::name($name)->getTable(), ['Cash','User']));
+            CashTransaction::requireTables(array_map(static fn(string $name): string => Db::name($name)->getTable(), ['Cash','User','CashHistory']));
             $scope = new CashTransaction('refund', null, $failure);
             $scope->begin();
-            // 与审核使用相同的行锁顺序；退款、删除不可被另一个审核/删除请求穿插。
-            $list = Db::name('Cash')->master()->where($where)->order('cash_id')->lock(true)->select()->toArray();
+            // Lock cash rows first, then capture every affected account before changing any balance.
+            $list = Db::name('Cash')->master()->where($where)->order('cash_id')->lock(true)->limit(self::MAX_BATCH + 1)->select()->toArray();
+            if (count($list) > self::MAX_BATCH) { return $scope->rollback(['code'=>1008, 'msg'=>lang('model/cash/batch_limit')]); }
+            $archives = [];
+            $balances = [];
+            $owners = [];
             foreach ($list as $row) {
                 $status = (int)$row['cash_status'];
                 if ($status !== 0 && $status !== 1) {
                     throw new \RuntimeException('invalid cash state');
                 }
+                $userId = PointsBalance::amount($row['user_id'], $status === 1);
+                if ($userId === null) { throw new \RuntimeException('Invalid cash owner'); }
+                $owners[$userId] = $userId;
+            }
+            sort($owners, SORT_NUMERIC);
+            foreach ($owners as $userId) {
+                $user = Db::name('User')->master()->where('user_id', $userId)->lock(true)->find();
+                if ($user !== null) { $balances[$userId] = self::balances($user); }
+            }
+            foreach ($list as $row) {
+                $status = (int)$row['cash_status'];
+                $userId = (int)$row['user_id'];
+                if (isset($balances[$userId])) { self::assertBalances($userId, ...$balances[$userId]); }
                 if ($status === 0) {
                     $points = PointsBalance::amount($row['cash_points']);
                     if ($points === null) {
                         throw new \RuntimeException('invalid frozen points');
                     }
-                    $userId = PointsBalance::amount($row['user_id']);
-                    if ($userId === null) { throw new \RuntimeException('Invalid cash owner'); }
-                    $user = Db::name('User')->master()->where('user_id', $userId)->lock(true)->find();
-                    [$available, $frozen] = self::balances($user);
+                    if (!isset($balances[$userId])) { throw new \RuntimeException('Cash owner missing'); }
+                    [$available, $frozen] = $balances[$userId];
                     if ($frozen < $points || $available > PointsBalance::MAX - $points) {
                         throw new \RuntimeException('Cash refund exceeds available capacity');
                     }
@@ -211,14 +228,20 @@ class Cash extends Base {
                         ->where('user_points', $available)->where('user_points_froze', $frozen)
                         ->inc('user_points', $points)->dec('user_points_froze', $points)->update();
                     if ($changed !== 1) { throw new \RuntimeException('Cash refund changed'); }
-                    self::assertBalances($userId, $available + $points, $frozen - $points);
+                    $balances[$userId] = [$available + $points, $frozen - $points];
+                    self::assertBalances($userId, ...$balances[$userId]);
                     self::assertCash((int)$row['cash_id'], $row);
                 }
+                $scope->assertActive();
+                $archives[] = CashArchive::store($row, $actor);
+                self::assertCash((int)$row['cash_id'], $row);
                 if (Db::name('Cash')->where('cash_id', $row['cash_id'])->delete() !== 1
                     || Db::name('Cash')->master()->where('cash_id', $row['cash_id'])->find() !== null) {
                     throw new \RuntimeException('cash delete failed');
                 }
             }
+            foreach ($archives as $archive) { CashArchive::assertStored($archive); }
+            foreach ($balances as $userId=>$expected) { self::assertBalances($userId, ...$expected); }
             $scope->assertActive();
             return $scope->commit(['code'=>1,'msg'=>lang('del_ok')]);
         } catch (\Throwable $e) {
@@ -244,7 +267,8 @@ class Cash extends Base {
             $scope = new CashTransaction('settle', null, $failure);
             $scope->begin();
             $list = Db::name('Cash')->master()->where($where)->where('cash_status', 0)
-                ->order('cash_id')->lock(true)->select()->toArray();
+                ->order('cash_id')->lock(true)->limit(self::MAX_BATCH + 1)->select()->toArray();
+            if (count($list) > self::MAX_BATCH) { return $scope->rollback(['code'=>1008, 'msg'=>lang('model/cash/batch_limit')]); }
             foreach ($list as $row) {
                 $points = PointsBalance::amount($row['cash_points']);
                 $userId = PointsBalance::amount($row['user_id']);

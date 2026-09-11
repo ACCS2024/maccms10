@@ -3227,4 +3227,5 @@ Note: Si les listes noires et blanches sont remplies, les stratégies s\'appliqu
     'model/cash/request_conflict' => 'This request ID belongs to another withdrawal. Check the original request before submitting again.',
     'model/cash/rounding_hint' => 'Withdrawal points are rounded up to the next whole point.',
     'model/cash/maximum_money' => 'Maximum amount per withdrawal',
+    'model/cash/batch_limit' => 'A batch can process at most 1000 withdrawal records. Select a smaller batch.',
 );

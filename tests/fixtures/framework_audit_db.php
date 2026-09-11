@@ -94,7 +94,9 @@ $GLOBALS['config'] = [
     'user' => ['cash_status' => '1', 'cash_min' => 1, 'cash_ratio' => 1],
 ];
 
+if (in_array('cash', $frameworkAuditTables, true)) { $frameworkAuditTables[] = 'cash_history'; }
 $allAuditSchemas = [
+    'cash_history' => 'cash_id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL, cash_status INTEGER NOT NULL, cash_time INTEGER NOT NULL, cash_time_archive INTEGER NOT NULL, cash_actor_type VARCHAR(16) NOT NULL, cash_actor_id INTEGER NOT NULL, cash_payload TEXT NOT NULL, cash_payload_hash CHAR(64) NOT NULL',
     'rows' => 'row_id INTEGER PRIMARY KEY, label TEXT',
     'query_vod' => 'vod_id INTEGER PRIMARY KEY, vod_status INTEGER, vod_name TEXT, vod_actor TEXT, vod_director TEXT, vod_tag TEXT',
     'type' => 'type_id INTEGER PRIMARY KEY, type_pid INTEGER',
@@ -110,7 +112,7 @@ $allAuditSchemas = [
     'admin' => 'admin_id INTEGER PRIMARY KEY, admin_name TEXT, admin_pwd TEXT, admin_status INTEGER, admin_auth TEXT, admin_random TEXT, admin_login_ip INTEGER DEFAULT 0, admin_login_time INTEGER DEFAULT 0, admin_login_num INTEGER DEFAULT 0, admin_last_login_time INTEGER DEFAULT 0, admin_last_login_ip INTEGER DEFAULT 0',
     'user' => 'user_id INTEGER PRIMARY KEY, user_name TEXT, user_status INTEGER DEFAULT 1, group_id TEXT DEFAULT "1", user_points INTEGER DEFAULT 0, user_points_froze INTEGER DEFAULT 0',
     'order' => 'order_id INTEGER PRIMARY KEY, order_code TEXT, order_status INTEGER DEFAULT 0, order_price REAL, order_points INTEGER, user_id INTEGER, order_pay_time INTEGER, order_pay_type TEXT, order_remarks TEXT DEFAULT ""',
-    'cash' => 'cash_id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, cash_money REAL, cash_points INTEGER, cash_time INTEGER, cash_status INTEGER DEFAULT 0, cash_time_audit INTEGER DEFAULT 0, cash_bank_name TEXT, cash_bank_no TEXT, cash_payee_name TEXT',
+    'cash' => 'cash_id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, cash_money REAL, cash_points INTEGER, cash_time INTEGER DEFAULT 0, cash_status INTEGER DEFAULT 0, cash_time_audit INTEGER DEFAULT 0, cash_bank_name TEXT, cash_bank_no TEXT, cash_payee_name TEXT',
     'plog' => 'plog_id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, plog_type INTEGER, plog_points INTEGER, plog_time INTEGER',
 ];
 foreach (array_intersect_key($allAuditSchemas, array_flip($frameworkAuditTables)) as $table => $columns) {
@@ -129,7 +131,7 @@ function expect($condition, string $message): void {
 }
 function seed(): void {
     global $frameworkAuditTables;
-    foreach (array_intersect(['cash', 'order', 'plog', 'user'], $frameworkAuditTables) as $table) { Db::execute('DELETE FROM audit_' . $table); }
+    foreach (array_intersect(['cash_history', 'cash', 'order', 'plog', 'user'], $frameworkAuditTables) as $table) { Db::execute('DELETE FROM audit_' . $table); }
     Db::name('User')->insert(['user_id'=>1,'user_name'=>'one','group_id'=>'1','user_points'=>100,'user_points_froze'=>0]);
     Db::name('User')->insert(['user_id'=>2,'user_name'=>'two','group_id'=>'1','user_points'=>100,'user_points_froze'=>0]);
     $GLOBALS['user'] = ['user_id'=>1,'user_points'=>100,'user_points_froze'=>0];

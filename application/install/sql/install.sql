@@ -1722,3 +1722,20 @@ CREATE TABLE `mac_cash_request` (
   PRIMARY KEY (`user_id`, `request_id`),
   KEY `cash_request_cash` (`cash_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=ascii COLLATE=ascii_bin;
+
+-- Cash archive: normal record removal retains the original financial snapshot.
+DROP TABLE IF EXISTS `mac_cash_history`;
+CREATE TABLE `mac_cash_history` (
+  `cash_id` int unsigned NOT NULL,
+  `user_id` int unsigned NOT NULL,
+  `cash_status` tinyint unsigned NOT NULL,
+  `cash_time` int unsigned NOT NULL,
+  `cash_time_archive` int unsigned NOT NULL,
+  `cash_actor_type` varchar(16) NOT NULL,
+  `cash_actor_id` int unsigned NOT NULL,
+  `cash_payload` longtext NOT NULL,
+  `cash_payload_hash` char(64) NOT NULL,
+  PRIMARY KEY (`cash_id`),
+  KEY `cash_history_user` (`user_id`, `cash_id`),
+  KEY `cash_history_status` (`cash_status`, `cash_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;

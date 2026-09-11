@@ -16,7 +16,7 @@ function cashWriteBody(array $changes=[]):array {
     return $changes+['request_id'=>str_repeat('a',64),'cash_money'=>'0.29','cash_bank_name'=>'Bank + branch','cash_bank_no'=>'001%20+234','cash_payee_name'=>'Ordinary name'];
 }
 function cashWriteState():array {
-    return purchaseCsrfState()+['Cash'=>Db::name('Cash')->order('cash_id')->select()->toArray(),'CashRequest'=>Db::name('CashRequest')->order('user_id,request_id')->select()->toArray()];
+    return purchaseCsrfState()+['CashHistory'=>Db::name('CashHistory')->order('cash_id')->select()->toArray(),'Cash'=>Db::name('Cash')->order('cash_id')->select()->toArray(),'CashRequest'=>Db::name('CashRequest')->order('user_id,request_id')->select()->toArray()];
 }
 function cashWriteToken():array {
     $cookies=purchaseCsrfCookies();$before=cashWriteState();
