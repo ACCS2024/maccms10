@@ -9,6 +9,7 @@
             return blocked;
         }
         function localUrl(value) {
+            if (typeof value !== 'string' || !value.trim()) { throw new Error('Missing cash endpoint'); }
             var url = new URL(value, window.location.href);
             if (url.origin !== window.location.origin || url.username || url.password || url.hash) {
                 throw new Error('Invalid cash endpoint');
@@ -64,7 +65,7 @@
                     body.set('csrf_token', result.info.csrf_token);
                     if (reservation) { key = reservationKey(); body.set('request_id', key); }
                     sent = true;
-                    return request(url, {method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'}, body: body.toString()})
+                    return request(url, {method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8', 'X-CSRF-Token': result.info.csrf_token}, body: body.toString()})
                         .then(function (reply) {
                             if (!reply || !Number.isInteger(reply.code) || reply.code < 1 || typeof reply.msg !== 'string') { return unknown(); }
                             if (reply.retryable === false || (reply.info && reply.info.retryable === false)) { return unknown(reply); }

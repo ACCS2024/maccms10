@@ -198,7 +198,7 @@ class Admin extends Base {
             return ['code'=>1002,'msg'=>lang('model/admin/not_login')];
         }
         // 会话是登录时的快照；停用、删除、改密和撤销权限必须在下一次请求生效。
-        $current = $this->where('admin_id', (int)$info['admin_id'])->find();
+        $current = $this->master()->where('admin_id', (int)$info['admin_id'])->find();
         if (!$current || (int)$current['admin_status'] !== 1
             || (string)$current['admin_name'] !== (string)($info['admin_name'] ?? '')
             || !hash_equals((string)$current['admin_pwd'], $info['admin_pwd'])) {

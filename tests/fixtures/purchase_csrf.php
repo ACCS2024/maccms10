@@ -44,7 +44,7 @@ if(!defined('MAC_PATH'))define('MAC_PATH','/fixture/');
 if(!$purchaseHttp)register_shutdown_function(static function()use($purchaseTemp):void{audit_remove_temp($purchaseTemp);});
 $app=new \think\App($purchaseTemp.'/app');
 $mysql=getenv('PURCHASE_CSRF_MYSQL')==='1';
-$purchaseDatabase=defined('CASH_WRITE_AUDIT')?'maccms_audit_cash_write':(getenv('MANGA_PURCHASE_AUDIT')==='1'?'maccms_audit_manga_purchase':'maccms_audit_purchase_csrf');
+$purchaseDatabase=defined('CASH_ADMIN_AUDIT')?'maccms_audit_cash_admin':(defined('CASH_WRITE_AUDIT')?'maccms_audit_cash_write':(getenv('MANGA_PURCHASE_AUDIT')==='1'?'maccms_audit_manga_purchase':'maccms_audit_purchase_csrf'));
 $connection=['type'=>$mysql?'mysql':'sqlite','database'=>$mysql?$purchaseDatabase:($purchaseHttp?$purchaseTemp.'/purchase.sqlite':':memory:'),
     'prefix'=>'audit_','trigger_sql'=>true,'fields_cache'=>false,'charset'=>'utf8mb4',
     'hostname'=>getenv('FRAMEWORK_AUDIT_HOST')?:'127.0.0.1','username'=>'root','password'=>getenv('FRAMEWORK_AUDIT_PASSWORD')?:''];
@@ -63,7 +63,7 @@ $app->bind(\app\index\controller\User::class,PurchaseCsrfIndex::class);$app->bin
 if($mysql)Db::execute("SET SESSION sql_mode=''");
 if(!defined('PURCHASE_CSRF_EXISTING_DB')&&(!$purchaseHttp||!is_file($purchaseTemp.'/schema.ready'))){
     $ddl=file_get_contents(dirname(__DIR__,2).'/application/install/sql/install.sql');
-    foreach(array_merge(['user','group','plog','ulog','vod','art'],getenv('MANGA_PURCHASE_AUDIT')==='1'?['manga']:[],defined('CASH_WRITE_AUDIT')?['cash','cash_request']:[])as $table){
+    foreach(array_merge(['user','group','plog','ulog','vod','art'],getenv('MANGA_PURCHASE_AUDIT')==='1'?['manga']:[],defined('CASH_WRITE_AUDIT')?['cash','cash_request']:[],defined('CASH_ADMIN_AUDIT')?['admin']:[])as $table){
         if(!preg_match('/CREATE TABLE `mac_'.$table.'` \(([\s\S]*?)\) ENGINE[^;]*;/',$ddl,$match))throw new RuntimeException('Purchase install schema missing');
         Db::execute('DROP TABLE IF EXISTS audit_'.$table);
         if($mysql){Db::execute(str_replace('`mac_'.$table.'`','`audit_'.$table.'`',$match[0]));continue;}
@@ -148,7 +148,7 @@ function purchaseCsrfManga(array $changes=[]):array{
 }
 function purchaseCsrfSeed():void{
     purchaseCsrfConfig();
-    foreach(array_merge(['ulog','plog','user','group','vod','art'],getenv('MANGA_PURCHASE_AUDIT')==='1'?['manga']:[],defined('CASH_WRITE_AUDIT')?['cash','cash_request']:[])as $table)Db::execute('DELETE FROM audit_'.$table);
+    foreach(array_merge(['ulog','plog','user','group','vod','art'],getenv('MANGA_PURCHASE_AUDIT')==='1'?['manga']:[],defined('CASH_WRITE_AUDIT')?['cash','cash_request']:[],defined('CASH_ADMIN_AUDIT')?['admin']:[])as $table)Db::execute('DELETE FROM audit_'.$table);
     $groups=[];
     foreach([1,2,3]as $id){$group=['group_id'=>$id,'group_name'=>'Fixture '.$id,'group_type'=>'1,','group_popedom'=>json_encode([1=>[3=>1,4=>1,5=>1]]),'group_status'=>1];Db::name('Group')->insert($group);$group['group_popedom']=json_decode($group['group_popedom'],true);$groups[$id]=$group;}
     \think\facade\Cache::set('purchase_csrf_group_list',$groups);

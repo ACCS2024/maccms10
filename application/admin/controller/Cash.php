@@ -44,38 +44,48 @@ class Cash extends Base
 
     public function del()
     {
-        $param = \think\facade\Request::param();
-        $ids = $param['ids'];
-        $all = $param['all'];
-        if(!empty($ids)){
-            $where=[];
-            $where['cash_id'] = $ids;
-            if($all==1){
-                $where[] = ['cash_id', '>', 0];
-            }
-            $res = (new \app\common\model\Cash())->delData($where);
-            if($res['code']>1){
-                return $this->error($res['msg']);
-            }
-            return $this->success($res['msg']);
-        }
-        return $this->error(lang('param_err'));
+        if (($failure = $this->authorizeCashWrite('del')) !== null) { return json($failure); }
+        $ids = $this->cashSelection(true);
+        if ($ids === null) { return json(['code'=>1001, 'msg'=>lang('param_err')]); }
+        $where = $ids === [] ? [['cash_id', '>', 0]] : ['cash_id'=>$ids];
+        return json((new \app\common\model\Cash())->delData($where));
     }
 
     public function audit()
     {
-        $param = \think\facade\Request::param();
-        $ids = $param['ids'];
-        if(!empty($ids)){
-            $where=[];
-            $where['cash_id'] = $ids;
-            $res = (new \app\common\model\Cash())->auditData($where);
-            if($res['code']>1){
-                return $this->error($res['msg']);
-            }
-            return $this->success($res['msg']);
-        }
-        return $this->error(lang('param_err'));
+        if (($failure = $this->authorizeCashWrite('audit')) !== null) { return json($failure); }
+        $ids = $this->cashSelection(false);
+        if ($ids === null) { return json(['code'=>1001, 'msg'=>lang('param_err')]); }
+        return json((new \app\common\model\Cash())->auditData(['cash_id'=>$ids]));
     }
 
+    private function authorizeCashWrite(string $action): ?array
+    {
+        if (request()->method(true) !== 'POST' || request()->method() !== 'POST') {
+            return ['code'=>1001, 'msg'=>lang('param_err')];
+        }
+        $auth = (new \app\common\model\Admin())->checkLogin();
+        if (($auth['code'] ?? null) !== 1) { return ['code'=>1401, 'msg'=>lang('model/admin/not_login')]; }
+        $this->_admin = $auth['info'];
+        if (!$this->check_auth('cash', $action)) { return ['code'=>1403, 'msg'=>lang('permission_denied')]; }
+        if (!\app\common\util\SessionCsrf::validate(request())) { return ['code'=>1403, 'msg'=>lang('token_err')]; }
+        return null;
+    }
+
+    private function cashSelection(bool $allowAll): ?array
+    {
+        $param = \think\facade\Request::post();
+        if (is_array($param['ids'] ?? null)) {
+            $raw = $param['ids'];
+            if (!array_is_list($raw) || count($raw) > 1000) { return null; }
+            foreach ($raw as $id) {
+                if ((!is_string($id) && !is_int($id)) || strlen((string)$id) > 10) { return null; }
+                $one = \app\common\util\LogSelection::ids(['ids'=>$id]);
+                if ($one === null || count($one) !== 1) { return null; }
+            }
+            $param['ids'] = implode(',', $raw);
+        }
+        $ids = \app\common\util\LogSelection::ids($param);
+        return !$allowAll && $ids === [] ? null : $ids;
+    }
 }

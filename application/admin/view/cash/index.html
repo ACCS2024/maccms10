@@ -1,5 +1,5 @@
 {include file="../../../application/admin/view/public/head" /}
-<div class="page-container p10">
+<div id="mac-admin-cash" class="page-container p10">
 
     <div class="my-toolbar-box" >
         <div class="mb-2">
@@ -19,9 +19,9 @@
         </div>
 
         <div class="flex gap-5 overflow-x-auto overflow-y-hidden">
-            <a data-href="{:url('del')}" class="layui-btn layui-btn-primary j-page-btns confirm"><i class="layui-icon">&#xe640;</i>{:lang('del')}</a>
-            <a data-href="{:url('del')}?ids=1&all=1" class="layui-btn layui-btn-primary j-ajax" confirm="{:lang('clear_confirm')}"><i class="layui-icon">&#xe640;</i>{:lang('clear')}</a>
-            <a data-href="{:url('audit')}" class="layui-btn layui-btn-primary j-page-btns confirm" confirm="{:lang('audit_confirm')}"><i class="layui-icon">&#xe640;</i>{:lang('audit')}</a>
+            <a data-cash-url="{:url('del')}" data-cash-selection="checked" class="layui-btn layui-btn-primary js-cash-action"><i class="layui-icon">&#xe640;</i>{:lang('del')}</a>
+            <a data-cash-url="{:url('del')}" data-cash-selection="all" class="layui-btn layui-btn-primary js-cash-action" data-confirm="{:lang('clear_confirm')}"><i class="layui-icon">&#xe640;</i>{:lang('clear')}</a>
+            <a data-cash-url="{:url('audit')}" data-cash-selection="checked" class="layui-btn layui-btn-primary js-cash-action" data-confirm="{:lang('audit_confirm')}"><i class="layui-icon">&#xe640;</i>{:lang('audit')}</a>
         </div>
     </div>
 
@@ -56,13 +56,13 @@
                 <td>{$vo.cash_bank_name|htmlspecialchars}</td>
                 <td>{$vo.cash_bank_no|htmlspecialchars}</td>
                 <td>{$vo.cash_payee_name|htmlspecialchars}</td>
-                <td>{$vo.cash_remarks|htmlspecialchars}</td>
+                <td>{$vo.cash_remarks|default=''|htmlspecialchars}</td>
                 <td>{$vo.cash_time|mac_day='color'}</td>
                 <td>{$vo.cash_time_audit|mac_day='color'}</td>
                 <td>
-                    <a class="layui-badge-rim j-tr-del" data-href="{:url('del?ids='.$vo['cash_id'])}" href="javascript:;" title="{:lang('del')}">{:lang('del')}</a>
+                    <a class="layui-badge-rim js-cash-action" data-cash-url="{:url('del')}" data-cash-selection="{$vo.cash_id}" href="javascript:;" title="{:lang('del')}">{:lang('del')}</a>
                     {if condition="$vo.cash_status neq '1'"}
-                    <a class="layui-badge-rim j-ajax" confirm="{:lang('audit_confirm')}" data-href="{:url('audit?ids='.$vo['cash_id'])}" href="javascript:;" title="{:lang('audit')}">{:lang('audit')}</a>
+                    <a class="layui-badge-rim js-cash-action" data-confirm="{:lang('audit_confirm')}" data-cash-url="{:url('audit')}" data-cash-selection="{$vo.cash_id}" href="javascript:;" title="{:lang('audit')}">{:lang('audit')}</a>
                     {/if}
                 </td>
             </tr>
@@ -76,6 +76,8 @@
 </div>
 
 {include file="../../../application/admin/view/public/foot" /}
+<script src="__STATIC__/js/cash-write.js?v=__ASSETV__"></script>
+<script src="__STATIC__/js/admin_cash.js?v=__ASSETV__"></script>
 
 
 <script type="text/javascript">
