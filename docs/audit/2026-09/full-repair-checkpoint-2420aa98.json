@@ -1,0 +1,78 @@
+{
+  "source_commit": "2420aa98",
+  "source_tree": "51944c5b22e96190aa16f53e9d7fe171c50bbac0",
+  "php_images": {
+    "8.3": "maccms-audit-image83:20260910",
+    "8.4": "maccms-audit-image84:20260910"
+  },
+  "checks": {
+    "php83": {
+      "version": "8.3.33",
+      "compiled_files": 5460,
+      "compilation_failures": 0,
+      "default_processes": 174,
+      "default_failures": 0
+    },
+    "php84": {
+      "version": "8.4.25",
+      "compiled_files": 5460,
+      "compilation_failures": 0,
+      "default_processes": 174,
+      "default_failures": 0
+    },
+    "phpstan_level1": {
+      "errors": 0,
+      "file_errors": 49
+    },
+    "phpstan_level5": {
+      "errors": 0,
+      "file_errors": 798
+    },
+    "phpcompatibility": {
+      "errors": 0,
+      "warnings": 1,
+      "fixable": 0
+    },
+    "source_policy": {
+      "profile": "source",
+      "findings": 0,
+      "hashed_files": 6421,
+      "includes_clean_production_vendor": true
+    },
+    "known_dependency_advisories": {
+      "root": 0,
+      "embedded_upyun": 0,
+      "abandoned_packages": 0,
+      "scope": "Online Composer audit against the lockfiles, no production credentials"
+    }
+  },
+  "artifacts": {
+    "lint-83.json": {
+      "sha256": "8334bcade7b22f195e69ad047938b1cf77dae3d00d4c89a931746f04849d2ad1"
+    },
+    "lint-84.json": {
+      "sha256": "f29b8ebe1ba69196cd7102431e27293d0a22049e54359c700bb8251f0068b789"
+    },
+    "default-83.log": {
+      "sha256": "c3aed17ebe53c2c20bf77e7632db2fae9a79930f923f5dd424014d4a33ba8dc7"
+    },
+    "default-84.log": {
+      "sha256": "e0f64e1229f3105bc3360735236dafcc50cc1e7d844a24ddf0eccc1955c70143"
+    },
+    "level1.json": {
+      "sha256": "0513b22b8567c94d4b457dafc034c9ffce3f5bd8bb1096006581d2b222017d48"
+    },
+    "level5.json": {
+      "sha256": "4263b9e0d0f5091978ddc74ee0b2d4d1c12aeed6e91df2328e3ff922c389e9eb"
+    },
+    "phpcompatibility.json": {
+      "sha256": "0484b1a84361d788dc31118e9a8dd9be4e5421a9ad20e48777aa93b0b59afd8a"
+    },
+    "source-audit.json": {
+      "sha256": "a7416189810414dc4b3ec60804e480747a94d0963906806b1b6254fa6a167c55"
+    },
+    "source-manifest.json": {
+      "sha256": "0f7b728675829a52bd8fa62b4bdb544f6128e5e93eb355e4e30065f58bcb6972"
+    }
+  }
+}

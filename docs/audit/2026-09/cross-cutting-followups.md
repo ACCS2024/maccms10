@@ -1,6 +1,6 @@
 # 跨模块复审清单
 
-日期：2026-09-11，最新完整 MySQL/静态基线为 `4a7f90c7`，见[刷新记录](full-repair-baseline-20260911.md)；之后独立批次见行内记录。此表区分已提交修复、实际复现和待核实范围，避免把一个入口通过回归当成整个系统已解决。每项修复仍独立冻结、验证和提交。
+日期：2026-09-11，最新完整默认/编译/静态基线见 [`2420aa98` 检查点](full-repair-checkpoint-2420aa98.md)；完整 MySQL 分组基线见 [`4a7f90c7` 刷新记录](full-repair-baseline-20260911.md)，后续关键事务均另跑真实 MySQL，见行内记录。此表区分已提交修复、实际复现和待核实范围，避免把一个入口通过回归当成整个系统已解决。每项修复仍独立冻结、验证和提交。
 
 | 类别 | 已提交或已确认 | 剩余边界 |
 | --- | --- | --- |
@@ -9,14 +9,17 @@
 | 漫画实际坐标和权限 | 解析 `7967fe99`、读取 `40931297`、购买 `a2460b94` 已分批完成；实际 source/chapter、密码范围、当前价格、空章节与非连续导航有专项证据 | 不把新读取路径的结论扩展至所有遗留模板和模型入口；见[读取报告](manga-resource-authorization.md)、[购买报告](manga-purchase-resources.md) |
 | Group 与输入容量 | 漫画 32 个活动组、实际 type_id 权限投影、8 MiB 正文与 20,000 章节已作组合容量验证 | 通用登录身份组装仍读取整份 Group 缓存，坏形状和额外内存占用需独立治理；漫画局部改动不代替共享身份链修复 |
 | 外部对象和附件目录 | 手工附件/头像 `17a09659`，下载图片资产 `e71164d3`，均登记全部衍生文件和精确 Annex/Intent 引用 | AI 封面已在 `51f2efeb` 原子绑定；Collect/Images 随后更新资源行、Annex 主动删除、目标迁移与孤儿核对仍待处理 |
-| AI 封面并发与恢复 | `b79959f2` 备份字段迁移、`51f2efeb` 图片解码与事务绑定、并发快照、完整组合恢复和提交后维护隔离；双版 SQLite 368 / MySQL 369 项，见[报告](ai-cover-transactions.md) | 历史不完整备份保留人工核对；跨请求幂等/核对队列、限流原子性和独立存储意图事务仍需处理 |
+| AI 封面并发与恢复 | `b79959f2` 备份字段迁移、`51f2efeb` 图片解码与事务绑定、并发快照、完整组合恢复和提交后维护隔离；双版 SQLite 368 / MySQL 369 项，见[报告](ai-cover-transactions.md) | 独立存储意图事务已在 `a13d8a1d` 接入原 PDO 收尾；历史不完整备份、跨请求幂等/核对队列和限流原子性仍需处理 |
 | 内容购买 owner 收尾（F1a） | `f15a1285` 的原 PDO 身份、有限清理、未知付款响应和 Request 阻止；真实 SQLite/MySQL BEGIN、ROLLBACK、COMMIT 前后故障均有证据 | 普通 `buy` 的调用方 SAVEPOINT 路径另列 F1b；独立返利及其它金融事务另列 F2；跨请求持久操作编号和核对器尚未实现 |
 | 调用方 SAVEPOINT（F1b） | 私有 SAVEPOINT 隔离兼容 buy，确认局部回滚后才恢复层级；不结束/关闭调用方 PDO；未知结果要求调用方中止并阻止同上下文再次购买；双 PHP SQLite/MySQL 各 127 项，见[报告](purchase-caller-savepoints.md) | 未知状态必须由调用方中止整个原事务，跨请求核对与通用 rollback-only 尚无；独立返利等 F2 仍待处理。三个正式锁内报价入口继续使用 owner 合同 |
 | 共享金融机制 / 返利会员（F2） | `a478462e` 抽取公共机制；返利和会员已接入原 PDO 收尾/私有保存点，补足实际落库验证和提交后 Cookie；双版 SQLite 192 / MySQL 195 项，见[报告](reward-membership-transactions.md) | `251e851b` 完成返利/会员；订单外层见 F2c，持久核对及其它资金入口另审 |
 | 订单外层收尾（F2c） | 原 PDO 拥有者接入，拒绝借用调用方未提交状态，内层未知清理由外层完整回滚；双版 SQLite 252 / MySQL 255 项，见[报告](order-owner-transactions.md) | `9fd9e21a` 完成；持久诊断、核对器与其它资金入口仍待处理；数据一致性另见 F2d |
 | 订单当前值和落库（F2d） | 锁内当前订单及用户、重复订单歧义拒绝、实际订单/台账/余额核对；双版 SQLite 78 / MySQL 80 项，另各 20 项真实独立进程并发，见[报告](order-authority-storage.md) | 历史不一致记录、跨请求核对、异常会员备注合同、完整主从拓扑与死锁策略另审；不自动重写既有支付数据 |
 | 卡密及其余事务（F3） | 卡密接入原 PDO 拥有者与实际存储核对，双版 SQLite 80 / MySQL 84 项，见[报告](card-owner-transactions.md)；f32e4000 的 74 行直接 Db 调用清点保留为原始候选 | 模型锁内逐字节身份核对见[凭据报告](card-credential-identity.md)；F3c [控制器输入](card-controller-ingress.md)已统一字面凭据及 POST 校验，双版双库各 212 项；批量发卡、管理保留及其它事务合同另审 |
-| 附件 owner 收尾 | `6330cd84` 修复 BEGIN 标记过晚与回滚不明时删除文件；保留原 PDO、私有清单、已发布文件和同 Request 阻止 | 独立 StorageIntent 事务、主动删除和跨请求恢复仍待验证；关闭 ORM 引用不能当作物理回滚证据 |
+| 附件 owner 收尾 | `6330cd84` 修复 BEGIN 标记过晚与回滚不明时删除文件；保留原 PDO、私有清单、已发布文件和同 Request 阻止 | `a13d8a1d` 完成 StorageIntent prepare/claim/finish 与附件未知结果证据保留；双版 SQLite 324 / MySQL 327 项，另各 340 项附件故障验证，见[报告](storage-owner-transactions.md)。主动删除和跨请求恢复仍待处理 |
+| 提现事务与精确落库 | `8779ad9c` 原 PDO 拥有者；`4b4fb3be` 精确报价、冻结容量、用户状态、收款字段容量及 Cash/User/Plog 实际写入核对，双版 MySQL owner 313 项、严格/非严格精确存储各 99 项 | 会员/API/管理入口的 POST、CSRF、选择范围和未知结果展示正在复审；历史保留、跨请求幂等与核对仍待处理；见[金额报告](cash-exact-storage.md) |
+| 提前响应与页面缓存 | `945a98b7` 构造响应、`360f9fbd` 前台守卫、`2ffc8792` 缓存/404 响应；真实中间件、回环 HTTP，双版 MySQL 身份缓存 index 247 / api 191 项 | 资源权限和采集直接输出、缓存锁归属/失败释放、JSON 未命中合同继续检查，见[响应报告](page-cache-response-lifecycle.md) |
+| 本机命令与可选能力 | `3f7250f4` 数值监控、`96f998ff` 有界进程、`2420aa98` OpenCC 真实 CLI/失败恢复及缓存字节上限；双版 native OpenCC 17 项 | 原生 Windows/BSD 管道、真实 PHP OpenCC 扩展、其它命令调用及显式“不可用”显示另审，见[OpenCC 报告](opencc-process-recovery.md) |
 | 旧数据库返回值 | level 5 多处 int 返回值与 false 比较；AI 封面零影响行伪成功已有真实证据 | 分清插入失败、对象删除、合法幂等更新与异常抛出；不全局将 `=== false` 改成 `=== 0` |
 | 网页中的隐式 DDL | 新 Manga 读取不经 infoData/cache/自动加列，并区分实际缺少可选列与查询失败 | 遗留 infoData 和后台初始化仍有自动迁移入口；需要显式升级前置条件、迁移和缺列受控行为 |
 | CSV 往返与解析预算 | `7f31d6b7` 修复尾部反斜杠合并行；`91486040` 在原生分配前限制字节、逻辑记录、列数和单元格矩阵 | [列映射 I1c](import-column-mapping.md)已拒绝重复、无名数据列及短行补空；[文本 I1d](import-text-encoding.md)已整文件拒绝非法 UTF-8 和不支持的控制字符；CSV 公式策略及逐行保存一致性仍待独立处理；XLSX 预算另列已提交项 |
