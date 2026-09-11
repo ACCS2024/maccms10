@@ -11,7 +11,6 @@ use think\facade\Cache;
  */
 class Seacms extends Base
 {
-    use PublicApi { check_config as private; }
     /** @var array */
     private $_param;
 
@@ -25,19 +24,7 @@ class Seacms extends Base
 
     public function vod()
     {
-        if ($GLOBALS['config']['api']['vod']['status'] != 1) {
-            echo 'closed';
-            exit;
-        }
-
-        if ($GLOBALS['config']['api']['vod']['charge'] == 1) {
-            $h = $_SERVER['REMOTE_ADDR'] ?? '';
-            if (!$h) {
-                echo lang('api/auth_err');
-                exit;
-            }
-            $this->checkDomainAuth($GLOBALS['config']['api']['vod']['auth']);
-        }
+        \app\common\util\ApiAccess::enforce($GLOBALS['config']['api']['vod'] ?? null);
 
         $cache_time = intval($GLOBALS['config']['api']['vod']['cachetime']);
         $cache_name = $GLOBALS['config']['app']['cache_flag'] . '_seacms_api_vod_' . md5(http_build_query($this->_param));

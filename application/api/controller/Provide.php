@@ -31,22 +31,7 @@ class Provide extends Base
 
     public function vod()
     {
-        if($GLOBALS['config']['api']['vod']['status'] != 1){
-            echo 'closed';
-            exit;
-        }
-
-        if($GLOBALS['config']['api']['vod']['charge'] == 1) {
-            $h = $_SERVER['REMOTE_ADDR'] ?? '';
-            if (!$h) {
-                echo lang('api/auth_err');
-                exit;
-            }
-            else {
-                $auth = $GLOBALS['config']['api']['vod']['auth'];
-                $this->checkDomainAuth($auth);
-            }
-        }
+        \app\common\util\ApiAccess::enforce($GLOBALS['config']['api']['vod'] ?? null);
 
         $cache_time = intval($GLOBALS['config']['api']['vod']['cachetime']);
         $cach_name = $GLOBALS['config']['app']['cache_flag']. '_'.'api_vod_'.md5(http_build_query($this->_param));
@@ -354,21 +339,7 @@ class Provide extends Base
 
     public function art()
     {
-        if($GLOBALS['config']['api']['art']['status'] != 1){
-            echo 'closed';die;
-        }
-
-        if($GLOBALS['config']['api']['art']['charge'] == 1) {
-            $h = $_SERVER['REMOTE_ADDR'] ?? '';
-            if (!$h) {
-                echo lang('api/auth_err');
-                exit;
-            }
-            else {
-                $auth = $GLOBALS['config']['api']['art']['auth'];
-                $this->checkDomainAuth($auth);
-            }
-        }
+        \app\common\util\ApiAccess::enforce($GLOBALS['config']['api']['art'] ?? null);
 
         $cache_time = intval($GLOBALS['config']['api']['art']['cachetime']);
         $cach_name = $GLOBALS['config']['app']['cache_flag']. '_'.'api_art_'.md5(http_build_query($this->_param));
@@ -480,21 +451,7 @@ class Provide extends Base
 
     public function actor()
     {
-        if($GLOBALS['config']['api']['actor']['status'] != 1){
-            echo 'closed';die;
-        }
-
-        if($GLOBALS['config']['api']['actor']['charge'] == 1) {
-            $h = $_SERVER['REMOTE_ADDR'] ?? '';
-            if (!$h) {
-                echo lang('api/auth_err');
-                exit;
-            }
-            else {
-                $auth = $GLOBALS['config']['api']['actor']['auth'];
-                $this->checkDomainAuth($auth);
-            }
-        }
+        \app\common\util\ApiAccess::enforce($GLOBALS['config']['api']['actor'] ?? null);
 
         $cache_time = intval($GLOBALS['config']['api']['actor']['cachetime']);
         $cach_name = $GLOBALS['config']['app']['cache_flag']. '_'.'api_actor_'.md5(http_build_query($this->_param));
@@ -593,21 +550,7 @@ class Provide extends Base
 
     public function role()
     {
-        if($GLOBALS['config']['api']['role']['status'] != 1){
-            echo 'closed';die;
-        }
-
-        if($GLOBALS['config']['api']['role']['charge'] == 1) {
-            $h = $_SERVER['REMOTE_ADDR'] ?? '';
-            if (!$h) {
-                echo lang('api/auth_err');
-                exit;
-            }
-            else {
-                $auth = $GLOBALS['config']['api']['role']['auth'];
-                $this->checkDomainAuth($auth);
-            }
-        }
+        \app\common\util\ApiAccess::enforce($GLOBALS['config']['api']['role'] ?? null);
 
         $cache_time = intval($GLOBALS['config']['api']['role']['cachetime']);
         $cach_name = $GLOBALS['config']['app']['cache_flag']. '_'.'api_role_'.md5(http_build_query($this->_param));
@@ -694,22 +637,7 @@ class Provide extends Base
 
     public function manga()
     {
-        if($GLOBALS['config']['api']['manga']['status'] != 1){
-            echo 'closed';
-            exit;
-        }
-
-        if($GLOBALS['config']['api']['manga']['charge'] == 1) {
-            $h = $_SERVER['REMOTE_ADDR'] ?? '';
-            if (!$h) {
-                echo lang('api/auth_err');
-                exit;
-            }
-            else {
-                $auth = $GLOBALS['config']['api']['manga']['auth'];
-                $this->checkDomainAuth($auth);
-            }
-        }
+        \app\common\util\ApiAccess::enforce($GLOBALS['config']['api']['manga'] ?? null);
 
         $cache_time = intval($GLOBALS['config']['api']['manga']['cachetime']);
         $cach_name = $GLOBALS['config']['app']['cache_flag']. '_'.'api_manga_'.md5(http_build_query($this->_param));
@@ -888,21 +816,7 @@ class Provide extends Base
 
     public function website()
     {
-        if($GLOBALS['config']['api']['website']['status'] != 1){
-            echo 'closed';die;
-        }
-
-        if($GLOBALS['config']['api']['website']['charge'] == 1) {
-            $h = $_SERVER['REMOTE_ADDR'] ?? '';
-            if (!$h) {
-                echo lang('api/auth_err');
-                exit;
-            }
-            else {
-                $auth = $GLOBALS['config']['api']['website']['auth'];
-                $this->checkDomainAuth($auth);
-            }
-        }
+        \app\common\util\ApiAccess::enforce($GLOBALS['config']['api']['website'] ?? null);
 
         $cache_time = intval($GLOBALS['config']['api']['website']['cachetime']);
         $cach_name = $GLOBALS['config']['app']['cache_flag']. '_'.'api_website_'.md5(http_build_query($this->_param));
@@ -1002,27 +916,6 @@ class Provide extends Base
     public function comment()
     {
 
-    }
-
-    private function checkDomainAuth($auth)
-    {
-        $ip = mac_get_client_ip();
-        $auth_list = ['127.0.0.1'];
-        if (!empty($auth)) {
-            foreach (explode('#', $auth) as $domain) {
-                $domain = trim($domain);
-                $auth_list[] = $domain;
-                if (!mac_string_is_ip($domain)) {
-                    $auth_list[] = gethostbyname($domain);
-                }
-            }
-            $auth_list = array_unique($auth_list);
-            $auth_list = array_filter($auth_list);
-        }
-        if (!in_array($ip, $auth_list)) {
-            echo lang('api/auth_err');
-            exit;
-        }
     }
 
     private function getImgUrlProtocol($key)

@@ -5,13 +5,7 @@ require dirname(__DIR__) . '/application/api/controller/Base.php';
 require dirname(__DIR__) . '/application/api/controller/PublicApi.php';
 require dirname(__DIR__) . '/application/api/controller/Seacms.php';
 require dirname(__DIR__) . '/application/api/controller/Provide.php';
-function mac_get_client_ip() { return '127.0.0.1'; }
-function mac_string_is_ip($value) { return filter_var($value, FILTER_VALIDATE_IP) !== false; }
-$seacms = (new \ReflectionClass(\app\api\controller\Seacms::class))->newInstanceWithoutConstructor();
-$authorize = new \ReflectionMethod($seacms, 'checkDomainAuth');
-check($authorize->isPrivate(), 'SeaCMS authorization helper became a route');
-$authorize->invoke($seacms, '127.0.0.1');
-check(true, 'SeaCMS authorized client completed without missing method');
+// Shared API/SeaCMS authorization now runs through actual response middleware in framework_audit_api_access.php.
 $category = new \ReflectionMethod(\app\api\controller\Base::class, 'categoryIsAllowed');
 foreach ([['2', '12,13'], [['12'], '12'], ['12,13', '12'], ['0', '']] as [$requested, $allowed]) {
     check(!$category->invoke(null, $requested, $allowed), 'Category allowlist accepted a substring or malformed ID');
