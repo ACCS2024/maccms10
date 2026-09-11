@@ -48,15 +48,11 @@ class AdminAudit
             return $response;
         }
 
-        $denyContains = self::buildDenyContainsList($app);
-        $payload      = self::sanitizePayload(array_merge($request->param(), $request->post()), $denyContains);
-        $json         = '';
+        $payload = array_merge($request->param(), $request->post());
+        $json = '';
         if ($payload !== []) {
-            $json = json_encode($payload, JSON_UNESCAPED_UNICODE);
-            if (strlen($json) > 16384) {
-                $json = substr($json, 0, 16300) . '…(truncated)';
-            }
-            if (!empty($app['admin_audit_encrypt']) && (string)$app['admin_audit_encrypt'] === '1' && $json !== '') {
+            $json = \app\common\util\AdminAuditPayload::encode($payload, $app);
+            if (!empty($app['admin_audit_encrypt']) && (string)$app['admin_audit_encrypt'] === '1') {
                 try {
                     $enc = SensitiveDataCrypto::encryptString($json, $app);
                 } catch (\Throwable $error) {
@@ -88,57 +84,4 @@ class AdminAudit
         return $response;
     }
 
-    private static function buildDenyContainsList(array $app): array
-    {
-        $denyContains = [
-            'secret', 'apikey', 'api_key', 'token', 'access_key', 'private_key',
-        ];
-        $extra = isset($app['admin_audit_extra_redact']) ? trim((string)$app['admin_audit_extra_redact']) : '';
-        if ($extra !== '') {
-            foreach (preg_split('/[\s,|]+/', $extra, -1, PREG_SPLIT_NO_EMPTY) ?: [] as $word) {
-                $w = strtolower(trim((string)$word));
-                if ($w !== '' && strlen($w) <= 64) {
-                    $denyContains[] = $w;
-                }
-            }
-        }
-        return array_values(array_unique($denyContains));
-    }
-
-    private static function sanitizePayload(array $data, array $denyContains): array
-    {
-        $denyExact = [
-            'admin_pwd', 'user_pwd', 'user_pwd2', 'password', 'verify',
-            '__token__', 'user_check', 'admin_check', 'sql',
-        ];
-        $out = [];
-        foreach ($data as $k => $v) {
-            $lk = strtolower((string)$k);
-            if (in_array($lk, $denyExact, true)
-                || substr($lk, -4) === '_pwd'
-                || substr($lk, -8) === '_password') {
-                $out[$k] = '[redacted]';
-                continue;
-            }
-            $redacted = false;
-            foreach ($denyContains as $kw) {
-                if ($kw !== '' && strpos($lk, $kw) !== false) {
-                    $out[$k] = '[redacted]';
-                    $redacted = true;
-                    break;
-                }
-            }
-            if ($redacted) {
-                continue;
-            }
-            if (is_array($v)) {
-                $out[$k] = self::sanitizePayload($v, $denyContains);
-            } elseif (is_string($v) && strlen($v) > 2000) {
-                $out[$k] = substr($v, 0, 2000) . '…';
-            } else {
-                $out[$k] = $v;
-            }
-        }
-        return $out;
-    }
 }
