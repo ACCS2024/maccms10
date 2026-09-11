@@ -179,25 +179,31 @@ class Collect extends Base {
     /**
      * 采集完成后自动清理缓存
      *
-     * 同一请求内只清理一次（flag 防重入）。
+     * 同一请求内成功后只清理一次；失败不占用后续重试机会。
      * 使用 Cache::clear() 统一走 ThinkPHP 缓存层——对 Redis 直接 FLUSHDB，
      * 对文件缓存由框架删除 cache/ 目录，不再手动 Dir::delDir（避免双重清理）。
      */
-    private function collectCacheClear()
+    private function collectCacheClear(): bool
     {
         if ($this->_cacheClearedFlag) {
-            return;
+            return true;
         }
-        $this->_cacheClearedFlag = true;
-
         try {
-            Cache::clear();
-            // 仅清理页面输出临时文件（非缓存目录），不影响 Redis 用户
-            Dir::delDir(RUNTIME_PATH . 'temp/');
-            mac_echo('<font color="green">[cache] ' . lang('admin/index/clear_ok') . '</font>');
-        } catch (\Exception $e) {
-            mac_echo('<font color="red">[cache] ' . lang('admin/index/clear_err') . '</font>');
+            $cacheCleared = Cache::clear() === true;
+        } catch (\Throwable $error) {
+            $cacheCleared = false;
         }
+        try {
+            // 页面临时目录独立清理；目录不存在视为已经完成，根链接视为配置错误。
+            $tempCleared = Dir::clearDirectory(RUNTIME_PATH . 'temp/');
+        } catch (\Throwable $error) {
+            $tempCleared = false;
+        }
+        $this->_cacheClearedFlag = $cacheCleared && $tempCleared;
+        mac_echo($this->_cacheClearedFlag
+            ? '<font color="green">[cache] ' . lang('admin/index/clear_ok') . '</font>'
+            : '<font color="red">[cache] ' . lang('admin/index/clear_err') . '</font>');
+        return $this->_cacheClearedFlag;
     }
 
     public function check_flag($param)
