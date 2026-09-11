@@ -817,6 +817,7 @@ CREATE TABLE `mac_vod` (
   `vod_pic_thumb` varchar(1024) NOT NULL DEFAULT '' ,
   `vod_pic_slide` varchar(1024) NOT NULL DEFAULT '' ,
   `vod_pic_original` varchar(1024) NOT NULL DEFAULT '' ,
+  `vod_pic_thumb_original` varchar(1024) DEFAULT NULL ,
   `vod_pic_screenshot` text,
   `vod_actor` varchar(255) NOT NULL DEFAULT '' ,
   `vod_director` varchar(255) NOT NULL DEFAULT '' ,
