@@ -13,6 +13,8 @@ PHPStan level 1 扫描业务、框架适配层、扩展、配置、入口、CLI�
 
 PHPStan 无 baseline/ignoreErrors。`think-facades.stub` 声明锁定 ORM 经 DbManager 转发的 query/execute 原生参数与返回合同；不会为任意未知方法放行。`runtime-constants.php` 仅通过 scanFiles 读取，不执行；常量类型对应维护中的前台入口、AppInit 与 User OAuth 初始化，dynamicConstantNames 避免代表值把条件分支误判为常量。没有经过这些初始化的独立入口仍需单独验证。AiTask 的属性声明对应已测试的实际 ORM 列。依赖、入口或表结构升级后应重新校准这些声明。
 
+`ENTRANCE` 的动态类型同时包含 index、admin、api、install，对应四个维护中的 HTTP 入口；`think` CLI 使用 install。分析多个入口时不能把首先扫描到的 index 当作整个应用的常量值，否则后台/API 分支可能被错误裁剪。该声明只调整分析范围，不执行入口，不保证任意独立脚本已完成应用初始化。
+
 其余动态调用、控制流和语言键覆盖继续保留诊断并逐项分类。声明已存在的运行时合同不等于修复漏洞，不能把诊断条数直接作为漏洞数，也不能仅为归零而改变业务行为。
 
 全量原生编译和独立行为回归见 `tests/README.md`。临时报告可能包含本地文件路径和诊断内容，分享前检查；不要提交站点配置、凭据、数据库导出或运行日志。

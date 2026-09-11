@@ -1,0 +1,74 @@
+{
+  "tree": "f8d475b023634b6c8c10aad259d2d9a430567e48",
+  "results": {
+    "before-level1": {
+      "exit": 1,
+      "totals": {
+        "errors": 0,
+        "file_errors": 49
+      }
+    },
+    "before-level5": {
+      "exit": 1,
+      "totals": {
+        "errors": 0,
+        "file_errors": 688
+      }
+    },
+    "after-level1": {
+      "exit": 1,
+      "totals": {
+        "errors": 0,
+        "file_errors": 49
+      }
+    },
+    "after-level5": {
+      "exit": 1,
+      "totals": {
+        "errors": 0,
+        "file_errors": 610
+      }
+    }
+  },
+  "source_commit": "a22b2cfdad0a201d7c71bd3cc4899003d09100f7",
+  "php": "8.4.25",
+  "phpstan": "2.2.13",
+  "target_php": 80400,
+  "removed_diagnostics": 80,
+  "added_diagnostics": 2,
+  "added": [
+    {
+      "file": "application/middleware/AdminAudit.php",
+      "line": 59,
+      "identifier": "notIdentical.alwaysTrue",
+      "message": "Strict comparison using !== between non-empty-string|false and '' will always evaluate to true.",
+      "count": 1
+    },
+    {
+      "file": "application/middleware/CsrfGuard.php",
+      "line": 33,
+      "identifier": "identical.alwaysFalse",
+      "message": "Strict comparison using === between non-falsy-string and '0' will always evaluate to false.",
+      "count": 1
+    }
+  ],
+  "files": {
+    "before.neon": "aa9002a434e273e5339e6468a210572aab986915c6775e3967c04d53ef84e4e9",
+    "after.neon": "c7e4a4c265ae938b0301e41ba1f7e2dfd015bbe31652524ca95c3614b1fabcc3",
+    "tree.txt": "41eedf7f477be44a67f12af14d85467f4ec3138507845a69e529468e12ec97b9",
+    "summary.json": "af3292e15507f9720296e114bafd898afc9064d7f320d53608470897e957b994",
+    "before-level1.json": "f9141df36267a050ec24f69041c4f82a4e0d7ea0791dc837054cb36c04526ebc",
+    "before-level1.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "before-level5.json": "daef69a3d38c27d73c23c736f14b7ea6f56c182a17c19d296c8ad3369e78fb5c",
+    "before-level5.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "after-level1.json": "f9141df36267a050ec24f69041c4f82a4e0d7ea0791dc837054cb36c04526ebc",
+    "after-level1.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "after-level5.json": "2bd632c53136980e9d1334db3386a8ee82e2a538b7c90ff12b5394862e7f5930",
+    "after-level5.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "archive": {
+    "path": "evidence/static-entrypoint-a22b2cfd.tar.gz",
+    "sha256": "548acb76407c3e37ee275e79378f6ebf65f1a4101bf4714b682774d1daae90e9",
+    "bytes": 25427
+  }
+}

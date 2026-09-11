@@ -23,6 +23,7 @@ parameters:
     stubFiles:
         - think-facades.stub
     dynamicConstantNames:
+        ENTRANCE: "'index'|'admin'|'api'|'install'"
         MAC_PATH: string
         MAC_PAGE_SP: string
         MAC_PLAYER_SORT: mixed
