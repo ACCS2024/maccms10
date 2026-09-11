@@ -1,0 +1,52 @@
+{include file="../../../application/admin/view/public/head" /}
+<div class="page-container p10">
+    <div class="my-toolbar-box">
+        <p><a href="{:url('index')}">{:lang('admin/cash/active')}</a> | <a href="{:url('index',['archive'=>1])}">{:lang('admin/cash/archive')}</a></p>
+        <p>{:lang('admin/cash/archive_readonly')}</p>
+        <form class="layui-form space-x-1 space-y-1" method="get" action="{:url('index')}">
+            <input type="hidden" name="archive" value="1">
+            <div class="layui-input-inline w150">
+                <select name="status">
+                    <option value="">{:lang('select_status')}</option>
+                    <option value="1" {if condition="$param['status'] eq '1'"}selected{/if}>{:lang('reviewed')}</option>
+                    <option value="2" {if condition="$param['status'] eq '2'"}selected{/if}>{:lang('admin/cash/cancelled')}</option>
+                </select>
+            </div>
+            <div class="layui-input-inline"><input class="layui-input" type="text" name="uid" inputmode="numeric" maxlength="10" placeholder="{:lang('admin/cash/user_id')}" value="{$param.uid|htmlspecialchars}"></div>
+            <div class="layui-input-inline"><input class="layui-input" type="text" name="wd" maxlength="200" placeholder="{:lang('admin/cash/archive_keyword')}" value="{$param.wd|htmlspecialchars}"></div>
+            <button class="layui-btn">{:lang('btn_search')}</button>
+        </form>
+    </div>
+    <table class="layui-table" lay-size="sm">
+        <thead><tr>
+            <th>{:lang('id')}</th><th>{:lang('user')}</th><th>{:lang('status')}</th><th>{:lang('points')}</th><th>{:lang('money')}</th>
+            <th>{:lang('bank')}</th><th>{:lang('account')}</th><th>{:lang('name')}</th><th>{:lang('remarks')}</th>
+            <th>{:lang('time')}</th><th>{:lang('audit_time')}</th><th>{:lang('admin/cash/archive_time')}</th><th>{:lang('admin/cash/actor')}</th>
+        </tr></thead>
+        <tbody>
+        {volist name="list" id="vo"}
+        <tr>
+            <td>{$vo.cash_id}</td><td>[{$vo.user_id}]{$vo.user_name|htmlspecialchars}</td>
+            <td>{if condition="$vo.cash_status eq 2"}{:lang('admin/cash/cancelled')}{else/}{:lang('reviewed')}{/if}</td>
+            <td>{$vo.cash_points}</td><td>{$vo.cash_money}</td>
+            <td>{$vo.cash_bank_name|htmlspecialchars}</td><td>{$vo.cash_bank_no|htmlspecialchars}</td><td>{$vo.cash_payee_name|htmlspecialchars}</td><td>{$vo.cash_remarks|htmlspecialchars}</td>
+            <td>{$vo.cash_time|mac_day='color'}</td><td>{$vo.cash_time_audit|mac_day='color'}</td><td>{$vo.cash_time_archive|mac_day='color'}</td>
+            <td>{:lang('admin/cash/actor_'.$vo['cash_actor_type'])} [{$vo.cash_actor_id}]</td>
+        </tr>
+        {/volist}
+        </tbody>
+    </table>
+    <div id="pages" class="center"></div>
+</div>
+{include file="../../../application/admin/view/public/foot" /}
+<script>
+    var curUrl={:json_encode((string)url('cash/index',$param),15)};
+    layui.use('laypage', function () {
+        layui.laypage.render({elem:'pages', count:{$total}, limit:{$limit}, curr:{$page},
+            layout:['count','prev','page','next','limit','skip'], jump:function (obj, first) {
+                if (!first) { location.href = curUrl.replace('%7Bpage%7D',obj.curr).replace('%7Blimit%7D',obj.limit); }
+            }});
+    });
+</script>
+</body>
+</html>

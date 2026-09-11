@@ -32,11 +32,12 @@ class Cash extends Base {
             $where = json_decode($where,true);
         }
         $offset = ($limit * ($page-1) + $start);
-        $total = $this->where($where)->count();
-        $list = Db::name('Cash')->where($where)->order($order)->limit($offset, $limit)->select()->toArray();
+        $total = $this->master()->where($where)->count();
+        $list = Db::name('Cash')->master()->where($where)->order($order)->limit($offset, $limit)->select()->toArray();
 
         $user_ids=[];
         foreach($list as $k=>&$v){
+            $v['user_name'] = '';
             if($v['user_id'] >0){
                 $user_ids[$v['user_id']] = $v['user_id'];
             }
@@ -44,7 +45,7 @@ class Cash extends Base {
 
         unset($v);
         if (!empty($user_ids)) {
-            $userNames = Db::name('User')->whereIn('user_id', array_values($user_ids))->column('user_name', 'user_id');
+            $userNames = Db::name('User')->master()->whereIn('user_id', array_values($user_ids))->column('user_name', 'user_id');
             foreach ($list as $key => $row) {
                 $list[$key]['user_name'] = $userNames[$row['user_id']] ?? '';
             }
@@ -58,7 +59,7 @@ class Cash extends Base {
         if(empty($where) || !is_array($where)){
             return ['code'=>1001,'msg'=>lang('param_err')];
         }
-        $info = $this->field($field)->where($where)->find();
+        $info = $this->master()->field($field)->where($where)->find();
 
         if(empty($info)){
             return ['code'=>1002,'msg'=>lang('obtain_err')];

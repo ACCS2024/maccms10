@@ -11,23 +11,24 @@ class Cash extends Base
 
     public function index()
     {
-        $param = \think\facade\Request::param();
-        $param['page'] = intval($param['page'] ?? 0) <1 ? 1 : $param['page'];
-        $param['limit'] = intval($param['limit'] ?? 0) <1 ? $this->_pagesize : $param['limit'];
+        $param = \app\common\util\CashRead::admin(\think\facade\Request::param(), $this->_pagesize);
+        if ($param === null) { return $this->error(lang('param_err')); }
         $where=[];
-        if(($param['status'] ?? '')!=''){
+        if($param['status'] !== ''){
             $where['cash_status'] = $param['status'];
         }
-        if(!empty($param['uid'])){
+        if($param['uid'] !== ''){
             $where['user_id'] = $param['uid'] ;
         }
-        if(!empty($param['wd'])){
-            $param['wd'] = htmlspecialchars(urldecode($param['wd']));
+        if($param['wd'] !== '' && $param['archive'] === 0){
             $where[] = ['cash_bank_no', 'like', '%'.$param['wd'].'%' ];
         }
 
         $order='cash_id desc';
-        $res = (new \app\common\model\Cash())->listData($where,$order,$param['page'],$param['limit']);
+        $res = $param['archive'] === 1
+            ? \app\common\util\CashArchive::listData($where, $param['page'], $param['limit'], $param['wd'])
+            : (new \app\common\model\Cash())->listData($where,$order,$param['page'],$param['limit']);
+        if ($res['code'] !== 1) { return $this->error($res['msg']); }
 
         $this->assign('list',$res['list']);
         $this->assign('total',$res['total']);
@@ -39,7 +40,7 @@ class Cash extends Base
         $this->assign('param',$param);
 
         $this->assign('title',lang('admin/cash/title'));
-        return $this->fetch('admin@cash/index');
+        return $this->fetch($param['archive'] === 1 ? 'admin@cash/history' : 'admin@cash/index');
     }
 
     public function del()

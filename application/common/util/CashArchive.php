@@ -60,9 +60,61 @@ final class CashArchive
             || PointsBalance::amount($row['user_id'] ?? null, true) !== $userId
             || PointsBalance::amount($row['cash_time'] ?? null, true) !== $time
             || !in_array($row['cash_status'] ?? null, [0,1,'0','1'], true)
+            || !in_array($record['cash_status'] ?? null, [1,2,'1','2'], true)
             || (int)($record['cash_status'] ?? 0) !== ((int)$row['cash_status'] === 0 ? 2 : 1)) {
             throw new \RuntimeException('Cash archive identity changed');
         }
         return $row;
+    }
+
+    /** Read-only administrative projection; the original JSON is never rendered directly. */
+    public static function listData(array $where, $page = 1, $limit = 20, string $keyword = ''): array
+    {
+        $paging = CashRead::pagination($page, $limit);
+        if ($paging === null || strlen($keyword) > 200 || preg_match('//u', $keyword) !== 1) { return ['code'=>1001, 'msg'=>lang('param_err')]; }
+        try {
+            $query = Db::name('CashHistory')->master()->where($where);
+            if ($keyword !== '') {
+                $fragment = substr(json_encode($keyword, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR), 1, -1);
+                $query->whereRaw("cash_payload LIKE :cash_archive_keyword ESCAPE '!'",
+                    ['cash_archive_keyword'=>'%'.strtr($fragment, ['!'=>'!!', '%'=>'!%', '_'=>'!_']).'%']);
+            }
+            $total = (clone $query)->count();
+            $records = $query->order('cash_id desc')
+                ->limit($paging['offset'], $paging['limit'])->select()->toArray();
+            $list = [];
+            foreach ($records as $record) {
+                $row = self::original($record);
+                $points = PointsBalance::amount($row['cash_points'] ?? null, true);
+                $money = OrderAmount::minorUnits($row['cash_money'] ?? null, true);
+                $auditTime = PointsBalance::amount($row['cash_time_audit'] ?? 0, true);
+                $archiveTime = PointsBalance::amount($record['cash_time_archive'] ?? null);
+                $actorId = PointsBalance::amount($record['cash_actor_id'] ?? null, true);
+                $actorType = $record['cash_actor_type'] ?? null;
+                if ($points === null || $points > 65535 || $money === null || $auditTime === null || $archiveTime === null
+                    || $actorId === null || !in_array($actorType, ['internal','admin','user'], true)
+                    || ($actorType === 'internal' ? $actorId !== 0 : $actorId === 0)
+                    || ($actorType === 'user' && $actorId !== (int)$row['user_id'])) {
+                    throw new \RuntimeException('Invalid cash archive display metadata');
+                }
+                foreach (['cash_bank_name','cash_bank_no','cash_payee_name'] as $field) {
+                    if (!is_string($row[$field] ?? null)) { throw new \RuntimeException('Invalid cash archive payee'); }
+                }
+                if (isset($row['cash_remarks']) && !is_string($row['cash_remarks'])) { throw new \RuntimeException('Invalid cash archive remarks'); }
+                $list[] = ['cash_id'=>(int)$record['cash_id'], 'user_id'=>(int)$record['user_id'],
+                    'cash_status'=>(int)$record['cash_status'], 'cash_points'=>$points, 'cash_money'=>OrderAmount::decimal($money),
+                    'cash_bank_name'=>$row['cash_bank_name'], 'cash_bank_no'=>$row['cash_bank_no'], 'cash_payee_name'=>$row['cash_payee_name'],
+                    'cash_remarks'=>$row['cash_remarks'] ?? '', 'cash_time'=>(int)$record['cash_time'], 'cash_time_audit'=>$auditTime,
+                    'cash_time_archive'=>$archiveTime, 'cash_actor_type'=>$actorType, 'cash_actor_id'=>$actorId];
+            }
+            $ids = array_values(array_unique(array_column($list, 'user_id')));
+            $names = $ids === [] ? [] : Db::name('User')->master()->whereIn('user_id', $ids)->column('user_name', 'user_id');
+            foreach ($list as &$row) { $row['user_name'] = $names[$row['user_id']] ?? ''; }
+            unset($row);
+            return ['code'=>1, 'msg'=>lang('data_list'), 'page'=>$paging['page'], 'limit'=>$paging['limit'],
+                'total'=>$total, 'pagecount'=>(int)ceil($total / $paging['limit']), 'list'=>$list];
+        } catch (\Throwable $error) {
+            return ['code'=>1002, 'msg'=>lang('admin/cash/archive_unavailable')];
+        }
     }
 }

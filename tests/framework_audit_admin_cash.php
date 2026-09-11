@@ -6,11 +6,19 @@ require __DIR__.'/fixtures/purchase_csrf.php';
 use think\facade\Db;
 define('APP_PATH',$purchaseTemp.'/application/');
 mkdir(APP_PATH.'data/update',0700,true);file_put_contents(APP_PATH.'data/update/sec_schema.lock','v2');
-function url($path,$params=[]){return '/fixture/admin.php/'.$path;}
+function url($path,$params=[]){return '/fixture/admin.php/'.$path.($params === [] ? '' : '?'.http_build_query($params));}
 function redirect($path){return \think\Response::create($path,'redirect',302);}
 class AdminCashFixture extends \app\admin\controller\Cash {
-    protected function assign($name,$value=''):void{}
-    protected function fetch(string $template='',array $vars=[]):string{return 'Fixture rendering';}
+    private array $assigned=[];
+    protected function assign($name,$value=''):void{$this->assigned[$name]=$value;}
+    protected function fetch(string $template='',array $vars=[]):string{
+        global $purchaseTemp;
+        $source=file_get_contents(dirname(__DIR__).'/application/admin/view/'.str_replace('admin@','',$template).'.html');
+        $source=preg_replace('/\{include\b[^}]*\}/','',$source);
+        $source=str_replace(['__STATIC__','__ASSETV__'],['/fixture/static','fixture'],$source);
+        $engine=new \think\Template(['cache_path'=>$purchaseTemp.'/']+(require dirname(__DIR__).'/config/view.php'));ob_start();
+        try{$engine->display($source,$vars+$this->assigned);return ob_get_contents();}finally{ob_end_clean();}
+    }
 }
 $app->bind(\app\admin\controller\Cash::class,AdminCashFixture::class);
 function adminCashState():array {
@@ -46,8 +54,8 @@ function adminCashRoute(string $action,array $body=[],array $query=[],array $coo
     try{$response=$middleware->handle($request,static fn($request)=>(new \think\Route($app))->dispatch($request,false));}
     catch(\think\exception\HttpResponseException $error){$response=$error->getResponse();}
     $middleware->end($response);
-    check($response instanceof \think\response\Json||$response->getCode()===302,'Administrator route must return a controlled JSON or login redirect');
-    return ['response'=>$response,'data'=>$response instanceof \think\response\Json?$response->getData():['code'=>1401]];
+    check($response instanceof \think\response\Json||$response->getCode()===302||($action==='index'&&$response->getCode()===200),'Administrator route must return controlled data, HTML or a login redirect');
+    return ['response'=>$response,'data'=>$response instanceof \think\response\Json?$response->getData():['code'=>$response->getCode()===200?1:1401]];
 }
 function adminCashDenied($action,$body,$query,$cookies,$headers=[],$method='POST',$server=[]):void {
     $before=adminCashState();$result=adminCashRoute($action,$body,$query,$cookies,$headers,$method,$server);
@@ -82,8 +90,42 @@ check((int)Db::name('User')->where('user_id',1)->value('user_points')===100&&(in
 adminCashSeed();$rows=(new \app\common\model\Cash())->listData([],'cash_id',1,20)['list'];
 $source=file_get_contents(dirname(__DIR__).'/application/admin/view/cash/index.html');$source=preg_replace('/\{include\b[^}]*\}/','',$source);
 $source=str_replace(['__STATIC__','__ASSETV__'],['/fixture/static','fixture'],$source);
-$engine=new \think\Template(['cache_path'=>$purchaseTemp.'/']);ob_start();
+$engine=new \think\Template(['cache_path'=>$purchaseTemp.'/']+(require dirname(__DIR__).'/config/view.php'));ob_start();
 try{$engine->display($source,['list'=>$rows,'total'=>2,'page'=>1,'limit'=>20,'param'=>['status'=>'','wd'=>'','page'=>'{page}','limit'=>'{limit}']]);$html=ob_get_contents();}finally{ob_end_clean();}
 check(substr_count($html,'js-cash-action')===7&&!str_contains($html,'?ids='),'Actual admin template must render body-based handlers for every bulk and row action');
 check(str_contains($html,'/fixture/static/js/cash-write.js')&&str_contains($html,'/fixture/static/js/admin_cash.js'),'Actual admin template must load the dedicated financial write scripts');
+
+// Browse with the existing read permission through the real constructor, query and templates.
+[$cookies,$token]=adminCashSeed();
+Db::name('Admin')->where('admin_id',2)->update(['admin_auth'=>',cash/index,']);
+$ids=Db::name('Cash')->order('cash_id')->column('cash_id');$cash=new \app\common\model\Cash();
+Db::name('Cash')->where('cash_id',$ids[0])->update(['cash_bank_no'=>'literal%2B+&"account']);
+$before=adminCashState();$result=adminCashRoute('index',[],['wd'=>'literal%2B+&"account'],$cookies,[],'GET');
+$html=$result['response']->getContent();
+check($result['data']['code']===1&&str_contains($html,'literal%2B+&amp;&quot;account')&&adminCashState()===$before,'Active search must bind the original keyword once and escape HTML output without mutation');
+check(str_contains($html,'archive=1'),'Active page must expose the read-only archive link');
+check($cash->auditData(['cash_id'=>$ids[1]])['code']===1,'Archive read fixture must settle the approved withdrawal');
+check($cash->delData(['cash_id'=>$ids],['type'=>'admin','id'=>2])['code']===1,'Archive read fixture must retain both cancellation and approval');
+$before=adminCashState();
+foreach([[],['status'=>'2'],['status'=>'1'],['uid'=>'1'],['wd'=>'literal%2B+&"account'],['limit'=>'1','page'=>'2']] as $filters){
+    $result=adminCashRoute('index',[],['archive'=>'1']+$filters,$cookies,[],'GET');$html=$result['response']->getContent();
+    check($result['data']['code']===1&&str_contains($html,'admin/cash/archive_readonly')&&adminCashState()===$before,'Archive queries must render their real template without financial writes');
+    check(!str_contains($html,'js-cash-action')&&!str_contains($html,'checkbox')&&!str_contains($html,'cash-write.js'),'Archive template must have no financial write controls or script');
+    $rows=substr_count($html,'admin/cash/actor_admin');
+    check($rows===($filters===[]?2:1),'Archive status, owner, keyword and page filters must select the expected rows');
+}
+foreach(['page'=>[[],0,-1,'1e2','1.2',true,'4294967295'],'limit'=>[[],0,-1,101,'1e2',true],
+    'status'=>[[],0,3,'01',true],'archive'=>[[],2,true],'uid'=>[[],0,'4294967296',true],'wd'=>[[],true,str_repeat('a',201),"a\0b","\xff"]] as $field=>$values){
+    foreach($values as $value)adminCashDenied('index',[],array_replace(['archive'=>'1'],[$field=>$value]),$cookies,[],'GET');
+}
+adminCashDenied('index',[],['archive'=>'1'],[],[],'GET');
+Db::name('Admin')->where('admin_id',2)->update(['admin_auth'=>',cash/audit,cash/del,']);
+adminCashDenied('index',[],['archive'=>'1'],$cookies,[],'GET');
+Db::name('Admin')->where('admin_id',2)->update(['admin_auth'=>',cash/index,']);
+Db::name('CashHistory')->where('cash_id',$ids[0])->update(['cash_payload_hash'=>str_repeat('0',64)]);
+$before=adminCashState();$result=adminCashRoute('index',[],['archive'=>'1'],$cookies,[],'GET');
+check(($result['data']['code']??1)!==1&&$result['data']['msg']==='admin/cash/archive_unavailable'&&adminCashState()===$before,'Corrupt snapshot must produce a controlled error, not disappear or render partial financial data');
+Db::execute('DROP TABLE audit_cash_history');
+$result=adminCashRoute('index',[],['archive'=>'1'],$cookies,[],'GET');
+check(($result['data']['code']??1)!==1&&$result['data']['msg']==='admin/cash/archive_unavailable','An unmigrated installation must receive an explicit archive error');
 echo 'Admin cash routes: '.$checks.' checks passed on PHP '.PHP_VERSION.' / '.($mysql?'MySQL':'SQLite')."\n";
