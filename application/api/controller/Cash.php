@@ -2,14 +2,16 @@
 
 namespace app\api\controller;
 
-use think\facade\Db;
-use think\facade\Request;
+use app\common\util\CashRead;
+use app\common\util\MemberWrite;
+use app\common\util\OrderAmount;
+use app\common\util\PointsBalance;
 
 /**
  * 提现管理 API
  *
  * 提供用户积分提现的申请、列表查询、删除等功能。
- * 所有接口均需用户登录（Cookie/Session 认证）。
+ * 个人记录需验证 Cookie 或已启用的 Bearer；配置接口提供公开的提现规则。
  */
 class Cash extends Base
 {
@@ -27,18 +29,11 @@ class Cash extends Base
      */
     private function _checkLogin()
     {
-        $check = (new \app\common\model\User())->checkLogin();
-        if ($check['code'] > 1) {
-            return ['ok' => false, 'user_id' => 0, 'user' => null,
-                    'response' => json(['code' => 1401, 'msg' => '未登录，请先登录'])];
+        $check = MemberWrite::identity();
+        if ($check['code'] !== 1) {
+            return ['ok' => false, 'user_id' => 0, 'response' => json($check)];
         }
-        $uid  = intval($check['info']['user_id']);
-        $user = Db::name('User')->where('user_id', $uid)->find();
-        if (!$user) {
-            return ['ok' => false, 'user_id' => 0, 'user' => null,
-                    'response' => json(['code' => 1002, 'msg' => '用户不存在'])];
-        }
-        return ['ok' => true, 'user_id' => $uid, 'user' => $user, 'response' => null];
+        return ['ok' => true, 'user_id' => (int)$check['info']['user_id'], 'response' => null];
     }
 
     /**
@@ -52,27 +47,22 @@ class Cash extends Base
      */
     public function get_list(\think\Request $request)
     {
+        if ($request->method(true) !== 'GET' || $request->method() !== 'GET') { return json(['code'=>1001, 'msg'=>lang('param_err')]); }
         $auth = $this->_checkLogin();
         if (!$auth['ok']) return $auth['response'];
 
-        $param = $request->param();
-
-        $validate = new \app\api\validate\Cash();
-        if (!$validate->scene($request->action())->check($param)) {
-            return json(['code' => 1001, 'msg' => '参数错误: ' . $validate->getError()]);
-        }
-
-        $page  = max(1, intval($param['page'] ?? 1));
-        $limit = max(1, min(100, intval($param['limit'] ?? 20)));
+        $param = CashRead::member($request->get());
+        if ($param === null) { return json(['code'=>1001, 'msg'=>lang('param_err')]); }
 
         $where = ['user_id' => $auth['user_id']];
 
-        if (isset($param['status']) && $param['status'] !== '') {
-            $where['cash_status'] = intval($param['status']);
+        if ($param['status'] !== '') {
+            $where['cash_status'] = $param['status'];
         }
 
         $order = 'cash_id desc';
-        $res   = (new \app\common\model\Cash())->listData($where, $order, $page, $limit);
+        $res   = (new \app\common\model\Cash())->listData($where, $order, $param['page'], $param['limit']);
+        if ($res['code'] !== 1) { return json($res); }
 
         return json([
             'code' => 1,
@@ -90,17 +80,12 @@ class Cash extends Base
      */
     public function get_detail(\think\Request $request)
     {
+        if ($request->method(true) !== 'GET' || $request->method() !== 'GET') { return json(['code'=>1001, 'msg'=>lang('param_err')]); }
         $auth = $this->_checkLogin();
         if (!$auth['ok']) return $auth['response'];
 
-        $param = $request->param();
-
-        $validate = new \app\api\validate\Cash();
-        if (!$validate->scene($request->action())->check($param)) {
-            return json(['code' => 1001, 'msg' => '参数错误: ' . $validate->getError()]);
-        }
-
-        $cash_id = intval($param['cash_id'] ?? 0);
+        $cash_id = PointsBalance::amount($request->get()['cash_id'] ?? null);
+        if ($cash_id === null) { return json(['code'=>1001, 'msg'=>lang('param_err')]); }
 
         $where = [
             'cash_id' => $cash_id,
@@ -167,24 +152,37 @@ class Cash extends Base
      * 获取提现配置信息
      * GET /api.php/cash/get_config
      *
-     * 响应 JSON：{code:1, msg:'获取成功', info:{cash_status, cash_min, cash_ratio}}
+     * 响应 JSON：{code:1, msg:'获取成功', info:{cash_status, cash_min, cash_ratio, cash_min_decimal, cash_ratio_decimal}}
      *
      * 说明：
      * - cash_status: 提现功能开关（0=关闭, 1=开启）
      * - cash_min: 最小提现金额（单位：元）
      * - cash_ratio: 兑换比例（1元 = 多少积分）
+     * - *_decimal: 精确十进制字符串；新客户端应使用这些字段，积分扣减仍由服务端计算
      */
     public function get_config(\think\Request $request)
     {
+        if ($request->method(true) !== 'GET' || $request->method() !== 'GET') { return json(['code'=>1001, 'msg'=>lang('param_err')]); }
         $user_config = $GLOBALS['config']['user'] ?? [];
+        if (!is_array($user_config)) { return json(['code'=>1001, 'msg'=>lang('param_err')]); }
+        $user_config += ['cash_status'=>0, 'cash_min'=>null, 'cash_ratio'=>1];
+        if (!in_array($user_config['cash_status'], [0,1,'0','1'], true)) {
+            return json(['code'=>1001, 'msg'=>lang('param_err')]);
+        }
+        $minimum = OrderAmount::minimum($user_config['cash_min']);
+        $rate = OrderAmount::rateDecimal($user_config['cash_ratio']);
+        if ($minimum === null || $rate === null) { return json(['code'=>1001, 'msg'=>lang('param_err')]); }
+        $money = OrderAmount::decimal($minimum);
 
         return json([
             'code' => 1,
             'msg'  => '获取成功',
             'info' => [
                 'cash_status' => intval($user_config['cash_status'] ?? 0),
-                'cash_min'    => floatval($user_config['cash_min'] ?? 0),
-                'cash_ratio'  => intval($user_config['cash_ratio'] ?? 1),
+                'cash_min'    => (float)$money,
+                'cash_ratio'  => str_contains($rate, '.') ? (float)$rate : (int)$rate,
+                'cash_min_decimal' => $money,
+                'cash_ratio_decimal' => $rate,
             ],
         ]);
     }

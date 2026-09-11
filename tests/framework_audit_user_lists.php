@@ -116,6 +116,11 @@ namespace {
         foreach (['cash'=>'cash_id','orders'=>'order_id','cards'=>'card_id'] as $action=>$id) {
             userListExpect(array_column(userListCall($action)['list'],$id)===[1],$action.' must never include another user');
         }
+        foreach (['page'=>[[],null,true,0,'1e2','1.5','4294967295'],'limit'=>[[],null,true,0,101]] as $field=>$values) {
+            foreach ($values as $value) { userListExpect(userListCall('cash',[$field=>$value])['code']===1001,'Member cash pagination must reject malformed or excessive values'); }
+        }
+        $cashPage=userListCall('cash',['limit'=>'1','page'=>'2']);
+        userListExpect($cashPage['param']['limit']===1&&$cashPage['param']['page']===2&&$cashPage['__PAGING__']['limit']===1&&$cashPage['list']===[], 'Member cash pagination metadata must match the actual bounded query');
         $reward=userListCall('reward');
         userListExpect(array_column($reward['list'],'user_id')===[3] && !isset($reward['list'][0]['user_random'],$reward['list'][0]['user_pwd']),'Default reward level must preserve referral scope and sensitive-field stripping');
         userListExpect(array_column(userListCall('reward',['level'=>2])['list'],'user_id')===[4],'Second referral level must remain selectable');

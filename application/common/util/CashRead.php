@@ -35,4 +35,12 @@ final class CashRead
         return ['page'=>$paging['page'], 'limit'=>$paging['limit'], 'archive'=>(int)$archive,
             'status'=>$status === '' ? '' : (int)$status, 'uid'=>$uid === '' ? '' : (int)$uid, 'wd'=>$keyword];
     }
+
+    public static function member(array $input): ?array
+    {
+        $input += ['page'=>1, 'limit'=>20, 'status'=>''];
+        $paging = self::pagination($input['page'], $input['limit']);
+        if ($paging === null || !in_array($input['status'], ['',0,1,'0','1'], true)) { return null; }
+        return ['page'=>$paging['page'], 'limit'=>$paging['limit'], 'status'=>$input['status'] === '' ? '' : (int)$input['status']];
+    }
 }

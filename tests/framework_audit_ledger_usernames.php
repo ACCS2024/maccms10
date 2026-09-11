@@ -49,6 +49,14 @@ try {
         foreach([['user_id'=>0],[$prefix.'_id'=>999999]] as $where){[$result,$queries]=readNames($model,$where);verify($queries===[],'Empty/guest-only result fetched users');}
         $logs=[];foreach($users as $user){$logs[]=[$prefix.'_id'=>$user['user_id'],'user_id'=>$user['user_id']];}
         foreach(array_chunk($logs,100)as$chunk){think\facade\Db::name($model)->insertAll($chunk);}
+        if ($model === 'Cash') {
+            [$excess,$queries]=readNames($model,[[$prefix.'_id','>=',1000]],1,1001);
+            verify($excess['code']===1001 && $queries===[], 'Cash pages above the financial read budget must fail before loading usernames');
+            [$bounded,$queries]=readNames($model,[[$prefix.'_id','>=',1000]],1,100);
+            verify($bounded['total']===1001 && count($bounded['list'])===100 && $bounded['list'][99]['user_name']==='User 1099', 'Cash pagination must retain total and exact current-page names within its limit');
+            verify(count($queries)===1 && count(think\facade\Db::query($queries[0]))===100, 'Bounded cash page must use a single scoped username projection');
+            continue;
+        }
         [$large,$queries]=readNames($model,[[$prefix.'_id','>=',1000]],1,1001);
         verify(count($large['list'])===1001 && $large['list'][0]['user_name']==='User 1000' && $large['list'][1000]['user_name']==='User 2000','Large page retained a 999-user cutoff');
         verify(count($queries)===1 && count(think\facade\Db::query($queries[0]))===1001,'Large-page query changed scope');

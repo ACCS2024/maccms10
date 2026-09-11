@@ -25,33 +25,28 @@ class Cash extends Base {
 
     public function listData($where,$order,$page=1,$limit=20,$start=0)
     {
-        $page = $page > 0 ? (int)$page : 1;
-        $limit = $limit ? (int)$limit : 20;
-        $start = $start ? (int)$start : 0;
-        if(!is_array($where)){
-            $where = json_decode($where,true);
+        $paging = \app\common\util\CashRead::pagination($page, $limit, $start);
+        if ($paging === null) { return ['code'=>1001, 'msg'=>lang('param_err')]; }
+        if (!is_array($where)) {
+            if (!is_string($where) || strlen($where) > 16384) { return ['code'=>1001, 'msg'=>lang('param_err')]; }
+            try { $where = json_decode($where, true, 16, JSON_THROW_ON_ERROR); }
+            catch (\JsonException $error) { return ['code'=>1001, 'msg'=>lang('param_err')]; }
+            if (!is_array($where)) { return ['code'=>1001, 'msg'=>lang('param_err')]; }
         }
-        $offset = ($limit * ($page-1) + $start);
-        $total = $this->master()->where($where)->count();
-        $list = Db::name('Cash')->master()->where($where)->order($order)->limit($offset, $limit)->select()->toArray();
-
-        $user_ids=[];
-        foreach($list as $k=>&$v){
-            $v['user_name'] = '';
-            if($v['user_id'] >0){
-                $user_ids[$v['user_id']] = $v['user_id'];
-            }
+        try {
+            $total = $this->master()->where($where)->count();
+            $list = Db::name('Cash')->master()->where($where)->order($order)
+                ->limit($paging['offset'], $paging['limit'])->select()->toArray();
+            $ids = array_values(array_unique(array_filter(array_column($list, 'user_id'),
+                static fn($id): bool => PointsBalance::amount($id) !== null)));
+            $names = $ids === [] ? [] : Db::name('User')->master()->whereIn('user_id', $ids)->column('user_name', 'user_id');
+            foreach ($list as &$row) { $row['user_name'] = $names[$row['user_id']] ?? ''; }
+            unset($row);
+            return ['code'=>1, 'msg'=>lang('data_list'), 'page'=>$paging['page'], 'pagecount'=>(int)ceil($total / $paging['limit']),
+                'limit'=>$paging['limit'], 'total'=>$total, 'list'=>$list];
+        } catch (\Throwable $error) {
+            return ['code'=>1002, 'msg'=>lang('obtain_err')];
         }
-
-        unset($v);
-        if (!empty($user_ids)) {
-            $userNames = Db::name('User')->master()->whereIn('user_id', array_values($user_ids))->column('user_name', 'user_id');
-            foreach ($list as $key => $row) {
-                $list[$key]['user_name'] = $userNames[$row['user_id']] ?? '';
-            }
-        }
-
-        return ['code'=>1,'msg'=>lang('data_list'),'page'=>$page,'pagecount'=>ceil($total/$limit),'limit'=>$limit,'total'=>$total,'list'=>$list];
     }
 
     public function infoData($where,$field='*')
@@ -59,7 +54,8 @@ class Cash extends Base {
         if(empty($where) || !is_array($where)){
             return ['code'=>1001,'msg'=>lang('param_err')];
         }
-        $info = $this->master()->field($field)->where($where)->find();
+        try { $info = $this->master()->field($field)->where($where)->find(); }
+        catch (\Throwable $error) { return ['code'=>1002, 'msg'=>lang('obtain_err')]; }
 
         if(empty($info)){
             return ['code'=>1002,'msg'=>lang('obtain_err')];

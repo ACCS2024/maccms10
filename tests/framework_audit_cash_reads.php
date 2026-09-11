@@ -62,6 +62,11 @@ foreach([[1,100,0],[10001,100,0],[1,1,1000000]] as [$page,$limit,$start]) {
 }
 foreach([[0,20,0],[[],20,0],[true,20,0],['1.1',20,0],[1,101,0],[1,[],0],[10002,100,0],[1,1,1000001],[1,1,-1],['4294967295',100,0]] as [$page,$limit,$start]) {
     expect(CashRead::pagination($page,$limit,$start)===null,'Malformed or excessive pagination must fail before ORM arithmetic');
+    expect($cash->listData([],'cash_id',$page,$limit,$start)['code']===1001,'Model reads must enforce the same boundary for internal and legacy callers');
 }
+foreach([null,false,12,'null','false','"text"','{broken',str_repeat('a',16385)] as $where) {
+    expect($cash->listData($where,'cash_id')['code']===1001,'Malformed legacy JSON query input must not become an unscoped query');
+}
+expect($cash->listData('{"user_id":1}','cash_id')['code']===1,'Legacy JSON object filters must remain usable');
 expect(CashRead::admin([],[])['limit']===20,'Invalid administrative page-size configuration must fall back to a bounded default');
 finishFrameworkAudit('framework_audit_cash_reads');

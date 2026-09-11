@@ -59,6 +59,18 @@ final class OrderAmount
         return self::rate($scale) !== null;
     }
 
+    /** Canonical decimal text for clients that must preserve all configured rate digits. */
+    public static function rateDecimal($scale): ?string
+    {
+        $rate = self::rate($scale);
+        if ($rate === null) { return null; }
+        [$numerator, $denominator] = $rate;
+        $whole = (string)intdiv($numerator, $denominator);
+        if ($denominator === 1) { return $whole; }
+        $fraction = rtrim(str_pad((string)($numerator % $denominator), strlen((string)$denominator) - 1, '0', STR_PAD_LEFT), '0');
+        return $fraction === '' ? $whole : $whole.'.'.$fraction;
+    }
+
     public static function points($points, bool $allowZero = false): ?int
     {
         if ((!is_int($points) && !is_string($points)) || !preg_match('/^[0-9]{1,8}$/D', (string)$points)) { return null; }

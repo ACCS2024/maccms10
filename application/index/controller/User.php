@@ -851,13 +851,16 @@ class User extends Base
         }
 
         $param = Request::get();
-        $param['page'] = intval($param['page'] ?? 1) < 1 ? 1 : intval($param['page'] ?? 1);
-        $param['limit'] = intval($param['limit'] ?? 20) < 20 ? 20 : intval($param['limit'] ?? 20);
+        $paging = \app\common\util\CashRead::member(array_intersect_key($param, array_flip(['page','limit'])));
+        if ($paging === null) { return json(['code'=>1001, 'msg'=>lang('param_err')]); }
+        $param['page'] = $paging['page'];
+        $param['limit'] = $paging['limit'];
 
         $where = [];
         $where['user_id'] = $GLOBALS['user']['user_id'];
         $order = 'cash_id desc';
         $res = (new \app\common\model\Cash())->listData($where, $order, $param['page'], $param['limit']);
+        if ($res['code'] !== 1) { return json($res); }
 
         $this->assign('cash_view', \app\common\util\CashView::data($GLOBALS['config']['user'] ?? null, $GLOBALS['user'] ?? null));
         $this->assign('param', array_merge(mac_param_url(), $param));

@@ -3,6 +3,9 @@
 require dirname(__DIR__) . '/vendor/autoload.php';
 require __DIR__ . '/fixtures/security_audit_test_helpers.php';
 use app\common\util\OrderAmount;
+foreach ([['0001.01000000','1.01'],['0.00000001','0.00000001'],['9999999999.99999999','9999999999.99999999'],[0.5,'0.5'],[100,'100']] as [$input,$expected]) {
+    check(OrderAmount::rateDecimal($input)===$expected,'Exchange rate text must retain all exact configured digits');
+}
 foreach ([['0.29','100','0.29',29], ['2.3','100','2.30',230], ['1.25','2.4','1.25',3],
     ['167772.15','100','167772.15',16777215], ['16777215.99','1','16777215.99',16777215],
     ['9999999999.99','0.00000001','9999999999.99',99], ['0002.30','000100.00','2.30',230]] as [$price,$scale,$decimal,$points]) {

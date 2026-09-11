@@ -7,14 +7,14 @@ use think\Validate;
 class Cash extends Validate
 {
     protected $rule = [
-        'cash_id'         => 'require|number|between:1,' . PHP_INT_MAX,
+        'cash_id'         => 'require|cashIdentity',
         'cash_money'      => 'require|float|gt:0',
         'cash_bank_name'  => 'require|max:60',
         'cash_bank_no'    => 'require|max:30',
         'cash_payee_name' => 'require|max:30',
-        'page'            => 'number|between:1,' . PHP_INT_MAX,
-        'limit'           => 'number|between:1,100',
-        'status'          => 'number|in:0,1',
+        'page'            => 'cashPage',
+        'limit'           => 'cashLimit',
+        'status'          => 'cashStatus',
         'ids'             => 'max:200',
     ];
 
@@ -47,4 +47,26 @@ class Cash extends Validate
         ],
         'get_config' => [],
     ];
+
+    protected function cashIdentity($value): bool
+    {
+        return \app\common\util\PointsBalance::amount($value) !== null;
+    }
+
+    protected function cashPage($value): bool
+    {
+        $page = \app\common\util\PointsBalance::amount($value);
+        return $page !== null && $page <= \app\common\util\CashRead::MAX_OFFSET + 1;
+    }
+
+    protected function cashLimit($value): bool
+    {
+        $limit = \app\common\util\PointsBalance::amount($value);
+        return $limit !== null && $limit <= \app\common\util\CashRead::MAX_LIMIT;
+    }
+
+    protected function cashStatus($value): bool
+    {
+        return in_array($value, [0,1,'0','1'], true);
+    }
 }
