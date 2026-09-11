@@ -3224,4 +3224,5 @@ Note: Si les listes noires et blanches sont remplies, les stratégies s\'appliqu
     'validate/danmaku_text_require'=>'Texte requis','validate/danmaku_text_max'=>'Max 200 caracteres',
     'validate/danmaku_type_in'=>'Type invalide','validate/danmaku_id_require'=>'ID danmaku requis',
     'validate/danmaku_id_number'=>'ID doit etre un nombre',
+    'model/cash/request_conflict' => 'This request ID belongs to another withdrawal. Check the original request before submitting again.',
 );

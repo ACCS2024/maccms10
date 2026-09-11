@@ -27,13 +27,26 @@
                 return response.json();
             }).finally(function () { window.clearTimeout(timer); });
         }
+        function reservationKey() {
+            if (typeof options.storageKey !== 'string' || !options.storageKey) { throw new Error('Missing cash owner scope'); }
+            var key = window.sessionStorage.getItem(options.storageKey);
+            if (key !== null && !/^[a-f0-9]{64}$/.test(key)) { throw new Error('Invalid pending cash request'); }
+            if (key === null) {
+                var bytes = new Uint8Array(32);
+                window.crypto.getRandomValues(bytes);
+                key = Array.from(bytes, function (byte) { return byte.toString(16).padStart(2, '0'); }).join('');
+                window.sessionStorage.setItem(options.storageKey, key);
+            }
+            if (window.sessionStorage.getItem(options.storageKey) !== key) { throw new Error('Cash request persistence unavailable'); }
+            return key;
+        }
         return {
             blocked: function () { return blocked !== null; },
-            submit: function (url, fields) {
+            submit: function (url, fields, reservation) {
                 if (blocked) { return Promise.resolve(blocked); }
                 if (pending) { return Promise.resolve({code: 1005, msg: '正在处理，请稍候。'}); }
                 pending = true;
-                var sent = false;
+                var sent = false, key = null;
                 return Promise.resolve().then(function () {
                     url = localUrl(url);
                     if (options.token) { return {code: 1, info: {csrf_token: options.token}}; }
@@ -49,11 +62,18 @@
                         body.set(key, fields[key]);
                     });
                     body.set('csrf_token', result.info.csrf_token);
+                    if (reservation) { key = reservationKey(); body.set('request_id', key); }
                     sent = true;
                     return request(url, {method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'}, body: body.toString()})
                         .then(function (reply) {
                             if (!reply || !Number.isInteger(reply.code) || reply.code < 1 || typeof reply.msg !== 'string') { return unknown(); }
                             if (reply.retryable === false || (reply.info && reply.info.retryable === false)) { return unknown(reply); }
+                            if (key !== null && reply.code === 1 && (!reply.info || reply.info.request_id !== key
+                                || !Number.isInteger(reply.info.cash_id) || reply.info.cash_id < 1)) { return unknown(); }
+                            // A rejection before receipt lookup (e.g. auth/rate limit) cannot disprove an earlier commit.
+                            if (key !== null && reply.code === 1 && window.sessionStorage.getItem(options.storageKey) === key) {
+                                window.sessionStorage.removeItem(options.storageKey);
+                            }
                             return reply;
                         });
                 }).catch(function () {

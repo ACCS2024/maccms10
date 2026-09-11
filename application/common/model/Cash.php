@@ -3,6 +3,7 @@ namespace app\common\model;
 use app\common\util\PointsBalance;
 use app\common\util\CashTransaction;
 use app\common\util\OrderAmount;
+use app\common\util\CashRequest;
 use think\facade\Db;
 
 class Cash extends Base {
@@ -69,62 +70,61 @@ class Cash extends Base {
         return $this->saveForUser($GLOBALS['user']['user_id'] ?? null, $param);
     }
 
-    /** The controller supplies its verified identity, independently of request fields and globals. */
+    /** Compatibility entry for trusted internal callers without a browser request. */
     public function saveForUser($ownerId, $param)
     {
+        return $this->reserveForUser($ownerId, $param, null);
+    }
+
+    /** Public financial ingress always carries a stable request ID. */
+    public function saveRequestForUser($ownerId, $param)
+    {
+        $key = is_array($param) ? CashRequest::key($param['request_id'] ?? null) : null;
+        if ($key === null) { return ['code'=>1001, 'msg'=>lang('param_err')]; }
+        return $this->reserveForUser($ownerId, $param, $key);
+    }
+
+    private function reserveForUser($ownerId, $param, ?string $requestKey)
+    {
         if (($blocked = CashTransaction::blockedResult()) !== null) { return $blocked; }
-        if (!is_array($param)) { return ['code'=>1001, 'msg'=>lang('param_err')]; }
-        $settings = $GLOBALS['config']['user'] ?? [];
-        if (!is_array($settings) || !in_array($settings['cash_status'] ?? '0', [1, '1'], true)) {
-            return ['code'=>1005,'msg'=>lang('model/cash/not_open')];
-        }
-        $quote = OrderAmount::recharge($param['cash_money'] ?? null, $settings['cash_ratio'] ?? null);
-        $minimum = OrderAmount::minimum($settings['cash_min'] ?? null);
-        if ($quote === null || $minimum === null || $quote['order_points'] > 65535) {
-            return ['code'=>1001,'msg'=>lang('param_err')];
-        }
-        $money = $quote['order_price'];
-        $points = $quote['order_points'];
-        if (OrderAmount::minorUnits($money) < $minimum) {
-            return ['code'=>1006,'msg'=>lang('model/cash/min_money_err').'：'.OrderAmount::decimal($minimum)];
+        if (!is_array($param) || ($fields = CashRequest::fields($param)) === null) {
+            return ['code'=>1001, 'msg'=>lang('param_err')];
         }
         $userId = PointsBalance::amount($ownerId);
-        if ($userId === null) { return ['code'=>1002,'msg'=>lang('param_err')]; }
-        $data = [
-            'cash_money' => $money,
-            'user_id' => $userId,
-            'cash_points' => $points,
-            'cash_time' => time(),
-            'cash_status' => 0,
-            'cash_time_audit' => 0,
-        ];
-        foreach (['cash_bank_name'=>60, 'cash_bank_no'=>30, 'cash_payee_name'=>30] as $field=>$limit) {
-            $value = $param[$field] ?? null;
-            if ((!is_string($value) && !is_int($value)) || strlen((string)$value) > $limit * 4
-                || !mb_check_encoding((string)$value, 'UTF-8') || preg_match('/[\x00-\x1f\x7f]/', (string)$value)) {
-                return ['code'=>1001,'msg'=>lang('param_err')];
-            }
-            // Request parsing has already decoded form fields. Preserve literal plus and percent characters.
-            $data[$field] = htmlspecialchars(trim((string)$value), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-            if ($data[$field] === '' || mb_strlen($data[$field], 'UTF-8') > $limit) {
-                return ['code'=>1001,'msg'=>lang('param_err')];
-            }
-        }
-        $validate = mac_validate('Cash');
-        if (!$validate->check($data)) {
-            return ['code'=>1001,'msg'=>lang('param_err').'：'.$validate->getError()];
-        }
+        if ($userId === null) { return ['code'=>1002, 'msg'=>lang('param_err')]; }
+        $eligibility = self::reservationQuote($fields['cash_money']);
+        if ($requestKey === null && $eligibility['code'] !== 1) { return $eligibility; }
+        $fingerprint = CashRequest::fingerprint($fields);
 
         $scope = null;
         $failure = ['code'=>1004,'msg'=>lang('save_err')];
         try {
-            CashTransaction::requireTables(array_map(static fn(string $name): string => Db::name($name)->getTable(), ['Cash','User']));
+            CashTransaction::requireTables(array_map(static fn(string $name): string => Db::name($name)->getTable(), $requestKey === null ? ['Cash','User'] : ['Cash','User','CashRequest']));
             $scope = new CashTransaction('reserve', $userId, $failure);
             $scope->begin();
             $user = Db::name('User')->master()->where('user_id', $userId)->lock(true)->find();
             if (!$user || (string)($user['user_status'] ?? '') !== '1') {
                 return $scope->rollback(['code'=>1007,'msg'=>lang('model/cash/mush_money_err')]);
             }
+            if ($requestKey !== null) {
+                $receipts = Db::name('CashRequest')->master()->where(['user_id'=>$userId, 'request_id'=>$requestKey])->lock(true)->limit(2)->select()->toArray();
+                if (count($receipts) > 1) { throw new \RuntimeException('Duplicate cash request receipts'); }
+                if ($receipts !== []) {
+                    $receipt = $receipts[0];
+                    $cashId = PointsBalance::amount($receipt['cash_id']);
+                    if ($cashId === null || !is_string($receipt['payload_hash'])) { throw new \RuntimeException('Invalid cash receipt'); }
+                    if (!hash_equals($receipt['payload_hash'], $fingerprint)) {
+                        return $scope->rollback(['code'=>1009, 'msg'=>lang('model/cash/request_conflict'),
+                            'info'=>['request_id'=>$requestKey, 'cash_id'=>$cashId, 'retryable'=>false]]);
+                    }
+                    return $scope->rollback(CashRequest::acknowledgement($cashId, $requestKey));
+                }
+            }
+            if ($eligibility['code'] !== 1) { return $scope->rollback($eligibility); }
+            $points = $eligibility['points'];
+            $data = $fields + ['user_id'=>$userId, 'cash_points'=>$points, 'cash_time'=>time(), 'cash_status'=>0, 'cash_time_audit'=>0];
+            $validate = mac_validate('Cash');
+            if (!$validate->check($data)) { return $scope->rollback(['code'=>1001, 'msg'=>lang('param_err').'：'.$validate->getError()]); }
             [$available, $frozen] = self::balances($user);
             if ($available < $points || $frozen > PointsBalance::MAX - $points) {
                 return $scope->rollback(['code'=>1007,'msg'=>lang('model/cash/mush_money_err')]);
@@ -138,11 +138,40 @@ class Cash extends Base {
             if ($cashId === null) { throw new \RuntimeException('Cash identity was not stored'); }
             self::assertCash($cashId, $data + ['cash_id'=>$cashId]);
             self::assertBalances($userId, $available - $points, $frozen + $points);
+            if ($requestKey !== null) {
+                $receipt = ['user_id'=>$userId, 'request_id'=>$requestKey, 'payload_hash'=>$fingerprint, 'cash_id'=>$cashId, 'created_at'=>$data['cash_time']];
+                $scope->assertActive();
+                if (Db::name('CashRequest')->insert($receipt) !== 1) { throw new \RuntimeException('Cash receipt not stored'); }
+                $stored = Db::name('CashRequest')->master()->where(['user_id'=>$userId, 'request_id'=>$requestKey])->lock(true)->find();
+                foreach ($receipt as $field=>$value) {
+                    if (!is_array($stored) || (string)($stored[$field] ?? '') !== (string)$value) { throw new \RuntimeException('Cash receipt changed'); }
+                }
+                // Receipt triggers must not alter the financial rows after their earlier readback.
+                self::assertCash($cashId, $data + ['cash_id'=>$cashId]);
+                self::assertBalances($userId, $available - $points, $frozen + $points);
+            }
             $scope->assertActive();
-            return $scope->commit(['code'=>1,'msg'=>lang('save_ok')]);
+            return $scope->commit($requestKey === null ? ['code'=>1,'msg'=>lang('save_ok')] : CashRequest::acknowledgement($cashId, $requestKey));
         } catch (\Throwable $e) {
             return $scope !== null ? $scope->rollback($failure) : $failure;
         }
+    }
+
+    private static function reservationQuote(string $money): array
+    {
+        $settings = $GLOBALS['config']['user'] ?? [];
+        if (!is_array($settings) || !in_array($settings['cash_status'] ?? '0', [1, '1'], true)) {
+            return ['code'=>1005, 'msg'=>lang('model/cash/not_open')];
+        }
+        $quote = OrderAmount::recharge($money, $settings['cash_ratio'] ?? null);
+        $minimum = OrderAmount::minimum($settings['cash_min'] ?? null);
+        if ($quote === null || $minimum === null || $quote['order_points'] > 65535) {
+            return ['code'=>1001, 'msg'=>lang('param_err')];
+        }
+        if (OrderAmount::minorUnits($money) < $minimum) {
+            return ['code'=>1006, 'msg'=>lang('model/cash/min_money_err').'：'.OrderAmount::decimal($minimum)];
+        }
+        return ['code'=>1, 'points'=>$quote['order_points']];
     }
 
     public function delData($where)

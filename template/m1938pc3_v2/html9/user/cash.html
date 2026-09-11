@@ -86,7 +86,7 @@
 </div>
 <script src="{$maccms.path}static/js/cash-write.js"></script>
 <script>
-    var cashWrite = MacCashWrite({tokenUrl: "{:url('user/write_token')}"}), cashAccepted = false;
+    var cashWrite = MacCashWrite({tokenUrl: "{:url('user/write_token')}", storageKey: "{$maccms.path}cash-request-{$obj.user_id}"}), cashAccepted = false;
     function cashResult(result) {
         alert(result.msg);
         if (cashWrite.blocked()) { $("#btn_submit").prop("disabled", true); }
@@ -112,7 +112,7 @@
         });
         if (!valid) { alert('请完整填写提现信息'); return; }
         button.prop('disabled', true).val('正在提交');
-        cashWrite.submit("{:url('user/cash')}", fields).then(function (result) {
+        cashWrite.submit("{:url('user/cash')}", fields, true).then(function (result) {
             cashAccepted = result.code === 1;
             cashResult(result);
             button.prop('disabled', cashAccepted || cashWrite.blocked()).val('提交');

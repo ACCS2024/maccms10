@@ -13,10 +13,10 @@ function cashWriteSeed():void {
     $app->config->set($GLOBALS['config'],'maccms');
 }
 function cashWriteBody(array $changes=[]):array {
-    return $changes+['cash_money'=>'0.29','cash_bank_name'=>'Bank + branch','cash_bank_no'=>'001%20+234','cash_payee_name'=>'Ordinary name'];
+    return $changes+['request_id'=>str_repeat('a',64),'cash_money'=>'0.29','cash_bank_name'=>'Bank + branch','cash_bank_no'=>'001%20+234','cash_payee_name'=>'Ordinary name'];
 }
 function cashWriteState():array {
-    return purchaseCsrfState()+['Cash'=>Db::name('Cash')->order('cash_id')->select()->toArray()];
+    return purchaseCsrfState()+['Cash'=>Db::name('Cash')->order('cash_id')->select()->toArray(),'CashRequest'=>Db::name('CashRequest')->order('user_id,request_id')->select()->toArray()];
 }
 function cashWriteToken():array {
     $cookies=purchaseCsrfCookies();$before=cashWriteState();
@@ -31,7 +31,7 @@ function cashWriteDenied($target,$body,$query,$cookies,$headers=[],$method='POST
 }
 foreach(['user/cash','cash/create'] as $target) {
     cashWriteSeed();[$cookies,$token]=cashWriteToken();
-    foreach(['cash_money','cash_bank_name','cash_bank_no','cash_payee_name'] as $field) {
+    foreach(['request_id','cash_money','cash_bank_name','cash_bank_no','cash_payee_name'] as $field) {
         $body=cashWriteBody(['csrf_token'=>$token]);unset($body[$field]);
         cashWriteDenied($target,$body,[$field=>cashWriteBody()[$field]],$cookies);
         foreach([[],null,true] as $bad)cashWriteDenied($target,cashWriteBody([$field=>$bad,'csrf_token'=>$token]),[],$cookies);

@@ -3214,4 +3214,5 @@ Hinweis: Wenn sowohl Blacklist als auch Whitelist ausgefüllt sind, werden beide
     'validate/danmaku_type_in'=>'Ungueltiger Typ','validate/danmaku_id_require'=>'Danmaku-ID erforderlich',
     'validate/danmaku_id_number'=>'Danmaku-ID muss Zahl sein',
 
+    'model/cash/request_conflict' => 'This request ID belongs to another withdrawal. Check the original request before submitting again.',
 );

@@ -3223,4 +3223,5 @@ Nota: Si se especifican listas negras y blancas, ambas se aplicarán simultánea
     'validate/danmaku_text_require'=>'Texto requerido','validate/danmaku_text_max'=>'Max 200 caracteres',
     'validate/danmaku_type_in'=>'Tipo invalido','validate/danmaku_id_require'=>'ID danmaku requerido',
     'validate/danmaku_id_number'=>'ID debe ser numero',
+    'model/cash/request_conflict' => 'This request ID belongs to another withdrawal. Check the original request before submitting again.',
 );

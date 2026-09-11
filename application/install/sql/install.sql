@@ -1709,3 +1709,16 @@ CREATE TABLE `mac_rep` (
   KEY `rep_status` (`rep_status`),
   KEY `rep_applied` (`rep_applied`)
 ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COMMENT='内容替换规则';
+
+
+-- Durable cash request receipts survive ordinary cancellation; a fresh installation resets all tables.
+DROP TABLE IF EXISTS `mac_cash_request`;
+CREATE TABLE `mac_cash_request` (
+  `user_id` int unsigned NOT NULL,
+  `request_id` char(64) NOT NULL,
+  `payload_hash` char(64) NOT NULL,
+  `cash_id` int unsigned NOT NULL,
+  `created_at` int unsigned NOT NULL,
+  PRIMARY KEY (`user_id`, `request_id`),
+  KEY `cash_request_cash` (`cash_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=ascii COLLATE=ascii_bin;

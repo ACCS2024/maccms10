@@ -3234,4 +3234,5 @@ https://www.baidu.com/123.jpg
     'validate/danmaku_text_require'=>'彈幕內容不能為空','validate/danmaku_text_max'=>'彈幕內容最多200個字元',
     'validate/danmaku_type_in'=>'彈幕類型不正確','validate/danmaku_id_require'=>'彈幕ID不能為空',
     'validate/danmaku_id_number'=>'彈幕ID必須為數字',
+    'model/cash/request_conflict' => '此請求編號已用於另一份提款申請，請先核對原申請，確認前請勿重複提交。',
 );

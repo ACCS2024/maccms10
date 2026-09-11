@@ -3542,4 +3542,5 @@ https://www.baidu.com/123.jpg
     'validate/danmaku_type_in'=>'弹幕类型不正确',
     'validate/danmaku_id_require'=>'弹幕ID不能为空',
     'validate/danmaku_id_number'=>'弹幕ID必须为数字',
+    'model/cash/request_conflict' => '该请求编号已用于另一份提现申请，请先核对原申请，确认前请勿重复提交。',
 ];

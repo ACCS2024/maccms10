@@ -3256,4 +3256,5 @@ Note: If both black and white lists are filled, both policies will take effect.'
     'validate/danmaku_text_require'=>'Text required','validate/danmaku_text_max'=>'Max 200 chars',
     'validate/danmaku_type_in'=>'Invalid type','validate/danmaku_id_require'=>'Danmaku ID required',
     'validate/danmaku_id_number'=>'Danmaku ID must be number',
+    'model/cash/request_conflict' => 'This request ID belongs to another withdrawal. Check the original request before submitting again.',
 );

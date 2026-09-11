@@ -3227,4 +3227,5 @@ https://www.baidu.com/123.jpg
     'validate/danmaku_text_require'=>'내용 필수','validate/danmaku_text_max'=>'최대 200자',
     'validate/danmaku_type_in'=>'유형 오류','validate/danmaku_id_require'=>'탄막 ID 필수',
     'validate/danmaku_id_number'=>'탄막 ID는 숫자',
+    'model/cash/request_conflict' => 'This request ID belongs to another withdrawal. Check the original request before submitting again.',
 );

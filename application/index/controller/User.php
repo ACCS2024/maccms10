@@ -847,7 +847,7 @@ class User extends Base
         if (request()->method(true) !== 'GET' || request()->method() !== 'GET') {
             $identity = \app\common\util\MemberWrite::authorize(request());
             if ($identity['code'] !== 1) { return json($identity); }
-            return json((new \app\common\model\Cash())->saveForUser($identity['info']['user_id'], Request::post()));
+            return json((new \app\common\model\Cash())->saveRequestForUser($identity['info']['user_id'], Request::post()));
         }
 
         $param = Request::get();

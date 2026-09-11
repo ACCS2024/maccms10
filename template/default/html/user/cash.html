@@ -12,6 +12,7 @@
 <div id="mac-user-cash-root"
 	class="member-wrap member-wrap-bg"
 	data-api-base="{:rtrim($maccms.path,'/').'/api.php'}"
+	data-cash-storage-key="{$maccms.path}cash-request-{$obj.user_id}"
 	data-write-token-url="{:url('user/write_token')}"
 	data-url-login="{:url('user/login')}">
 <div id="member" class="fn-clear">

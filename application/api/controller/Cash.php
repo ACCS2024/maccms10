@@ -116,6 +116,7 @@ class Cash extends Base
      * POST /api.php/cash/create
      *
      * 请求字段：  cash_money      float   必填，提现金额（单位：元）
+     * 请求字段：  request_id      string  必填，64 位小写十六进制随机请求编号，重试必须沿用原编号
      * 请求字段：  cash_bank_name  string  必填，银行名称
      * 请求字段：  cash_bank_no    string  必填，银行账号
      * 请求字段：  cash_payee_name string  必填，收款人姓名
@@ -135,7 +136,7 @@ class Cash extends Base
         if (!mac_fe_write_throttle('fe_cash', 120, 10)) {
             return json(['code' => 1005, 'msg' => lang('frequently')]);
         }
-        $res = (new \app\common\model\Cash())->saveForUser($identity['info']['user_id'], $request->post());
+        $res = (new \app\common\model\Cash())->saveRequestForUser($identity['info']['user_id'], $request->post());
         return json($res);
     }
 
