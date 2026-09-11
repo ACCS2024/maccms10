@@ -59,6 +59,11 @@ jobs:
           node tests/security_audit_order_price_js.js
           node tests/framework_audit_auto_registration_frontend.js
           node tests/framework_audit_purchase_frontend.js
+      - name: Native OpenCC conversion and whitespace contract
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends opencc
+          php tests/framework_audit_opencc.php native
       - uses: actions/setup-node@v4
         with:
           node-version: '20'

@@ -13,6 +13,9 @@ class OpenccConverter
     private static $shellChecked = false;
     private static $shellAvailable = false;
     private static $cache = [];
+    private static int $cacheBytes = 0;
+    private const CACHE_BYTES = 4194304;
+    private const CACHE_VALUE_BYTES = 65536;
     /** @var array<string, mixed> opencc_open 句柄，false 表示该 config 不可用 */
     private static $extOd = [];
     /** @var bool|null 实测能否完成繁简转换（非仅扩展/命令是否存在） */
@@ -38,57 +41,6 @@ class OpenccConverter
     }
 
     /**
-     * 带超时的 shell 执行，避免 shell_exec 无上限阻塞。
-     *
-     * @return string|null
-     */
-    private static function shellExecLimited($cmd, $timeoutSec = null)
-    {
-        $timeoutSec = max(1, (int)($timeoutSec ?? self::$shellExecTimeout));
-        if (!function_exists('proc_open')) {
-            return null;
-        }
-        $descriptors = [
-            0 => ['pipe', 'r'],
-            1 => ['pipe', 'w'],
-            2 => ['pipe', 'w'],
-        ];
-        $proc = @proc_open($cmd, $descriptors, $pipes, null, null, ['bypass_shell' => false]);
-        if (!is_resource($proc)) {
-            return null;
-        }
-        @fclose($pipes[0]);
-        stream_set_blocking($pipes[1], false);
-        stream_set_blocking($pipes[2], false);
-        $stdout = '';
-        $deadline = microtime(true) + $timeoutSec;
-        while (true) {
-            $stdout .= (string)stream_get_contents($pipes[1]);
-            $status = proc_get_status($proc);
-            if (!$status['running']) {
-                break;
-            }
-            if (microtime(true) >= $deadline) {
-                @proc_terminate($proc);
-                break;
-            }
-            // 用 stream_select 等 fd 就绪，而不是固定睡 50ms。
-            // opencc 处理一行文本只要几毫秒，固定 50ms 轮询意味着每次调用
-            // 至少浪费一个完整周期；批量场景下这是数量级的差异。
-            $r = [$pipes[1]];
-            $w = null;
-            $x = null;
-            @stream_select($r, $w, $x, 0, 5000); // 最多等 5ms
-        }
-        $stdout .= (string)stream_get_contents($pipes[1]);
-        @fclose($pipes[1]);
-        @fclose($pipes[2]);
-        @proc_close($proc);
-
-        return $stdout !== '' ? $stdout : null;
-    }
-
-    /**
      * 简体 -> 繁体（OpenCC s2t）。
      */
     public static function s2t($text)
@@ -109,8 +61,11 @@ class OpenccConverter
      */
     public static function convert($text, $config)
     {
+        if (!is_string($text) && !is_int($text) && !is_float($text) && $text !== null) { return ''; }
         $text = (string)$text;
-        $config = trim((string)$config);
+        if (!is_string($config) || strlen($text) > 8388608 || !mb_check_encoding($text, 'UTF-8')) { return $text; }
+        $config = trim($config);
+        if (!preg_match('/^[a-zA-Z0-9_-]{1,64}$/D', $config)) { return $text; }
         if ($text === '' || $config === '') {
             return $text;
         }
@@ -127,17 +82,12 @@ class OpenccConverter
         if (isset(self::$cache[$key])) {
             return self::$cache[$key];
         }
-        // 进程内缓存加上限：常驻进程（队列/CLI 批处理）下不能无限增长
-        if (count(self::$cache) >= self::$memCacheMax) {
-            self::$cache = [];
-        }
-
-        $persistKey = 'opencc:' . $config . ':' . md5($text);
+        $persistKey = 'opencc:v2:' . $config . ':' . md5($text);
         if (class_exists('\think\Cache', false)) {
             try {
                 $cached = Cache::get($persistKey);
-                if (is_string($cached)) {
-                    self::$cache[$key] = $cached;
+                if (is_string($cached) && strlen($cached) <= self::CACHE_VALUE_BYTES) {
+                    self::remember($key, $cached);
 
                     return $cached;
                 }
@@ -148,10 +98,11 @@ class OpenccConverter
 
         $out = self::convertOnce($text, $config);
         if ($out === null || $out === '') {
-            $out = $text;
+            // A transient failure is not a successful identity conversion to persist.
+            return $text;
         }
-        self::$cache[$key] = $out;
-        if (class_exists('\think\Cache', false)) {
+        self::remember($key, $out);
+        if (strlen($out) <= self::CACHE_VALUE_BYTES && class_exists('\think\Cache', false)) {
             try {
                 Cache::set($persistKey, $out, self::$persistTtl);
             } catch (\Throwable $e) {
@@ -159,6 +110,19 @@ class OpenccConverter
         }
 
         return $out;
+    }
+
+    private static function remember(string $key, string $value): void
+    {
+        $bytes = strlen($value);
+        if ($bytes > self::CACHE_VALUE_BYTES) { return; }
+        if (count(self::$cache) >= self::$memCacheMax || self::$cacheBytes + $bytes > self::CACHE_BYTES) {
+            self::$cache = [];
+            self::$cacheBytes = 0;
+        }
+        self::$cacheBytes -= isset(self::$cache[$key]) ? strlen(self::$cache[$key]) : 0;
+        self::$cache[$key] = $value;
+        self::$cacheBytes += $bytes;
     }
 
     /**
@@ -173,9 +137,7 @@ class OpenccConverter
         $ext = extension_loaded('opencc')
             && function_exists('opencc_open')
             && function_exists('opencc_convert');
-        self::$conversionWorks = $ext ? true : self::isShellAvailable();
-
-        return self::$conversionWorks;
+        return $ext || self::isShellAvailable();
     }
 
     /**
@@ -188,7 +150,7 @@ class OpenccConverter
             return $ext;
         }
         if (!self::isShellAvailable()) {
-            return $text;
+            return null;
         }
 
         return self::execOpencc($text, $config);
@@ -204,10 +166,12 @@ class OpenccConverter
         if (!extension_loaded('opencc') || !function_exists('opencc_open') || !function_exists('opencc_convert')) {
             return null;
         }
+        if (!array_key_exists($config, self::$extOd) && count(self::$extOd) >= 32) { return null; }
         if (!array_key_exists($config, self::$extOd)) {
             $od = null;
             foreach (self::extensionConfigCandidates($config) as $cfgFile) {
-                $od = @opencc_open($cfgFile);
+                try { $od = @opencc_open($cfgFile); }
+                catch (\Throwable $error) { $od = false; }
                 if ($od !== false && $od !== null) {
                     break;
                 }
@@ -218,12 +182,12 @@ class OpenccConverter
         if ($od === false || $od === null) {
             return null;
         }
-        $converted = @opencc_convert($text, $od);
-        if (!is_string($converted)) {
-            $converted = @opencc_convert($od, $text);
+        foreach ([[$text, $od], [$od, $text]] as $arguments) {
+            try { $converted = @opencc_convert(...$arguments); }
+            catch (\Throwable $error) { continue; }
+            if (is_string($converted)) { return $converted; }
         }
-
-        return is_string($converted) ? $converted : null;
+        return null;
     }
 
     /**
@@ -309,7 +273,7 @@ class OpenccConverter
         if (self::$conversionWorks !== null) {
             return self::$conversionWorks;
         }
-        $persistKey = 'opencc:conversion_works';
+        $persistKey = 'opencc:conversion_works:v2';
         if (class_exists('\think\Cache', false)) {
             try {
                 $cached = Cache::get($persistKey);
@@ -361,7 +325,7 @@ class OpenccConverter
             return self::$shellAvailable;
         }
         self::$shellChecked = true;
-        $persistKey = 'opencc:shell_available';
+        $persistKey = 'opencc:shell_available:v2';
         if (class_exists('\think\Cache', false)) {
             try {
                 $cached = Cache::get($persistKey);
@@ -378,7 +342,7 @@ class OpenccConverter
                 // 未初始化缓存时忽略
             }
         }
-        if (!function_exists('shell_exec')) {
+        if (!function_exists('proc_open')) {
             self::$shellAvailable = false;
             if (class_exists('\think\Cache', false)) {
                 try {
@@ -390,20 +354,9 @@ class OpenccConverter
             return false;
         }
         try {
-            // 【探测必须只看 stdout】原实现用 `opencc -V 2>&1` 并只判断
-            // "输出非空"，而 opencc 未安装时 shell 会把
-            //   sh: 1: opencc: not found
-            // 经 2>&1 并入 stdout —— 于是"命令不存在"被判成"可用"。
-            // 后果：此后每次繁简转换都去 proc_open 起一个注定失败的进程，
-            // 再按 50ms 轮询等它退出，单次转换 ~100ms。全量重建 18 万条时
-            // 每文档约 204ms，整体从几分钟劣化到 9 小时（实测）。
-            // 这里改为：只取 stdout（不合并 stderr），且要求输出含版本特征。
-            $ret = self::shellExecLimited('opencc -V', 2);
-            if ($ret === null && function_exists('shell_exec')) {
-                $ret = @shell_exec('opencc -V 2>/dev/null');
-            }
+            $ret = LocalProcess::capture(['opencc', '--version'], '', 2);
             $ret = is_string($ret) ? trim($ret) : '';
-            // opencc -V 形如 "opencc 1.1.6"；命令不存在时 stdout 为空
+            // opencc --version 包含版本号，例如 "opencc 1.1.6"；命令不存在时 stdout 为空
             self::$shellAvailable = $ret !== ''
                 && stripos($ret, 'not found') === false
                 && stripos($ret, 'command not found') === false
@@ -425,38 +378,14 @@ class OpenccConverter
         return self::$shellAvailable;
     }
 
-    /**
-     * 通过临时文件调用 opencc，避免命令行转义导致的文本损坏。
-     *
-     * @return string|null
-     */
+    /** Complete conversion only; preserve whitespace and never publish partial tool output. */
     private static function execOpencc($text, $config)
     {
-        try {
-            $tmpIn = tempnam(sys_get_temp_dir(), 'mcc_in_');
-            $tmpOut = tempnam(sys_get_temp_dir(), 'mcc_out_');
-            if ($tmpIn === false || $tmpOut === false) {
-                return null;
-            }
-            file_put_contents($tmpIn, $text);
-            $out = null;
-            foreach ([$config . '.json', $config] as $cfgName) {
-                $cmd = 'opencc -c ' . escapeshellarg($cfgName)
-                    . ' -i ' . escapeshellarg($tmpIn)
-                    . ' -o ' . escapeshellarg($tmpOut) . ' 2>&1';
-                self::shellExecLimited($cmd, self::$shellExecTimeout);
-                $chunk = @file_get_contents($tmpOut);
-                if (is_string($chunk) && trim($chunk) !== '') {
-                    $out = trim($chunk);
-                    break;
-                }
-            }
-            @unlink($tmpIn);
-            @unlink($tmpOut);
-
-            return is_string($out) ? $out : null;
-        } catch (\Throwable $e) {
-            return null;
+        if (!is_string($text) || !is_string($config) || strlen($text) > 8388608) { return null; }
+        foreach ([$config . '.json', $config] as $cfgName) {
+            $output = LocalProcess::capture(['opencc', '-c', $cfgName], $text, self::$shellExecTimeout, 16777216);
+            if ($output !== null && $output !== '') { return $output; }
         }
+        return null;
     }
 }
