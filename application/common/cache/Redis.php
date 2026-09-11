@@ -49,4 +49,9 @@ class Redis extends \think\cache\driver\Redis
     {
         if ($this->handler) { try { $this->handler->close(); } catch (\Throwable $ignored) {} $this->handler = null; }
     }
+
+    public function clear(): bool
+    {
+        return $this->handler()->flushDB() === true;
+    }
 }

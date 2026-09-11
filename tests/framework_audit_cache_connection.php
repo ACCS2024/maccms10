@@ -122,6 +122,13 @@ if($redisAvailable){
     check(abs($store->handler()->getOption(Redis::OPT_READ_TIMEOUT)-0.2)<0.001,'Redis socket read timeout must retain its fractional value');
     $admin->select(0);check(!$admin->exists('runtime-fixture'),'Configured Redis database must be selected in the actual runtime connection');
     $store->delete('runtime-fixture');$store->disconnect();
+    $store=cacheStore($values,'redis');$store->set('clear-fixture','value',30);
+    check($store->clear()===true&&$store->get('clear-fixture')===null&&$admin->get('test')==='unrelated-value','Real Redis clear must empty only its selected isolated database');
+    $store->disconnect();
+    $denied=cacheStore(array_replace($values,['cache_username'=>'nodelete','cache_db'=>0]),'redis');
+    try {$cleared=$denied->clear();}catch(\Throwable $error){$cleared=false;}
+    check($cleared===false&&$admin->get('test')==='unrelated-value','Real Redis ACL refusal must not report successful cleanup or remove existing data');
+    $denied->disconnect();
     $app->config->set(cacheConfig($values),'cache');$sessionManager=new \think\Cache($app);
     $session=new \think\session\driver\Cache($sessionManager,['store'=>'redis','expire'=>45,'prefix'=>'session-fixture-']);
     check($session->write('normal','session-value')&&$session->read('normal')==='session-value'&&$session->delete('normal'),

@@ -323,6 +323,15 @@ class Dir implements \IteratorAggregate {
 
     /** Delete the selected directory; symbolic links are removed as entries, never traversed. */
     public static function delDir($directory, $subdir = true): bool {
+        return self::deleteDirectory($directory, false, true);
+    }
+
+    /** Remove a physical cache directory if present. A linked cache has not been cleared. */
+    public static function clearDirectory($directory): bool {
+        return self::deleteDirectory($directory, true, false);
+    }
+
+    private static function deleteDirectory($directory, bool $allowMissing, bool $removeLink): bool {
         $directory = self::cleanupDirectoryPath($directory);
         if ($directory === null) { return false; }
         // A linked parent can redirect the requested subtree even when its final entry is ordinary.
@@ -330,16 +339,19 @@ class Dir implements \IteratorAggregate {
         while (true) {
             clearstatcache(true, $parent);
             if (is_link($parent)) { return false; }
+            // An inaccessible ancestor must not turn a stat failure into an "already absent" result.
+            if (file_exists($parent) && (!is_dir($parent)
+                || (DIRECTORY_SEPARATOR !== '\\' && !is_executable($parent)))) { return false; }
             $next = dirname($parent);
             if ($next === $parent) { break; }
             $parent = $next;
         }
         clearstatcache(true, $directory);
         if (is_link($directory)) {
-            return @unlink($directory);
+            return $removeLink && @unlink($directory);
         }
         if (!is_dir($directory)) {
-            return false;
+            return $allowMissing && !file_exists($directory);
         }
         $handle = @opendir($directory);
         if ($handle === false) {

@@ -5,7 +5,7 @@ namespace app\common\util;
 final class CacheConnection
 {
     private const DRIVERS = [
-        'file'=>\think\cache\driver\File::class,
+        'file'=>\app\common\cache\File::class,
         'redis'=>\app\common\cache\Redis::class,
         'memcached'=>\app\common\cache\Memcached::class,
         'memcache'=>\app\common\cache\Memcache::class,
@@ -19,7 +19,7 @@ final class CacheConnection
         foreach (['host','port','username','password','db','timeout'] as $field) {
             if (array_key_exists('cache_'.$field, $app)) { $input[$field] = $app['cache_'.$field]; }
         }
-        $stores = ['file'=>['type'=>'file', 'path'=>'', 'prefix'=>'', 'expire'=>$expire]];
+        $stores = ['file'=>['type'=>self::DRIVERS['file'], 'path'=>'', 'prefix'=>'', 'expire'=>$expire]];
         foreach (['redis','memcache','memcached'] as $name) {
             $stores[$name] = ['type'=>self::DRIVERS[$name], 'connection'=>$input, 'expire'=>$expire];
         }
@@ -111,7 +111,7 @@ final class CacheConnection
     public static function driver(array $input, $timeout = null): \think\cache\Driver
     {
         $type = self::type($input['type'] ?? null);
-        if ($type === 'file') { return new \think\cache\driver\File(\think\Container::getInstance()->make('app'), ['expire'=>30]); }
+        if ($type === 'file') { return new \app\common\cache\File(\think\Container::getInstance()->make('app'), ['expire'=>30]); }
         if (!array_key_exists('timeout', $input)) { $input['timeout'] = $timeout; }
         $class = self::DRIVERS[$type];
         return new $class(['connection'=>$input, 'expire'=>30]);
