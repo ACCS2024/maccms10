@@ -209,8 +209,8 @@ try {
             check($ready,'Loopback cache-hit fixture is ready');
             $context=stream_context_create(['http'=>['timeout'=>5,'ignore_errors'=>true]]);$body=file_get_contents('http://'.$address.'/',false,$context);
             check($body==='CACHED-PUBLIC-MARKER','Actual cache hit returns the cached public catalog: '.substr((string)$body,0,600).' / '.substr((string)file_get_contents($log),-1500));
-            check(in_array('Cache-Control: private, no-store',$http_response_header,true),'Direct echo/exit cache hit must emit a private no-store header');
-            check(!preg_match('/Cache-Control:.*public/i',implode("\n",$http_response_header)),'No public header can escape the cache-hit exit path');
+            check(preg_match('/^Cache-Control:\s*private, no-store$/mi',implode("\n",$http_response_header))===1,'Framework cache hit must emit a private no-store header');
+            check(!preg_match('/Cache-Control:.*public/i',implode("\n",$http_response_header)),'No public header can escape the cache-hit response path');
         }finally{proc_terminate($process);proc_close($process);}
     }
     echo 'framework_audit_content_identity_cache: '.$checks.' checks passed for '.$entrance.' on PHP '.PHP_VERSION.' / MySQL'.PHP_EOL;

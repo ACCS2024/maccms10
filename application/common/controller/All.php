@@ -44,7 +44,7 @@ class All
             $GLOBALS['_mac_page_cacheable'] = (int)$GLOBALS['config']['app']['cache_time_page'];
             $cach_name = $this->page_cache_key($tpl);
             $res = Cache::get($cach_name);
-            if (empty($res)) {
+            if (!is_string($res)) {
                 // 防击穿:抢锁者回源产出(label_fetch set 后释放);未抢到者短等他人结果,超时再自行产出
                 if (mac_cache_lock_acquire($cach_name, 15)) {
                     $this->_page_sf_lock = $cach_name;
@@ -52,19 +52,13 @@ class All
                     $res = mac_cache_singleflight_wait($cach_name);
                 }
             }
-            if (!empty($res)) {
+            if (is_string($res)) {
                 // 修复后台开启页面缓存时，模板json请求解析问题
                 // https://github.com/magicblack/maccms10/issues/965
                 $accept = request()->header('accept');
-                if($type=='json' || (is_string($accept) && str_contains($accept, 'application/json'))){
-                    $res = json_encode($res);
-                }
-                if (!headers_sent()) {
-                    // This direct response bypasses the outer Session/security middleware.
-                    header('Cache-Control: private, no-store');
-                }
-                echo $res;
-                die;
+                $response = $type == 'json' || (is_string($accept) && str_contains($accept, 'application/json'))
+                    ? json($res) : \think\Response::create($res);
+                throw new \think\exception\HttpResponseException($response->header(['Cache-Control'=>'private, no-store']));
             }
         }
     }
@@ -177,15 +171,15 @@ class All
         if ($tplRoot !== '' && !is_file($tplRoot . 'public/' . $tpl . $suffix)) {
             $tpl = 'jump';
         }
-        header("HTTP/1.1 404 Not Found");
-        header("Status: 404 Not Found");
         if ($tplRoot !== '' && !is_file($tplRoot . 'public/' . $tpl . $suffix)) {
-            header('Content-Type: text/html; charset=utf-8');
-            exit('<!doctype html><meta charset="utf-8"><title>404</title><h1>404</h1><p>'
-                . htmlspecialchars((string)$msg, ENT_QUOTES) . '</p>');
+            $html = '<!doctype html><meta charset="utf-8"><title>404</title><h1>404</h1><p>'
+                . htmlspecialchars((string)$msg, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</p>';
+        } else {
+            // Error pages are never read from or written to the shared successful-page cache.
+            $html = $this->fetch('public/'.$tpl);
         }
-        $html = $this->label_fetch('public/'.$tpl);
-        exit($html);
+        throw new \think\exception\HttpResponseException(\think\Response::create($html, 'html', 404)
+            ->header(['Cache-Control'=>'private, no-store']));
     }
 
     protected function label_user()
